@@ -79,19 +79,19 @@ function AU.run()
   local f = UI.frame
   if not f or not f:IsShown() then return nil end
   local keep = UI.current
-  local all = {}
+  local found = {}
   for _, tab in ipairs(UI.tabs) do
     UI.Select(tab.key)
-    for _, p in ipairs(AU.scan(f, tab.key)) do if #all < AU.MAX then all[#all + 1] = p end end
+    for _, p in ipairs(AU.scan(f, tab.key)) do if #found < AU.MAX then found[#found + 1] = p end end
   end
   UI.Select(keep)
   local Core = ns.Core
   local key = Core.charKey or "?"
   Core.db.diag[key] = Core.db.diag[key] or {}
   local scale = num(call(f, "GetEffectiveScale"))
-  Core.db.diag[key].layout = { at = time and time() or 0, count = #all, items = all, scale = scale, game = ns.Compat.game() }
-  Core.log("info", "layout audit: " .. #all .. " finding(s)")
-  return all
+  Core.db.diag[key].layout = { at = time and time() or 0, count = #found, items = found, scale = scale, game = ns.Compat.game() }
+  Core.log("info", "layout audit: " .. #found .. " finding(s)")
+  return found
 end
 
 --- Once per session, shortly after the window first opens.
