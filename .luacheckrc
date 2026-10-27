@@ -15,7 +15,8 @@ files["tests/"] = { std = "+lua53", globals = { "arg" }, ignore = { "211", "311"
 -- Globals the addon defines
 globals = {
   "WoWBoxerDB", "WoWBoxerCharDB", "SLASH_WOWBOXER1", "SLASH_WOWBOXER2", "SlashCmdList", "StaticPopupDialogs",
-  "WoWBoxerMainFrame",
+  "WoWBoxerMainFrame", "WoWBoxerMinimapMenu",
+  "WoWBoxer_OnAddonCompartmentClick", "WoWBoxer_OnAddonCompartmentEnter", "WoWBoxer_OnAddonCompartmentLeave",
 }
 
 -- WoW API the addon reads (keep in sync with Compat.lua)
@@ -37,4 +38,6 @@ read_globals = {
   "GameFontNormalLarge", "GameFontDisable", "GameFontDisableSmall", "GameFontNormalHuge", "RAID_CLASS_COLORS", "CLASS_ICON_TCOORDS",
   "Settings", "InterfaceOptions_AddCategory", "ReloadUI", "SetBindingMacro", "SaveBindings", "GetCurrentBindingSet",
   "ACCEPT", "CANCEL", "OKAY", "YES", "NO", "CLOSE",
+  "GetBindingKey", "GetBindingAction", "SetBinding", "CHARACTER_BINDINGS", "GetCursorPosition", "Minimap",
+  "IsAltKeyDown", "IsControlKeyDown", "IsShiftKeyDown", "AddonCompartmentFrame",
 }

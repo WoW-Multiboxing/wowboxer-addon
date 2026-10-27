@@ -32,13 +32,12 @@ for _, scenario in ipairs({
   local tag = scenario.class .. ": "
   UI.Toggle()
   H.ok(UI.frame:IsShown(), tag .. "window opens")
-  -- no squad: empty state with quick start
-  local qs = findButton(W, "Start a squad")
-  H.ok(qs ~= nil, tag .. "quick start offered")
+  -- no squad yet: opening the window sets this character up solo (leader), nothing written to the game
+  H.ok(select(2, Core.me()) ~= nil, tag .. "opening the window sets up this character")
+  H.ok(select(2, Core.me()).leader, tag .. "solo character leads")
+  H.eq(W.calls.CreateMacro, nil, tag .. "opening writes no macros")
   for _, t in ipairs(UI.tabs) do UI.Select(t.key) end
   UI.Select("keys")
-  qs:Click()
-  H.ok(select(2, Core.me()) ~= nil, tag .. "quick start creates the member")
   if scenario.party then
     -- add the leader and make him leader
     local s = Core.me()

@@ -6,6 +6,9 @@
 ## SavedVariables: WoWBoxerDB
 ## SavedVariablesPerCharacter: WoWBoxerCharDB
 ## IconTexture: Interface\Icons\Ability_Hunter_Pet_Wolf
+## AddonCompartmentFunc: WoWBoxer_OnAddonCompartmentClick
+## AddonCompartmentFuncOnEnter: WoWBoxer_OnAddonCompartmentEnter
+## AddonCompartmentFuncOnLeave: WoWBoxer_OnAddonCompartmentLeave
 ## X-License: MIT
 ## X-Website: https://github.com/WoW-Multiboxing/wowboxer-addon
 ## X-Credits: Talent data: Zephras (zephras.com, CC BY 4.0) + The Forever Era. World of Warcraft names and icons (c) Blizzard Entertainment.
@@ -28,11 +31,13 @@ Compat.lua
 State.lua
 Macros.lua
 Bars.lua
+Binds.lua
 Share.lua
 Checklist.lua
 Core.lua
 UI\Widgets.lua
 UI\Main.lua
+UI\Minimap.lua
 UI\TabKeys.lua
 UI\TabSquad.lua
 UI\TabTalents.lua

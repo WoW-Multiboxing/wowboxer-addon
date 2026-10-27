@@ -41,6 +41,7 @@ function UI.Build()
   UI.who = W.text(f, "GameFontHighlightSmall", nil, W.TEXT)
   UI.who:SetPoint("LEFT", title, "RIGHT", 12, -1)
   UI.who:SetPoint("RIGHT", f, "RIGHT", -40, 0)
+  if UI.who.SetWordWrap then UI.who:SetWordWrap(false) end
   local close = W.frame("Button", f, "UIPanelCloseButton")
   close:SetPoint("TOPRIGHT", -6, -6)
   close:SetScript("OnClick", function() f:Hide() end)
@@ -99,10 +100,11 @@ function UI.Refresh()
 end
 
 function UI.Toggle()
+  ns.Core.ensureMe()
   UI.Build()
   if UI.frame:IsShown() then UI.frame:Hide() else UI.frame:Show() end
 end
-function UI.Open(tab) UI.Build(); UI.frame:Show(); if tab then UI.Select(tab) end end
+function UI.Open(tab) ns.Core.ensureMe(); UI.Build(); UI.frame:Show(); if tab then UI.Select(tab) end end
 
 -- ------------------------------------------------------------------ level-up offer toast
 function UI.ShowOffer(ctx)

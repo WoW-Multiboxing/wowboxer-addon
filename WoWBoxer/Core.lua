@@ -111,6 +111,94 @@ function Core.sync(opts)
   end)
 end
 
+-- ------------------------------------------------------------------ single character
+--- A character that is in no squad gets a solo squad (leader = itself) the first time the window opens, so the
+--- Keys tab works right away. Only SavedVariables change; nothing is written to the game.
+function Core.ensureMe()
+  if not Core.db then return nil end
+  local _, m = Core.me()
+  if m then return m end
+  local info = Core.playerInfo()
+  if not info.name or not info.cls then return nil end
+  local _, mm = S.quickStart(Core.db, Core.cdb, info)
+  Core.log("info", "solo setup for " .. tostring(info.name))
+  return mm
+end
+
+-- ------------------------------------------------------------------ drag & drop, bar memory
+--- Put WBX macro `name` on the cursor so the player can drop it on any action button. Creates or updates the macro
+--- first when needed. Returns true or false, reason. Out of combat only (macro writes are #nocombat).
+function Core.pickup(name)
+  if C.inCombat() then return false, "Not in combat." end
+  local ctx, why = Core.compute()
+  if not ctx then return false, why end
+  local item
+  for _, it in ipairs(ctx.macros.items) do if it.name == name then item = it end end
+  if not item then return false, "Unknown key " .. tostring(name) end
+  if item.status == "noslot" then return false, "No free character macro slot. Delete a macro first." end
+  if item.status == "invalid" then return false, item.why or "invalid macro" end
+  if item.status == "create" or item.status == "update" or item.status == "skipped" then
+    if item.status == "skipped" then Core.cdb.skip[name] = nil; ctx = Core.compute(); for _, it in ipairs(ctx.macros.items) do if it.name == name then item = it end end end
+    if item.status == "create" or item.status == "update" then
+      local res = M.apply({ items = { item } })
+      if #res.failed > 0 then return false, res.failed[1].err end
+      Core.log("info", "drag: " .. item.status .. " " .. name)
+    end
+  end
+  local idx = M.findIndex(name)
+  if not idx then return false, "Macro not found." end
+  if C.cursorBusy() then ClearCursor() end
+  PickupMacro(idx)
+  return true
+end
+--- Same for a spell from the spell list: it becomes an extra key "WBX <Spell>" (kept for this character).
+function Core.pickupSpell(spellId)
+  local extras = Core.cdb.extras
+  local have = false
+  for _, id in ipairs(extras) do if id == spellId then have = true end end
+  if not have then extras[#extras + 1] = spellId end
+  local ctx, why = Core.compute()
+  if not ctx then return false, why end
+  for _, d in ipairs(ctx.desired) do if d.key == "X:" .. spellId then return Core.pickup(d.name) end end
+  if not have then table.remove(extras) end
+  return false, "That spell has no key (passive, not learned yet, or not in your spellbook)."
+end
+--- Remember where the player put each WBX macro (any action slot), so "Create & place keys" keeps it there.
+function Core.scanBars()
+  local cdb = Core.cdb
+  if not cdb then return end
+  local found = {}
+  for slot = 1, 120 do
+    local a = C.actionInfo(slot)
+    if a and a.kind == "macro" and R.isOurs(a.name) and not found[a.name] then found[a.name] = slot end
+  end
+  for name, slot in pairs(cdb.slots) do
+    local a = C.actionInfo(slot)
+    if a and a.kind == "macro" and a.name == name then found[name] = slot end -- keep the remembered one if still there
+  end
+  cdb.slots = found
+end
+
+-- ------------------------------------------------------------------ key bindings
+function Core.bindKey(name, key)
+  return Core.whenSafe("Bind " .. name, function()
+    local ok, info = ns.Binds.bind(name, key)
+    if ok then
+      chat(name .. " is now on " .. key .. (info and info ~= ("MACRO " .. name) and (" (was: " .. info .. ")") or "") .. " for this character.")
+      Core.log("info", "bind " .. key .. " -> " .. name .. " (was " .. tostring(info) .. ")")
+    else chat("|cffff6060Could not bind:|r " .. tostring(info)); Core.log("warn", "bind failed " .. name .. ": " .. tostring(info)) end
+    Core.changed()
+  end)
+end
+function Core.unbindKey(name)
+  return Core.whenSafe("Unbind " .. name, function()
+    local n = ns.Binds.unbind(name)
+    chat(n .. " key(s) removed from " .. name .. ".")
+    Core.log("info", "unbind " .. name .. ": " .. n)
+    Core.changed()
+  end)
+end
+
 -- ------------------------------------------------------------------ CVars
 function Core.cvarPlan(overrides)
   local _, m = Core.me()
@@ -234,6 +322,7 @@ end
 local HELP = {
   "/wbx – open or close the window",
   "/wbx sync – create/update your WBX macros and place new ones on your bars",
+  "/wbx minimap – show or hide the minimap button",
   "/wbx show – list your keys and what would change",
   "/wbx cvars | /wbx cvars restore – apply recommended settings / put the old ones back",
   "/wbx selftest – write a diagnostic report to the saved variables",
@@ -246,6 +335,7 @@ function Core.slash(msg)
   if cmd == "" then if ns.UI and ns.UI.Toggle then ns.UI.Toggle() else chat("window not available") end
   elseif cmd == "help" or cmd == "?" then for _, l in ipairs(HELP) do chat(l) end
   elseif cmd == "sync" then Core.sync({ replace = rest == "replace" })
+  elseif cmd == "minimap" then if ns.Minimap then ns.Minimap.SetHidden(not Core.db.settings.minimapHidden) end
   elseif cmd == "show" then
     local ctx, why = Core.compute()
     if not ctx then chat(why) return end
@@ -269,7 +359,7 @@ local function safeRegister(ev) pcall(frame.RegisterEvent, frame, ev) end
 safeRegister("ADDON_LOADED")
 safeRegister("PLAYER_LOGIN")
 
-local spellsTimer
+local spellsTimer, barsTimer
 function Core.onEvent(event, ...)
   if event == "ADDON_LOADED" then
     local name = ...
@@ -284,6 +374,10 @@ function Core.onEvent(event, ...)
     safeRegister("SPELLS_CHANGED")
     safeRegister("LEARNED_SPELL_IN_TAB")
     safeRegister("LEARNED_SPELL_IN_SKILL_LINE")
+    safeRegister("ACTIONBAR_SLOT_CHANGED")
+    safeRegister("UPDATE_BINDINGS")
+    Core.scanBars()
+    if ns.Minimap and ns.Minimap.Init then ns.Minimap.Init() end
     if C_Timer and C_Timer.After then C_Timer.After(3, function() Core.checkOffer("login") end) end
     -- read-only diagnose a few seconds after login, so a /reload is enough to see how the addon behaves in this client
     if C_Timer and C_Timer.After then
@@ -303,6 +397,14 @@ function Core.onEvent(event, ...)
     spellsTimer = true
     local function run() spellsTimer = nil; Core.checkOffer("spells") end
     if C_Timer and C_Timer.After then C_Timer.After(2, run) else run() end
+  elseif event == "ACTIONBAR_SLOT_CHANGED" then
+    -- many fire at once (page swaps, drags): rescan once, a moment later
+    if barsTimer then return end
+    barsTimer = true
+    local function run() barsTimer = nil; Core.scanBars(); Core.changed() end
+    if C_Timer and C_Timer.After then C_Timer.After(0.3, run) else run() end
+  elseif event == "UPDATE_BINDINGS" then
+    Core.changed()
   end
 end
 frame:SetScript("OnEvent", function(_, event, ...) Core.onEvent(event, ...) end)

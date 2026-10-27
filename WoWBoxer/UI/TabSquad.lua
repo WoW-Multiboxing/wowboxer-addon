@@ -2,7 +2,7 @@
 local _, ns = ...
 local UI, W = ns.UI, ns.Widgets
 local tab = { key = "squad", label = "Squad" }
-local ROW_H = 44
+local ROW_H = 50
 
 local function D() return ns.Data end
 local function S() return ns.State end
@@ -53,22 +53,25 @@ function tab.build(p)
     r.sub:SetWidth(250)
     r.role = W.cycle(r, { width = 120, values = function() return roleValues(r.m.cls) end, get = function() return r.m.role end,
       set = function(v) r.m.role = v; r.m.guide = ns.Kit.defaultGuideFor(r.m.cls, v); Core().changed() end })
-    r.role:SetPoint("LEFT", 262, 0)
+    r.role:SetPoint("BOTTOMLEFT", 262, 3)
     r.unit = W.cycle(r, { width = 120, values = unitValues, get = function() return r.m.unit end, set = function(v) r.m.unit = v; Core().changed() end })
     r.unit:SetPoint("LEFT", r.role, "RIGHT", 4, 0)
     r.leaderBtn = W.button(r, "Make leader", 84, 20, function()
       for _, x in ipairs(squad().members) do x.leader = (x == r.m) end
       S().applyLink(squad()); Core().changed()
     end)
-    r.leaderBtn:SetPoint("LEFT", r.role, "RIGHT", 4, 0)
-    r.meBtn = W.button(r, "This is me", 76, 20, function() Core().setMe(squad().id, r.m.id) end)
-    r.meBtn:SetPoint("TOPRIGHT", -26, -4)
+    r.leaderBtn:SetPoint("BOTTOMRIGHT", -4, 3)
+    r.meBtn = W.button(r, "This is me", 80, 20, function() Core().setMe(squad().id, r.m.id) end)
+    r.meBtn:SetPoint("TOPRIGHT", -84, -3)
+    r.edit = W.button(r, "Edit", 54, 20, function() p.startEdit(r.m) end)
+    r.edit:SetPoint("TOPRIGHT", -28, -3)
     r.del = W.button(r, "x", 20, 20, function()
       local s = squad()
       for i, x in ipairs(s.members) do if x == r.m then table.remove(s.members, i) break end end
       S().fixLeader(s); Core().changed()
     end)
-    r.del:SetPoint("TOPRIGHT", -4, -4)
+    r.del:SetPoint("TOPRIGHT", -4, -3)
+    W.tooltip(r.del, function(GT) GT:AddLine("Remove from the squad", 1, 0.82, 0) end)
     return r
   end)
 
@@ -79,7 +82,9 @@ function tab.build(p)
   addBox:SetHeight(40)
   local at = W.text(addBox, "GameFontNormalSmall", nil, W.GOLD)
   at:SetPoint("LEFT", 8, 0)
+  at:SetWidth(30)
   at:SetText("Add")
+  p.addTitle = at
   p.newName = W.frame("EditBox", addBox, "InputBoxTemplate")
   p.newName:SetSize(110, 20)
   p.newName:SetAutoFocus(false)
@@ -95,8 +100,38 @@ function tab.build(p)
   p.roleCycle = W.cycle(addBox, { width = 110, values = function() return roleValues(p.add.cls) end,
     get = function() return p.add.role or D().classes[p.add.cls].roles[1] end, set = function(v) p.add.role = v end })
   p.roleCycle:SetPoint("LEFT", p.raceCycle, "RIGHT", 4, 0)
+  function p.startEdit(m)
+    p.editing = m
+    p.add.cls, p.add.race, p.add.role = m.cls, m.race, m.role
+    p.newName:SetText(m.name)
+    p.addTitle:SetText("Edit")
+    p.addBtn:SetText("Save")
+    p.cancelEdit:Show()
+    p.clsCycle.Refresh(); p.raceCycle.Refresh(); p.roleCycle.Refresh()
+  end
+  function p.stopEdit()
+    p.editing = nil
+    p.newName:SetText("")
+    p.addTitle:SetText("Add")
+    p.addBtn:SetText("Add")
+    p.cancelEdit:Hide()
+  end
   p.addBtn = W.button(addBox, "Add", 56, 22, function()
     local s = squad()
+    if p.editing then
+      local m = p.editing
+      local name = ns.Rules.cleanText(p.newName:GetText() or "", 24)
+      local keep = m.cls == p.add.cls
+      local nm = S().newMember({ id = m.id, name = (name and name ~= "") and name or m.name, cls = p.add.cls, race = p.add.race, role = p.add.role,
+        level = m.level, leader = m.leader, unit = m.unit, talented = m.talented, seq = m.seq, seqTarget = m.seqTarget,
+        build = keep and m.build or nil, guide = (keep and m.role == p.add.role) and m.guide or nil,
+        customSeq = keep and m.customSeq or nil, pins = keep and m.pins or nil })
+      for i, x in ipairs(s.members) do if x == m then s.members[i] = nm end end
+      Core().log("info", "edited " .. nm.name .. " (" .. nm.cls .. ")")
+      p.stopEdit(); p.newName:ClearFocus()
+      Core().changed()
+      return
+    end
     if not s then s = S().newSquad({ name = "My squad", faction = ns.Compat.playerFaction() }); table.insert(Core().db.squads, s); Core().db.active = s.id end
     if #s.members >= S().MAX_MEMBERS then Core().print("A squad holds at most " .. S().MAX_MEMBERS .. " characters."); return end
     local name = ns.Rules.cleanText(p.newName:GetText() or "", 24)
@@ -108,6 +143,9 @@ function tab.build(p)
     Core().changed()
   end)
   p.addBtn:SetPoint("RIGHT", -6, 0)
+  p.cancelEdit = W.button(p, "Cancel edit", 90, 20, function() p.stopEdit() end)
+  p.cancelEdit:SetPoint("BOTTOMRIGHT", addBox, "TOPRIGHT", 0, 2)
+  p.cancelEdit:Hide()
   p.addMe = W.button(p, "Add this character", 140, 22, function()
     local info = Core().playerInfo()
     local s = squad()
@@ -120,7 +158,8 @@ function tab.build(p)
   p.help = W.text(p, "GameFontHighlightSmall", nil, W.MUTED)
   p.help:SetPoint("LEFT", p.addMe, "RIGHT", 10, 0)
   p.help:SetPoint("RIGHT", p, "RIGHT", 0, 0)
-  p.help:SetText("Followers assist the leader through party1–4 or focus. Use the same squad on every client (Share tab).")
+  p.help:SetText("Followers assist the leader via party1–4 or focus. Copy the squad to your other characters in Share.")
+  if p.help.SetWordWrap then p.help:SetWordWrap(false) end
 end
 
 function tab.refresh(p)
@@ -147,8 +186,10 @@ function tab.refresh(p)
     r.role.Refresh()
     r.unit:SetShown(not m.leader); r.unit.Refresh()
     r.leaderBtn:SetShown(m.leader ~= true)
-    r.leaderBtn:ClearAllPoints(); r.leaderBtn:SetPoint("LEFT", r.unit, "RIGHT", 4, 0)
     r.meBtn:SetShown(m ~= me)
+    if r.SetBackdropBorderColor then
+      if p.editing == m then r:SetBackdropBorderColor(1, 0.82, 0, 1) else r:SetBackdropBorderColor(0.54, 0.43, 0.2, 1) end
+    end
   end
   p.list:SetHeight(math.max(y, 10))
 end

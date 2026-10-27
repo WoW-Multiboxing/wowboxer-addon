@@ -192,7 +192,12 @@ function Mock.new(H, opts)
   function methods:GetObjectType() return self._kind end
   function methods:GetCursorPosition() return 0 end
   function methods:GetNumLetters() return #(self._text or "") end
-  FrameMT.__index = function(t, k) if type(k) == "string" and k:sub(1, 1) == "_" then return nil end return methods[k] or function() end end
+  -- unknown API methods (CamelCase) are no-ops; unknown fields (_x, lowercase) are nil, like on a real frame
+  FrameMT.__index = function(t, k)
+    if methods[k] then return methods[k] end
+    if type(k) == "string" and k:match("^%u") then return function() end end
+    return nil
+  end
   W.newFrame = newFrame
   env.CreateFrame = function(kind, name, parent, template) local f = newFrame(kind, name, parent); f._template = template; return f end
   env.UIParent = newFrame("Frame", "UIParent")
@@ -214,7 +219,30 @@ function Mock.new(H, opts)
   env.SlashCmdList = {}
   env.hooksecurefunc = function() end
   env.ACCEPT, env.CANCEL, env.OKAY, env.CLOSE, env.YES, env.NO = "Accept", "Cancel", "Okay", "Close", "Yes", "No"
-  env.GetCurrentBindingSet = function() return 2 end
+  env.GetCurrentBindingSet = function() return W.bindingSet or 1 end
+  -- key bindings: W.bindings[key] = command
+  W.bindings = opts.bindings or { ["1"] = "ACTIONBUTTON1", ["2"] = "ACTIONBUTTON2", ["3"] = "ACTIONBUTTON3", ["F"] = "ASSISTTARGET" }
+  env.GetBindingKey = function(cmd)
+    local keys = {}
+    for k, c in pairs(W.bindings) do if c == cmd then keys[#keys + 1] = k end end
+    table.sort(keys)
+    return unpack(keys)
+  end
+  env.GetBindingAction = function(key) return W.bindings[key] or "" end
+  env.SetBindingMacro = function(key, name) protected("SetBindingMacro"); call("SetBindingMacro"); W.bindings[key] = "MACRO " .. name; return true end
+  env.SetBinding = function(key, cmd) protected("SetBinding"); call("SetBinding"); W.bindings[key] = cmd; return true end
+  env.SaveBindings = function(set) protected("SaveBindings"); W.bindingSet = set end
+  env.CHARACTER_BINDINGS = 2
+  W.mods = {}
+  env.IsShiftKeyDown = function() return W.mods.shift end
+  env.IsControlKeyDown = function() return W.mods.ctrl end
+  env.IsAltKeyDown = function() return W.mods.alt end
+  W.cursorPos = { 0, 0 }
+  env.GetCursorPosition = function() return W.cursorPos[1], W.cursorPos[2] end
+  env.Minimap = newFrame("Frame", "Minimap", env.UIParent)
+  env.Minimap.GetCenter = function() return 500, 500 end
+  env.Minimap.GetEffectiveScale = function() return 1 end
+  env.Minimap._w = 140
   env.ReloadUI = function() W.reloaded = true end
   env.IsLoggedIn = function() return true end
 
