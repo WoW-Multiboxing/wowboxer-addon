@@ -72,7 +72,7 @@ Built behind probes and tested in the simulator; only the real client can confir
 - [ ] Classic Era dataset (talents/spells/guides for 1.15), TBC Anniversary. Decision (Claude Code, 2026-10-27): not
       built autonomously – it is a research/data job for the companion pipeline (workstream A). Until then Era uses
       Forever data filtered by the real spellbook, and the Talents tab says the trees differ.
-- [x] (NEXT: `.github/workflows/release.yml`, tag-only: same checks, zip on a GitHub Release) Release pipeline, part 1.
+- [x] (f238e40: `.github/workflows/release.yml`, tag-only: same checks, zip on a GitHub Release) Release pipeline, part 1.
 - [ ] Release pipeline part 2: BigWigsMods packager → CurseForge/Wago when the owner makes the repo public (needs his
       accounts/tokens and the project IDs in the TOC).
 
