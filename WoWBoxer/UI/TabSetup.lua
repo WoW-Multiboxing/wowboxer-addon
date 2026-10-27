@@ -17,30 +17,30 @@ function tab.build(p)
   local function barValues() local v = {}; for _, b in ipairs(Bars.BARS) do v[#v + 1] = { b.first, b.label } end return v end
   local function row(y, label, widget, tip)
     local t = W.text(p, "GameFontHighlightSmall", nil, W.TEXT)
-    t:SetPoint("TOPLEFT", 0, y - 5)
+    t:SetPoint("TOPLEFT", 0, y - 6)
     t:SetText(label)
     widget:SetPoint("TOPLEFT", 120, y)
-    if tip then W.tip(widget, label, tip) end
+    if tip then W.ddTip(widget, label, tip) end
     return t
   end
-  p.bar1 = W.cycle(p, { width = 170, values = barValues, get = function() return Core().cdb.primaryBar end,
+  p.bar1 = W.dropdown(p, { width = 170, values = barValues, get = function() return Core().cdb.primaryBar end,
     set = function(v) Core().cdb.primaryBar = v; Core().cdb.slots = {}; Core().changed() end })
-  row(-24, "Main keys on", p.bar1, "Where Place all puts keys 1–8, the sequences and Follow/Assist. Keys you dragged somewhere yourself stay there.")
-  p.bar2 = W.cycle(p, { width = 170, values = barValues, get = function() return Core().cdb.secondaryBar end,
+  row(-22, "Main keys on", p.bar1, "Where Place all puts keys 1–8, the sequences and Follow/Assist. Keys you dragged somewhere yourself stay there.")
+  p.bar2 = W.dropdown(p, { width = 170, values = barValues, get = function() return Core().cdb.secondaryBar end,
     set = function(v) Core().cdb.secondaryBar = v; Core().cdb.slots = {}; Core().changed() end })
   row(-50, "Other keys on", p.bar2, "Where Place all puts your own keys, Focus and the pet keys.")
-  p.scale = W.cycle(p, { width = 170, values = function() return SCALES end,
+  p.scale = W.dropdown(p, { width = 170, values = function() return SCALES end,
     get = function() local v = tonumber(Core().db.settings.scale) or 1; return math.floor(v * 10 + 0.5) / 10 end,
     set = function(v) Core().db.settings.scale = v; UI.ApplyWindowSettings() end })
-  row(-76, "Window size", p.scale, "Makes this window bigger or smaller. It always fits the screen. Same as /wbx scale.")
+  row(-78, "Window size", p.scale, "Makes this window bigger or smaller. It always fits the screen. Same as /wbx scale.")
   p.replace = W.check(p, "Place all may replace other buttons", function(_, v) Core().cdb.replace = v; Core().changed() end)
-  p.replace:SetPoint("TOPLEFT", -4, -100)
+  p.replace:SetPoint("TOPLEFT", -4, -104)
   W.tip(p.replace, "Replace buttons", "Off: a button that holds a spell or item is kept, and that key waits for you to drag it. On: Place all puts the key there.")
   p.anim = W.check(p, "Animations (keys fly to your bar)", function(_, v) Core().db.settings.animations = v; Core().changed() end)
-  p.anim:SetPoint("TOPLEFT", -4, -122)
+  p.anim:SetPoint("TOPLEFT", -4, -126)
   W.tip(p.anim, "Animations", "When WoWBoxer places or updates keys, their icons fly to the action buttons and the buttons flash. Only a picture: it changes nothing.")
   p.guideBtn = W.button(p, "Show the guide", 120, 22, function() ns.Book.ShowGuide() end, "Opens the 3-step guide again on the My keys page.")
-  p.guideBtn:SetPoint("TOPLEFT", 0, -148)
+  p.guideBtn:SetPoint("TOPLEFT", 0, -152)
   p.macrosOnly = W.button(p, "Macros only", 100, 22, function() Core().sync({ macrosOnly = true }) end,
     "Creates or updates your WoWBoxer macros without touching your action bars (drag them yourself from the book).")
   p.macrosOnly:SetPoint("LEFT", p.guideBtn, "RIGHT", 6, 0)

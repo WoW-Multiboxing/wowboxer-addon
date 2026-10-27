@@ -48,6 +48,25 @@ function Book.describe(d, mem)
   return "Casts " .. spell .. "."
 end
 
+--- Dropdown values: the roles of the member's class, and Leader / Follower via a unit.
+function Book.roleValues(mem)
+  local v = {}
+  if mem then for _, r in ipairs(ns.Data.classes[mem.cls].roles) do v[#v + 1] = { r, ns.State.ROLE_NAME[r] } end end
+  return v
+end
+function Book.playsAsValues()
+  local v = { { "leader", "Leader", "This character leads: its keys use its own target." } }
+  for _, u in ipairs(ns.Engine.UNITS) do
+    v[#v + 1] = { u, "Follower (" .. u .. ")", "Its keys use the leader's target through " .. u .. " and heal the leader." }
+  end
+  return v
+end
+function Book.setRole(mem, v)
+  if not mem then return end
+  mem.role = v; mem.guide = ns.Kit.defaultGuideFor(mem.cls, v)
+  Core().log("info", "role " .. v); Core().changed()
+end
+
 -- ------------------------------------------------------------------ data per page
 local function iconFor(d, it)
   if d and d.spell and d.spell.icon then return d.spell.icon end
@@ -322,46 +341,21 @@ local function build(p, mode)
 
   -- options (My keys only): role, plays as, sequence keys
   if mode == "keys" then
-    local rl = W.text(body, "GameFontNormalSmall", nil, W.GOLD)
+    local function me() local _, mem = Core().me(); return mem end
+    p.role = W.dropdown(body, { width = 112, values = function() return Book.roleValues(me()) end,
+      get = function() local mem = me(); return mem and mem.role end,
+      set = function(v) Book.setRole(me(), v) end })
+    local rl = W.labelled(body, "Role", p.role)
     rl:SetPoint("TOPLEFT", 4, OPT_Y - 5)
-    rl:SetText("Role")
-    p.role = W.cycle(body, { width = 124,
-      values = function()
-        local _, mem = Core().me()
-        local v = {}
-        if mem then for _, r in ipairs(ns.Data.classes[mem.cls].roles) do v[#v + 1] = { r, ns.State.ROLE_NAME[r] } end end
-        return v
-      end,
-      get = function() local _, mem = Core().me(); return mem and mem.role end,
-      set = function(v)
-        local _, mem = Core().me()
-        if mem then mem.role = v; mem.guide = ns.Kit.defaultGuideFor(mem.cls, v); Core().log("info", "role " .. v); Core().changed() end
-      end })
-    p.role:SetPoint("LEFT", rl, "RIGHT", 6, 0)
-    W.tip(p.role, "Role", "Picks the recommended keys and talent guide for this character. Nothing changes in the game until you place or update keys.")
-    local pl = W.text(body, "GameFontNormalSmall", nil, W.GOLD)
-    pl:SetPoint("LEFT", p.role, "RIGHT", 14, 0)
-    pl:SetText("Plays as")
-    p.playsAs = W.cycle(body, { width = 176,
-      values = function()
-        local v = { { "leader", "Leader" } }
-        for _, u in ipairs(ns.Engine.UNITS) do v[#v + 1] = { u, "Follower (" .. u .. ")" } end
-        return v
-      end,
-      get = function() local _, mem = Core().me(); return mem and (mem.leader and "leader" or mem.unit) end,
+    W.ddTip(p.role, "Role", "Picks the recommended keys and talent guide for this character. Nothing changes in the game until you place or update keys.")
+    p.playsAs = W.dropdown(body, { width = 156, values = function() return Book.playsAsValues(me()) end,
+      get = function() local mem = me(); return mem and (mem.leader and "leader" or mem.unit) end,
       set = function(v) Core().setPlaysAs(v) end })
-    p.playsAs:SetPoint("LEFT", pl, "RIGHT", 6, 0)
-    W.tip(p.playsAs, "Plays as", "Leader: your keys use your own target. Follower: your keys use the leader's target (party1–4 or focus). One key press is still one action on this character.")
-    local sl = W.text(body, "GameFontNormalSmall", nil, W.GOLD)
-    sl:SetPoint("LEFT", p.playsAs, "RIGHT", 14, 0)
-    sl:SetText("Sequences")
-    p.seqLabel = sl
-    p.seq = W.cycle(body, { width = 112,
-      values = function() return { { "off", "Off" }, { "simple", "Simple" }, { "medium", "Medium" }, { "advanced", "Advanced" } } end,
-      get = function() local _, mem = Core().me(); return mem and mem.seq end,
-      set = function(v) local _, mem = Core().me(); if mem then mem.seq = v; Core().log("info", "sequence tier " .. v); Core().changed() end end })
-    p.seq:SetPoint("LEFT", sl, "RIGHT", 6, 0)
-    W.tip(p.seq, "Sequence keys", "Adds one key that casts your rotation, one spell per press (Paladin, Priest, Warlock). Simple has few spells, Advanced more.")
+    local pl = W.labelled(body, "Plays as", p.playsAs)
+    pl:SetPoint("LEFT", p.role, "RIGHT", 12, 0)
+    W.ddTip(p.playsAs, "Plays as", "Leader: your keys use your own target. Follower: your keys use the leader's target (party1–4 or focus). One key press is still one action on this character.")
+    p.seq = W.seqControl(body, { member = me, width = 96 })
+    p.seq:SetPoint("LEFT", p.playsAs, "RIGHT", 12, 0)
   else
     p.hint = W.text(body, "GameFontHighlightSmall", nil, W.MUTED)
     p.hint:SetPoint("TOPLEFT", 4, OPT_Y - 6)
@@ -449,12 +443,7 @@ local function refresh(p, ctx)
   else p.stepBtn:Hide(); p.stepFn = nil end
   p.stepText:SetPoint("RIGHT", step.button and p.stepBtn or p.strip, step.button and "LEFT" or "RIGHT", -10, 0)
   if not ctx then for _, c in ipairs(p.cells) do c:Hide() end; p.det:Hide(); return end
-  local mem = ctx.member
-  if p.role then
-    p.role.Refresh(); p.playsAs.Refresh(); p.seq.Refresh()
-    local ok = ns.Engine.seqSupported(mem.cls)
-    p.seq:SetShown(ok); p.seqLabel:SetShown(ok)
-  end
+  if p.role then p.role.Refresh(); p.playsAs.Refresh(); p.seq.Refresh() end
 
   local list = Book.cells(p.mode, ctx)
   local pages = math.max(1, math.ceil(#list / (PER_PAGE * 2)))
@@ -565,6 +554,8 @@ function Book.buildGuide(p)
     Core().setPlaysAs((mem and not mem.leader and mem.unit) or "party1")
   end, "This character follows: its keys use the leader's target through party1 (change the unit on the My keys page).")
   g.follow:SetPoint("LEFT", g.lead, "RIGHT", 8, 0)
+  g.seq = W.seqControl(g, { member = function() local _, mem = Core().me(); return mem end, width = 110 })
+  g.seq:SetPoint("TOPLEFT", 20, -262)
   -- step 2 option
   g.replace = W.check(g, "Also replace buttons that hold something else", function(_, v) Core().cdb.replace = v; Core().changed() end)
   g.replace:SetPoint("TOPLEFT", 20, -186)
@@ -624,14 +615,15 @@ function Book.refreshGuide(p, ctx)
   g:Show()
   local mem, info = ctx.member, Core().playerInfo()
   local cls = ns.Data.classes[mem.cls]
-  for _, x in ipairs({ g.roleLabel, g.playLabel, g.lead, g.follow, g.replace, g.next, g.place, g.drag, g.done }) do x:Hide() end
+  for _, x in ipairs({ g.roleLabel, g.playLabel, g.lead, g.follow, g.seq, g.replace, g.next, g.place, g.drag, g.done }) do x:Hide() end
   for _, b in ipairs(g.roles) do b:Hide() end
   g.back:SetShown(g.step > 1 and g.step < 3)
   if g.step == 1 then
     g.title:SetText("Step 1 of 3 – Who is this character?")
     g.text:SetText("WoWBoxer builds the keys for " .. (info.name or "this character") .. " (" .. (cls and cls.n or mem.cls) ..
-      "). Pick the role and whether this character leads or follows. You can change both later on the My keys page.")
+      "). Pick the role, whether this character leads or follows, and if you want sequence keys. You can change all of it later on the My keys page.")
     g.roleLabel:Show(); g.playLabel:Show(); g.lead:Show(); g.follow:Show(); g.next:Show()
+    g.seq:Show(); g.seq.Refresh()
     for i, r in ipairs(cls and cls.roles or {}) do
       local b = g.roles[i]
       if b then

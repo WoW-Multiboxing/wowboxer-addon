@@ -13,7 +13,7 @@ function tab.build(p)
   local lg = W.text(p, "GameFontHighlightSmall", nil, W.MUTED)
   lg:SetPoint("TOPLEFT", 0, -6)
   lg:SetText("Guide")
-  p.guide = W.cycle(p, { width = 300,
+  p.guide = W.dropdown(p, { width = 300,
     values = function()
       local _, m = ns.Core.me()
       local v = {}
@@ -24,6 +24,7 @@ function tab.build(p)
     get = function() local _, m = ns.Core.me(); return m and m.guide end,
     set = function(v) local _, m = ns.Core.me(); if m then m.guide = v; ns.Core.changed() end end })
   p.guide:SetPoint("LEFT", lg, "RIGHT", 6, 0)
+  W.ddTip(p.guide, "Guide", "The talent guide WoWBoxer follows for this character. * = recommended for your role.")
   p.kind = W.text(p, "GameFontHighlightSmall", nil, W.GREEN)
   p.kind:SetPoint("TOPLEFT", 0, -30)
   p.kind:SetWidth(LEFT_W)

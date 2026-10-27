@@ -431,6 +431,7 @@ function Core.selftest(quiet)
   -- fly-to-bar probe: which action buttons exist and are visible (bar addons hide Blizzard's), Blizzard's own tracker
   r.fly = { iconIntro = _G.IconIntroTracker ~= nil, buttons = {} }
   if ns.Fly then for _, slot in ipairs({ 1, 13, 25, 37, 49, 61, 145 }) do r.fly.buttons[tostring(slot)] = ns.Fly.buttonForSlot(slot) ~= nil end end
+  r.ui = { dropdown = (ns.Widgets and ns.Widgets.hasBlizzardDropdown and ns.Widgets.hasBlizzardDropdown()) and "blizzard" or "own" }
   db.diag[Core.charKey or "?"] = r
   Core.log("info", "selftest written to WoWBoxerDB.diag[" .. tostring(Core.charKey) .. "]")
   if not quiet then chat("Selftest done. /reload (or log out) to save it to WTF\\...\\SavedVariables\\WoWBoxer.lua.") end

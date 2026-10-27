@@ -27,6 +27,7 @@ local BACKDROP = {
   tile = true, tileSize = 16, edgeSize = 12,
   insets = { left = 3, right = 3, top = 3, bottom = 3 },
 }
+W.BACKDROP = BACKDROP
 --- A dark box with a thin border.
 function W.box(parent, r, g, b, a)
   local f = W.frame("Frame", parent, _G.BackdropTemplateMixin and "BackdropTemplate" or nil)
@@ -118,43 +119,6 @@ function W.check(parent, label, onClick)
   c.label = t
   if onClick then c:SetScript("OnClick", function(self) onClick(self, self:GetChecked() and true or false) end) end
   return c
-end
-
---- A "‹ value ›" selector that cycles through a list. opts: {values={{value, label}}, get=fn, set=fn, width}
-function W.cycle(parent, opts)
-  local f = CreateFrame("Frame", nil, parent)
-  f:SetSize(opts.width or 150, 22)
-  local prev = W.button(f, "<", 24, 22)
-  local nxt = W.button(f, ">", 24, 22)
-  prev:SetPoint("LEFT")
-  nxt:SetPoint("RIGHT")
-  local label = W.line(f, "GameFontHighlightSmall", nil, nil, "CENTER")
-  label:SetPoint("LEFT", prev, "RIGHT", 2, 0)
-  label:SetPoint("RIGHT", nxt, "LEFT", -2, 0)
-  f.label = label
-  local function index()
-    local cur = opts.get()
-    for i, v in ipairs(opts.values()) do if v[1] == cur then return i end end
-    return 1
-  end
-  function f.Refresh()
-    local vals = opts.values()
-    local v = vals[index()]
-    label:SetText(v and v[2] or "-")
-    local many = #vals > 1
-    prev:SetEnabled(many); nxt:SetEnabled(many)
-  end
-  local function step(d)
-    local vals = opts.values()
-    if #vals == 0 then return end
-    local i = ((index() - 1 + d) % #vals) + 1
-    opts.set(vals[i][1])
-    f.Refresh()
-  end
-  f.step = step
-  prev:SetScript("OnClick", function() step(-1) end)
-  nxt:SetScript("OnClick", function() step(1) end)
-  return f
 end
 
 --- Scroll area with a content frame. Returns scroll, content.

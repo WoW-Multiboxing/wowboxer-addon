@@ -96,7 +96,7 @@ function KE.Build(parent)
   f.name:SetScript("OnTextChanged", function(self, user) if user and f.draft then f.draft.name = self:GetText(); KE.Refresh() end end)
 
   local function cyc(width, values, key)
-    return W.cycle(f, { width = width, values = function() return values end, get = function() return f.draft and f.draft[key] end,
+    return W.dropdown(f, { width = width, values = function() return values end, get = function() return f.draft and f.draft[key] end,
       set = function(v) f.draft[key] = v; KE.Refresh() end })
   end
   f.kind = cyc(190, KINDS, "kind")
@@ -105,9 +105,13 @@ function KE.Build(parent)
   f.aim:SetPoint("LEFT", f.kind, "RIGHT", 6, 0)
   f.reset = cyc(170, RESETS, "reset")
   f.reset:SetPoint("TOPLEFT", 10, -84)
-  f.fills = W.cycle(f, { width = 110, values = function() local v = {}; for i = 1, 6 do v[#v + 1] = { i, "Filler × " .. i } end return v end,
+  f.fills = W.dropdown(f, { width = 110, values = function() local v = {}; for i = 1, 6 do v[#v + 1] = { i, "Filler × " .. i } end return v end,
     get = function() return f.draft and f.draft.fills end, set = function(v) f.draft.fills = v; KE.Refresh() end })
   f.fills:SetPoint("LEFT", f.reset, "RIGHT", 6, 0)
+  W.ddTip(f.kind, "Kind", "Sequence: each press casts the next step. Priority: each press casts the first step that is ready.")
+  W.ddTip(f.aim, "Aim", "Who the key casts on: an enemy (your or the leader's target) or a friend.")
+  W.ddTip(f.reset, "Starts over", "When the sequence starts again from the first step.")
+  W.ddTip(f.fills, "Filler", "How many times the filler spell is cast between the other steps.")
 
   -- steps strip: icons in order; click removes; drop a spell from the spellbook to add it
   local sl = W.text(f, "GameFontHighlightSmall", nil, W.MUTED)

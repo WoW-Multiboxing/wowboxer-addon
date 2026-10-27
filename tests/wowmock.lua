@@ -372,7 +372,11 @@ function Mock.new(H, opts)
   function methods:Enable() self._disabled = false end
   function methods:Disable() self._disabled = true end
   function methods:SetEnabled(v) self._disabled = not v end
-  function methods:Click(button) if not self._disabled and self._scripts.OnClick then self._scripts.OnClick(self, button or "LeftButton") end end
+  function methods:Click(button)
+    if self._disabled then return end
+    if self._kind == "CheckButton" then self._checked = not self._checked end -- the client toggles before OnClick
+    if self._scripts.OnClick then self._scripts.OnClick(self, button or "LeftButton") end
+  end
   function methods:GetFontString() self._fs = self._fs or newFrame("FontString", nil, self); return self._fs end
   function methods:HasFocus() return false end
   function methods:GetObjectType() return self._kind end
@@ -402,7 +406,36 @@ function Mock.new(H, opts)
     return nil
   end
   W.newFrame = newFrame
-  env.CreateFrame = function(kind, name, parent, template) local f = newFrame(kind, name, parent); f._template = template; return f end
+  env.CreateFrame = function(kind, name, parent, template)
+    if kind == "DropdownButton" and not opts.menu then error("Unknown frame type 'DropdownButton'", 2) end
+    local f = newFrame(kind, name, parent); f._template = template
+    if kind == "DropdownButton" then W.blizzDropdown(f) end
+    return f
+  end
+  -- the modern menu system (opts.menu): DropdownButton + SetupMenu(generator); the generator gets a root description
+  -- whose CreateRadio(text, isSelected, setSelected, data) entries the test can read (f._menu) and pick (W.pickMenu).
+  if opts.menu then env.MenuUtil = { CreateRadioMenu = function() end } end
+  function W.blizzDropdown(f)
+    f.SetupMenu = function(self, gen) self._gen = gen; self:GenerateMenu() end
+    f.GenerateMenu = function(self)
+      local entries = {}
+      local root = { CreateRadio = function(_, text, isSel, setSel, data)
+        local e = { text = text, isSel = isSel, setSel = setSel, data = data }
+        e.SetTooltip = function(x, fn) x.tip = fn end
+        entries[#entries + 1] = e
+        return e
+      end }
+      if self._gen then self._gen(self, root) end
+      self._menu = entries
+    end
+    f.OverrideText = function(self, t) self._text = t end
+    f.OpenMenu = function(self) self._menuOpen = true end
+  end
+  function W.pickMenu(f, text)
+    f:GenerateMenu()
+    for _, e in ipairs(f._menu) do if e.text == text then e.setSel(e.data) return true end end
+    return false
+  end
   env.UIParent = newFrame("Frame", "UIParent")
   W.screen = opts.screen or { w = 1365, h = 768 }
   env.UIParent._w, env.UIParent._h = W.screen.w, W.screen.h

@@ -39,7 +39,9 @@ local function buildEditor(p)
   e.name:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
   e.v = {}
   local function cyc(width, values, key)
-    return W.cycle(e, { width = width, values = values, get = function() return e.v[key] end, set = function(v) e.v[key] = v; e.refresh() end })
+    local dd = W.dropdown(e, { width = width, values = values, get = function() return e.v[key] end, set = function(v) e.v[key] = v; e.refresh() end })
+    W.ddTip(dd, ({ cls = "Class", race = "Race", role = "Role", plays = "Plays as" })[key] or key, "Saved when you press Save. Nothing changes in the game.")
+    return dd
   end
   e.cls = cyc(118, function() local v = {}; for _, c in ipairs(D().classOrder) do v[#v + 1] = { c, D().classes[c].n } end return v end, "cls")
   e.cls:SetPoint("LEFT", e.name, "RIGHT", 8, 0)
@@ -83,11 +85,12 @@ function tab.build(p)
   local top = W.text(p, "GameFontNormal", nil, W.GOLD)
   top:SetPoint("TOPLEFT", 0, -6)
   top:SetText("Squad")
-  p.squadCycle = W.cycle(p, { width = 230,
+  p.squadCycle = W.dropdown(p, { width = 230,
     values = function() local v = {}; for _, s in ipairs(Core().db.squads) do v[#v + 1] = { s.id, s.name .. " (" .. #s.members .. ")" } end return v end,
     get = function() return Core().db.active end,
     set = function(v) Core().db.active = v; Core().cdb.squadId, Core().cdb.memberId = nil, nil; Core().changed() end })
   p.squadCycle:SetPoint("LEFT", top, "RIGHT", 8, 0)
+  W.ddTip(p.squadCycle, "Squad", "The squad this character uses. Switching changes only WoWBoxer's own setup.")
   p.delSquad = W.button(p, "Delete squad", 100, 22, function(self)
     local s = squad()
     if not s then return end

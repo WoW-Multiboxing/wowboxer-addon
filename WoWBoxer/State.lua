@@ -99,7 +99,8 @@ function S.newMember(o)
   if not name or name == "" then name = D().classes[cls].n end
   return { id = safeId(o.id, "m"), name = name, cls = cls, race = race, role = role, level = clampLvl(o.level or 1), leader = not not o.leader,
     unit = E.contains(E.UNITS, o.unit) and o.unit or "party1", talented = clampT(o.talented), build = S.sanitizeOrder(cls, o.build or {}),
-    guide = guide, seq = E.contains(E.SEQ_TIERS, o.seq) and o.seq or "off", seqTarget = not not o.seqTarget, customSeq = S.cleanCustom(o.customSeq), pins = pins }
+    guide = guide, seq = E.contains(E.SEQ_TIERS, o.seq) and o.seq or "off", seqTarget = not not o.seqTarget,
+    seqTier = (E.contains(E.SEQ_TIERS, o.seqTier) and o.seqTier ~= "off") and o.seqTier or nil, customSeq = S.cleanCustom(o.customSeq), pins = pins }
 end
 
 function S.fixLeader(s)
