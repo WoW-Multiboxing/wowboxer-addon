@@ -80,7 +80,7 @@ Built behind probes and tested in the simulator; only the real client can confir
 - [ ] Release pipeline part 2: BigWigsMods packager → CurseForge/Wago when the owner makes the repo public (needs his
       accounts/tokens and the project IDs in the TOC).
 
-- [x] (NEXT: Macros.localize, token-wise; round-trip test over every engine macro) Non-English clients: macros use the English spell names from the data, so `/cast` fails on e.g. deDE/frFR.
+- [x] (1a50919: Macros.localize, token-wise; round-trip test over every engine macro) Non-English clients: macros use the English spell names from the data, so `/cast` fails on e.g. deDE/frFR.
       Design note (Claude Code): build a map English name → `C_Spell.GetSpellName(rank-1 spell ID)` once per login and
       localise *tokens* in the finished body (after `/cast [..] `, between `, ` in `/castsequence`, after `#showtooltip`),
       longest names first, never substrings ("Heal" inside "Greater Heal"); re-check 255 characters after. The owner's
