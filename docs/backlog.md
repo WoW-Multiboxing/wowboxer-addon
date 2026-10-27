@@ -68,7 +68,7 @@ Built behind probes and tested in the simulator; only the real client can confir
 - [x] (54ee117: Forever only via C_Traits like Leatrix/Questie; Era says why not; "Take next" + "Off the plan" on the Talents tab; diagnose records it) Talent read-back: Forever via `C_ClassTalents` + `C_Traits` (as Leatrix Plus Forever does), Era via
       `GetTalentInfo`; show "you are off the guide" and the next point to take.
 - [x] (877ff61: Keys tab "New key" / "Edit"; picker + drop from the spellbook; preview + companion warnings; WBX C1–C8) Custom-key editor in game (drag spells into a sequence via `OnReceiveDrag`), same rules as the companion.
-- [x] (NEXT: Team.lua + team panel, /wbx team on|off; throttled 1.5 s + 15 s heartbeat; checklist line) Display-only team status over addon messages (lost follow, different target than the leader, low mana).
+- [x] (0bf1f4d: Team.lua + team panel, /wbx team on|off; throttled 1.5 s + 15 s heartbeat; checklist line) Display-only team status over addon messages (lost follow, different target than the leader, low mana).
 - [ ] Classic Era dataset (talents/spells/guides for 1.15), TBC Anniversary.
 - [ ] Release pipeline (BigWigsMods packager → CurseForge/Wago) when the repo goes public.
 
