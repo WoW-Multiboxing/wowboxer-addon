@@ -23,3 +23,10 @@ Data\Class_druid.lua
 Engine.lua
 Kit.lua
 Json.lua
+Rules.lua
+Compat.lua
+State.lua
+Macros.lua
+Bars.lua
+Share.lua
+Core.lua

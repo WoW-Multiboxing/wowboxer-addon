@@ -8,18 +8,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        lua: ["5.1.5", "luajit-2.1.0-beta3"]
+        lua: ["lua5.1", "luajit"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - uses: leafo/gh-actions-lua@v10
-        with:
-          luaVersion: ${{ matrix.lua }}
-      - uses: leafo/gh-actions-luarocks@v4
-      - name: Install luacheck
-        run: luarocks install luacheck
+      - name: Install Lua 5.1, LuaJIT and luacheck
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq lua5.1 liblua5.1-0-dev luajit luarocks
+          sudo luarocks --lua-version 5.1 install luacheck
       - name: Generated data is up to date
         run: node tools/build_data.js --check
       - name: Lua 5.1 syntax + compliance lint
@@ -31,4 +30,4 @@ jobs:
       - name: Share-string reference tests (JS)
         run: if [ -f share/test.js ]; then node share/test.js; fi
       - name: Lua tests (parity, mocks, UI smoke)
-        run: LUA=lua tests/run_all.sh
+        run: LUA=${{ matrix.lua }} tests/run_all.sh

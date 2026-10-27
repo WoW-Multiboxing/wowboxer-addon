@@ -151,10 +151,13 @@ local function numstr(x)
   if tonumber(s) ~= x then s = format("%.17g", x) end
   return s
 end
+-- Same escaping as JavaScript's JSON.stringify (so both sides produce identical canonical JSON).
+local SHORT = { [8] = "\\b", [9] = "\\t", [10] = "\\n", [12] = "\\f", [13] = "\\r", [34] = '\\"', [92] = "\\\\" }
 local function encStr(s)
   return '"' .. gsub(s, '[%c"\\]', function(c)
     local b = byte(c)
-    if c == '"' then return '\\"' elseif c == "\\" then return "\\\\" elseif b == 10 then return "\\n" elseif b == 13 then return "\\r" elseif b == 9 then return "\\t" end
+    if SHORT[b] then return SHORT[b] end
+    if b >= 32 then return c end -- DEL (127) is not escaped by JSON.stringify
     return format("\\u%04x", b)
   end) .. '"'
 end
