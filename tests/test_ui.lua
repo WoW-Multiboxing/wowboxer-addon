@@ -72,6 +72,20 @@ for _, scenario in ipairs({
     if f._kind == "Button" and f._text and f:IsVisible() and not f._scripts.OnEnter and f._text ~= "<" and f._text ~= ">" then bare[#bare + 1] = f._text end
   end
   H.eq(table.concat(bare, ", "), "", tag .. "every button has a tooltip")
+  -- the same on every tab: plain words, a tooltip on every button
+  for _, t in ipairs(UI.tabs) do
+    UI.Select(t.key)
+    local words, noTip = {}, {}
+    for _, f in ipairs(W.frames) do
+      if f:IsVisible() and type(f._text) == "string" then
+        if f._text:find("WBX [KSC]%d") or f._text:find("noslot") or f._text:find("skipped") then words[#words + 1] = f._text:sub(1, 40) end
+        if f._kind == "Button" and not f._scripts.OnEnter and f._text ~= "<" and f._text ~= ">" then noTip[#noTip + 1] = f._text end
+      end
+    end
+    H.eq(table.concat(words, " | "), "", tag .. t.key .. ": plain words")
+    H.eq(table.concat(noTip, ", "), "", tag .. t.key .. ": every button has a tooltip")
+  end
+  UI.Select("keys")
   -- sequence tier (paladin/priest)
   if ns.Engine.seqSupported(scenario.class:lower()) then
     local p = UI.panels.keys

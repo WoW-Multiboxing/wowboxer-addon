@@ -22,7 +22,7 @@ function CL.items()
     if m.unit == "focus" then
       local f = C.unitName("focus")
       local okf = f ~= nil and f:lower() == leader.name:lower()
-      add(okf, "Focus is " .. leader.name, okf and "Your keys assist your focus." or "Target " .. leader.name .. " and press your WBX Focus key (after every login).")
+      add(okf, "Focus is " .. leader.name, okf and "Your keys assist your focus." or "Target " .. leader.name .. " and press your Focus key (after every login).")
     elseif unitOfLeader then
       add(unitOfLeader == m.unit, leader.name .. " is " .. unitOfLeader .. " on this client",
         unitOfLeader == m.unit and "Matches your unit." or ("Your keys use " .. m.unit .. ". Fix switches them to " .. unitOfLeader .. "; then update your keys."),
@@ -35,11 +35,11 @@ function CL.items()
   if ctx then
     local c = ctx.macros.counts
     local made = c.same + c.update
-    add(ctx.macros.changes == 0 and c.noslot == 0, made .. " WBX keys created, " .. ctx.macros.changes .. " to create or update",
-      c.noslot > 0 and (c.noslot .. " key(s) have no free macro slot: untick some on the Keys tab.") or (ctx.macros.free .. " character macro slots free."))
+    add(ctx.macros.changes == 0 and c.noslot == 0, made .. " keys created, " .. ctx.macros.changes .. " to create or update",
+      c.noslot > 0 and (c.noslot .. (c.noslot == 1 and " key has" or " keys have") .. " no free macro slot: delete a macro in /macro, or leave a key out (right-click it in the book).") or (ctx.macros.free .. " character macro slots free."))
     local b = ctx.bars.counts
     add(b.occupied + b.empty + b.ours + b.missing == 0, b.placed .. " keys on your bars",
-      b.occupied > 0 and (b.occupied .. " button(s) hold something else: tick Replace on the Keys tab.") or "Keys tab: Create & place keys.")
+      b.occupied > 0 and (b.occupied .. (b.occupied == 1 and " button holds" or " buttons hold") .. " something else: drag those keys yourself, or tick Replace above.") or "My keys: press Place all.")
     if not m.leader then add(nil, "Follow and Assist keys", "Press them yourself. WoWBoxer never follows or targets for you.") end
     if #ctx.missing > 0 then add(false, #ctx.missing .. " spell(s) to learn at your trainer", "They are left out of your keys until you learn them.") end
   end

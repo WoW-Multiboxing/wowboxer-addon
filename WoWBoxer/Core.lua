@@ -115,9 +115,9 @@ function Core.sync(opts)
       bres = B.apply(again.bars, Core.cdb, opts.replace)
     end
     Core.cdb.lastSync = { level = ctx.level, at = time and time() or 0 }
-    local msg = string.format("%d created, %d updated, %d placed on bars", mres.created, mres.updated, bres.placed)
+    local msg = string.format("%d keys created, %d updated, %d placed on your bars", mres.created, mres.updated, bres.placed)
     if ctx.macros.counts.noslot > 0 then msg = msg .. string.format(", %d without a free macro slot", ctx.macros.counts.noslot) end
-    if bres.skipped > 0 then msg = msg .. string.format(", %d bar slots kept (occupied)", bres.skipped) end
+    if bres.skipped > 0 then msg = msg .. string.format(", %d left where they were (the button holds something else)", bres.skipped) end
     chat(msg .. ".")
     Core.log("info", "sync L" .. ctx.level .. ": " .. msg)
     for _, f in ipairs(mres.failed) do Core.log("error", "macro " .. f.name .. ": " .. f.err) end
@@ -247,7 +247,7 @@ function Core.pickupSpell(spellId)
   if not have then table.remove(extras) end
   return false, "That spell has no key (passive, not learned yet, or not in your spellbook)."
 end
---- Remember where the player put each WBX macro (any action slot), so "Create & place keys" keeps it there.
+--- Remember where the player put each WBX macro (any action slot), so Place all keeps it there.
 function Core.scanBars()
   local cdb = Core.cdb
   if not cdb then return end
@@ -271,11 +271,23 @@ function Core.openKeyBindings()
   Core.log("info", "open key bindings: " .. tostring(how))
   if not how then chat("Could not open the key bindings here: use the game menu > Key Bindings.") end
 end
+--- "Smite (Key 2)" for a WBX macro name; the name itself when it is not one of this character's keys.
+function Core.keyLabel(name)
+  local ok, ctx = pcall(Core.compute)
+  if ok and ctx then
+    for _, it in ipairs(ctx.macros.items) do
+      if it.name == name then return it.label .. (ns.Book and (" (" .. ns.Book.kindName(it) .. ")") or "") end
+    end
+  end
+  return name
+end
+local function plural(n, one, many) return n .. " " .. (n == 1 and one or many) end
+Core.plural = plural
 function Core.bindKey(name, key)
   return Core.whenSafe("Bind " .. name, function()
     local ok, info = ns.Binds.bind(name, key)
     if ok then
-      chat(name .. " is now on " .. key .. (info and info ~= ("MACRO " .. name) and (" (was: " .. info .. ")") or "") .. " for this character.")
+      chat(Core.keyLabel(name) .. " is now on " .. key .. (info and info ~= ("MACRO " .. name) and (" (was: " .. info .. ")") or "") .. " for this character.")
       Core.log("info", "bind " .. key .. " -> " .. name .. " (was " .. tostring(info) .. ")")
     else chat("|cffff6060Could not bind:|r " .. tostring(info)); Core.log("warn", "bind failed " .. name .. ": " .. tostring(info)) end
     Core.changed()
@@ -284,7 +296,7 @@ end
 function Core.unbindKey(name)
   return Core.whenSafe("Unbind " .. name, function()
     local n = ns.Binds.unbind(name)
-    chat(n .. " key(s) removed from " .. name .. ".")
+    chat(plural(n, "key", "keys") .. " removed from " .. Core.keyLabel(name) .. ".")
     Core.log("info", "unbind " .. name .. ": " .. n)
     Core.changed()
   end)
@@ -371,7 +383,7 @@ function Core.checkOffer(reason)
       Core.lastOffer = sig
       Core.log("info", "offer (" .. reason .. "): " .. n .. " key(s) changed at level " .. ctx.level)
       if Core.cdb.lastSync then -- only nag players who already use WoWBoxer keys
-        chat(string.format("%d key(s) changed at level %d. Type |cffffd100/wbx sync|r or open |cffffd100/wbx|r to update them.", n, ctx.level))
+        chat(string.format("%s changed at level %d. Open |cffffd100/wbx|r (or type |cffffd100/wbx sync|r) to update them.", plural(n, "key", "keys"), ctx.level))
         if ns.UI and ns.UI.ShowOffer then ns.UI.ShowOffer(ctx) end
         if ns.Minimap and ns.Minimap.SetAttention then ns.Minimap.SetAttention(true) end
       end
@@ -428,7 +440,7 @@ end
 -- ------------------------------------------------------------------ slash commands
 local HELP = {
   "/wbx – open or close the window",
-  "/wbx sync – create/update your WBX macros and place new ones on your bars",
+  "/wbx sync – create/update your keys and place new ones on your bars (same as Place all)",
   "/wbx minimap – show or hide the minimap button",
   "/wbx bars – list where each key is and which key presses it",
   "/wbx keys – open the game's key bindings (Quick Keybind mode where available)",

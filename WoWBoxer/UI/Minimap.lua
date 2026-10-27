@@ -43,7 +43,7 @@ local function tooltip(GT)
   GT:AddLine("WoWBoxer", 1, 0.82, 0)
   local ok, ctx = pcall(ns.Core.compute)
   if ok and ctx then
-    if ctx.macros.changes > 0 then GT:AddLine(ctx.macros.changes .. " key(s) to create or update", 0.94, 0.71, 0.24)
+    if ctx.macros.changes > 0 then GT:AddLine(ctx.macros.changes .. (ctx.macros.changes == 1 and " key" or " keys") .. " to create or update", 0.94, 0.71, 0.24)
     else GT:AddLine("Keys up to date for level " .. ctx.level, 0.56, 0.75, 0.42) end
   end
   GT:AddLine("Left-click: open / close", 0.85, 0.85, 0.85)

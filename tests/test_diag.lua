@@ -68,7 +68,7 @@ do
     H.eq(W.calls[api], nil, "no " .. api .. " without a click")
   end
   H.eq(W.cvars.autoLootDefault, "0", "no CVar changed without a click")
-  H.ok(W.chatHas("key%(s%) changed"), "but the level-up offer was shown")
+  H.ok(W.chatHas("keys? changed"), "but the level-up offer was shown")
 end
 
 os.exit(H.report("diag") and 0 or 1)

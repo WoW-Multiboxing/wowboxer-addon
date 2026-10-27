@@ -1,5 +1,5 @@
 --[[ WoWBoxer – Squad tab (docs/ui-spec.md): one card per character, a small inline editor for add/edit, and an info
-  box. Only SavedVariables change here; macros change when the player presses Create & place keys. ]]
+  box. Only SavedVariables change here; macros change when the player presses Place all. ]]
 local _, ns = ...
 local UI, W = ns.UI, ns.Widgets
 local tab = { key = "squad", label = "Squad", icon = "Spell_Holy_PrayerOfFortitude", tip = "The characters you play together: names, classes, roles, who leads." }

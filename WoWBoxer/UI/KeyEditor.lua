@@ -2,7 +2,7 @@
   A custom key is plain data {name, kind, aim, steps, filler, fills, reset}; the companion engine builds the macro
   (E.buildCustom) with the same targeting, pet, 255-character and warning rules as on the website. Spells are added
   from a list of learned spells or by dropping a spell from the spellbook onto the steps strip (GetCursorInfo: data
-  only, nothing is cast). Saving only changes SavedVariables; the macro WBX C<n> is written by Create & place keys
+  only, nothing is cast). Saving only changes SavedVariables; the macro WBX C<n> is written by Place all
   or by dragging the key, like every other key. ]]
 local _, ns = ...
 local UI, W = ns.UI, ns.Widgets
@@ -29,7 +29,7 @@ function KE.spellChoices(m, L)
   return out
 end
 
---- Macro + warnings for the draft key (what the Keys tab will show after saving).
+--- Macro + warnings for the draft key (what the book will show after saving).
 function KE.preview(m, c, L)
   local ctx = ns.Kit.memberCtx(m)
   local has = ns.Kit.seqHas(m, L, nil)
@@ -60,7 +60,7 @@ function KE.delete(m, index)
   m.customSeq = ns.State.cleanCustom(list)
 end
 
--- ------------------------------------------------------------------ the editor frame (overlays the Keys tab)
+-- ------------------------------------------------------------------ the editor frame (overlays the book)
 local function spellFromCursor()
   if not _G.GetCursorInfo then return nil end
   local kind, a, b, c = _G.GetCursorInfo()
