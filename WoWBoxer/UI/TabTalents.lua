@@ -43,8 +43,12 @@ function tab.build(p)
   p.then_ = W.text(nb, "GameFontHighlightSmall", nil, W.TEXT)
   p.then_:SetPoint("TOPLEFT", 10, -68)
   p.then_:SetWidth(230)
+  p.readback = W.text(p, "GameFontHighlightSmall", nil, W.TEXT)
+  p.readback:SetPoint("TOPLEFT", nb, "BOTTOMLEFT", 0, -8)
+  p.readback:SetWidth(250)
+  p.readback:SetJustifyV("TOP")
   p.source = W.text(p, "GameFontHighlightSmall", nil, W.MUTED)
-  p.source:SetPoint("TOPLEFT", nb, "BOTTOMLEFT", 0, -8)
+  p.source:SetPoint("TOPLEFT", p.readback, "BOTTOMLEFT", 0, -8)
   p.source:SetWidth(250)
   p.prio = W.text(p, "GameFontHighlightSmall", nil, W.TEXT)
   p.prio:SetPoint("TOPLEFT", p.source, "BOTTOMLEFT", 0, -8)
@@ -114,6 +118,7 @@ function tab.refresh(p)
       ". Talent data: Zephras (CC BY 4.0) + The Forever Era.")
   else p.source:SetText("Talent data: Zephras (CC BY 4.0) + The Forever Era.") end
   p.prio:SetText(g and g.kind == "priorities" and g.priorities and g.priorities:sub(1, 600) or "")
+  p.readback:SetText(tab.readbackText(m, level))
   -- list
   local y, counts, current = 0, {}, nil
   for i, key in ipairs(order) do
@@ -139,6 +144,23 @@ function tab.refresh(p)
   end
   p.list:SetHeight(math.max(y, 10))
   if current and p.sf.SetVerticalScroll then pcall(p.sf.SetVerticalScroll, p.sf, math.max(0, current - 3 * ROW_H)) end
+end
+
+--- One or two lines comparing the talents spent in game with the plan (Forever only: other clients have other trees).
+function tab.readbackText(m, level)
+  local C = ns.Compat
+  if not C.isForever() then return "|cffa89a7eYour spent talents are only compared on WoW: Forever.|r" end
+  local ranks, src = C.talentRanks()
+  if not ranks then return "|cffa89a7eCan't read your talents on this client (" .. tostring(src) .. ").|r" end
+  local st = ns.Kit.talentStatus(m, ranks, level)
+  local parts = { "In game: " .. st.spent .. " of " .. st.available .. " points spent." }
+  if #st.off > 0 then
+    local n = {}
+    for i, o in ipairs(st.off) do if i <= 2 then n[#n + 1] = o.name .. " " .. o.have .. "/" .. o.plan end end
+    parts[#parts + 1] = "|cfff0b43cOff the plan: " .. table.concat(n, ", ") .. (#st.off > 2 and ", …" or "") .. "|r"
+  elseif st.spent > 0 then parts[#parts + 1] = "|cff8fbf6aOn the plan.|r" end
+  if st.next and st.spent < st.available then parts[#parts + 1] = "Take next: |cffffd100" .. st.next.name .. "|r (rank " .. st.next.rank .. ")" end
+  return table.concat(parts, " ")
 end
 
 UI.RegisterTab(tab)

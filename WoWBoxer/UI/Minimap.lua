@@ -48,6 +48,7 @@ local ITEMS = {
   { "Open WoWBoxer", function() ns.UI.Open("keys") end },
   { "Create & place keys", function() ns.Core.sync({ replace = ns.Core.cdb.replace }) end },
   { "Setup checklist & settings", function() ns.UI.Open("setup") end },
+  { "Key bindings", function() ns.Core.openKeyBindings() end },
   { "Hide minimap button", function() MM.SetHidden(true) end },
   { "Close", function() end },
 }

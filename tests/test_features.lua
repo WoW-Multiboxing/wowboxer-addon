@@ -173,6 +173,11 @@ do
   W.fire("PLAYER_REGEN_ENABLED")
   H.eq(W.bindings.H, "MACRO WBX K2", "bound after combat")
   H.ok(not KB.bind("Heal me", "J"), "only WBX macros can be bound")
+  W.env.QuickKeybindFrame = W.newFrame("Frame", "QuickKeybindFrame", W.env.UIParent); W.env.QuickKeybindFrame:Hide()
+  W.env.ShowUIPanel = function(f) f:Show() end
+  W.env.SlashCmdList.WOWBOXER("keys")
+  H.ok(W.env.QuickKeybindFrame:IsShown(), "/wbx keys opens Quick Keybind mode")
+  H.ok(not UI.frame:IsShown(), "and closes the WoWBoxer window")
   H.eq(#errors(ns), 0, "no errors (binds): " .. table.concat(errors(ns), " | "))
 end
 
@@ -299,6 +304,61 @@ do
   local c1 = computes
   W.flush()
   H.ok(computes - c1 <= 1, "a burst of bar events refreshes once")
+end
+
+-- ------------------------------------------------------------------ talent read-back (Forever C_Traits, read-only)
+do
+  local W, ns = boot({ name = "Warlocker", class = "PRIEST", race = "Scourge", level = 20 })
+  local Core, UI, K, C = ns.Core, ns.UI, ns.Kit, ns.Compat
+  UI.Open("talents")
+  local _, m = Core.me()
+  local plan = K.plan(m)
+  local T = K.tree("priest")
+  local first = T.byKey[plan[1]]
+  -- the client: first plan talent at 2 ranks, one talent the plan does not take yet, one name not in the data
+  local offNode
+  for _, n in ipairs(T.nodes) do
+    local inPlan = false
+    for i = 1, 11 do if plan[i] == n.k then inPlan = true end end
+    if not inPlan and n.r == 1 then offNode = n; break end
+  end
+  local defs = { { name = first.n, rank = 2 }, { name = offNode.n, rank = 1 }, { name = "Brand New Talent", rank = 1 } }
+  local calls = {}
+  W.env.C_ClassTalents = { GetActiveConfigID = function() return 77 end }
+  W.env.C_Traits = {
+    GetConfigInfo = function(id) return id == 77 and { treeIDs = { 5 } } or nil end,
+    GetTreeNodes = function() return { 1, 2, 3, 4 } end,
+    GetNodeInfo = function(_, nodeID)
+      local d = defs[nodeID]
+      return { ranksPurchased = d and d.rank or 0, entryIDs = { nodeID * 10 } }
+    end,
+    GetEntryInfo = function(_, entryID) return { definitionID = entryID } end,
+    GetDefinitionInfo = function(defID) return { overrideName = defs[defID / 10] and defs[defID / 10].name } end,
+    PurchaseRank = function() calls.purchase = true end, CommitConfig = function() calls.commit = true end,
+  }
+  local ranks, src = C.talentRanks()
+  H.eq(src, "C_Traits", "Forever talents read through C_Traits")
+  H.eq(ranks[first.n], 2, "rank read")
+  local st = K.talentStatus(m, ranks, 20)
+  H.eq(st.spent, 3, "3 points matched to the data")
+  H.eq(st.available, 11, "11 points at level 20")
+  H.eq(#st.off, 1, "one talent off the plan")
+  H.eq(st.off[1] and st.off[1].name, offNode.n, "the right one")
+  H.eq(st.unknown[1], "Brand New Talent", "unknown names reported, not matched")
+  H.ok(st.next ~= nil, "next point from the plan")
+  UI.Refresh()
+  local txt = UI.panels.talents.readback._text or ""
+  H.ok(txt:find("3 of 11") and txt:find("Off the plan"), "talents tab shows the read-back: " .. txt)
+  H.ok(not calls.purchase and not calls.commit, "read-back never changes talents")
+  W.flush()
+  local d = Core.db.diag["Warlocker-Realm"]
+  H.ok(d and d.talents and d.talents.source == "C_Traits" and d.talents.spent == 3, "diagnose records the read-back")
+  H.eq(#errors(ns), 0, "no errors (talents): " .. table.concat(errors(ns), " | "))
+end
+do
+  local W, ns = boot({ name = "Era", class = "PRIEST", race = "Scourge", level = 20, toc = 11509, spellbookStyle = "classic" })
+  ns.UI.Open("talents")
+  H.ok((ns.UI.panels.talents.readback._text or ""):find("only compared on WoW: Forever") ~= nil, "Era: read-back explained, not faked")
 end
 
 os.exit(H.report("features") and 0 or 1)

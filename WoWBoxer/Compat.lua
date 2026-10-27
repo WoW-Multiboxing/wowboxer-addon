@@ -27,6 +27,8 @@ function C.isSecret(v)
   local ok, r = pcall(f, v)
   return ok and r or false
 end
+--- v, or nil when it is a secret value (never compare or store secrets).
+function C.safe(v) if C.isSecret(v) then return nil end return v end
 --- Unit name or nil (never a secret value).
 function C.unitName(unit)
   local ok, name = pcall(UnitName, unit)
@@ -164,6 +166,80 @@ function C.actionInfo(slot)
   end
   return info
 end
+--- Open Blizzard's key binding UI: Quick Keybind mode where it exists (Forever), else the Key Bindings panel.
+--- Returns the way it was opened, or nil. Out of combat only (the caller checks).
+function C.openKeyBindings()
+  if G.QuickKeybindFrame and G.ShowUIPanel then
+    local ok = pcall(G.ShowUIPanel, G.QuickKeybindFrame)
+    if ok then return "quick" end
+  end
+  if G.KeyBindingFrame_LoadUI then pcall(G.KeyBindingFrame_LoadUI) end
+  if G.KeyBindingFrame and G.ShowUIPanel then
+    local ok = pcall(G.ShowUIPanel, G.KeyBindingFrame)
+    if ok then return "panel" end
+  end
+  local St = G.Settings
+  if St and St.OpenToCategory and St.KEYBINDINGS_CATEGORY_ID then
+    local ok = pcall(St.OpenToCategory, St.KEYBINDINGS_CATEGORY_ID)
+    if ok then return "settings" end
+  end
+  return nil
+end
+
+-- ------------------------------------------------------------------ talents (read-only)
+local function spellName(id)
+  if not id then return nil end
+  local CS = G.C_Spell
+  local ok, n
+  if CS and CS.GetSpellName then ok, n = pcall(CS.GetSpellName, id) elseif G.GetSpellInfo then ok, n = pcall(G.GetSpellInfo, id) end
+  return ok and C.safe(n) or nil
+end
+--- Talent ranks the character has spent, by talent name: {[name] = rank}, source.
+--- Forever: the active C_Traits config (as Leatrix Plus / Questie read it). Other clients: GetTalentInfo.
+--- Never changes anything (no PurchaseRank / CommitConfig).
+function C.talentRanks()
+  local CT, TR = G.C_ClassTalents, G.C_Traits
+  if CT and CT.GetActiveConfigID and TR and TR.GetConfigInfo and TR.GetTreeNodes and TR.GetNodeInfo then
+    local ok, configID = pcall(CT.GetActiveConfigID)
+    configID = ok and C.safe(configID) or nil
+    local config = configID and select(2, pcall(TR.GetConfigInfo, configID))
+    if type(config) == "table" and type(config.treeIDs) == "table" then
+      local out = {}
+      for _, treeID in ipairs(config.treeIDs) do
+        local okN, nodes = pcall(TR.GetTreeNodes, C.safe(treeID))
+        for _, nodeID in ipairs(okN and type(nodes) == "table" and nodes or {}) do
+          local okI, node = pcall(TR.GetNodeInfo, configID, C.safe(nodeID))
+          if okI and type(node) == "table" then
+            local rank = C.safe(node.ranksPurchased)
+            if type(rank) ~= "number" or rank == 0 then rank = C.safe(node.activeRank) end
+            if type(rank) == "number" and rank > 0 and type(node.entryIDs) == "table" and TR.GetEntryInfo and TR.GetDefinitionInfo then
+              local entryID = node.activeEntry and node.activeEntry.entryID or node.entryIDs[1]
+              local okE, entry = pcall(TR.GetEntryInfo, configID, entryID)
+              local okD, def = pcall(TR.GetDefinitionInfo, okE and type(entry) == "table" and entry.definitionID or nil)
+              local name = okD and type(def) == "table" and (C.safe(def.overrideName) or spellName(C.safe(def.spellID))) or nil
+              if name then out[name] = (out[name] or 0) + rank end
+            end
+          end
+        end
+      end
+      return out, "C_Traits"
+    end
+  end
+  if G.GetNumTalentTabs and G.GetNumTalents and G.GetTalentInfo then
+    local out = {}
+    local okT, tabs = pcall(G.GetNumTalentTabs)
+    for t = 1, okT and tonumber(tabs) or 0 do
+      local okN, n = pcall(G.GetNumTalents, t)
+      for i = 1, okN and tonumber(n) or 0 do
+        local okI, name, _, _, _, rank = pcall(G.GetTalentInfo, t, i)
+        if okI and name and tonumber(rank) and rank > 0 then out[name] = rank end
+      end
+    end
+    return out, "GetTalentInfo"
+  end
+  return nil, "none"
+end
+
 -- Frames of the extra bars (same names in Classic Era and the modern UI). Bar 1 is always shown.
 local BAR_FRAME = { [61] = "MultiBarBottomLeft", [49] = "MultiBarBottomRight", [25] = "MultiBarRight", [37] = "MultiBarLeft" }
 --- false when the bar starting at `first` exists but is hidden (not enabled in the interface options / Edit Mode).

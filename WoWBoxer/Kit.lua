@@ -288,4 +288,38 @@ function K.helpers(m)
   return out
 end
 
+--- Talents spent in game (ranks by name, from Compat.talentRanks) compared with the plan at this level.
+--- {spent, available, matched, off = {{key, name, have, plan}}, next = {key, name, rank, level}|nil, unknown = {names}}
+function K.talentStatus(m, ranks, level)
+  local T = K.tree(m.cls)
+  local byName = {}
+  for _, n in ipairs(T.nodes) do byName[n.n:lower()] = n end
+  local counts, spent, unknown = {}, 0, {}
+  for name, r in pairs(ranks or {}) do
+    local n = type(name) == "string" and byName[name:lower()]
+    if n then
+      local c = math.min(tonumber(r) or 0, n.m)
+      counts[n.k] = c; spent = spent + c
+    else unknown[#unknown + 1] = tostring(name) end
+  end
+  table.sort(unknown)
+  local plan = K.plan(m)
+  local have = E.pointsAt(level, m.talented)
+  local want = E.countsOf(plan, have)
+  local off = {}
+  for k, c in pairs(counts) do
+    local w = want[k] or 0
+    if c > w then off[#off + 1] = { key = k, name = T.byKey[k].n, have = c, plan = w } end
+  end
+  table.sort(off, function(a, b) return a.name < b.name end)
+  local order = {}
+  for _, n in ipairs(T.nodes) do for _ = 1, counts[n.k] or 0 do order[#order + 1] = n.k end end
+  local nxt
+  if #plan > 0 then
+    local g = E.guideNext(T, plan, order)
+    if g and T.byKey[g.key] then nxt = { key = g.key, name = T.byKey[g.key].n, rank = g.rank, level = E.levelForPoint(g.index, m.talented) } end
+  end
+  return { spent = spent, available = have, off = off, next = nxt, unknown = unknown }
+end
+
 return K

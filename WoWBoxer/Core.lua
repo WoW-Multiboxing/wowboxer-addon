@@ -226,6 +226,13 @@ function Core.scanBars()
 end
 
 -- ------------------------------------------------------------------ key bindings
+function Core.openKeyBindings()
+  if C.inCombat() then chat("Not in combat."); return end
+  if ns.UI and ns.UI.frame then ns.UI.frame:Hide() end
+  local how = C.openKeyBindings()
+  Core.log("info", "open key bindings: " .. tostring(how))
+  if not how then chat("Could not open the key bindings here: use the game menu > Key Bindings.") end
+end
 function Core.bindKey(name, key)
   return Core.whenSafe("Bind " .. name, function()
     local ok, info = ns.Binds.bind(name, key)
@@ -360,6 +367,17 @@ function Core.selftest(quiet)
   r.party = {}
   for i = 1, 4 do r.party["party" .. i] = C.unitName("party" .. i) or "-" end
   r.focus = C.unitName("focus") or "-"
+  -- talent read-back probe (read-only): which API answered and how many talents matched the data
+  local okT, ranks, src = pcall(C.talentRanks)
+  if okT then
+    r.talents = { source = src, names = 0 }
+    for _ in pairs(ranks or {}) do r.talents.names = r.talents.names + 1 end
+    if ranks and ctx then
+      local st = K.talentStatus(ctx.member, ranks, ctx.level)
+      r.talents.spent, r.talents.off, r.talents.unknown = st.spent, #st.off, #st.unknown
+      r.talents.unknownNames = { unpack(st.unknown, 1, math.min(5, #st.unknown)) }
+    end
+  end
   db.diag[Core.charKey or "?"] = r
   Core.log("info", "selftest written to WoWBoxerDB.diag[" .. tostring(Core.charKey) .. "]")
   if not quiet then chat("Selftest done. /reload (or log out) to save it to WTF\\...\\SavedVariables\\WoWBoxer.lua.") end
@@ -372,6 +390,7 @@ local HELP = {
   "/wbx sync – create/update your WBX macros and place new ones on your bars",
   "/wbx minimap – show or hide the minimap button",
   "/wbx bars – list where each key is and which key presses it",
+  "/wbx keys – open the game's key bindings (Quick Keybind mode where available)",
   "/wbx scale 0.9 – window size (0.7–1.3); /wbx reset – window back to the middle",
   "/wbx show – list your keys and what would change",
   "/wbx cvars | /wbx cvars restore – apply recommended settings / put the old ones back",
@@ -385,6 +404,7 @@ function Core.slash(msg)
   if cmd == "" then if ns.UI and ns.UI.Toggle then ns.UI.Toggle() else chat("window not available") end
   elseif cmd == "help" or cmd == "?" then for _, l in ipairs(HELP) do chat(l) end
   elseif cmd == "sync" then Core.sync({ replace = rest == "replace" })
+  elseif cmd == "keys" then Core.openKeyBindings()
   elseif cmd == "reset" then
     Core.db.settings.window, Core.db.settings.scale = nil, nil
     if ns.UI and ns.UI.ApplyWindowSettings then ns.UI.ApplyWindowSettings() end
