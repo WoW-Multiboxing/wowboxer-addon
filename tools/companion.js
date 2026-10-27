@@ -10,7 +10,7 @@ const VENDOR = path.join(__dirname, '..', 'vendor', 'companion');
 function load() {
   const D = JSON.parse(fs.readFileSync(path.join(VENDOR, 'app_data.json'), 'utf8'));
   const E = require(path.join(VENDOR, 'engine.js'));
-  const appSrc = fs.readFileSync(path.join(VENDOR, 'app.js'), 'utf8');
+  const appSrc = fs.readFileSync(path.join(VENDOR, 'app.js'), 'utf8').replace(/\r\n/g, '\n'); // CRLF-safe (Windows checkouts)
 
   // --- extract top-level declarations from app.js by name (function NAME(...) {...} or const NAME = ...;)
   function grab(name) {
