@@ -385,6 +385,16 @@ function Mock.new(H, opts)
     return unpack(out)
   end
   function methods:GetNumLetters() return #(self._text or "") end
+  -- animations: Play() queues the group, W.finishAnims() ends them all (fires OnFinished)
+  W.playing = {}
+  function methods:CreateAnimationGroup() return newFrame("AnimationGroup", nil, self) end
+  function methods:CreateAnimation(kind) local a = newFrame("Animation", nil, self); a._animKind = kind; return a end
+  function methods:SetOffset(x, y) self._offset = { x, y } end
+  function methods:Play() if self._kind == "AnimationGroup" then W.playing[#W.playing + 1] = self end end
+  function W.finishAnims()
+    local list = W.playing; W.playing = {}
+    for _, ag in ipairs(list) do if ag._scripts.OnFinished then ag._scripts.OnFinished(ag) end end
+  end
   -- unknown API methods (CamelCase) are no-ops; unknown fields (_x, lowercase) are nil, like on a real frame
   FrameMT.__index = function(t, k)
     if methods[k] then return methods[k] end

@@ -73,7 +73,7 @@ end
 
 --- Place the macros. replace=true also replaces slots that hold other things. Out of combat only.
 function B.apply(plan, cdb, replace)
-  local res = { placed = 0, skipped = 0, failed = {} }
+  local res = { placed = 0, skipped = 0, failed = {}, list = {} }
   if C.inCombat() then res.failed[1] = { name = "*", err = "in combat" }; return res end
   if C.cursorBusy() then res.failed[1] = { name = "*", err = "your cursor is holding something; drop it first" }; return res end
   for _, it in ipairs(plan.items) do
@@ -81,7 +81,7 @@ function B.apply(plan, cdb, replace)
       local idx = M.findIndex(it.name)
       if idx then
         local ok, err = pcall(function() PickupMacro(idx); PlaceAction(it.slot); ClearCursor() end)
-        if ok then res.placed = res.placed + 1; cdb.slots[it.name] = it.slot
+        if ok then res.placed = res.placed + 1; cdb.slots[it.name] = it.slot; res.list[#res.list + 1] = it.name
         else res.failed[#res.failed + 1] = { name = it.name, err = tostring(err) }; pcall(ClearCursor) end
       end
     elseif it.status == "placed" then cdb.slots[it.name] = it.slot

@@ -58,6 +58,13 @@ local function iconFor(d, it)
 end
 Book.iconFor = iconFor
 
+--- The visible book button of key `name` (where its flight starts), or nil.
+function Book.cellFrame(name)
+  local p = UI.panels and UI.panels[UI.current]
+  if not (p and p.cells and p:IsVisible()) then return nil end
+  for _, b in ipairs(p.cells) do if b:IsShown() and b.cell and b.cell.name == name then return b end end
+end
+
 --- Cells for a mode: {kind="key"|"spell"|"new", name, label, sub, color, icon, glow, item, d, spell}
 function Book.cells(mode, ctx)
   local out = {}

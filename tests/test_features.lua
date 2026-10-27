@@ -583,4 +583,62 @@ do
   H.ok(math.abs(placed[2]) < 0.01 and math.abs(placed[1] - 72) < 0.01, "square minimap: right edge at 0 degrees")
 end
 
+
+-- ------------------------------------------------------------------ fly to the bar (purely visual)
+do
+  local W, ns = boot({ name = "Warlocker", class = "PRIEST", race = "Scourge", level = 20 })
+  local Core, UI, Fly = ns.Core, ns.UI, ns.Fly
+  -- Blizzard's action buttons along the bottom of the screen
+  for i = 1, 12 do
+    local b = W.newFrame("Button", "ActionButton" .. i, W.env.UIParent)
+    b:SetSize(36, 36); b:SetPoint("BOTTOMLEFT", W.env.UIParent, "BOTTOMLEFT", 300 + i * 40, 20)
+    local m = W.newFrame("Button", "MultiBarBottomLeftButton" .. i, W.env.UIParent)
+    m:SetSize(36, 36); m:SetPoint("BOTTOMLEFT", W.env.UIParent, "BOTTOMLEFT", 300 + i * 40, 60)
+  end
+  H.eq(Fly.buttonForSlot(3), W.env.ActionButton3, "slot 3 -> ActionButton3")
+  H.eq(Fly.buttonForSlot(63), W.env.MultiBarBottomLeftButton3, "slot 63 -> Bottom Left button 3")
+  H.eq(Fly.buttonForSlot(27), nil, "no button for a bar that does not exist")
+  W.env.GetBonusBarOffset = function() return 1 end
+  H.eq(Fly.buttonForSlot(3), nil, "bar 1 on a stance page does not show slot 3")
+  H.eq(Fly.buttonForSlot(75), W.env.ActionButton3, "stance page 1: slot 75 -> ActionButton3")
+  W.env.GetBonusBarOffset = function() return 0 end
+  UI.Open("keys")
+  local writes = W.calls.PlaceAction or 0
+  findButton(W, "Place all"):Click()
+  local placed = (W.calls.PlaceAction or 0) - writes
+  W.flush() -- staggered starts
+  H.ok(placed > 0, "keys placed")
+  H.eq(Fly.flights, placed, "every placed key flies to its button")
+  local ag = W.playing[1]
+  local move
+  for _, a in ipairs(ag and ag._children or {}) do if a._animKind == "Translation" then move = a end end
+  H.ok(move and move._offset and move._offset[2] < 0, "the icon flies down to the bar")
+  local before = W.calls.PlaceAction
+  W.finishAnims()
+  H.eq(Fly.flashes, placed, "each button flashes when its icon arrives")
+  W.finishAnims()
+  H.eq(W.calls.PlaceAction, before, "the animation writes nothing")
+  -- level-up: updated keys fly to the buttons they are already on
+  W.player.level = 40
+  for _, sp in ipairs(ns.Data.spells.priest) do if sp.level <= 40 and sp.gate ~= "talent" then W.known[sp.name] = true end end
+  W.fire("PLAYER_LEVEL_UP", 40); W.fire("SPELLS_CHANGED"); W.flush()
+  local n0, changes = Fly.flights, Core.compute().macros.changes
+  H.ok(changes > 0, "keys changed at 40")
+  Core.sync({}); W.flush()
+  H.ok(Fly.flights > n0, "updated keys fly too")
+  -- bar addon: Blizzard's buttons hidden -> no flight, still placed
+  for i = 1, 12 do W.env["ActionButton" .. i]:Hide() end
+  Core.cdb.slots = {}
+  for slot = 1, 12 do W.actions[slot] = nil end
+  local n1 = Fly.flights
+  Core.sync({}); W.flush()
+  H.eq(Fly.flights, n1, "no visible button, no flight")
+  H.ok(W.slotMacroName(1) ~= nil, "keys are placed anyway")
+  -- off in the settings
+  for i = 1, 12 do W.env["ActionButton" .. i]:Show() end
+  Core.db.settings.animations = false
+  H.eq(Fly.play({ { slot = 1, icon = "Spell_Holy_Heal" } }), 0, "animations off")
+  H.eq(#errors(ns), 0, "no errors (fly): " .. table.concat(errors(ns), " | "))
+end
+
 os.exit(H.report("features") and 0 or 1)

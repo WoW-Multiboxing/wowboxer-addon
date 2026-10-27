@@ -187,7 +187,7 @@ end
 
 --- Apply create/update items. Must be called out of combat. Returns {done, failed={{name, err}}}
 function M.apply(plan)
-  local res = { created = 0, updated = 0, failed = {} }
+  local res = { created = 0, updated = 0, failed = {}, changed = {} }
   if C.inCombat() then res.failed[1] = { name = "*", err = "in combat" }; return res end
   for _, it in ipairs(plan.items) do
     if it.status == "create" or it.status == "update" then
@@ -198,17 +198,17 @@ function M.apply(plan)
         if M.findIndex(it.name) then -- created meanwhile: edit instead
           local idx = M.findIndex(it.name)
           local okc, err = pcall(EditMacro, idx, it.name, it.icon, it.body)
-          if okc then res.updated = res.updated + 1 else res.failed[#res.failed + 1] = { name = it.name, err = tostring(err) } end
+          if okc then res.updated = res.updated + 1; res.changed[#res.changed + 1] = it.name else res.failed[#res.failed + 1] = { name = it.name, err = tostring(err) } end
         else
           local okc, err = pcall(CreateMacro, it.name, it.icon, it.body, true)
-          if okc and err then res.created = res.created + 1 else res.failed[#res.failed + 1] = { name = it.name, err = tostring(err or "no free macro slot") } end
+          if okc and err then res.created = res.created + 1; res.changed[#res.changed + 1] = it.name else res.failed[#res.failed + 1] = { name = it.name, err = tostring(err or "no free macro slot") } end
         end
       else
         local idx = M.findIndex(it.name)
         if not idx then res.failed[#res.failed + 1] = { name = it.name, err = "macro disappeared" }
         else
           local okc, err = pcall(EditMacro, idx, it.name, it.icon, it.body)
-          if okc then res.updated = res.updated + 1 else res.failed[#res.failed + 1] = { name = it.name, err = tostring(err) } end
+          if okc then res.updated = res.updated + 1; res.changed[#res.changed + 1] = it.name else res.failed[#res.failed + 1] = { name = it.name, err = tostring(err) } end
         end
       end
     end

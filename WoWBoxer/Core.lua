@@ -126,7 +126,27 @@ function Core.sync(opts)
     Core.lastOffer = nil
     if ns.Minimap and ns.Minimap.SetAttention then ns.Minimap.SetAttention(false) end
     Core.changed()
+    Core.flyKeys(ctx, mres.changed, bres.list)
   end)
+end
+
+--- The keys that were just created, updated or placed fly to their action buttons (purely visual, Fly.lua).
+function Core.flyKeys(ctx, ...)
+  if not (ns.Fly and ns.Fly.enabled()) then return 0 end
+  local seen, list = {}, {}
+  local byName = {}
+  for _, d in ipairs(ctx.desired) do byName[d.name] = d end
+  for _, names in ipairs({ ... }) do
+    for _, name in ipairs(names or {}) do
+      local slot = Core.cdb.slots[name]
+      if not seen[name] and slot then
+        seen[name] = true
+        local d = byName[name]
+        list[#list + 1] = { slot = slot, icon = ns.Book and ns.Book.iconFor(d, d) or nil, from = ns.Book and ns.Book.cellFrame(name) }
+      end
+    end
+  end
+  return ns.Fly.play(list)
 end
 
 -- ------------------------------------------------------------------ bridge for WoWBoxer Window Layouts (WS-C)
@@ -396,6 +416,9 @@ function Core.selftest(quiet)
       r.talents.unknownNames = { unpack(st.unknown, 1, math.min(5, #st.unknown)) }
     end
   end
+  -- fly-to-bar probe: which action buttons exist and are visible (bar addons hide Blizzard's), Blizzard's own tracker
+  r.fly = { iconIntro = _G.IconIntroTracker ~= nil, buttons = {} }
+  if ns.Fly then for _, slot in ipairs({ 1, 13, 25, 37, 49, 61, 145 }) do r.fly.buttons[tostring(slot)] = ns.Fly.buttonForSlot(slot) ~= nil end end
   db.diag[Core.charKey or "?"] = r
   Core.log("info", "selftest written to WoWBoxerDB.diag[" .. tostring(Core.charKey) .. "]")
   if not quiet then chat("Selftest done. /reload (or log out) to save it to WTF\\...\\SavedVariables\\WoWBoxer.lua.") end
