@@ -17,7 +17,7 @@ function UI.Build()
   local f = W.frame("Frame", UIParent, _G.BackdropTemplateMixin and "BackdropTemplate" or nil, "WoWBoxerMainFrame")
   UI.frame = f
   f:SetSize(UI.WIDTH, UI.HEIGHT)
-  f:SetPoint("CENTER")
+  UI.ApplyWindowSettings()
   f:SetFrameStrata("HIGH")
   f:SetToplevel(true)
   f:SetClampedToScreen(true)
@@ -25,7 +25,11 @@ function UI.Build()
   f:SetMovable(true)
   f:RegisterForDrag("LeftButton")
   f:SetScript("OnDragStart", function(self) self:StartMoving() end)
-  f:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
+  f:SetScript("OnDragStop", function(self)
+    self:StopMovingOrSizing()
+    local point, _, rel, x, y = self:GetPoint()
+    if point and ns.Core.db then ns.Core.db.settings.window = { point, rel or point, math.floor((x or 0) + 0.5), math.floor((y or 0) + 0.5) } end
+  end)
   if f.SetBackdrop then
     f:SetBackdrop({ bgFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
       tile = true, tileSize = 32, edgeSize = 24, insets = { left = 6, right = 6, top = 6, bottom = 6 } })
@@ -46,6 +50,9 @@ function UI.Build()
   close:SetPoint("TOPRIGHT", -6, -6)
   close:SetScript("OnClick", function() f:Hide() end)
 
+  UI.errText = W.text(f, "GameFontHighlightSmall", nil, W.RED, "RIGHT")
+  UI.errText:SetPoint("TOPRIGHT", -18, -46)
+  UI.errText:SetWidth(130)
   -- tabs
   UI.tabButtons, UI.panels = {}, {}
   local x = 16
@@ -94,9 +101,25 @@ function UI.Refresh()
   for _, tab in ipairs(UI.tabs) do
     if tab.key == UI.current and tab.refresh then
       local ok, err = pcall(tab.refresh, UI.panels[tab.key], ctx)
-      if not ok then Core.log("error", "UI " .. tab.key .. ": " .. tostring(err)) end
+      if not ok then
+        Core.log("error", "UI " .. tab.key .. ": " .. tostring(err))
+        if Core.db.settings.debug then Core.print("|cffff6060UI error:|r " .. tostring(err)) end
+      end
+      UI.errText:SetText(ok and "" or "Something went wrong here. /wbx log")
     end
   end
+end
+
+--- Position (saved when the window is dragged) and scale (/wbx scale) from WoWBoxerDB.settings.
+function UI.ApplyWindowSettings()
+  local f = UI.frame
+  if not f then return end
+  local st = ns.Core.db and ns.Core.db.settings or {}
+  f:ClearAllPoints()
+  local w = st.window
+  if type(w) == "table" and type(w[1]) == "string" then f:SetPoint(w[1], UIParent, w[2], tonumber(w[3]) or 0, tonumber(w[4]) or 0)
+  else f:SetPoint("CENTER") end
+  f:SetScale(tonumber(st.scale) or 1)
 end
 
 function UI.Toggle()

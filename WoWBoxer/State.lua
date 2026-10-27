@@ -154,8 +154,9 @@ function S.initDB(db, cdb)
   db.log = type(db.log) == "table" and db.log or {}
   db.diag = type(db.diag) == "table" and db.diag or {}
   cdb.v = 1
-  cdb.primaryBar = tonumber(cdb.primaryBar) or 1
-  cdb.secondaryBar = tonumber(cdb.secondaryBar) or 61
+  -- nil until chosen: Core picks a default per class at login (stance/form classes avoid bar 1)
+  cdb.primaryBar = tonumber(cdb.primaryBar)
+  cdb.secondaryBar = tonumber(cdb.secondaryBar)
   cdb.slots = type(cdb.slots) == "table" and cdb.slots or {}
   cdb.skip = type(cdb.skip) == "table" and cdb.skip or {}
   cdb.extras = type(cdb.extras) == "table" and cdb.extras or {}

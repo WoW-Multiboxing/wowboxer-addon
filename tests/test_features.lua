@@ -191,4 +191,58 @@ do
   H.eq(#errors(ns), 0, "no errors (squad): " .. table.concat(errors(ns), " | "))
 end
 
+-- ------------------------------------------------------------------ bars for stance classes, warnings, plays as
+do
+  local W, ns = boot({ name = "Warry", class = "WARRIOR", race = "Orc", level = 12 })
+  local Core, UI = ns.Core, ns.UI
+  H.eq(Core.cdb.primaryBar, 61, "warrior keys start on Bottom Left (bar 1 is the stance page)")
+  H.eq(Core.cdb.secondaryBar, 49, "other keys on Bottom Right")
+  W.env.MultiBarBottomLeft = W.newFrame("Frame", "MultiBarBottomLeft", W.env.UIParent)
+  W.env.MultiBarBottomLeft:Hide()
+  UI.Open("keys")
+  H.ok((UI.panels.keys.warn._text or ""):find("hidden") ~= nil, "hidden bar explained: " .. tostring(UI.panels.keys.warn._text))
+  W.env.MultiBarBottomLeft:Show()
+  Core.cdb.primaryBar = 1
+  W.env.GetBonusBarOffset = function() return 1 end
+  UI.Refresh()
+  H.ok((UI.panels.keys.warn._text or ""):find("stance") ~= nil, "stance page on bar 1 explained")
+  W.env.GetBonusBarOffset = function() return 0 end
+  UI.Refresh()
+  H.eq(UI.panels.keys.warn._text, "", "no warning when all is fine")
+  -- plays as: a solo character becomes a follower via party2
+  Core.setPlaysAs("party2")
+  local s, m = Core.me()
+  H.ok(not m.leader and m.unit == "party2", "follower via party2")
+  H.eq(#s.members, 2, "a placeholder leader was added")
+  H.ok(s.members[1].leader and s.members[1].name == "Leader", "placeholder leads")
+  local ctx = Core.compute()
+  local uses = false
+  for _, d in ipairs(ctx.desired) do if d.body:find("party2target", 1, true) then uses = true end end
+  H.ok(uses, "keys now assist party2's target")
+  Core.setPlaysAs("leader")
+  H.ok(select(2, Core.me()).leader, "back to leader")
+  H.eq(#s.members, 2, "no second placeholder")
+  -- checklist fix: leader is party3 here
+  Core.setPlaysAs("party1")
+  s.members[1].name = "Dorin"
+  W.party = { party3 = "Dorin" }
+  UI.Select("setup")
+  local fix = findButton(W, "Use party3")
+  H.ok(fix ~= nil, "checklist offers Use party3")
+  if fix then fix:Click() end
+  H.eq(select(2, Core.me()).unit, "party3", "fix switched the unit")
+  -- window position + scale + slash commands
+  UI.frame.GetPoint = function() return "TOPLEFT", nil, "TOPLEFT", 120.4, -80.6 end
+  UI.frame._scripts.OnDragStop(UI.frame)
+  H.eq(Core.db.settings.window[3], 120, "window x saved")
+  H.eq(Core.db.settings.window[4], -81, "window y saved")
+  W.env.SlashCmdList.WOWBOXER("scale 2")
+  H.eq(Core.db.settings.scale, 1.3, "scale clamped")
+  W.env.SlashCmdList.WOWBOXER("reset")
+  H.eq(Core.db.settings.window, nil, "reset clears the position")
+  W.env.SlashCmdList.WOWBOXER("bars")
+  H.ok(W.chatHas("WBX K1"), "/wbx bars lists the keys")
+  H.eq(#errors(ns), 0, "no errors (warrior): " .. table.concat(errors(ns), " | "))
+end
+
 os.exit(H.report("features") and 0 or 1)

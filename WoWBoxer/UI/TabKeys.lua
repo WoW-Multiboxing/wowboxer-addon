@@ -112,16 +112,32 @@ function tab.build(p)
     end })
   p.role:SetPoint("LEFT", rl, "RIGHT", 6, 0)
   W.tooltip(p.role, function(GT) GT:AddLine("Role", 1, 0.82, 0); GT:AddLine("Picks the recommended keys and talent guide for this character.", 1, 1, 1, true) end)
+  local pl = W.text(m, "GameFontNormal", nil, W.GOLD)
+  pl:SetPoint("LEFT", p.role, "RIGHT", 14, 0)
+  pl:SetText("Plays as")
+  p.playsAs = W.cycle(m, { width = 170,
+    values = function()
+      local v = { { "leader", "Leader" } }
+      for _, u in ipairs(ns.Engine.UNITS) do v[#v + 1] = { u, "Follower via " .. u } end
+      return v
+    end,
+    get = function() local _, mem = Core().me(); return mem and (mem.leader and "leader" or mem.unit) end,
+    set = function(v) Core().setPlaysAs(v) end })
+  p.playsAs:SetPoint("LEFT", pl, "RIGHT", 6, 0)
+  W.tooltip(p.playsAs, function(GT)
+    GT:AddLine("Plays as", 1, 0.82, 0)
+    GT:AddLine("Leader: your keys use your own target. Follower: your keys use the leader's target through party1-4 or focus. One key press is still one action on this character.", 1, 1, 1, true)
+  end)
 
   p.tierButtons = {}
   local prevBtn
   for i = #TIERS, 1, -1 do
     local t = TIERS[i]
-    local b = W.button(m, t[2], 66, 20, function()
+    local b = W.button(m, t[2], 60, 20, function()
       local _, mem = Core().me()
       if mem then mem.seq = t[1]; Core().log("info", "sequence tier " .. t[1]); Core().changed() end
     end)
-    if prevBtn then b:SetPoint("RIGHT", prevBtn, "LEFT", -2, 0) else b:SetPoint("TOPRIGHT", m, "TOPRIGHT", 0, -36) end
+    if prevBtn then b:SetPoint("RIGHT", prevBtn, "LEFT", -2, 0) else b:SetPoint("TOPRIGHT", m, "TOPRIGHT", 0, -62) end
     prevBtn = b
     p.tierButtons[t[1]] = b
   end
@@ -129,16 +145,15 @@ function tab.build(p)
   p.tierLabel:SetPoint("RIGHT", prevBtn, "LEFT", -6, 0)
   p.tierLabel:SetText("Sequence keys:")
   p.tierNone = W.text(m, "GameFontHighlightSmall", nil, W.MUTED, "RIGHT")
-  p.tierNone:SetPoint("TOPRIGHT", m, "TOPRIGHT", 0, -40)
+  p.tierNone:SetPoint("TOPRIGHT", m, "TOPRIGHT", 0, -66)
 
   -- list mode switch
   p.modeKeys = W.button(m, "My keys", 90, 20, function() p.mode = "keys"; UI.Refresh() end)
   p.modeKeys:SetPoint("TOPLEFT", 0, -62)
   p.modeSpells = W.button(m, "All spells", 90, 20, function() p.mode = "spells"; UI.Refresh() end)
   p.modeSpells:SetPoint("LEFT", p.modeKeys, "RIGHT", 4, 0)
-  p.dragHint = W.text(m, "GameFontHighlightSmall", nil, W.MUTED)
-  p.dragHint:SetPoint("LEFT", p.modeSpells, "RIGHT", 8, 0)
-  p.dragHint:SetText("Drag a row onto any action button")
+  W.tooltip(p.modeSpells, function(GT) GT:AddLine("All spells", 1, 0.82, 0); GT:AddLine("Every spell you have learned. Drag one onto an action button to make it a WBX key.", 1, 1, 1, true) end)
+  W.tooltip(p.modeKeys, function(GT) GT:AddLine("My keys", 1, 0.82, 0); GT:AddLine("Your recommended WBX keys. Drag a row onto any action button, or use Create & place keys.", 1, 1, 1, true) end)
 
   -- list
   local sf, content = W.scroll(m, LIST_W, LIST_H)
@@ -232,6 +247,10 @@ function tab.build(p)
   p.trainer:SetPoint("TOPLEFT", sf, "BOTTOMLEFT", 0, -4)
   p.trainer:SetWidth(LIST_W)
   if p.trainer.SetWordWrap then p.trainer:SetWordWrap(false) end
+  p.warn = W.text(m, "GameFontHighlightSmall", nil, W.ORANGE)
+  p.warn:SetPoint("TOPLEFT", p.trainer, "BOTTOMLEFT", 0, -3)
+  p.warn:SetWidth(628)
+  if p.warn.SetWordWrap then p.warn:SetWordWrap(false) end
 
   -- footer
   local Bars = ns.Bars
@@ -348,9 +367,14 @@ function tab.refresh(p, ctx)
   local mem = ctx.member
   if ctx.macros.changes > 0 then
     p.banner:Show()
-    p.bannerText:SetText((cdb.lastSync and ("|cffb7f07aLevel " .. ctx.level .. ":|r ") or "") .. ctx.macros.changes .. " key(s) to create or update.")
+    local n = ctx.macros.changes
+    local text
+    if not cdb.lastSync then text = "Create your " .. n .. " WBX key" .. (n > 1 and "s" or "") .. ": click Create & place keys, or drag them onto your bars."
+    elseif (cdb.lastSync.level or 0) < ctx.level then text = "|cffb7f07aLevel " .. ctx.level .. ":|r " .. n .. " key(s) changed. Same buttons, new macros."
+    else text = n .. " key(s) to create or update." end
+    p.bannerText:SetText(text)
   else p.banner:Hide() end
-  p.role.Refresh()
+  p.role.Refresh(); p.playsAs.Refresh()
   local seqOk = ns.Engine.seqSupported(mem.cls)
   for k, b in pairs(p.tierButtons) do
     b:SetShown(seqOk)
@@ -409,6 +433,17 @@ function tab.refresh(p, ctx)
     end)
   else p.trainer:SetText("") end
 
+  local warn
+  local C, B = ns.Compat, ns.Bars
+  for _, first in ipairs({ cdb.primaryBar or 1, cdb.secondaryBar or 61 }) do
+    if not warn and not C.barVisible(first) then
+      warn = B.barLabel(first) .. " is hidden: turn it on in " .. (C.game() == "forever" and "Edit Mode" or "Interface > Action Bars") .. ", or pick another bar below."
+    end
+  end
+  if not warn and (cdb.primaryBar or 1) == 1 and C.bonusBarOffset() > 0 then
+    warn = "Bar 1 is showing your stance/form page right now, so keys on Bar 1 are hidden there. Pick Bottom Left Bar below."
+  end
+  p.warn:SetText(warn or "")
   p.bar1.Refresh(); p.bar2.Refresh()
   p.replace:SetChecked(cdb.replace and true or false)
   local _, charMax = ns.Compat.macroLimits()

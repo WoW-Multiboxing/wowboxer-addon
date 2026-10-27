@@ -47,7 +47,7 @@ for _, scenario in ipairs({
   end
   for _, t in ipairs(UI.tabs) do UI.Select(t.key); H.ok(UI.panels[t.key]:IsShown(), tag .. "tab " .. t.key .. " shows") end
   UI.Select("keys")
-  H.ok(anyText(W, "to create or update") ~= nil, tag .. "banner shows pending keys")
+  H.ok(anyText(W, "Create your %d+ WBX key") ~= nil, tag .. "banner invites to create the keys")
   local apply = findButton(W, "Create & place keys")
   H.ok(apply ~= nil, tag .. "apply button")
   apply:Click()

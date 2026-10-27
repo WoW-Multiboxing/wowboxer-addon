@@ -21,6 +21,8 @@ function tab.build(p)
     r.hint = W.text(r, "GameFontHighlightSmall", nil, W.MUTED)
     r.hint:SetPoint("TOPLEFT", r.text, "BOTTOMLEFT", 0, -1)
     r.hint:SetWidth(262)
+    r.fix = W.button(r, "Fix", 80, 18, function() if r.fixFn then r.fixFn() end end)
+    r.fix:SetPoint("TOPRIGHT", 0, -1)
     return r
   end)
 
@@ -34,9 +36,11 @@ function tab.build(p)
 
   p.cvTitle = W.text(p, "GameFontNormal", nil, W.GOLD)
   p.cvTitle:SetPoint("TOPLEFT", 312, -4)
-  local hdr = W.text(p, "GameFontHighlightSmall", nil, W.MUTED)
-  hdr:SetPoint("TOPLEFT", 312, -24)
-  hdr:SetText("Setting                                   Now     Rec.")
+  for _, col in ipairs({ { "Setting", 0 }, { "Now", 166 }, { "Tip", 206 } }) do
+    local hdr = W.text(p, "GameFontHighlightSmall", nil, W.MUTED)
+    hdr:SetPoint("TOPLEFT", 312 + col[2], -24)
+    hdr:SetText(col[1])
+  end
   p.cvPool = W.pool(p, function(parent, i)
     local r = CreateFrame("Frame", nil, parent)
     r:SetSize(294, 20)
@@ -73,6 +77,8 @@ function tab.refresh(p)
     r.mark:SetTextColor(col[1], col[2], col[3])
     r.text:SetText(it.text)
     r.hint:SetText(it.hint or "")
+    r.fixFn = it.fix and it.fix.fn or false
+    if it.fix then r.fix:SetText(it.fix.label); r.fix:Show(); r.text:SetWidth(178) else r.fix:Hide(); r.text:SetWidth(262) end
     y = y + 38
   end
   p.checks:SetHeight(math.max(y, 10))

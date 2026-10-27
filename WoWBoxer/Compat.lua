@@ -155,6 +155,26 @@ function C.actionInfo(slot)
   end
   return info
 end
+-- Frames of the extra bars (same names in Classic Era and the modern UI). Bar 1 is always shown.
+local BAR_FRAME = { [61] = "MultiBarBottomLeft", [49] = "MultiBarBottomRight", [25] = "MultiBarRight", [37] = "MultiBarLeft" }
+--- false when the bar starting at `first` exists but is hidden (not enabled in the interface options / Edit Mode).
+function C.barVisible(first)
+  local name = BAR_FRAME[first]
+  local f = name and G[name]
+  if not f or not f.IsShown then return true end
+  local ok, shown = pcall(f.IsShown, f)
+  return not ok or shown == true
+end
+--- > 0 when action bar 1 shows a stance/form/stealth page instead of slots 1-12 (Warrior, Druid, Rogue ...).
+function C.bonusBarOffset()
+  local f = (G.C_ActionBar and G.C_ActionBar.GetBonusBarOffset) or G.GetBonusBarOffset
+  if not f then return 0 end
+  local ok, v = pcall(f)
+  return ok and tonumber(v) or 0
+end
+--- Classes whose bar 1 changes with stance/form/stealth: their keys default to the Bottom Left bar.
+C.PAGED_CLASSES = { warrior = true, druid = true, rogue = true }
+
 function C.cursorBusy() return G.GetCursorInfo and G.GetCursorInfo() ~= nil end
 
 -- ------------------------------------------------------------------ CVars

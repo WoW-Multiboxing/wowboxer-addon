@@ -17,16 +17,16 @@ minimap button, much more drag & drop of macros onto the action bars.
       the `UIPanelScrollFrameTemplate` scrollbar sits outside the scroll frame's width and can overlap the preview
       panel on the Keys tab (list 360 px wide, preview starts at x 368); fixed pixel widths everywhere (window 660×480);
       Setup's header uses spaces for column alignment.
-- [ ] Errors inside a tab refresh are only logged (`UI.Refresh` pcall). Print them in chat when `/wbx debug` is on,
+- [x] (NEXT: red note in the window + chat with /wbx debug) Errors inside a tab refresh are only logged (`UI.Refresh` pcall). Print them in chat when `/wbx debug` is on,
       and surface a one-line "something went wrong, see /wbx log" in the window.
-- [ ] Keys banner wording: only say "Level N:" after a real level change; first time say "Create your N keys".
-- [ ] Bar 1 for **stance/form classes** (Warrior always; Druid in forms; Rogue in stealth; Priest in Shadowform):
+- [x] (NEXT) Keys banner wording: only say "Level N:" after a real level change; first time say "Create your N keys".
+- [x] (NEXT: Warrior/Druid/Rogue default to Bottom Left + Bottom Right; warning when bar 1 shows a bonus page (`C_ActionBar.GetBonusBarOffset` or `GetBonusBarOffset`)) Bar 1 for **stance/form classes** (Warrior always; Druid in forms; Rogue in stealth; Priest in Shadowform):
       bar 1 shows slots 73–120, so keys placed in 1–12 are invisible. Detect the bonus page (probe the 12.x
       replacement for the deprecated `GetBonusBarOffset`) or default these classes to Bottom Left, and explain it.
-- [ ] Before placing on a bar, check it is visible (Edit Mode / interface options); if not, say which bar to enable.
-- [ ] Macro slots: Classic Era has **30** per character (seen in the diagnose) – make sure the UI reads
+- [x] (NEXT: warning names the hidden bar and where to enable it) Before placing on a bar, check it is visible (Edit Mode / interface options); if not, say which bar to enable.
+- [x] (NEXT: verified – `Compat.macroLimits` reads `MAX_CHARACTER_MACROS`) Macro slots: Classic Era has **30** per character (seen in the diagnose) – make sure the UI reads
       `MAX_CHARACTER_MACROS`, not a constant.
-- [ ] Remember window position; ESC closes (already via UISpecialFrames – verify); scale option (0.8–1.2).
+- [x] (NEXT: position saved on drag, `/wbx scale`, `/wbx reset`; ESC to verify in game) Remember window position; ESC closes (already via UISpecialFrames – verify); scale option (0.8–1.2).
 
 ## P1 – minimap, drag & drop, keybindings
 - [x] (66c60fc, own button, no LibDBIcon) **Minimap button** (recommended: embed LibDBIcon-1.0 + LibStub + CallbackHandler + LibDataBroker, BSD-style,
@@ -41,13 +41,13 @@ minimap button, much more drag & drop of macros onto the action bars.
 - [x] (66c60fc: Binds.lua, bind/unbind with confirm) Show the **key binding** of every placed key (`GetBindingKey` on the button's binding command; bonus pages use
       `ACTIONBUTTONn`). Button "Set keys…" opens Blizzard's Quick Keybind mode (Forever) / Key Bindings (Era).
       Optional later: bind directly with `SetBindingMacro` + `SaveBindings(2)` after a click, never overwriting silently.
-- [ ] `/wbx` sub-commands: `minimap`, `reset` (window position), `bars` (print where each key is).
+- [x] (NEXT: minimap, reset, scale, bars) `/wbx` sub-commands: `minimap`, `reset` (window position), `bars` (print where each key is).
 
 ## P2 – squad basics
 - [ ] (partly 66c60fc: Edit + no overlaps – verify in game) Squad tab works for: add, rename, change class/race/role, remove, make leader, follower unit, "this is me".
       Editing a member = small inline editor (name box + cycles) instead of the current row of cycles.
-- [ ] Import on a second client: after "Import squad", jump to Keys with "You are <name>" confirmed.
-- [ ] Checklist: show "Leader is partyN" with the fix inline (one click sets the unit).
+- [x] (already in M3: Import squad jumps to Keys) Import on a second client: after "Import squad", jump to Keys with "You are <name>" confirmed.
+- [x] (NEXT: Fix button "Use partyN") Checklist: show "Leader is partyN" with the fix inline (one click sets the unit).
 
 ## P3 – later (plan §3)
 - [ ] Talent read-back: Forever via `C_ClassTalents` + `C_Traits` (as Leatrix Plus Forever does), Era via

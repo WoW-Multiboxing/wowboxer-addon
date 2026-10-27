@@ -125,6 +125,34 @@ function Core.ensureMe()
   return mm
 end
 
+--- First-time bar choice: Warriors, Druids and Rogues see a stance/form page on bar 1, so their keys start on
+--- Bottom Left (main) and Bottom Right (other); everybody else on Bar 1 and Bottom Left.
+function Core.defaultBars()
+  local cdb = Core.cdb
+  if not cdb then return end
+  local paged = C.PAGED_CLASSES[C.playerClass() or ""]
+  if not cdb.primaryBar then cdb.primaryBar = paged and 61 or 1 end
+  if not cdb.secondaryBar then cdb.secondaryBar = paged and 49 or 61 end
+end
+
+--- "leader" or a follower unit (party1-4, focus) for this character. A follower needs a leader in the squad: a solo
+--- character gets a placeholder "Leader" member (rename it on the Squad tab, or import the real squad).
+function Core.setPlaysAs(v)
+  local s, m = Core.me()
+  if not m then return end
+  if v == "leader" then
+    for _, x in ipairs(s.members) do x.leader = (x == m) end
+  elseif ns.Engine.contains(ns.Engine.UNITS, v) then
+    m.leader, m.unit = false, v
+    if not S.leaderOf(s) then
+      table.insert(s.members, 1, S.newMember({ name = "Leader", cls = m.cls, race = m.race, level = m.level, leader = true }))
+      chat("Added a placeholder leader to your squad. Rename it on the Squad tab, or import your squad.")
+    end
+  else return end
+  Core.log("info", "plays as " .. v)
+  Core.changed()
+end
+
 -- ------------------------------------------------------------------ drag & drop, bar memory
 --- Put WBX macro `name` on the cursor so the player can drop it on any action button. Creates or updates the macro
 --- first when needed. Returns true or false, reason. Out of combat only (macro writes are #nocombat).
@@ -323,6 +351,8 @@ local HELP = {
   "/wbx – open or close the window",
   "/wbx sync – create/update your WBX macros and place new ones on your bars",
   "/wbx minimap – show or hide the minimap button",
+  "/wbx bars – list where each key is and which key presses it",
+  "/wbx scale 0.9 – window size (0.7–1.3); /wbx reset – window back to the middle",
   "/wbx show – list your keys and what would change",
   "/wbx cvars | /wbx cvars restore – apply recommended settings / put the old ones back",
   "/wbx selftest – write a diagnostic report to the saved variables",
@@ -335,6 +365,25 @@ function Core.slash(msg)
   if cmd == "" then if ns.UI and ns.UI.Toggle then ns.UI.Toggle() else chat("window not available") end
   elseif cmd == "help" or cmd == "?" then for _, l in ipairs(HELP) do chat(l) end
   elseif cmd == "sync" then Core.sync({ replace = rest == "replace" })
+  elseif cmd == "reset" then
+    Core.db.settings.window, Core.db.settings.scale = nil, nil
+    if ns.UI and ns.UI.ApplyWindowSettings then ns.UI.ApplyWindowSettings() end
+    chat("Window position and size reset.")
+  elseif cmd == "scale" then
+    local v = tonumber(rest)
+    if not v then chat("Window scale is " .. tostring(Core.db.settings.scale or 1) .. ". Example: /wbx scale 0.9"); return end
+    Core.db.settings.scale = math.max(0.7, math.min(1.3, v))
+    if ns.UI and ns.UI.ApplyWindowSettings then ns.UI.ApplyWindowSettings() end
+    chat("Window scale " .. Core.db.settings.scale .. ".")
+  elseif cmd == "bars" then
+    local ctx, why = Core.compute()
+    if not ctx then chat(why); return end
+    for _, it in ipairs(ctx.bars.items) do
+      local keys = {}
+      for _, k in ipairs(ns.Binds.keysFor(it.name, it.status == "placed" and it.slot or nil)) do keys[#keys + 1] = k.key end
+      chat(string.format("  %s – %s: %s%s", it.name, it.label or "", it.status == "placed" and B.slotLabel(it.slot) or ("not placed (" .. it.status .. ")"),
+        #keys > 0 and (" · key " .. table.concat(keys, ", ")) or ""))
+    end
   elseif cmd == "minimap" then if ns.Minimap then ns.Minimap.SetHidden(not Core.db.settings.minimapHidden) end
   elseif cmd == "show" then
     local ctx, why = Core.compute()
@@ -374,6 +423,7 @@ function Core.onEvent(event, ...)
     safeRegister("SPELLS_CHANGED")
     safeRegister("LEARNED_SPELL_IN_TAB")
     safeRegister("LEARNED_SPELL_IN_SKILL_LINE")
+    Core.defaultBars()
     safeRegister("ACTIONBAR_SLOT_CHANGED")
     safeRegister("UPDATE_BINDINGS")
     Core.scanBars()

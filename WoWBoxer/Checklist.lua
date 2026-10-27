@@ -7,7 +7,7 @@ ns.Checklist = CL
 function CL.items()
   local Core, C, S = ns.Core, ns.Compat, ns.State
   local out = {}
-  local function add(ok, text, hint) out[#out + 1] = { ok = ok, text = text, hint = hint } end
+  local function add(ok, text, hint, fix) out[#out + 1] = { ok = ok, text = text, hint = hint, fix = fix } end
   local s, m = Core.me()
   if not m then
     add(false, "This character is in a squad", "Squad tab: start a squad, add this character, or import your squad string.")
@@ -25,7 +25,8 @@ function CL.items()
       add(okf, "Focus is " .. leader.name, okf and "Your keys assist your focus." or "Target " .. leader.name .. " and press your WBX Focus key (after every login).")
     elseif unitOfLeader then
       add(unitOfLeader == m.unit, leader.name .. " is " .. unitOfLeader .. " on this client",
-        unitOfLeader == m.unit and "Matches your unit." or ("Your keys use " .. m.unit .. ": change your unit to " .. unitOfLeader .. " on the Squad tab."))
+        unitOfLeader == m.unit and "Matches your unit." or ("Your keys use " .. m.unit .. ". Fix switches them to " .. unitOfLeader .. "; then update your keys."),
+        unitOfLeader ~= m.unit and { label = "Use " .. unitOfLeader, fn = function() Core.setPlaysAs(unitOfLeader) end } or nil)
     elseif inParty then
       add(nil, "Leader's party slot unknown", "Names can be hidden in this client; check that " .. leader.name .. " is " .. m.unit .. " yourself.")
     end
