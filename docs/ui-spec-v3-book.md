@@ -61,3 +61,18 @@ be a visual distinction between the spells you actually use and the helper spell
   leader, pet class, sequences on, level-up banner) and fail on: label/button/status/hint over the word budgets above,
   any "…" truncation of a spell or helper name, a header occupying a grid cell, text crossing the book's spine.
 - Keep the resolution/scale overlap matrix green.
+
+## Key editor ("Edit own key", the owner 23:39, screenshot `docs/research/2026-10-27-key-editor-screenshot.png`)
+- **Bug: the macro text runs off to the right** ("[@mouseover,harm,nodead][@party1target,harm,nodead][…") instead of
+  wrapping. The macro box must **wrap inside its width and grow downwards**, with a scroll bar when needed (multi-line
+  EditBox/FontString with its width set to the box's inner width – a width of 0 inside a ScrollFrame is the usual cause –
+  `SetWordWrap(true)`, `SetNonSpaceWrap(true)` so the long `[...]` conditions break too). Make the box clearly bigger:
+  it should show a full 255-character macro without scrolling at normal UI scale.
+- Show the macro **one command per line** as WoW will run it, monospace-like, muted colour; the counter `234/255` under it.
+- Same text diet as the rest: "Steps (click to remove, drop spells here)" → **Steps** + tooltip; "Filler: none – pick one
+  with Filler · repeated 2×" → **Filler: Shadow Bolt ×2** (or **No filler**); the warning block → at most two short
+  lines with an orange ! icon ("Demon Skin, Summon Imp: buffs – put them on their own key"), details in the tooltip.
+- The two unlabeled icon buttons next to the spell list (top right, and the round one lower down) need a visible purpose
+  or must go; every button needs a label or a tooltip.
+- Spell list: **Add** / **Filler** buttons are fine; mark spells already in the key; keep drag & drop onto Steps.
+- Add this editor to `tests/test_copy.lua` and the overlap matrix (long macro of 255 characters must be fully visible).
