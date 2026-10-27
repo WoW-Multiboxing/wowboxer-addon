@@ -9,11 +9,11 @@ The owner's direction (2026-10-27, after the first in-game test: "it works as an
 minimap button, much more drag & drop of macros onto the action bars.
 
 ## P0 – own character, polish and bugs
-- [ ] **Solo by default.** First `/wbx` on a character without a squad: create a one-character squad silently (this
+- [x] (66c60fc) **Solo by default.** First `/wbx` on a character without a squad: create a one-character squad silently (this
       character, leader) instead of the empty "Start a squad" page. Keys tab header gets the two choices that matter for
       one character: **Role** (cycle from the class's roles) and **Plays as** (Leader / Follower via party1–4/focus).
       The Squad tab stays for multiboxers but is not needed to get keys.
-- [ ] Walk every tab in Classic Era and screenshot it; fix overlaps and cut-off text. Known risks in the M3 code:
+- [ ] (partly 66c60fc: Keys overlaps fixed) Walk every tab in Classic Era and screenshot it; fix overlaps and cut-off text. Known risks in the M3 code:
       the `UIPanelScrollFrameTemplate` scrollbar sits outside the scroll frame's width and can overlap the preview
       panel on the Keys tab (list 360 px wide, preview starts at x 368); fixed pixel widths everywhere (window 660×480);
       Setup's header uses spaces for column alignment.
@@ -29,22 +29,22 @@ minimap button, much more drag & drop of macros onto the action bars.
 - [ ] Remember window position; ESC closes (already via UISpecialFrames – verify); scale option (0.8–1.2).
 
 ## P1 – minimap, drag & drop, keybindings
-- [ ] **Minimap button** (recommended: embed LibDBIcon-1.0 + LibStub + CallbackHandler + LibDataBroker, BSD-style,
+- [x] (66c60fc, own button, no LibDBIcon) **Minimap button** (recommended: embed LibDBIcon-1.0 + LibStub + CallbackHandler + LibDataBroker, BSD-style,
       has a Forever file; licence files in `WoWBoxer/Libs/`). Left-click toggles the window, right-click menu
       (Sync keys, Settings, Hide), tooltip with character + "N keys to update", draggable, hide option + `/wbx minimap`.
       Small marker when an update is waiting after a level-up.
-- [ ] **Addon compartment** on Forever: `## AddonCompartmentFunc: WoWBoxer_OnCompartmentClick` (+ OnEnter/OnLeave
+- [x] (66c60fc) **Addon compartment** on Forever: `## AddonCompartmentFunc: WoWBoxer_OnCompartmentClick` (+ OnEnter/OnLeave
       for a tooltip). Globals only.
-- [ ] **Drag & drop:** every key on the Keys tab is a big draggable icon; `OnDragStart` (out of combat) creates or
+- [x] (66c60fc) **Drag & drop:** every key on the Keys tab is a big draggable icon; `OnDragStart` (out of combat) creates or
       updates that WBX macro and calls `PickupMacro(index)` so the player drops it on any action button. Same for spells
       in the "other spells" list (creates `WBX <spell>` first). Show "drag me" hints; keep "Create & place keys".
-- [ ] Show the **key binding** of every placed key (`GetBindingKey` on the button's binding command; bonus pages use
+- [x] (66c60fc: Binds.lua, bind/unbind with confirm) Show the **key binding** of every placed key (`GetBindingKey` on the button's binding command; bonus pages use
       `ACTIONBUTTONn`). Button "Set keys…" opens Blizzard's Quick Keybind mode (Forever) / Key Bindings (Era).
       Optional later: bind directly with `SetBindingMacro` + `SaveBindings(2)` after a click, never overwriting silently.
 - [ ] `/wbx` sub-commands: `minimap`, `reset` (window position), `bars` (print where each key is).
 
 ## P2 – squad basics
-- [ ] Squad tab works for: add, rename, change class/race/role, remove, make leader, follower unit, "this is me".
+- [ ] (partly 66c60fc: Edit + no overlaps – verify in game) Squad tab works for: add, rename, change class/race/role, remove, make leader, follower unit, "this is me".
       Editing a member = small inline editor (name box + cycles) instead of the current row of cycles.
 - [ ] Import on a second client: after "Import squad", jump to Keys with "You are <name>" confirmed.
 - [ ] Checklist: show "Leader is partyN" with the fix inline (one click sets the unit).
