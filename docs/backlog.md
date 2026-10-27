@@ -8,6 +8,17 @@ The owner's direction (2026-10-27, after the first in-game test: "it works as an
 **own character first** – the single-character flow must be excellent; the squad stays but simple. Optimise, bug-fix,
 minimap button, much more drag & drop of macros onto the action bars.
 
+## Needs the owner in game
+Built behind probes and tested in the simulator; only the real client can confirm these. (Claude Code keeps this list.)
+- Layout of every tab at the real font sizes (screenshots with PrtScn → `_classic_era_\Screenshots`).
+- Drag from the Keys tab onto an action button (`PickupMacro` after creating the macro).
+- "Bind key": key capture frame (`EnableKeyboard`/`SetPropagateKeyboardInput`), `SetBindingMacro` + `SaveBindings(2)`.
+- Minimap button position/drag on a round minimap; Addon Compartment entry on Forever (and whether Era has one).
+- Stance page warning: `GetBonusBarOffset` (Era) / `C_ActionBar.GetBonusBarOffset` (Forever) on a Warrior.
+- Hidden-bar warning: `MultiBarBottomLeft:IsShown()` when the bar is switched off.
+- Class badges on the Squad tab (`CLASS_ICON_TCOORDS` + the character-create class texture).
+- Minimap level-up dot texture `Interface\COMMON\Indicator-Yellow`.
+
 ## P0 – own character, polish and bugs
 - [x] (66c60fc) **Solo by default.** First `/wbx` on a character without a squad: create a one-character squad silently (this
       character, leader) instead of the empty "Start a squad" page. Keys tab header gets the two choices that matter for
@@ -44,7 +55,7 @@ minimap button, much more drag & drop of macros onto the action bars.
 - [x] (d43a145: minimap, reset, scale, bars) `/wbx` sub-commands: `minimap`, `reset` (window position), `bars` (print where each key is).
 
 ## P2 – squad basics
-- [ ] (partly 66c60fc: Edit + no overlaps – verify in game) Squad tab works for: add, rename, change class/race/role, remove, make leader, follower unit, "this is me".
+- [x] (NEXT: cards + inline editor for add/edit/remove, plays-as, leader) Squad tab works for: add, rename, change class/race/role, remove, make leader, follower unit, "this is me".
       Editing a member = small inline editor (name box + cycles) instead of the current row of cycles.
 - [x] (already in M3: Import squad jumps to Keys) Import on a second client: after "Import squad", jump to Keys with "You are <name>" confirmed.
 - [x] (d43a145: Fix button "Use partyN") Checklist: show "Leader is partyN" with the fix inline (one click sets the unit).

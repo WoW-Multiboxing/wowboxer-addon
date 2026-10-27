@@ -124,6 +124,7 @@ function Core.sync(opts)
     for _, f in ipairs(bres.failed) do Core.log("error", "bar " .. f.name .. ": " .. f.err) end
     if #mres.failed + #bres.failed > 0 then chat("|cffff6060Some changes failed|r – see /wbx log.") end
     Core.lastOffer = nil
+    if ns.Minimap and ns.Minimap.SetAttention then ns.Minimap.SetAttention(false) end
     Core.changed()
   end)
 end
@@ -327,6 +328,7 @@ function Core.checkOffer(reason)
       if Core.cdb.lastSync then -- only nag players who already use WoWBoxer keys
         chat(string.format("%d key(s) changed at level %d. Type |cffffd100/wbx sync|r or open |cffffd100/wbx|r to update them.", n, ctx.level))
         if ns.UI and ns.UI.ShowOffer then ns.UI.ShowOffer(ctx) end
+        if ns.Minimap and ns.Minimap.SetAttention then ns.Minimap.SetAttention(true) end
       end
     end
   end

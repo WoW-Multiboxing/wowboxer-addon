@@ -104,6 +104,12 @@ function MM.Create()
   border:SetSize(53, 53)
   border:SetPoint("TOPLEFT")
   border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
+  local dot = b:CreateTexture(nil, "OVERLAY", nil, 7)
+  dot:SetSize(10, 10)
+  dot:SetPoint("TOPRIGHT", -2, -2)
+  dot:SetTexture("Interface\\COMMON\\Indicator-Yellow")
+  dot:Hide()
+  b.dot = dot
   if b.SetHighlightTexture then b:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight") end
 
   b:SetScript("OnClick", function(self, button)
@@ -120,6 +126,12 @@ function MM.Create()
   MM.button = b
   MM.Place()
   return b
+end
+
+--- Yellow dot on the button while keys wait for an update after a level-up (set by Core.checkOffer / Core.sync).
+function MM.SetAttention(on)
+  MM.attention = on and true or false
+  if MM.button and MM.button.dot then MM.button.dot:SetShown(MM.attention) end
 end
 
 function MM.SetHidden(hidden)

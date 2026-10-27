@@ -65,8 +65,11 @@ for _, scenario in ipairs({
   -- squad tab: add a character
   UI.Select("squad")
   local panel = UI.panels.squad
-  panel.newName:SetText("Kirra")
+  findButton(W, "Add character"):Click()
+  H.ok(panel.editor:IsShown(), tag .. "editor opens")
+  panel.editor.name:SetText("Kirra")
   findButton(W, "Add"):Click()
+  H.ok(not panel.editor:IsShown(), tag .. "editor closes after Add")
   local s = Core.me()
   H.eq(s.members[#s.members].name, "Kirra", tag .. "character added")
   -- share: export then import back

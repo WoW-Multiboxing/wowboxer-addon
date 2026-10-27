@@ -81,6 +81,18 @@ def check(path):
             errs.append((line, 'operator %s is Lua 5.2+/5.3+' % text))
         if kind == 'op' and text == '~':
             errs.append((line, 'operator ~ is Lua 5.3+'))
+        if kind == 'str' and text[:1] in '"\'':
+            # Lua 5.1 silently drops an unknown escape: "Interface\Icons\X" becomes "InterfaceIconsX" (no error)
+            k = 1
+            while k < len(text) - 1:
+                if text[k] == '\\':
+                    nxt = text[k + 1]
+                    if nxt not in 'abfnrtv\\"\'0123456789\n':
+                        errs.append((line, 'invalid escape \\%s in string (use \\\\ for a path)' % nxt))
+                        break
+                    k += 2
+                else:
+                    k += 1
         if kind == 'name' and FORBIDDEN_RE.fullmatch(text) and not (prev and prev[0] == 'op' and prev[1] in ('.', ':')):
             errs.append((line, 'forbidden call/name: %s' % text))
         prev = (kind, text)

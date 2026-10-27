@@ -57,6 +57,16 @@ do
   H.eq(W.calls.CreateMacro, nil, "minimap and compartment write nothing")
   local toc = H.readFile(H.root .. "/WoWBoxer/WoWBoxer.toc")
   H.ok(toc:find("## AddonCompartmentFunc: WoWBoxer_OnAddonCompartmentClick", 1, true) ~= nil, "TOC registers the compartment")
+  ns.State.quickStart(ns.Core.db, ns.Core.cdb, ns.Core.playerInfo())
+  ns.Core.sync({})
+  W.player.level = 40
+  for _, sp in ipairs(ns.Data.spells.priest) do if sp.level <= 40 and sp.gate ~= "talent" then W.known[sp.name] = true end end
+  W.fire("PLAYER_LEVEL_UP", 40)
+  W.flush()
+  H.ok(ns.Core.compute().macros.changes > 0, "keys changed at level 40")
+  H.ok(b.dot:IsShown(), "level-up marks the minimap button")
+  ns.Core.sync({})
+  H.ok(not b.dot:IsShown(), "update clears the mark")
   H.eq(#errors(ns), 0, "no errors (minimap): " .. table.concat(errors(ns), " | "))
 end
 
@@ -172,22 +182,43 @@ do
   local Core, UI = ns.Core, ns.UI
   UI.Open("squad")
   local p = UI.panels.squad
-  p.newName:SetText("Wowtwo")
+  findButton(W, "Add character"):Click()
+  p.editor.name:SetText("Wowtwo")
+  p.editor.v.plays = "party2"
   findButton(W, "Add"):Click()
   local s = Core.me()
   local added = s.members[#s.members]
   H.eq(added.name, "Wowtwo", "added")
-  H.ok(not added.leader, "the solo character stays leader")
-  p.startEdit(added)
-  H.eq(findButton(W, "Save") ~= nil, true, "edit mode")
-  p.newName:SetText("Wowtwo2")
-  p.add.cls, p.add.race, p.add.role = "warlock", "undead", "ranged"
+  H.ok(not added.leader and added.unit == "party2", "added as follower via party2")
+  H.ok(select(2, Core.me()).leader, "the solo character stays leader")
+  -- edit: rename, class, race (kept valid), role
+  p.openEditor(added)
+  H.ok(findButton(W, "Save") ~= nil, "edit mode")
+  p.editor.name:SetText("Wowtwo2")
+  p.editor.v.cls = "warlock"; p.editor.refresh()
+  H.eq(p.editor.v.role, "ranged", "role corrected for the new class")
   findButton(W, "Save"):Click()
   local edited = s.members[#s.members]
   H.eq(edited.name, "Wowtwo2", "renamed")
   H.eq(edited.cls, "warlock", "class changed")
   H.eq(edited.id, added.id, "same member id")
-  H.ok(findButton(W, "Add") ~= nil, "back to add mode")
+  H.eq(edited.unit, "party2", "unit kept")
+  -- make the new one leader via the editor
+  p.openEditor(edited)
+  p.editor.v.plays = "leader"
+  findButton(W, "Save"):Click()
+  local leaders = 0
+  for _, x in ipairs(s.members) do if x.leader then leaders = leaders + 1 end end
+  H.eq(leaders, 1, "exactly one leader")
+  H.ok(s.members[#s.members].leader, "edited character leads")
+  -- remove needs two clicks
+  p.openEditor(s.members[#s.members])
+  findButton(W, "Remove"):Click()
+  H.eq(#s.members, 2, "first click only arms")
+  findButton(W, "Sure?"):Click()
+  H.eq(#s.members, 1, "removed")
+  H.ok(s.members[1].leader, "the remaining character leads again")
+  H.eq(W.calls.CreateMacro, nil, "squad edits write nothing to the game")
   H.eq(#errors(ns), 0, "no errors (squad): " .. table.concat(errors(ns), " | "))
 end
 
