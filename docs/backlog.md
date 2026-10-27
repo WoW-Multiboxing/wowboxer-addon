@@ -8,6 +8,15 @@ The owner's direction (2026-10-27, after the first in-game test: "it works as an
 **own character first** – the single-character flow must be excellent; the squad stays but simple. Optimise, bug-fix,
 minimap button, much more drag & drop of macros onto the action bars.
 
+## The owner: in-game test (one round, Classic Era)
+1. Close every WoW client completely and start one again (new addon files are only read at client start).
+   Log in on one character; WoWBoxer must be ticked under AddOns.
+2. Type `/wbx` (or click the new minimap button) and click through all five tabs once – the addon measures the layout
+   itself. Press PrtScn on the Keys and Squad tabs.
+3. Keys tab: click **Create & place keys**; then drag one key row onto another action button; then select a key,
+   click **Bind key** and press a free key (e.g. F6).
+4. `/reload`, then tell Claude "done" – Claude reads the log, layout audit, macros and screenshots and fixes the rest.
+
 ## Needs the owner in game
 Built behind probes and tested in the simulator; only the real client can confirm these. (Claude Code keeps this list.)
 - Layout audit (4d5b52b): opening `/wbx` once writes measured cut-off texts / too-narrow buttons / overflow to the diagnose → `tools/read_log.py`. Then screenshots only for what the audit cannot see.
