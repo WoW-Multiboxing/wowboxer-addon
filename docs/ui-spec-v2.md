@@ -47,3 +47,19 @@ This supersedes the Keys-tab layout in `docs/ui-spec.md`; colours and the other 
 ## 4. Keep
 - All rules in CLAUDE.md. Drag & drop only picks up a macro; the player drops it. Writes only after a click, out of combat.
 - Colours and the other tabs from `docs/ui-spec.md` (they move into the bookmark tabs).
+
+## 5. "Fly to the bar" animation (like retail when a new spell is learned)
+- When WoWBoxer places a key on a bar (Place all, Update keys after a level-up, or a new key after training), the
+  key's icon **flies from the WoWBoxer window (or the screen centre if the window is closed) down to its action
+  button**, then the button flashes briefly – the same feel as retail's new-spell animation.
+- Build it with plain animations (works on Forever and Classic Era): a temporary icon frame on `UIParent`
+  (`HIGH`/`DIALOG` strata) with an `AnimationGroup`: `Translation` from start to the target button's centre
+  (convert with `GetCenter()` × `GetEffectiveScale()` / `UIParent:GetEffectiveScale()`), a slight `Scale` up then down,
+  `Alpha` fade at the end, ~0.6–0.8 s with smoothing; stagger several keys by ~0.12 s. Then a short glow/flash on the
+  target button (own overlay texture, additive blend, fades out). Probe for Blizzard's own `IconIntroTracker` /
+  `IconIntroTemplate` on Forever and reuse it if it exists; otherwise use ours.
+- Find the target button from the slot: bar 1 / bonus pages → `ActionButtonN`, Bottom Left → `MultiBarBottomLeftButtonN`,
+  Bottom Right → `MultiBarBottomRightButtonN`, Right → `MultiBarRightButtonN`, Right 2/Left → `MultiBarLeftButtonN`
+  (modern extra bars `MultiBar5/6/7ButtonN`; Bartender/ElvUI etc. have their own buttons – if no visible button is
+  found, skip the flight and just show the "Placed on Bar X · N" message).
+- Purely visual: it never clicks, casts or changes anything. Setting "Animations" on by default, off in Setup.
