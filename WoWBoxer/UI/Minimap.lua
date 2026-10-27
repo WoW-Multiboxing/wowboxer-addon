@@ -18,8 +18,16 @@ function MM.Place()
   if not b or not _G.Minimap then return end
   local a = math.rad(tonumber(settings().minimapAngle) or MM.DEFAULT_ANGLE)
   local r = (_G.Minimap:GetWidth() or 140) / 2 + 6
+  local x, y = math.cos(a), math.sin(a)
+  -- square minimaps (ElvUI and others report it through GetMinimapShape): run along the edge, not a circle
+  local shape = _G.GetMinimapShape and _G.GetMinimapShape()
+  if shape == "SQUARE" then
+    local m = math.max(math.abs(x), math.abs(y))
+    if m > 0 then x, y = x / m, y / m end
+    r = (_G.Minimap:GetWidth() or 140) / 2 + 2
+  end
   b:ClearAllPoints()
-  b:SetPoint("CENTER", _G.Minimap, "CENTER", math.cos(a) * r, math.sin(a) * r)
+  b:SetPoint("CENTER", _G.Minimap, "CENTER", x * r, y * r)
 end
 
 --- Angle in degrees from the minimap centre to the cursor.

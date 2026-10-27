@@ -487,6 +487,10 @@ function Core.onEvent(event, ...)
   elseif event == "PLAYER_LOGIN" then
     Core.charKey = (C.playerName() or "?") .. "-" .. (GetRealmName and GetRealmName() or "?")
     Core.writeBridge("login")
+    if not Core.cdb.welcomed then
+      Core.cdb.welcomed = true
+      chat("loaded. Type |cffffd100/wbx|r or click the minimap button to set up this character's keys.")
+    end
     safeRegister("PLAYER_LOGOUT")
     Core.log("info", "login " .. Core.charKey .. " " .. C.buildString() .. " (" .. C.game() .. ", toc " .. C.interface() .. ")")
     safeRegister("PLAYER_LEVEL_UP")

@@ -556,4 +556,24 @@ do
   H.ok(W.chatHas("Layout audit"), "/wbx audit reports")
 end
 
+-- ------------------------------------------------------------------ square minimap, welcome line once
+do
+  local W, ns = boot({ name = "Sq", class = "MAGE", race = "Human", level = 10, faction = "Alliance" })
+  H.ok(W.chatHas("Type .*/wbx"), "welcome line on first login")
+  local n = #W.chat
+  W.fire("PLAYER_LOGIN")
+  local again = 0
+  for i = n + 1, #W.chat do if W.chat[i]:find("Type") then again = again + 1 end end
+  H.eq(again, 0, "welcome only once per character")
+  W.env.GetMinimapShape = function() return "SQUARE" end
+  local placed
+  ns.Minimap.button.SetPoint = function(_, _, _, _, x, y) placed = { x, y } end
+  ns.Core.db.settings.minimapAngle = 45
+  ns.Minimap.Place()
+  H.ok(placed and math.abs(placed[1] - placed[2]) < 0.01 and placed[1] > 70, "square minimap: corner at 45 degrees")
+  ns.Core.db.settings.minimapAngle = 0
+  ns.Minimap.Place()
+  H.ok(math.abs(placed[2]) < 0.01 and math.abs(placed[1] - 72) < 0.01, "square minimap: right edge at 0 degrees")
+end
+
 os.exit(H.report("features") and 0 or 1)
