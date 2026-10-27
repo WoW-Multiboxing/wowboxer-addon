@@ -199,6 +199,12 @@ SP.register({ key = "home", label = "Home", tip = "Everyone in the squad at a gl
     for _, h in ipairs(S().composition(s)) do hints[#hints + 1] = h end
     local hu, L = ns.Squad.unitHint()
     if hu then hints[#hints + 1] = "|cfff0b43c" .. L.name .. " is " .. hu .. " here|r – My keys offers to use " .. hu .. "." end
+    local myVer = ns.Team.version()
+    for _, row in ipairs(rows) do
+      if row.version and row.version ~= myVer and not row.me then
+        hints[#hints + 1] = "|cfff0b43c" .. row.m.name .. " runs WoWBoxer " .. row.version .. "|r (this client: " .. myVer .. ") – install the same version everywhere."
+      end
+    end
     if s and #s.members == 1 then hints[#hints + 1] = "Playing with more characters? Edit squad → Add my party (when grouped) or a template." end
     local chain = {}
     for _, m in ipairs(s and s.members or {}) do if not m.leader then chain[#chain + 1] = m.name end end

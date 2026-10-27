@@ -550,6 +550,7 @@ function Core.onEvent(event, ...)
     if ns.Minimap and ns.Minimap.Init then ns.Minimap.Init() end
     if ns.Team and ns.Team.Init then ns.Team.Init() end
     if ns.SeqStrip and ns.SeqStrip.Init then ns.SeqStrip.Init() end
+    if ns.Sync and ns.Sync.Init then ns.Sync.Init() end
     if C_Timer and C_Timer.After then C_Timer.After(3, function() Core.checkOffer("login") end) end
     -- read-only diagnose a few seconds after login, so a /reload is enough to see how the addon behaves in this client
     if C_Timer and C_Timer.After then

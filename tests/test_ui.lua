@@ -216,6 +216,16 @@ local function layoutPass(screen, opts)
   for _, s in ipairs(ns.Data.spells[(opts.class or "PALADIN"):lower()]) do if s.level <= W.player.level then W.known[s.name] = true end end
   W.fire("PLAYER_LEVEL_UP", W.player.level); W.fire("SPELLS_CHANGED"); W.flush()
   if UI.offer and UI.offer:IsShown() then check("level-up toast", { UI.offer }) end
+  -- offer cards from another client (squad, preset) and the session card
+  ns.Sync.offer({ kind = "squad", from = "Dorinverylongname", name = "The undead trio of doom", count = 3, str = "" })
+  check("squad offer card", { ns.Sync.frame })
+  ns.Sync.dismiss()
+  ns.Sync.offer({ kind = "preset", from = "Wowtwo", name = "Dungeon – Wowtwo heals", leader = "Dorinverylongname", squadId = "x", presetId = "y" })
+  check("preset offer card", { ns.Sync.frame })
+  ns.Sync.dismiss()
+  ns.Sync.offer({ kind = "session", from = "", text = "Squad The undead trio of doom · 3/3 online · keys OK on 1/3 · Wowtwo, Kirrathedestroyer need Update keys" })
+  check("session card", { ns.Sync.frame })
+  ns.Sync.dismiss()
   UI.Select("keys")
   check("keys after level-up")
   return problems

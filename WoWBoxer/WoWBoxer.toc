@@ -37,6 +37,7 @@ Checklist.lua
 Core.lua
 Team.lua
 Squad.lua
+Sync.lua
 UI\Widgets.lua
 UI\Dropdown.lua
 UI\Main.lua
