@@ -40,7 +40,7 @@ function tab.build(p)
   end)
   p.delSquad:SetPoint("RIGHT", p.newSquad, "LEFT", -6, 0)
 
-  local sf, content = W.scroll(p, 606, 236)
+  local sf, content = W.scroll(p, 600, 236)
   sf:SetPoint("TOPLEFT", 0, -32)
   p.list = content
   p.pool = W.pool(content, function(parent)

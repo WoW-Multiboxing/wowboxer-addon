@@ -77,7 +77,14 @@ function UI.Select(key)
   for k, p in pairs(UI.panels or {}) do
     if k == key then p:Show() else p:Hide() end
     local b = UI.tabButtons[k]
-    if b then if k == key then b:LockHighlight() else b:UnlockHighlight() end end
+    if b then
+      if k == key then b:LockHighlight() else b:UnlockHighlight() end
+      local fs = b.GetFontString and b:GetFontString()
+      if fs and fs.SetTextColor then
+        local c = k == key and W.GOLD or W.TEXT
+        fs:SetTextColor(c[1], c[2], c[3])
+      end
+    end
   end
   UI.Refresh()
 end
@@ -86,6 +93,10 @@ end
 function UI.Refresh()
   local f = UI.frame
   if not f or not f:IsShown() then return end
+  ns.Core.batch(UI.RefreshNow)
+end
+function UI.RefreshNow()
+  local f = UI.frame
   local Core = ns.Core
   local ctx = Core.compute()
   local _, m = Core.me()
@@ -94,7 +105,8 @@ function UI.Refresh()
   local line = W.hex(W.classColor(info.cls)) .. (info.name or "?") .. "|r · " .. (cls and cls.n or "?") .. " · Level " .. tostring(info.level)
   if m then
     local s = Core.me()
-    line = line .. " · " .. (m.leader and "Leader" or ("follows via " .. m.unit)) .. " · " .. s.name
+    local L = ns.State.leaderOf(s)
+    line = line .. " · " .. (m.leader and "Leader" or ("follows " .. (L and L.name or "the leader") .. " via " .. m.unit)) .. " · " .. s.name
   else line = line .. " · |cffff8a80not in a squad yet|r" end
   if ns.Compat.game() ~= "forever" then line = line .. " · |cffd9b36c" .. ns.Compat.game() .. " (Forever data)|r" end
   UI.who:SetText(line)

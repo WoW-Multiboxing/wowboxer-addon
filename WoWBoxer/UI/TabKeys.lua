@@ -10,8 +10,8 @@ local STATUS = {
   invalid = { "Blocked", W.RED }, skipped = { "Off", W.MUTED },
 }
 local TIERS = { { "off", "Off" }, { "simple", "Simple" }, { "medium", "Medium" }, { "advanced", "Advanced" } }
-local ROW_H = 24
-local LIST_W, LIST_H = 356, 214
+local ROW_H = 28
+local LIST_W, LIST_H = 330, 210 -- + W.SCROLLBAR to the right, then the preview at x 366
 
 local function Core() return ns.Core end
 local function selectedItem(p, ctx)
@@ -163,6 +163,9 @@ function tab.build(p)
     local r = CreateFrame("Button", nil, parent)
     r:SetSize(LIST_W - 4, ROW_H)
     r:RegisterForDrag("LeftButton")
+    r.alt = r:CreateTexture(nil, "BACKGROUND")
+    r.alt:SetAllPoints()
+    r.alt:SetColorTexture(1, 1, 1, 0.035)
     r.hl = r:CreateTexture(nil, "BACKGROUND")
     r.hl:SetAllPoints()
     r.hl:SetColorTexture(1, 0.82, 0, 0.12)
@@ -172,23 +175,23 @@ function tab.build(p)
     r.check = W.frame("CheckButton", r, "UICheckButtonTemplate")
     r.check:SetSize(20, 20)
     r.check:SetPoint("LEFT", 0, 0)
-    r.icon = W.icon(r, 20)
-    r.icon:SetPoint("LEFT", 22, 0)
+    r.icon = W.icon(r, 24, true)
+    r.icon:SetPoint("LEFT", 23, 0)
     r.key = W.text(r, "GameFontDisableSmall", nil, W.MUTED)
-    r.key:SetPoint("LEFT", 46, 0)
-    r.key:SetWidth(48)
+    r.key:SetPoint("LEFT", 52, 0)
+    r.key:SetWidth(44)
     if r.key.SetWordWrap then r.key:SetWordWrap(false) end
     r.label = W.text(r, "GameFontHighlightSmall", nil, W.TEXT)
-    r.label:SetPoint("LEFT", 96, 0)
-    r.label:SetWidth(130)
+    r.label:SetPoint("LEFT", 98, 0)
+    r.label:SetWidth(118)
     if r.label.SetWordWrap then r.label:SetWordWrap(false) end
     r.status = W.text(r, "GameFontHighlightSmall")
-    r.status:SetPoint("LEFT", 230, 0)
-    r.status:SetWidth(64)
+    r.status:SetPoint("LEFT", 218, 0)
+    r.status:SetWidth(58)
     if r.status.SetWordWrap then r.status:SetWordWrap(false) end
     r.slot = W.text(r, "GameFontDisableSmall", nil, W.MUTED, "RIGHT")
     r.slot:SetPoint("RIGHT", -2, 0)
-    r.slot:SetWidth(54)
+    r.slot:SetWidth(48)
     if r.slot.SetWordWrap then r.slot:SetWordWrap(false) end
     r:SetScript("OnClick", function(self) if p.mode == "keys" then p.selected = self.name; UI.Refresh() end end)
     r:SetScript("OnDragStart", function(self)
@@ -242,10 +245,14 @@ function tab.build(p)
   p.pickup:SetPoint("LEFT", p.unbind, "RIGHT", 4, 0)
   W.tooltip(p.pickup, function(GT) GT:AddLine("Pick up", 1, 0.82, 0); GT:AddLine("Puts this key on your cursor: click an action button to place it.", 1, 1, 1, true) end)
   p.capture = buildCapture(p, pv)
+  p.rule = W.text(m, "GameFontHighlightSmall", nil, W.MUTED)
+  p.rule:SetPoint("TOPLEFT", pv, "BOTTOMLEFT", 2, -90)
+  p.rule:SetWidth(258)
+  p.rule:SetJustifyV("TOP")
 
   p.trainer = W.text(m, "GameFontHighlightSmall", nil, { 0.85, 0.7, 0.42 })
   p.trainer:SetPoint("TOPLEFT", sf, "BOTTOMLEFT", 0, -4)
-  p.trainer:SetWidth(LIST_W)
+  p.trainer:SetWidth(LIST_W + 20)
   if p.trainer.SetWordWrap then p.trainer:SetWordWrap(false) end
   p.warn = W.text(m, "GameFontHighlightSmall", nil, W.ORANGE)
   p.warn:SetPoint("TOPLEFT", p.trainer, "BOTTOMLEFT", 0, -3)
@@ -297,6 +304,7 @@ local function refreshKeys(p, ctx, desiredBy, layout, barOf)
     local r = p.pool:get()
     r.name, r.spellId = it.name, false
     r:SetPoint("TOPLEFT", 0, -y)
+    r.alt:SetShown((y / ROW_H) % 2 == 1)
     y = y + ROW_H
     local d = desiredBy[it.name]
     W.setIcon(r.icon, d and d.spell and d.spell.icon or (it.group == "helper" and "Ability_Hunter_Pet_Wolf") or nil)
@@ -339,6 +347,7 @@ local function refreshSpells(p, ctx, desiredBy)
     local key = keyOf[s.id]
     r.name, r.spellId = key or false, (not key) and s.id or false
     r:SetPoint("TOPLEFT", 0, -y)
+    r.alt:SetShown((y / ROW_H) % 2 == 1)
     y = y + ROW_H
     W.setIcon(r.icon, s.icon)
     r.check:Hide()
@@ -370,8 +379,15 @@ function tab.refresh(p, ctx)
     local n = ctx.macros.changes
     local text
     if not cdb.lastSync then text = "Create your " .. n .. " WBX key" .. (n > 1 and "s" or "") .. ": click Create & place keys, or drag them onto your bars."
-    elseif (cdb.lastSync.level or 0) < ctx.level then text = "|cffb7f07aLevel " .. ctx.level .. ":|r " .. n .. " key(s) changed. Same buttons, new macros."
-    else text = n .. " key(s) to create or update." end
+    else
+      local names = {}
+      for _, it in ipairs(ctx.macros.items) do
+        if (it.status == "create" or it.status == "update") and #names < 3 then names[#names + 1] = (it.status == "create" and "new " or "") .. it.label end
+      end
+      local list = " (" .. table.concat(names, ", ") .. (n > #names and ", …" or "") .. ")"
+      if (cdb.lastSync.level or 0) < ctx.level then text = "|cffb7f07aLevel " .. ctx.level .. ":|r " .. n .. " key(s) changed" .. list .. ". Same buttons, new macros."
+      else text = n .. " key(s) to create or update" .. list .. "." end
+    end
     p.bannerText:SetText(text)
   else p.banner:Hide() end
   p.role.Refresh(); p.playsAs.Refresh()
@@ -422,6 +438,8 @@ function tab.refresh(p, ctx)
     p.bind:Hide(); p.unbind:Hide(); p.pickup:Hide()
   end
 
+  p.rule:SetText(mem.leader and "Leader: hostile mouseover, else your target. Heals: mouseover, your friendly target, else you."
+    or ("Follower via " .. mem.unit .. ": mouseover, else the leader's target (" .. mem.unit .. "target), else yours. Heals: mouseover, the leader, else you."))
   if #ctx.missing > 0 then
     local n = {}
     for i, s in ipairs(ctx.missing) do if i <= 3 then n[#n + 1] = s.name end end
@@ -448,7 +466,7 @@ function tab.refresh(p, ctx)
   p.replace:SetChecked(cdb.replace and true or false)
   local _, charMax = ns.Compat.macroLimits()
   local used = charMax - ctx.macros.free - ctx.macros.counts.create
-  p.slots:SetText(used .. " / " .. charMax .. " character macros" .. (ctx.macros.counts.noslot > 0 and ("  |cffff8a80" .. ctx.macros.counts.noslot .. " without a slot|r") or ""))
+  p.slots:SetText(used .. " / " .. charMax .. " macro slots" .. (ctx.macros.counts.noslot > 0 and ("  |cffff8a80" .. ctx.macros.counts.noslot .. " without a slot|r") or ""))
   local busy = ns.Compat.inCombat()
   p.apply:SetEnabled(not busy); p.macrosOnly:SetEnabled(not busy); p.bind:SetEnabled(not busy)
 end

@@ -59,7 +59,16 @@ function C.inCombat() return InCombatLockdown() and true or false end
 
 -- ------------------------------------------------------------------ spellbook
 --- Set of spell names the player knows (from the spellbook). nil if no spellbook API was found.
+--- Cached until the spellbook changes (Core calls C.invalidateSpellbook on SPELLS_CHANGED / LEARNED_* / level-up).
+local bookCache, bookSource
+function C.invalidateSpellbook() bookCache, bookSource = nil, nil end
 function C.knownSpellNames()
+  if bookCache ~= nil then return bookCache or nil, bookSource end
+  local names, src = C.scanSpellbook()
+  bookCache, bookSource = names or false, src
+  return names, src
+end
+function C.scanSpellbook()
   local names = {}
   local SB = G.C_SpellBook
   if SB and SB.GetNumSpellBookSkillLines and SB.GetSpellBookSkillLineInfo and SB.GetSpellBookItemName then

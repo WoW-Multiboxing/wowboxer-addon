@@ -71,8 +71,25 @@ function Core.setMe(squadId, memberId)
   Core.changed()
 end
 
---- Desired macros + plans for this character. Returns ctx table or nil, reason.
+--- Run fn with Core.compute memoised: one window refresh asks for the same plan several times (header, tab,
+--- checklist); inside a batch it is computed once. Outside a batch every call is fresh.
+local memo, depth = nil, 0
+function Core.batch(fn, ...)
+  depth = depth + 1
+  local ok, err = pcall(fn, ...)
+  depth = depth - 1
+  if depth == 0 then memo = nil end
+  if not ok then error(err, 0) end
+end
 function Core.compute()
+  if depth > 0 then
+    if not memo then memo = { Core.computeFresh() } end
+    return memo[1], memo[2]
+  end
+  return Core.computeFresh()
+end
+--- Desired macros + plans for this character. Returns ctx table or nil, reason.
+function Core.computeFresh()
   local s, m = Core.me()
   if not m then return nil, "This character is not in a squad yet." end
   local live = M.liveCheck()
@@ -320,6 +337,7 @@ function Core.changed() if ns.UI and ns.UI.Refresh then ns.UI.Refresh() end end
 
 -- ------------------------------------------------------------------ selftest (for testing without looking at the screen)
 function Core.selftest(quiet)
+  C.invalidateSpellbook()
   local db = Core.db
   local r = { at = time and time() or 0, version = Core.VERSION, probe = C.probe(), player = Core.playerInfo() }
   local ctx, why = Core.compute()
@@ -441,8 +459,10 @@ function Core.onEvent(event, ...)
   elseif event == "PLAYER_LEVEL_UP" then
     local lvl = ...
     Core.log("info", "level up to " .. tostring(lvl))
+    C.invalidateSpellbook()
     if C_Timer and C_Timer.After then C_Timer.After(1, function() Core.checkOffer("level " .. tostring(lvl)) end) else Core.checkOffer("level") end
   elseif event == "SPELLS_CHANGED" or event == "LEARNED_SPELL_IN_TAB" or event == "LEARNED_SPELL_IN_SKILL_LINE" then
+    C.invalidateSpellbook()
     if spellsTimer then return end
     spellsTimer = true
     local function run() spellsTimer = nil; Core.checkOffer("spells") end

@@ -245,4 +245,29 @@ do
   H.eq(#errors(ns), 0, "no errors (warrior): " .. table.concat(errors(ns), " | "))
 end
 
+-- ------------------------------------------------------------------ performance: scans and computes are reused
+do
+  local W, ns = boot({ name = "Warlocker", class = "PRIEST", race = "Scourge", level = 20 })
+  local C, Core, UI = ns.Compat, ns.Core, ns.UI
+  local scans, computes = 0, 0
+  local scan, fresh = C.scanSpellbook, Core.computeFresh
+  C.scanSpellbook = function(...) scans = scans + 1; return scan(...) end
+  Core.computeFresh = function(...) computes = computes + 1; return fresh(...) end
+  UI.Open("keys")
+  local s0, c0 = scans, computes
+  for _ = 1, 5 do UI.Refresh() end
+  H.eq(computes - c0, 5, "one plan per window refresh")
+  UI.Select("setup")
+  H.eq(computes - c0, 6, "setup tab + checklist share one plan")
+  H.eq(scans, s0, "no spellbook rescan while nothing changed")
+  W.fire("SPELLS_CHANGED")
+  UI.Refresh()
+  H.eq(scans, s0 + 1, "rescan after SPELLS_CHANGED")
+  W.flush() -- login timers (offer check, diagnose) first
+  W.fire("ACTIONBAR_SLOT_CHANGED", 1); W.fire("ACTIONBAR_SLOT_CHANGED", 2); W.fire("ACTIONBAR_SLOT_CHANGED", 3)
+  local c1 = computes
+  W.flush()
+  H.ok(computes - c1 <= 1, "a burst of bar events refreshes once")
+end
+
 os.exit(H.report("features") and 0 or 1)

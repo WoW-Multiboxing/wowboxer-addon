@@ -129,6 +129,7 @@ do
   H.ok(byKey.K1 and byKey.K1.body:find("party1"), "kit follows party1")
   -- spells not in the spellbook stay out of sequences
   W.known["Mind Blast"] = nil
+  W.fire("SPELLS_CHANGED") -- the client fires this whenever the spellbook changes (the addon caches the scan)
   local ctx2 = Core.compute()
   local s1
   for _, d in ipairs(ctx2.desired) do if d.key == "S1" then s1 = d end end

@@ -141,12 +141,22 @@ function W.editBox(parent, width, height)
   return eb, sf
 end
 
-function W.icon(parent, size)
+--- Spell-style icon. border=true adds the spec's thin gold frame (a 1 px darker-gold square behind the icon).
+function W.icon(parent, size, border)
   local t = parent:CreateTexture(nil, "ARTWORK")
   t:SetSize(size or 20, size or 20)
   if t.SetTexCoord then t:SetTexCoord(0.08, 0.92, 0.08, 0.92) end
+  if border then
+    local b = parent:CreateTexture(nil, "BORDER")
+    b:SetPoint("TOPLEFT", t, "TOPLEFT", -1, 1)
+    b:SetPoint("BOTTOMRIGHT", t, "BOTTOMRIGHT", 1, -1)
+    b:SetColorTexture(0.54, 0.43, 0.2, 1)
+    t.border = b
+  end
   return t
 end
+--- Scrollbar width of UIPanelScrollFrameTemplate: it sits to the right, OUTSIDE the scroll frame. Keep this much free.
+W.SCROLLBAR = 24
 function W.setIcon(tex, slugOrId)
   if type(slugOrId) == "number" then tex:SetTexture(slugOrId)
   elseif type(slugOrId) == "string" and slugOrId ~= "" then tex:SetTexture("Interface\\Icons\\" .. slugOrId)

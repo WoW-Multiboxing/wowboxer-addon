@@ -9,7 +9,7 @@ ns.Bars = B
 local R, C, M = ns.Rules, ns.Compat, ns.Macros
 
 B.BARS = {
-  { first = 1, label = "Action Bar 1", short = "Bar1" },
+  { first = 1, label = "Action Bar 1", short = "Bar 1" },
   { first = 61, label = "Bottom Left Bar", short = "BL" },
   { first = 49, label = "Bottom Right Bar", short = "BR" },
   { first = 25, label = "Right Bar", short = "R1" },
@@ -18,7 +18,7 @@ B.BARS = {
 --- "Bar1 3", "BL 12" … for an action slot
 function B.slotLabel(slot)
   local first = slot - (slot - 1) % 12
-  for _, b in ipairs(B.BARS) do if b.first == first then return b.short .. " " .. ((slot - 1) % 12 + 1) end end
+  for _, b in ipairs(B.BARS) do if b.first == first then return b.short .. " · " .. ((slot - 1) % 12 + 1) end end
   return "#" .. slot
 end
 function B.barLabel(first) for _, b in ipairs(B.BARS) do if b.first == first then return b.label end end return "Bar " .. tostring(first) end
