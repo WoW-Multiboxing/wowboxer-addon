@@ -38,7 +38,7 @@ function Book.describe(d, mem)
   if d.group == "sequence" or (d.group == "custom" and d.seq) then
     return "Each press casts the next spell of the " .. (d.label or "sequence") .. " – one spell per press. It starts over after combat."
   end
-  if d.group == "helper" then return (d.label or "") .. "." end
+  if d.group == "helper" then return Book.helperText(d.key, mem) end
   local body, spell = d.body or "", d.label or "the spell"
   local lead = body:match("@(%w+)target") -- the leader's unit when this character follows
   if body:find("help", 1, true) then
@@ -70,11 +70,39 @@ function Book.setRole(mem, v)
   Core().log("info", "role " .. v); Core().changed()
 end
 
+--- What a helper key does and why WoWBoxer made it, in plain words (tooltip and details line).
+function Book.helperText(key, mem)
+  local _, me = Core().me()
+  mem = mem or me
+  local s = Core().me()
+  local L = s and ns.State.leaderOf(s)
+  local lead = (L and L ~= mem and L.name) or "the leader"
+  local u = mem and mem.unit or "party1"
+  local T = {
+    Follow = "Follows " .. lead .. " (" .. u .. "). Press it when this character should run behind the leader; moving it yourself stops following.",
+    Assist = "Takes " .. lead .. "'s target (" .. u .. "), so this character attacks what the leader attacks. Then press your attack keys.",
+    Focus = "Sets your current target as focus. Target the leader and press it once: your keys then use the leader through focus.",
+    Pet = "Sends your pet at the enemy under your mouse, else " .. ((mem and mem.leader) and "your target" or (lead .. "'s target")) .. ".",
+    PetBack = "Makes your pet passive and calls it back to you – use it to pull the pet out of a fight.",
+  }
+  local why = (key == "Pet" or key == "PetBack") and "WoWBoxer adds it because this character has a pet."
+    or "WoWBoxer adds it because this character follows " .. lead .. " (Plays as on the My keys page)."
+  return (T[key] or "A helper key.") .. " One press = one action on this character only. " .. why
+end
+--- Section headers on the My keys pages: kit, sequence, helpers, extra keys.
+Book.SECTION_TIP = {
+  kit = "Your everyday spells. Each key casts one spell on the right target: yours when you lead, the leader's when you follow.",
+  sequence = "Each press casts the next spell of a list. Turn them on with Use sequence keys at the top.",
+  helper = "Keys that help you play several characters together: follow the leader, take the leader's target, steer your pet. They cast no spell.",
+  extra = "Spells you dragged from All spells to make them WoWBoxer keys too.",
+}
+Book.SECTIONS = { kit = { "Spell keys", "One spell per press" }, sequence = { "Sequence keys", "One press = the next spell" },
+  helper = { "Helpers", "Follow, assist and pet keys" }, extra = { "Extra keys", "Spells you added" } }
+
 -- ------------------------------------------------------------------ data per page
 local function iconFor(d, it)
   if d and d.spell and d.spell.icon then return d.spell.icon end
-  if it and it.group == "helper" then return ({ Follow = "Ability_Tracking", Assist = "Ability_Hunter_SniperShot", Focus = "Ability_Hunter_MarkedForDeath",
-    Pet = "Ability_Hunter_Pet_Wolf", PetBack = "Ability_Hunter_BeastCall" })[it.key] or "INV_Misc_QuestionMark" end
+  if it and it.group == "helper" then return ns.Macros.HELPER_ICON[it.key] or "INV_Misc_QuestionMark" end
   if d and d.main then return d.main.icon end
   return nil
 end
@@ -130,8 +158,16 @@ function Book.cells(mode, ctx)
     end
     return out
   end
+  local lastGroup
   for _, it in ipairs(ctx.macros.items) do
     local custom = it.group == "custom"
+    if mode == "keys" and not custom and it.group ~= lastGroup and Book.SECTIONS[it.group] then
+      local sec = Book.SECTIONS[it.group]
+      -- a section starts on a new row
+      if #out % COLS == 1 then out[#out + 1] = { kind = "pad", name = false, label = "", sub = "", color = W.MUTED } end
+      out[#out + 1] = { kind = "header", label = sec[1], sub = sec[2], color = W.MUTED, name = false, group = it.group }
+      lastGroup = it.group
+    end
     if (mode == "custom") == custom then
       local d = desiredBy[it.name]
       local b = barOf[it.name]
@@ -279,7 +315,16 @@ function Book.menuFor(p, c)
   elseif c.item then items[#items + 1] = { "Leave out", function() setSkip(c.name, true) end } end
   local i = c.name and tonumber(c.name:match("^WBX C(%d)$"))
   if i then items[#items + 1] = { "Edit", function() ns.KeyEditor.Open(p, i) end } end
+  if c.d and c.d.body then items[#items + 1] = { "Copy…", function() Book.copyKey(c) end } end
   return items
+end
+
+--- Show a key's macro text (and, for own keys, a WoWBoxer key string) to copy and give to others.
+function Book.copyKey(c)
+  local _, m = Core().me()
+  local i = c.name and tonumber(c.name:match("^WBX C(%d)$"))
+  local own = i and m and m.customSeq and m.customSeq[i]
+  ns.CopyBox.ShowCopy("Copy \"" .. (c.label or "key") .. "\"", c.d.body, own and ns.Share.encodeKey(own, m.cls) or nil)
 end
 
 -- ------------------------------------------------------------------ build
@@ -326,18 +371,21 @@ local function makeCell(p, parent)
   b:SetScript("OnClick", function(self, button)
     local c = self.cell
     if not c then return end
+    if c.kind == "header" then return end
     if button == "RightButton" or (_G.IsShiftKeyDown and _G.IsShiftKeyDown()) then W.menu(self, Book.menuFor(p, c)); return end
     if c.kind == "new" then ns.KeyEditor.Open(p, nil); return end
+    if c.kind == "header" then return end
     p.selected = c.name or (c.spell and ("spell:" .. c.spell.id)) or nil
     UI.Refresh()
   end)
-  b:SetScript("OnDragStart", function(self) if self.cell and self.cell.kind ~= "new" then pickupCell(self.cell) end end)
+  b:SetScript("OnDragStart", function(self) if self.cell and self.cell.kind ~= "new" and self.cell.kind ~= "header" then pickupCell(self.cell) end end)
   W.tooltip(b, function(GT, self)
     local c = self.cell
     if not c then return end
     GT:AddLine(c.label, 1, 0.82, 0)
     GT:AddLine(c.sub, c.color[1], c.color[2], c.color[3])
     if c.kind == "new" then GT:AddLine("Click to build your own key: a sequence of your spells, one spell per press.", 1, 1, 1, true); return end
+    if c.kind == "header" then GT:AddLine(Book.SECTION_TIP[c.group] or "", 1, 1, 1, true); return end
     local d = c.d
     if c.kind == "spell" and not d then
       d = { group = "extra", label = c.spell.name, body = ns.Engine.makeMacro(c.spell, ns.Kit.memberCtx(ns.Core.compute().member)) }
@@ -483,9 +531,12 @@ local function refresh(p, ctx)
   local selCell
   for i, b in ipairs(p.cells) do
     local c = list[first + i]
+    if c and c.kind == "pad" then c = nil end
     b.cell = c
     if c then
       b:Show()
+      local head = c.kind == "header"
+      b.slotBg:SetShown(not head); b.icon:SetShown(not head); b.frame:SetShown(not head)
       W.setIcon(b.icon, c.icon)
       if c.icons then b.multi.set(c.icons); b.icon:SetAlpha(0) else b.multi.Hide() end
       b.badge:SetText(c.badge or ""); b.badge:SetShown(c.badge ~= nil); b.badgeBg:SetShown(c.badge ~= nil)

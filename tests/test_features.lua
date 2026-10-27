@@ -129,7 +129,7 @@ do
   H.ok(m and m:IsShown(), "right-click opens the menu")
   local labels = {}
   for _, b in ipairs(m.rows) do if b:IsShown() then labels[#labels + 1] = b.label._text end end
-  H.eq(table.concat(labels, ", "), "Pick up, Bind key…, Leave out", "menu entries")
+  H.eq(table.concat(labels, ", "), "Pick up, Bind key…, Leave out, Copy…", "menu entries")
   m.rows[3]:Click()
   H.ok(Core.cdb.skip["WBX K3"], "Leave out from the menu")
   H.ok(row(ns, function(x) return x.name == "WBX K3" end).cell.sub:find("Left out") ~= nil, "shown as Left out")

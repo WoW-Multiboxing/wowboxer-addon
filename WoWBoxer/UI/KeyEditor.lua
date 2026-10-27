@@ -38,7 +38,27 @@ function KE.preview(m, c, L)
   for _, n in ipairs(c.steps or {}) do local s = has(n); if s then sp[#sp + 1] = s end end
   local filler = (c.kind == "sequence" and c.filler and c.filler ~= "") and has(c.filler) or nil
   local warn = E().customWarnings(c.kind, sp, filler, c.aim, m.cls)
+  for _, w in ipairs(KE.extraWarnings(c, sp, filler)) do warn[#warn + 1] = w end
   return r, warn
+end
+
+--- Warnings the addon adds on top of the companion's (docs: the owner's warlock key with Demon Skin + Summon Imp).
+function KE.extraWarnings(c, sp, filler)
+  local out = {}
+  if c.aim ~= "harm" then return out end
+  local buffs, slow = {}, {}
+  for _, s in ipairs(sp) do
+    if s.action == "self" or s.action == "petself" then buffs[#buffs + 1] = s.name end
+    if (tonumber(s.castLast) or 0) >= 5 then slow[#slow + 1] = s.name .. " (" .. s.castLast .. " s)" end
+  end
+  if #buffs > 0 then
+    out[#out + 1] = table.concat(buffs, ", ") .. (#buffs == 1 and " is a buff or summon" or " are buffs or summons") ..
+      ": in an Enemy key every fight starts with " .. (#buffs == 1 and "it" or "them") .. ", and if one fails the sequence waits there. Put " ..
+      (#buffs == 1 and "it" or "them") .. " on " .. (#buffs == 1 and "its" or "their") .. " own key."
+  end
+  if #slow > 0 then out[#out + 1] = "Long casts: " .. table.concat(slow, ", ") .. " – the key does nothing else meanwhile." end
+  local _ = filler
+  return out
 end
 
 --- Save a draft into the member's custom keys (index = nil adds a new one). Returns index or nil, reason.
@@ -204,8 +224,38 @@ function KE.Build(parent)
     if m and f.index then KE.delete(m, f.index); Core().log("info", "custom key C" .. f.index .. " deleted") end
     KE.Close(); Core().changed()
   end, "Deletes this own key from WoWBoxer (click twice). The game macro is removed the next time you update your keys.")
-  f.delete:SetPoint("BOTTOMLEFT", 10, 8)
+  f.paste = W.button(f, "Paste…", 70, 24, function()
+    ns.CopyBox.ShowPaste(function(d) KE.usePasted(d) end)
+  end, "Paste a key someone gave you (a WoWBoxer key or plain macro text). Only the spell names are used.")
+  f.paste:SetPoint("BOTTOMLEFT", 10, 8)
+  f.copy = W.button(f, "Copy…", 70, 24, function()
+    local _, m = Core().me()
+    if not (m and f.draft) then return end
+    local r = KE.preview(m, f.draft, ns.Compat.playerLevel())
+    ns.CopyBox.ShowCopy("Copy \"" .. (f.draft.name or "My key") .. "\"", r.macro, ns.Share.encodeKey(f.draft, m.cls))
+  end, "Shows the macro text and a WoWBoxer key, ready to copy and give to others.")
+  f.copy:SetPoint("LEFT", f.paste, "RIGHT", 6, 0)
+  f.delete:SetPoint("LEFT", f.copy, "RIGHT", 6, 0)
   return f
+end
+
+--- Put a pasted key into the draft: spells this class does not have are left out (and named).
+function KE.usePasted(d)
+  local f = KE.frame
+  local _, m = Core().me()
+  if not (f and f.draft and m) then return end
+  local known = {}
+  for _, s in ipairs(ns.Kit.spellsOf(m)) do known[s.name] = true end
+  local steps, dropped = {}, {}
+  for _, n in ipairs(d.steps or {}) do if known[n] and #steps < MAX_STEPS then steps[#steps + 1] = n else dropped[#dropped + 1] = n end end
+  local filler = d.filler or ""
+  if filler ~= "" and not known[filler] then dropped[#dropped + 1] = filler; filler = "" end
+  local x = f.draft
+  x.kind, x.aim, x.steps, x.filler, x.fills, x.reset = d.kind, d.aim, steps, filler, d.fills or 1, d.reset or "combat"
+  if d.name and d.name ~= "" and d.name ~= "Pasted key" then x.name = d.name; f.name:SetText(d.name) end
+  if #dropped > 0 then Core().print("|cfff0b43cLeft out (not a " .. (ns.Data.classes[m.cls] and ns.Data.classes[m.cls].n or m.cls) .. " spell):|r " .. table.concat(dropped, ", ")) end
+  Core().log("info", "pasted key: " .. #steps .. " steps")
+  KE.Refresh()
 end
 
 function KE.addStep(name)

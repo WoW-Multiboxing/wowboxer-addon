@@ -99,3 +99,102 @@ function Sh.export(squad, extra)
   return Sh.encode(payload)
 end
 
+-- ------------------------------------------------------------------ one own key as text (copy / paste)
+-- !WBXK:1!<base64 JSON>!<crc32>, JSON = {f="wowboxer-key/1", cls, key={name, kind, aim, steps, filler, fills, reset}}.
+-- Like the squad string it carries spell NAMES only, never macro text: the client that pastes it builds the macro.
+Sh.KEY_PREFIX = "!WBXK:1!"
+Sh.KEY_FORMAT = "wowboxer-key/1"
+
+function Sh.encodeKey(c, cls)
+  local key = { name = c.name, kind = c.kind, aim = c.aim, steps = Json.array(E_copy(c.steps)), filler = c.filler or "", fills = c.fills, reset = c.reset }
+  local json = Json.encode({ f = Sh.KEY_FORMAT, cls = cls, key = key }, KEY_ORDER)
+  return Sh.KEY_PREFIX .. Json.b64encode(json) .. "!" .. Json.crc32hex(json)
+end
+
+--- A pasted key string -> clean key {name, kind, aim, steps, filler, fills, reset}, cls  or nil, error.
+function Sh.decodeKey(str)
+  str = (type(str) == "string" and str or ""):gsub("^%s+", ""):gsub("%s+$", "")
+  if #str > 4000 then return nil, "Too long for one key." end
+  local b64, crc = str:match("^!WBXK:1!([^!]+)!(%x%x%x%x%x%x%x%x)$")
+  if not b64 then return nil, "Not a WoWBoxer key." end
+  local json, err = Json.b64decode(b64)
+  if not json then return nil, "The key is damaged: " .. err .. "." end
+  if Json.crc32hex(json) ~= crc:lower() then return nil, "The key is damaged (checksum). Copy it again." end
+  local v = Json.decode(json, { maxDepth = 6, maxItems = 200, maxString = 200 })
+  if type(v) ~= "table" or v.f ~= Sh.KEY_FORMAT or type(v.key) ~= "table" then return nil, "Unknown key format." end
+  local c = S.cleanCustom({ v.key })[1]
+  if not c then return nil, "The key is empty." end
+  return c, (type(v.cls) == "string" and v.cls or nil)
+end
+
+--- Plain macro text (a /castsequence line, or /cast lines = a priority list) -> a key draft, or nil, error.
+--- Only the spell names are taken over; WoWBoxer writes its own conditions and lines. Data only, never run.
+function Sh.parseMacro(text)
+  if type(text) ~= "string" or #text > 2000 then return nil, "Paste one macro (up to 255 characters)." end
+  local function conds(rest)
+    local c, i = "", 1
+    while true do
+      local a = rest:find("^%s*%[", i)
+      if not a then break end
+      local j = rest:find("]", i, true)
+      if not j then break end
+      c = c .. rest:sub(i, j); i = j + 1
+    end
+    return c, (rest:sub(i):gsub("^%s+", ""))
+  end
+  local function spell(n)
+    n = (n or ""):gsub("^%s+", ""):gsub("%s+$", ""):gsub("^!", ""):gsub("%s*%(.-%)$", "")
+    n = n:match("^([^;]*)") or n
+    n = n:gsub("%s+$", "")
+    if n == "" or #n > 40 or n:find("[%[%]/]") then return nil end
+    return n
+  end
+  local seqLine, casts, help = nil, {}, false
+  for line in (text:gsub("\r", "") .. "\n"):gmatch("([^\n]*)\n") do
+    local rest = line:match("^%s*/castsequence%s+(.*)$")
+    if rest then seqLine = seqLine or rest
+    else
+      local r2 = line:match("^%s*/cast%s+(.*)$")
+      if r2 then casts[#casts + 1] = r2 end
+    end
+  end
+  local out = { name = "Pasted key", kind = "sequence", aim = "harm", steps = {}, filler = "", fills = 1, reset = "combat" }
+  if seqLine then
+    local c, tail = conds(seqLine)
+    help = c:find("help", 1, true) ~= nil and not c:find("harm", 1, true)
+    local reset, list = tail:match("^reset=(%S+)%s+(.*)$")
+    if not reset then list = tail end
+    if reset == "target" or reset == "target/combat" or reset == "combat/target" then out.reset = "target/combat"
+    elseif reset and reset:find("%d") then out.reset = "combat/12" end
+    local names = {}
+    for item in (list .. ","):gmatch("([^,]*),") do local n = spell(item); if n then names[#names + 1] = n end end
+    if #names == 0 then return nil, "No spells found after /castsequence." end
+    -- the last spell repeated at the end is the filler
+    local last, n = names[#names], 0
+    for i = #names, 1, -1 do if names[i] == last then n = n + 1 else break end end
+    if n >= 2 or #names == 1 then
+      out.filler, out.fills = last, math.min(6, math.max(1, n))
+      for i = 1, #names - n do out.steps[#out.steps + 1] = names[i] end
+    else
+      for _, x in ipairs(names) do out.steps[#out.steps + 1] = x end
+    end
+  elseif #casts > 0 then
+    out.kind = "priority"
+    for _, r in ipairs(casts) do
+      local c, tail = conds(r)
+      if c:find("help", 1, true) and not c:find("harm", 1, true) then help = true end
+      local n = spell(tail)
+      if n and #out.steps < 12 then
+        local dup = false
+        for _, x in ipairs(out.steps) do if x == n then dup = true end end
+        if not dup then out.steps[#out.steps + 1] = n end
+      end
+    end
+    if #out.steps == 0 then return nil, "No spells found after /cast." end
+  else
+    return nil, "Paste a WoWBoxer key (!WBXK:1!…) or a macro with /castsequence or /cast lines."
+  end
+  out.aim = help and "help" or "harm"
+  while #out.steps > 12 do table.remove(out.steps) end
+  return out
+end

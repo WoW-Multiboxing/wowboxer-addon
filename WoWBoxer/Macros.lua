@@ -13,6 +13,18 @@ M.ICON = 134400 -- the "?" icon: #showtooltip then shows the spell
 M.ORDER = { "K1", "K2", "K3", "K4", "K5", "K6", "K7", "K8", "S1", "S2", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8",
   "Follow", "Assist", "Focus", "Pet", "PetBack" }
 local SEQ_KEY = { dps = "S1", heal = "S2" }
+--- Helper keys run no spell, so #showtooltip cannot pick an icon: each gets a picture that says what it does.
+M.HELPER_ICON = { Follow = "Ability_Tracking", Assist = "Ability_Hunter_SniperShot", Focus = "Spell_Holy_MindVision",
+  Pet = "Ability_GhoulFrenzy", PetBack = "Ability_Seal" }
+--- The icon argument for CreateMacro/EditMacro: the file ID when the client can look it up, else the icon name.
+function M.namedIcon(slug)
+  local f = _G.GetFileIDFromPath
+  if f then
+    local ok, id = pcall(f, "Interface\\Icons\\" .. slug)
+    if ok and type(id) == "number" and id > 0 then return id end
+  end
+  return slug
+end
 
 --- live(name, spell) from the spellbook: true if the character really knows the spell. nil when no spellbook API.
 function M.liveCheck()
@@ -136,6 +148,7 @@ function M.desired(m, L, opts)
     if map then d.body = M.localize(d.body, map) end
     d.icon = M.ICON
     if d.seq then M.seqIcon(d, byName) end
+    if d.group == "helper" and M.HELPER_ICON[d.key] then d.iconName = M.HELPER_ICON[d.key]; d.icon = M.namedIcon(d.iconName) end
     d.ok, d.why = R.validateMacro(d.name, d.body)
     if not d.ok and map and #d.body > R.MACRO_LIMIT then d.why = "too long with your client's spell names (" .. #d.body .. "/255)" end
   end
@@ -174,6 +187,8 @@ end
 function M.iconChanged(have, want)
   if want == nil or want == M.ICON then return false end
   if type(have) == "string" and not tonumber(have) then return have:lower():find("questionmark", 1, true) ~= nil end
+  -- an icon given by name: the client stores some file ID for it, so only the "?" counts as a change
+  if type(want) == "string" then return have == nil or tonumber(have) == M.ICON end
   have = tonumber(have)
   return have == nil or have == M.ICON or have ~= want
 end

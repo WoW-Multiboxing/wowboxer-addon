@@ -153,7 +153,7 @@ for _, scenario in ipairs({
   W.combat = true
   UI.Select("keys")
   H.ok(anyText(W, "In combat") ~= nil, tag .. "combat explained in the next step")
-  UI.panels.keys.cells[1]:Click("LeftButton")
+  UI.panels.keys.cells[2]:Click("LeftButton") -- cell 1 is the "Spell keys" header
   H.ok(not findButton(W, "Bind key"):IsEnabled(), tag .. "Bind key disabled in combat")
   W.combat = false
   -- slash commands

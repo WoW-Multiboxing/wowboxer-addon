@@ -17,7 +17,9 @@ minimap button, much more drag & drop of macros onto the action bars.
 4. On every other client: the card "Dorin shares squad …" → **Review** → **Import squad**, then **My keys** → **Place all**.
 5. On a Paladin, Priest or Warlock: My keys → tick **Use sequence keys**, pick **Medium**, press **Update keys**. Look at
    the action bar: the sequence key has a real icon and small step icons; cast it a few times (the gold frame moves).
-6. On Dorin: Squad → Home, Readiness, Key map and Plan – PrtScn each. Then `/reload` on every client and tell Claude "done".
+6. On the warlock: My keys – check the **Helpers** section (hover Follow) and that Follow/Assist/Pet show real icons on
+   the bar after **Update keys**. Custom keys → New own key → **Paste…** your macro → read the warnings → **Copy…**.
+7. On Dorin: Squad → Home, Readiness, Key map and Plan – PrtScn each. Then `/reload` on every client and tell Claude "done".
 
 ## Needs the owner in game
 Built behind probes and tested in the simulator; only the real client can confirm these. (Claude Code keeps this list.)
@@ -26,6 +28,9 @@ Built behind probes and tested in the simulator; only the real client can confir
 - **Sequence icons (b35eb80):** the macro icon file ID from `C_Spell.GetSpellTexture`/`GetSpellTexture` (macros-cache
   shows it in `read_log`); the step strip on Blizzard action buttons: `GetActionText`, `QueryCastSequence` (diagnose
   `strip.query`), `GetMacroSpell` for priority keys; **taint**: `Logs\taint.log` must not name WoWBoxer (read_log prints it).
+- **Helper icons + copy/paste:** helper macros get an icon by name (`CreateMacro(name, "Ability_Tracking", …)`) or by
+  `GetFileIDFromPath` when the client has it – check the bar shows them and Update keys does not repeat forever;
+  the copy box (Ctrl+C from a selected edit box) and the paste box (Ctrl+V).
 - **Squad sync (2c338bf):** chunked `Q|` messages on PARTY between 2–3 clients (throttling), the offer card, Review →
   Import; `P|` preset offers; `R|` readiness + version in the team status (diagnose `team.peers`); the session card
   ~20 s after login when grouped; `UnitIsGroupLeader`/`UnitClass`/`UnitRace` on party units for Add my party.
@@ -79,7 +84,16 @@ Built behind probes and tested in the simulator; only the real client can confir
       like a pasted string; the card "Dorin shares squad … – Review / Ignore"; Import only after the click on that
       client; logged on both sides; only from your own party. Leader preset switch → "Apply / Ignore" on clients that
       have that squad. Version check (Home + Readiness) and a session card after login when grouped.
-- [x] Tests: `tests/test_dropdown.lua`, `tests/test_seqicons.lua`, `tests/test_squad.lua`, `tests/test_sync.lua`
+- [x] Helper keys (the owner 2026-10-28: "they pop out of nowhere"): Follow, Assist, Focus, Pet and Pet back get icons that
+      say what they do (on the bar too, not "?"), their own **Helpers** section in the book (sections: Spell keys,
+      Sequence keys, Helpers, Extra keys, each on a new row), and a hover that says what the key does, how to use it and
+      why WoWBoxer made it.
+- [x] Copy / paste keys: right-click → **Copy…** (macro text for /macro on any character; own keys also a `!WBXK:1!`
+      WoWBoxer key), key editor **Copy…** / **Paste…** (a WoWBoxer key or plain `/castsequence` / `/cast` text; only
+      spell names are taken, spells of other classes are left out and named). Data only, the addon writes the macro.
+- [x] Key editor warns about buffs and summons in an enemy key and about long casts (the owner's warlock key: Demon Skin +
+      Summon Imp stalled the sequence). Addon-side for now; WS-A should add the same warning to the companion.
+- [x] Tests: `tests/test_keys.lua` (helpers, paste/copy, warnings, box layout), `tests/test_dropdown.lua`, `tests/test_seqicons.lua`, `tests/test_squad.lua`, `tests/test_sync.lua`
       (three simulated clients in one party), every squad page and offer card in the layout matrix.
 
 ## UI v2 – spellbook, guide, any resolution, fly to the bar (`docs/ui-spec-v2.md`, the owner 2026-10-27 evening)
