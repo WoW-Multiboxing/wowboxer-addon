@@ -225,6 +225,7 @@ local function setSkip(name, skip) Core().cdb.skip[name] = skip or nil; Core().c
 --- Menu entries for a cell (right-click, Shift-click).
 function Book.menuFor(p, c)
   local items = {}
+  if ns.Compat.inCombat() then return { { "Not in combat – try again after the fight", function() end } } end
   if c.kind == "new" then return { { "New own key", function() ns.KeyEditor.Open(p, nil) end } } end
   if c.kind == "spell" and not c.name then
     if not c.dim then items[#items + 1] = { "Pick up (make a key)", function() pickupCell(c) end } end

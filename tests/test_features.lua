@@ -119,7 +119,22 @@ do
   if r then r._scripts.OnDragStart(r) end
   H.eq(W.calls.CreateMacro, n, "no macro written by a drag in combat")
   H.eq(W.cursor, nil, "nothing picked up in combat")
+  local menu = ns.Book.menuFor(UI.panels.keys, { kind = "key", name = "WBX K3", label = "x" })
+  H.eq(#menu, 1, "the right-click menu offers nothing in combat")
   W.combat = false
+  -- right-click menu: Pick up, Bind key, Leave out / Use again
+  local cell = row(ns, function(x) return x.name == "WBX K3" end)
+  cell:Click("RightButton")
+  local m = ns.Widgets.menuFrame
+  H.ok(m and m:IsShown(), "right-click opens the menu")
+  local labels = {}
+  for _, b in ipairs(m.rows) do if b:IsShown() then labels[#labels + 1] = b.label._text end end
+  H.eq(table.concat(labels, ", "), "Pick up, Bind key…, Leave out", "menu entries")
+  m.rows[3]:Click()
+  H.ok(Core.cdb.skip["WBX K3"], "Leave out from the menu")
+  H.ok(row(ns, function(x) return x.name == "WBX K3" end).cell.sub:find("Left out") ~= nil, "shown as Left out")
+  ns.Book.menuFor(UI.panels.keys, row(ns, function(x) return x.name == "WBX K3" end).cell)[3][2]()
+  H.eq(Core.cdb.skip["WBX K3"], nil, "Use again")
   H.eq(#errors(ns), 0, "no errors (drag): " .. table.concat(errors(ns), " | "))
 end
 
