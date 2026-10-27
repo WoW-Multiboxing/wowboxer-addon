@@ -68,9 +68,17 @@ function C.knownSpellNames()
       local info = SB.GetSpellBookSkillLineInfo(i)
       if info then
         local off, num = info.itemIndexOffset or 0, info.numSpellBookItems or 0
+        local future = G.Enum and G.Enum.SpellBookItemType and G.Enum.SpellBookItemType.FutureSpell
         for j = off + 1, off + num do
-          local ok, name = pcall(SB.GetSpellBookItemName, j, bank)
-          if ok and type(name) == "string" and not C.isSecret(name) then names[name] = true end
+          local isFuture = false
+          if SB.GetSpellBookItemInfo and future then
+            local okI, item = pcall(SB.GetSpellBookItemInfo, j, bank)
+            isFuture = okI and type(item) == "table" and item.itemType == future
+          end
+          if not isFuture then
+            local ok, name = pcall(SB.GetSpellBookItemName, j, bank)
+            if ok and type(name) == "string" and not C.isSecret(name) then names[name] = true end
+          end
         end
       end
     end
@@ -80,8 +88,11 @@ function C.knownSpellNames()
     for i = 1, G.GetNumSpellTabs() do
       local _, _, off, num = G.GetSpellTabInfo(i)
       for j = (off or 0) + 1, (off or 0) + (num or 0) do
-        local name = G.GetSpellBookItemName(j, G.BOOKTYPE_SPELL or "spell")
-        if type(name) == "string" then names[name] = true end
+        local kind = G.GetSpellBookItemInfo and G.GetSpellBookItemInfo(j, G.BOOKTYPE_SPELL or "spell")
+        if kind ~= "FUTURESPELL" then
+          local name = G.GetSpellBookItemName(j, G.BOOKTYPE_SPELL or "spell")
+          if type(name) == "string" then names[name] = true end
+        end
       end
     end
     return names, "GetSpellTabInfo"

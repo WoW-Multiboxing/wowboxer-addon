@@ -192,7 +192,7 @@ function Mock.new(H, opts)
   function methods:GetObjectType() return self._kind end
   function methods:GetCursorPosition() return 0 end
   function methods:GetNumLetters() return #(self._text or "") end
-  FrameMT.__index = function(t, k) return methods[k] or function() end end
+  FrameMT.__index = function(t, k) if type(k) == "string" and k:sub(1, 1) == "_" then return nil end return methods[k] or function() end end
   W.newFrame = newFrame
   env.CreateFrame = function(kind, name, parent, template) local f = newFrame(kind, name, parent); f._template = template; return f end
   env.UIParent = newFrame("Frame", "UIParent")
