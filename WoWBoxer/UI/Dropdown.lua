@@ -165,9 +165,9 @@ function W.dropdown(parent, opts)
   function dd.Refresh()
     if dd.isBlizzard then
       if dd.GenerateMenu then dd:GenerateMenu() end
-      if dd.OverrideText then dd:OverrideText(labelOf(opts) or "-") end
+      if dd.OverrideText then dd:OverrideText(labelOf(opts) or opts.placeholder or "-") end
     else
-      dd.label:SetText(labelOf(opts) or "-")
+      dd.label:SetText(labelOf(opts) or opts.placeholder or "-")
     end
   end
   --- Choose a value: what a click on a row does.

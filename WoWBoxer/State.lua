@@ -13,6 +13,9 @@ S.CUSTOM_MAX = 8
 local ROLES = { "tank", "healer", "melee", "ranged" }
 S.ROLES = ROLES
 S.ROLE_NAME = { tank = "Tank", healer = "Healer", melee = "Melee DPS", ranged = "Ranged DPS" }
+S.TAGS = { "tank", "healer", "caster", "melee", "pet" }
+S.TAG_NAME = { tank = "Tank", healer = "Healer", caster = "Caster", melee = "Melee", pet = "Pet" }
+S.PRESET_MAX = 8
 
 local function D() return ns.Data end
 local idCounter = 0
@@ -97,10 +100,13 @@ function S.newMember(o)
   if type(o.pins) == "table" then for _, p in ipairs(o.pins) do if type(p) == "string" and #pins < 24 then pins[#pins + 1] = p end end end
   local name = R.cleanText(o.name, 24)
   if not name or name == "" then name = D().classes[cls].n end
+  local tags = {}
+  if type(o.tags) == "table" then for _, t in ipairs(o.tags) do if E.contains(S.TAGS, t) and not E.contains(tags, t) then tags[#tags + 1] = t end end end
   return { id = safeId(o.id, "m"), name = name, cls = cls, race = race, role = role, level = clampLvl(o.level or 1), leader = not not o.leader,
     unit = E.contains(E.UNITS, o.unit) and o.unit or "party1", talented = clampT(o.talented), build = S.sanitizeOrder(cls, o.build or {}),
     guide = guide, seq = E.contains(E.SEQ_TIERS, o.seq) and o.seq or "off", seqTarget = not not o.seqTarget,
-    seqTier = (E.contains(E.SEQ_TIERS, o.seqTier) and o.seqTier ~= "off") and o.seqTier or nil, customSeq = S.cleanCustom(o.customSeq), pins = pins }
+    seqTier = (E.contains(E.SEQ_TIERS, o.seqTier) and o.seqTier ~= "off") and o.seqTier or nil, customSeq = S.cleanCustom(o.customSeq), pins = pins,
+    tags = tags }
 end
 
 function S.fixLeader(s)
@@ -135,7 +141,172 @@ function S.newSquad(o)
   s.current = (s.members[1] and s.members[1].id) or nil
   for _, m in ipairs(s.members) do if m.id == o.current then s.current = o.current end end
   S.applyLink(s)
+  s.notes = R.cleanText(o.notes, 200) or ""
+  s.presets = S.cleanPresets(s, o.presets)
+  s.activePreset = nil
+  for _, p in ipairs(s.presets) do if p.id == o.activePreset then s.activePreset = p.id end end
   return s
+end
+
+-- ------------------------------------------------------------------ leader presets ("Questing – Dorin leads")
+--- {id, name, leader = member id, roles = {[member id] = role}}; only members of the squad, only roles of their class.
+function S.cleanPresets(s, list)
+  local out = {}
+  if type(list) ~= "table" then return out end
+  for _, p in ipairs(list) do
+    if type(p) == "table" and #out < S.PRESET_MAX then
+      local leader = S.member(s, p.leader)
+      if leader then
+        local roles = {}
+        if type(p.roles) == "table" then
+          for id, r in pairs(p.roles) do
+            local m = S.member(s, id)
+            if m and E.contains(D().classes[m.cls].roles, r) then roles[m.id] = r end
+          end
+        end
+        local name = R.cleanText(p.name, 32)
+        out[#out + 1] = { id = safeId(p.id, "p"), name = (name and name ~= "") and name or (leader.name .. " leads"), leader = leader.id, roles = roles }
+      end
+    end
+  end
+  return out
+end
+function S.preset(s, id) for _, p in ipairs(s and s.presets or {}) do if p.id == id then return p end end return nil end
+--- Save who leads now (and every role) as a preset. Returns it (an existing one with that name is overwritten).
+function S.savePreset(s, name)
+  local L = S.leaderOf(s)
+  if not L then return nil end
+  name = R.cleanText(name, 32)
+  if not name or name == "" then name = L.name .. " leads" end
+  local roles = {}
+  for _, m in ipairs(s.members) do roles[m.id] = m.role end
+  local p = { id = S.uid("p"), name = name, leader = L.id, roles = roles }
+  for i, x in ipairs(s.presets) do if x.name:lower() == name:lower() then p.id = x.id; s.presets[i] = p; s.activePreset = p.id; return p end end
+  if #s.presets >= S.PRESET_MAX then return nil end
+  s.presets[#s.presets + 1] = p
+  s.activePreset = p.id
+  return p
+end
+--- Switch to a preset: the leader and the roles change (only WoWBoxer's own setup; keys change after Update keys).
+function S.applyPreset(s, id)
+  local p = S.preset(s, id)
+  if not p or not S.member(s, p.leader) then return false end
+  for _, m in ipairs(s.members) do
+    m.leader = (m.id == p.leader)
+    local r = p.roles[m.id]
+    if r and r ~= m.role and E.contains(D().classes[m.cls].roles, r) then m.role = r; m.guide = K.defaultGuideFor(m.cls, r) end
+  end
+  s.activePreset = p.id
+  S.applyLink(s)
+  return true
+end
+
+-- ------------------------------------------------------------------ order, tags, templates, party
+--- Move a member from position i to position j (window / slot order).
+function S.moveMember(s, i, j)
+  local n = #s.members
+  if i < 1 or i > n then return false end
+  j = max(1, min(n, j))
+  if i == j then return false end
+  local m = table.remove(s.members, i)
+  table.insert(s.members, j, m)
+  return true
+end
+function S.slotOf(s, m) for i, x in ipairs(s and s.members or {}) do if x == m then return i end end return nil end
+
+--- Tags that follow from class and role (used when a member has none of its own).
+function S.autoTags(m)
+  local t = {}
+  if m.role == "tank" then t[#t + 1] = "tank" end
+  if m.role == "healer" then t[#t + 1] = "healer" end
+  if m.role == "melee" then t[#t + 1] = "melee" end
+  if m.role == "ranged" and m.cls ~= "hunter" then t[#t + 1] = "caster" end
+  if m.cls == "hunter" or m.cls == "warlock" then t[#t + 1] = "pet" end
+  return t
+end
+function S.tagsOf(m) return (m.tags and #m.tags > 0) and m.tags or S.autoTags(m) end
+
+--- A race of the faction that the class can be (first in the data), else the class's first race.
+function S.raceFor(cls, faction)
+  local races = S.racesFor(cls)
+  for _, r in ipairs(races) do if r.f == faction then return r.k end end
+  return races[1] and races[1].k
+end
+
+S.TEMPLATES = {
+  { key = "duo", name = "Duo", tip = "Tank + healer.", members = { { "warrior", "tank" }, { "priest", "healer" } } },
+  { key = "trio", name = "Trio", tip = "Tank, healer and a damage dealer.", members = { { "warrior", "tank" }, { "priest", "healer" }, { "mage", "ranged" } } },
+  { key = "quad", name = "Quad", tip = "Tank, healer and two damage dealers.", members = { { "warrior", "tank" }, { "priest", "healer" }, { "mage", "ranged" }, { "warlock", "ranged" } } },
+  { key = "five", name = "5-man", tip = "A dungeon group: tank, healer, three damage dealers.",
+    members = { { "warrior", "tank" }, { "priest", "healer" }, { "mage", "ranged" }, { "warlock", "ranged" }, { "hunter", "ranged" } } },
+  { key = "undead", name = "Undead trio", tip = "Example: Undead Paladin tank, Priest healer, Warlock.", faction = "horde", race = "undead",
+    members = { { "paladin", "tank" }, { "priest", "healer" }, { "warlock", "ranged" } } },
+}
+--- A new squad from a template (class names as character names; rename them in Edit squad).
+function S.fromTemplate(key, faction)
+  local t
+  for _, x in ipairs(S.TEMPLATES) do if x.key == key then t = x end end
+  if not t then return nil end
+  faction = t.faction or (faction == "alliance" and "alliance" or "horde")
+  local members = {}
+  for i, x in ipairs(t.members) do
+    members[#members + 1] = { name = D().classes[x[1]].n .. (i > 1 and t.members[i - 1][1] == x[1] and tostring(i) or ""), cls = x[1], role = x[2],
+      race = t.race or S.raceFor(x[1], faction), leader = i == 1, unit = "party1" }
+  end
+  return S.newSquad({ name = t.name, faction = faction, members = members })
+end
+
+--- A squad from the live party: info = {{name, cls, race?, level?, leader?, me?}} (this character first).
+function S.fromParty(info, faction)
+  local members = {}
+  for _, x in ipairs(info) do
+    if #members < S.MAX_MEMBERS and x.name then
+      members[#members + 1] = { name = x.name, cls = x.cls, race = x.race or S.raceFor(x.cls, faction), level = x.level, leader = x.leader, unit = "party1" }
+    end
+  end
+  return S.newSquad({ name = "My party", faction = faction, members = members })
+end
+
+--- Change a member's class: race and role stay valid, the talent plan, own keys and pins start over (as in the companion).
+function S.setClass(s, m, cls)
+  if not S.validClass(cls) or m.cls == cls then return false end
+  m.cls = cls
+  local okRace = false
+  for _, r in ipairs(S.racesFor(cls)) do if r.k == m.race then okRace = true end end
+  if not okRace then m.race = S.raceFor(cls, s and s.faction) end
+  if not E.contains(D().classes[cls].roles, m.role) then m.role = D().classes[cls].roles[1] end
+  m.build, m.customSeq, m.pins, m.tags = {}, {}, {}, {}
+  m.guide = K.defaultGuideFor(cls, m.role)
+  if not E.seqSupported(cls) then m.seq = "off" end
+  return true
+end
+function S.setRole(m, role)
+  if not E.contains(D().classes[m.cls].roles, role) or m.role == role then return false end
+  m.role, m.guide = role, K.defaultGuideFor(m.cls, role)
+  return true
+end
+--- "leader" or a follower unit for member m. Exactly one leader stays in the squad.
+function S.setPlaysAs(s, m, v)
+  if v == "leader" then
+    for _, x in ipairs(s.members) do x.leader = (x == m) end
+  elseif E.contains(E.UNITS, v) then
+    m.leader, m.unit = false, v
+    S.fixLeader(s)
+  else return false end
+  s.activePreset = nil
+  S.applyLink(s)
+  return true
+end
+
+--- Plain-language hints about the squad (information only).
+function S.composition(s)
+  local out, n = {}, { tank = 0, healer = 0 }
+  for _, m in ipairs(s and s.members or {}) do if n[m.role] then n[m.role] = n[m.role] + 1 end end
+  local size = #(s and s.members or {})
+  if size >= 2 and n.healer == 0 then out[#out + 1] = "No healer in this squad." end
+  if n.tank > 1 then out[#out + 1] = n.tank .. " tanks in this squad." end
+  if size >= 3 and n.tank == 0 then out[#out + 1] = "No tank – fine for questing, hard in dungeons." end
+  return out
 end
 
 -- ------------------------------------------------------------------ DB

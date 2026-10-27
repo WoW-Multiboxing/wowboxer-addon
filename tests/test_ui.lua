@@ -101,13 +101,23 @@ for _, scenario in ipairs({
   -- squad tab: add a character
   UI.Select("squad")
   local panel = UI.panels.squad
+  H.ok(panel.frames.home:IsShown(), tag .. "squad home first")
+  ns.SquadPages.select(panel, "edit")
   findButton(W, "Add character"):Click()
-  H.ok(panel.editor:IsShown(), tag .. "editor opens")
-  panel.editor.name:SetText("Kirra")
-  findButton(W, "Add"):Click()
-  H.ok(not panel.editor:IsShown(), tag .. "editor closes after Add")
   local s = Core.me()
+  local row = panel.frames.edit.pool.rows[#s.members]
+  row.name:SetText("Kirra"); row.name._scripts.OnEnterPressed(row.name)
   H.eq(s.members[#s.members].name, "Kirra", tag .. "character added")
+  -- every squad page: plain words, a tooltip on every button
+  for _, def in ipairs(ns.SquadPages.pages) do
+    ns.SquadPages.select(panel, def.key)
+    local noTip = {}
+    for _, f in ipairs(W.frames) do
+      if f._kind == "Button" and f._text and f:IsVisible() and not f._scripts.OnEnter then noTip[#noTip + 1] = f._text end
+    end
+    H.eq(table.concat(noTip, ", "), "", tag .. "squad " .. def.key .. ": every button has a tooltip")
+  end
+  ns.SquadPages.select(panel, "home")
   -- share: export then import back
   UI.Select("share")
   local share = UI.panels.share
@@ -178,6 +188,18 @@ local function layoutPass(screen, opts)
   check("guide step 3")
   findButton(W, "Close"):Click()
   for _, t in ipairs(UI.tabs) do UI.Select(t.key); check("tab " .. t.key) end
+  -- a squad of three, every squad page
+  local s = Core.me()
+  for _, x in ipairs({ { "Wowtwo-Longname", "priest" }, { "Kirrathedestroyer", "warlock" } }) do
+    table.insert(s.members, ns.State.newMember({ name = x[1], cls = x[2], race = "undead", unit = "party1", level = 24 }))
+  end
+  UI.Select("squad")
+  for _, def in ipairs(ns.SquadPages.pages) do ns.SquadPages.select(UI.panels.squad, def.key); check("squad " .. def.key) end
+  ns.SquadPages.select(UI.panels.squad, "keymap")
+  ns.SquadPages.showCheatSheet(UI.panels.squad.frames.keymap)
+  check("cheat sheet")
+  UI.panels.squad.frames.keymap.sheet:Hide()
+  ns.SquadPages.select(UI.panels.squad, "home")
   UI.Select("keys")
   local p = UI.panels.keys
   p.cells[3]:Click("LeftButton")

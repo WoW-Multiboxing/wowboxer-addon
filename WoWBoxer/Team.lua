@@ -56,6 +56,25 @@ function TM.collect()
   return st
 end
 
+-- ------------------------------------------------------------------ my readiness + version (Squad pages)
+--- The WoWBoxer version of this client ("dev-1a2b3c4" from the installed TOC, else Core.VERSION).
+function TM.version()
+  local get = (G.C_AddOns and G.C_AddOns.GetAddOnMetadata) or G.GetAddOnMetadata
+  local v = get and select(2, pcall(get, "WoWBoxer", "Version"))
+  if type(v) ~= "string" or not v:match("^[%w%.%-]+$") or v:find("@", 1, true) then v = ns.Core.VERSION end
+  return v:sub(1, 20)
+end
+--- R|version|keys to update|unit ok (1/0/2 unknown)|follow+assist on bars (1/0)|settings to change
+function TM.encodeReady(r)
+  return table.concat({ "R", TM.version(), math.min(99, r.keys or 0), r.unit or 2, r.helpers or 1, math.min(99, r.cvars or 0) }, "|")
+end
+function TM.decodeReady(text)
+  if type(text) ~= "string" or #text > 80 then return nil end
+  local ver, keys, unit, helpers, cvars = text:match("^R|([%w%.%-]+)|(%d+)|([012])|([01])|(%d+)$")
+  if not ver or #ver > 20 then return nil end
+  return { version = ver, keys = tonumber(keys), unit = tonumber(unit), helpers = tonumber(helpers), cvars = tonumber(cvars) }
+end
+
 -- ------------------------------------------------------------------ wire format: S|level|mana|follow|combat|target
 function TM.encode(st) return table.concat({ "S", st.level, st.mana, st.follow, st.combat, st.target }, "|") end
 --- Data only: a fixed pattern, numbers and a GUID-shaped string. Anything else is ignored.
@@ -80,6 +99,22 @@ function TM.send(force)
   if ok then TM.lastMsg, TM.lastAt = msg, t; TM.sent = (TM.sent or 0) + 1 end
   return ok
 end
+--- My readiness (keys, unit, Follow/Assist, settings) – on the heartbeat and after a change, never more often than MIN_GAP.
+function TM.sendReady(force)
+  if not TM.active() or (ns.Compat.inCombat() and not force) then return false end
+  local ok, r = pcall(ns.Squad.myReady)
+  if not ok or not r then return false end
+  local msg = TM.encodeReady(r)
+  local t = now()
+  if not force and msg == TM.lastReady and t - (TM.lastReadyAt or -1e9) < TM.HEARTBEAT then return false end
+  local CI = G.C_ChatInfo
+  local send = (CI and CI.SendAddonMessage) or G.SendAddonMessage
+  if not send then return false end
+  local sent = pcall(send, TM.PREFIX, msg, channel())
+  if sent then TM.lastReady, TM.lastReadyAt = msg, t end
+  return sent
+end
+
 --- Coalesce bursts (power updates, target changes) into one message after MIN_GAP.
 function TM.schedule()
   if TM.pending then return end
@@ -95,11 +130,39 @@ function TM.receive(prefix, text, _, sender)
   if type(name) ~= "string" then return end
   name = name:match("^([^%-]+)") or name
   if name:lower() == (C().playerName() or ""):lower() then return end
+  if type(text) ~= "string" then return end
+  local kind = text:sub(1, 2)
+  if kind == "R|" then
+    local r = TM.decodeReady(text)
+    if not r then return end
+    local p = TM.peers[name:lower()] or { name = name, level = 0, mana = -1, follow = 0, combat = 0, target = "-" }
+    p.ready, p.version, p.at, p.name = r, r.version, now(), name
+    TM.peers[name:lower()] = p
+    TM.changed()
+    return
+  end
+  if kind == "Q|" or kind == "P|" then
+    if ns.Sync then ns.Sync.receive(text, name) end
+    return
+  end
   local st = TM.decode(text)
   if not st then return end
+  local old = TM.peers[name:lower()]
   st.at, st.name = now(), name
+  if old then st.ready, st.version = old.ready, old.version end
   TM.peers[name:lower()] = st
+  TM.changed()
+end
+--- The last state another client reported (nil when none or older than STALE).
+function TM.peer(name)
+  local p = name and TM.peers[name:lower()]
+  if p and now() - (p.at or 0) > TM.STALE then return nil end
+  return p
+end
+--- Something from another client arrived: refresh what shows it.
+function TM.changed()
   if ns.TeamFrame then ns.TeamFrame.Refresh() end
+  if ns.UI and ns.UI.frame and ns.UI.frame:IsShown() and ns.UI.current == "squad" then ns.UI.Refresh() end
 end
 
 --- Rows for the panel: one per squad character, with problems. {{name, cls, me, leader, st, flags = {{text, level}}}}
@@ -145,6 +208,7 @@ function TM.Init()
 end
 function TM.heartbeat()
   TM.send()
+  TM.sendReady()
   if ns.TeamFrame then ns.TeamFrame.Refresh() end
   if G.C_Timer and G.C_Timer.After then G.C_Timer.After(TM.HEARTBEAT, TM.heartbeat) end
 end

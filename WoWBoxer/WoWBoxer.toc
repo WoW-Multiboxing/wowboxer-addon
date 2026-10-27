@@ -36,6 +36,7 @@ Share.lua
 Checklist.lua
 Core.lua
 Team.lua
+Squad.lua
 UI\Widgets.lua
 UI\Dropdown.lua
 UI\Main.lua
@@ -49,4 +50,5 @@ UI\Book.lua
 UI\TabTalents.lua
 UI\TabSetup.lua
 UI\TabSquad.lua
+UI\SquadPages.lua
 UI\TabShare.lua

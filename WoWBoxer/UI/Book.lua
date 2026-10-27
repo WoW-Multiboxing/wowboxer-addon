@@ -173,6 +173,11 @@ function Book.nextStep(ctx, mode)
       button = { "Use Bottom Left", "Moves your main keys to the Bottom Left Bar (they are placed there when you press Place all).", function()
         cdb.primaryBar, cdb.secondaryBar, cdb.slots = 61, 49, {}; Core().changed() end } }
   end
+  local hu, L = ns.Squad.unitHint()
+  if hu then
+    return { text = "|cfff0b43c" .. L.name .. " is " .. hu .. " here,|r but your keys follow " .. ctx.member.unit .. ". Use " .. hu .. "?",
+      button = { "Use " .. hu, "Your keys will use " .. L.name .. " through " .. hu .. " (WoWBoxer's setting; then Update keys).", function() Core().setPlaysAs(hu) end } }
+  end
   local m = ctx.macros
   if m.counts.noslot > 0 then
     return { text = "|cffff8a80No free macro slot for " .. m.counts.noslot .. (m.counts.noslot == 1 and " key" or " keys") ..

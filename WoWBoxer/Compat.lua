@@ -44,6 +44,8 @@ end
 -- ------------------------------------------------------------------ player
 local RACE_FILE = { Human = "human", Dwarf = "dwarf", NightElf = "nightelf", Gnome = "gnome", Orc = "orc", Scourge = "undead",
   Undead = "undead", Tauren = "tauren", Troll = "troll" }
+--- Companion race key for a race file name ("Scourge" -> "undead"), or nil.
+function C.raceKey(file) return file and RACE_FILE[file] or nil end
 --- Companion race key for the player. Skyborne race files are not known before launch [AFKLAR]: guessed by faction.
 function C.playerRace()
   local _, file = UnitRace("player")

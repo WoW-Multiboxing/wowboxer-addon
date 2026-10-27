@@ -199,48 +199,68 @@ do
   H.eq(#errors(ns), 0, "no errors (binds): " .. table.concat(errors(ns), " | "))
 end
 
--- ------------------------------------------------------------------ squad basics: edit
+-- ------------------------------------------------------------------ squad basics: edit (Edit squad page)
 do
   local W, ns = boot({ name = "Dorin", class = "PALADIN", race = "Scourge", level = 10 })
   local Core, UI = ns.Core, ns.UI
   UI.Open("squad")
   local p = UI.panels.squad
+  ns.SquadPages.select(p, "edit")
+  local f = p.frames.edit
+  H.ok(f:IsShown(), "Edit squad page")
   findButton(W, "Add character"):Click()
-  p.editor.name:SetText("Wowtwo")
-  p.editor.v.plays = "party2"
-  findButton(W, "Add"):Click()
   local s = Core.me()
-  local added = s.members[#s.members]
-  H.eq(added.name, "Wowtwo", "added")
-  H.ok(not added.leader and added.unit == "party2", "added as follower via party2")
+  H.eq(#s.members, 2, "added a row")
+  local added = s.members[2]
+  local r = f.pool.rows[2]
+  H.eq(r.m, added, "row 2 edits the new character")
+  r.name:SetText("Wowtwo"); r.name._scripts.OnEnterPressed(r.name)
+  H.eq(added.name, "Wowtwo", "renamed in the row")
+  r.plays.select("party2")
+  H.ok(not added.leader and added.unit == "party2", "follower via party2 from the dropdown")
   H.ok(select(2, Core.me()).leader, "the solo character stays leader")
-  -- edit: rename, class, race (kept valid), role
-  p.openEditor(added)
-  H.ok(findButton(W, "Save") ~= nil, "edit mode")
-  p.editor.name:SetText("Wowtwo2")
-  p.editor.v.cls = "warlock"; p.editor.refresh()
-  H.eq(p.editor.v.role, "ranged", "role corrected for the new class")
-  findButton(W, "Save"):Click()
-  local edited = s.members[#s.members]
-  H.eq(edited.name, "Wowtwo2", "renamed")
-  H.eq(edited.cls, "warlock", "class changed")
-  H.eq(edited.id, added.id, "same member id")
-  H.eq(edited.unit, "party2", "unit kept")
-  -- make the new one leader via the editor
-  p.openEditor(edited)
-  p.editor.v.plays = "leader"
-  findButton(W, "Save"):Click()
+  r.cls.select("warlock")
+  H.eq(added.cls, "warlock", "class changed")
+  H.eq(added.role, "ranged", "role corrected for the new class")
+  local raceOk = false
+  for _, x in ipairs(ns.State.racesFor("warlock")) do if x.k == added.race then raceOk = true end end
+  H.ok(raceOk, "race kept valid for the class")
+  r.seq.check:Click()
+  H.eq(added.seq, "simple", "sequence keys in the member editor")
+  -- make the new one leader
+  r.plays.select("leader")
   local leaders = 0
   for _, x in ipairs(s.members) do if x.leader then leaders = leaders + 1 end end
   H.eq(leaders, 1, "exactly one leader")
-  H.ok(s.members[#s.members].leader, "edited character leads")
+  H.ok(added.leader, "edited character leads")
+  -- drag to reorder: drop row 2 on row 1
+  local r1 = f.pool.rows[1]
+  local _, y1 = r1:GetCenter()
+  W.cursorPos = { 10, y1 * r1:GetEffectiveScale() }
+  r.grip._scripts.OnDragStart(r.grip)
+  r.grip._scripts.OnDragStop(r.grip)
+  H.eq(s.members[1], added, "dragged to slot 1")
+  H.eq(f.pool.rows[1].num:GetText(), 1, "slot numbers follow the order")
   -- remove needs two clicks
-  p.openEditor(s.members[#s.members])
-  findButton(W, "Remove"):Click()
+  local rr = f.pool.rows[1]
+  rr.remove:Click()
   H.eq(#s.members, 2, "first click only arms")
-  findButton(W, "Sure?"):Click()
+  rr.remove:Click()
   H.eq(#s.members, 1, "removed")
   H.ok(s.members[1].leader, "the remaining character leads again")
+  -- templates + duplicate + everyone's sequence keys
+  f.template.select("undead")
+  local t = ns.State.activeSquad(Core.db)
+  H.eq(t.name, "Undead trio", "new squad from a template")
+  H.eq(#t.members, 3, "three characters")
+  H.eq(t.members[1].race, "undead", "template race")
+  H.ok(t.members[1].leader and t.members[1].role == "tank", "the tank leads")
+  f.allSeq.select("medium")
+  local on = 0
+  for _, m in ipairs(t.members) do if m.seq == "medium" then on = on + 1 end end
+  H.eq(on, 3, "everyone's sequence keys (paladin, priest, warlock)")
+  findButton(W, "Duplicate"):Click()
+  H.eq(ns.State.activeSquad(Core.db).name, "Undead trio (copy)", "duplicate")
   H.eq(W.calls.CreateMacro, nil, "squad edits write nothing to the game")
   H.eq(#errors(ns), 0, "no errors (squad): " .. table.concat(errors(ns), " | "))
 end

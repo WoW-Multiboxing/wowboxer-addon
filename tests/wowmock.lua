@@ -98,9 +98,16 @@ function Mock.new(H, opts)
     return W.party[u]
   end
   env.UnitExists = function(u) if u == "target" then return W.targetGUID ~= nil end return env.UnitName(u) ~= nil end
-  env.UnitClass = function(u) local c = W.player.class; return c:sub(1, 1) .. c:sub(2):lower(), c end
-  env.UnitRace = function(u) return W.player.race, W.player.race end
-  env.UnitLevel = function(u) return W.player.level end
+  -- other party members: W.partyInfo[unit] = {class, race, level, leader}
+  W.partyInfo = opts.partyInfo or {}
+  local function info(u) if u == "player" then return W.player end return W.partyInfo[u] or W.player end
+  env.UnitClass = function(u) local c = info(u).class; return c:sub(1, 1) .. c:sub(2):lower(), c end
+  env.UnitRace = function(u) local r = info(u).race or W.player.race; return r, r end
+  env.UnitLevel = function(u) return info(u).level or W.player.level end
+  env.UnitIsGroupLeader = function(u)
+    if u == "player" then return W.player.leader == true end
+    return W.partyInfo[u] ~= nil and W.partyInfo[u].leader == true
+  end
   env.UnitFactionGroup = function(u) return W.player.faction end
   env.IsInGroup = function() return next(W.party) ~= nil end
   env.GetNumGroupMembers = function() local n = 0; for _ in pairs(W.party) do n = n + 1 end; return n > 0 and n + 1 or 0 end

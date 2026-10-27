@@ -86,10 +86,14 @@ function Sh.export(squad, extra)
     end
     members[#members + 1] = { id = m.id, name = m.name, cls = m.cls, race = m.race, role = m.role, level = m.level, leader = m.leader, unit = m.unit,
       talented = m.talented, build = Json.array(E_copy(m.build)), guide = m.guide, seq = m.seq, seqTarget = m.seqTarget, customSeq = custom,
-      pins = Json.array(E_copy(m.pins)) }
+      pins = Json.array(E_copy(m.pins)), tags = Json.array(E_copy(m.tags)), seqTier = m.seqTier }
   end
   local payload = { f = Sh.FORMAT, game = extra.game or "any",
     squad = { id = squad.id, name = squad.name, faction = squad.faction, linkLevels = squad.linkLevels, members = members } }
+  local presets = Json.array()
+  for _, p in ipairs(squad.presets or {}) do presets[#presets + 1] = { id = p.id, name = p.name, leader = p.leader, roles = Json.object(p.roles) } end
+  if #presets > 0 then payload.squad.presets = presets; payload.squad.activePreset = squad.activePreset end
+  if squad.notes and squad.notes ~= "" then payload.squad.notes = squad.notes end
   if extra.cvars and next(extra.cvars) then payload.cvars = Json.object(extra.cvars) end
   if extra.addons and #extra.addons > 0 then payload.addons = Json.array(E_copy(extra.addons)) end
   return Sh.encode(payload)
