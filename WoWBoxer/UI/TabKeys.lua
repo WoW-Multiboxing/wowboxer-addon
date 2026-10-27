@@ -152,6 +152,12 @@ function tab.build(p)
   p.modeKeys:SetPoint("TOPLEFT", 0, -62)
   p.modeSpells = W.button(m, "All spells", 90, 20, function() p.mode = "spells"; UI.Refresh() end)
   p.modeSpells:SetPoint("LEFT", p.modeKeys, "RIGHT", 4, 0)
+  p.newKey = W.button(m, "New key", 84, 20, function() ns.KeyEditor.Open(p.main, nil) end)
+  p.newKey:SetPoint("LEFT", p.modeSpells, "RIGHT", 4, 0)
+  W.tooltip(p.newKey, function(GT)
+    GT:AddLine("New own key", 1, 0.82, 0)
+    GT:AddLine("Build your own sequence or priority key from your spells (WBX C1–C8). Same rules as the companion: one press, one cast, at most 255 characters.", 1, 1, 1, true)
+  end)
   W.tooltip(p.modeSpells, function(GT) GT:AddLine("All spells", 1, 0.82, 0); GT:AddLine("Every spell you have learned. Drag one onto an action button to make it a WBX key.", 1, 1, 1, true) end)
   W.tooltip(p.modeKeys, function(GT) GT:AddLine("My keys", 1, 0.82, 0); GT:AddLine("Your recommended WBX keys. Drag a row onto any action button, or use Create & place keys.", 1, 1, 1, true) end)
 
@@ -217,6 +223,12 @@ function tab.build(p)
   p.prevBody:SetPoint("TOPLEFT", 6, -6)
   p.prevBody:SetPoint("BOTTOMRIGHT", -6, 6)
   p.prevBody:SetJustifyV("TOP")
+  p.editKey = W.button(pv, "Edit", 50, 18, function()
+    local i = p.selected and tonumber(p.selected:match("^WBX C(%d)$"))
+    if i then ns.KeyEditor.Open(p.main, i) end
+  end)
+  p.editKey:SetPoint("TOPRIGHT", -4, -4)
+  p.editKey:SetFrameLevel((pv:GetFrameLevel() or 1) + 2)
   W.tooltip(pv, function(GT)
     local _, mem = Core().me()
     GT:AddLine("Targeting", 1, 0.82, 0)
@@ -432,10 +444,11 @@ function tab.refresh(p, ctx)
     p.keysLine:SetText("Key: " .. (keys and ("|cffffd100" .. keys .. "|r") or "|cff9d9d9dnone|r") ..
       (b and b.status == "placed" and ("  ·  on " .. ns.Bars.slotLabel(b.slot)) or ""))
     p.bind:Show(); p.pickup:Show()
+    p.editKey:SetShown(sel.name:match("^WBX C%d$") ~= nil)
     p.unbind:SetShown(direct)
   else
     p.prevTitle:SetText(""); p.prevBody:SetText(""); p.prevInfo:SetText(""); p.keysLine:SetText("")
-    p.bind:Hide(); p.unbind:Hide(); p.pickup:Hide()
+    p.bind:Hide(); p.unbind:Hide(); p.pickup:Hide(); p.editKey:Hide()
   end
 
   p.rule:SetText(mem.leader and "Leader: hostile mouseover, else your target. Heals: mouseover, your friendly target, else you."
@@ -469,6 +482,8 @@ function tab.refresh(p, ctx)
   p.slots:SetText(used .. " / " .. charMax .. " macro slots" .. (ctx.macros.counts.noslot > 0 and ("  |cffff8a80" .. ctx.macros.counts.noslot .. " without a slot|r") or ""))
   local busy = ns.Compat.inCombat()
   p.apply:SetEnabled(not busy); p.macrosOnly:SetEnabled(not busy); p.bind:SetEnabled(not busy)
+  p.newKey:SetEnabled(#(mem.customSeq or {}) < ns.State.CUSTOM_MAX)
+  if ns.KeyEditor.IsOpen() then ns.KeyEditor.Refresh() end
 end
 
 UI.RegisterTab(tab)

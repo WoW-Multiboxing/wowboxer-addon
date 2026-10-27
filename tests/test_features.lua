@@ -361,4 +361,67 @@ do
   H.ok((ns.UI.panels.talents.readback._text or ""):find("only compared on WoW: Forever") ~= nil, "Era: read-back explained, not faked")
 end
 
+-- ------------------------------------------------------------------ custom key editor
+do
+  local W, ns = boot({ name = "Kirra", class = "WARLOCK", race = "Scourge", level = 40 })
+  local Core, UI, KE = ns.Core, ns.UI, ns.KeyEditor
+  UI.Open("keys")
+  findButton(W, "New key"):Click()
+  local f = KE.frame
+  H.ok(f and f:IsShown(), "editor opens")
+  local function pick(name, btn)
+    for _, r in ipairs(f.pickPool.rows) do if r:IsShown() and r.spell.name == name then (btn == "fill" and r.fill or r.add):Click(); return true end end
+    return false
+  end
+  H.ok(pick("Corruption"), "Corruption in the picker")
+  H.ok(pick("Immolate"), "Immolate in the picker")
+  H.ok(pick("Shadow Bolt", "fill"), "Shadow Bolt as filler")
+  -- drop a spell from the spellbook onto the strip (cursor info is data only)
+  W.env.GetCursorInfo = function() return "spell", 12, "spell", 172 end
+  local cs = W.env.C_Spell or {}
+  cs.GetSpellName = function(id) return id == 172 and "Corruption" or nil end
+  W.env.C_Spell = cs
+  f.strip._scripts.OnReceiveDrag(f.strip)
+  W.env.GetCursorInfo = function() return W.cursor and W.cursor.kind or nil end
+  H.eq(#f.draft.steps, 3, "dropped spell added")
+  f.stepBtns[3]:Click()
+  H.eq(#f.draft.steps, 2, "click removes a step")
+  H.ok((f.body._text or ""):find("/castsequence", 1, true) ~= nil, "preview shows the castsequence")
+  H.ok((f.body._text or ""):find("/petattack", 1, true) ~= nil, "warlock key sends the pet")
+  H.ok(#(f.body._text or "") <= 255, "within 255 characters")
+  pick("Conflagrate")
+  if f.draft.steps[3] == "Conflagrate" then H.ok((f.warn._text or ""):find("Immolate") ~= nil, "Conflagrate warning shown") ; f.stepBtns[3]:Click() end
+  f.name:SetText("Dots"); f.name._scripts.OnTextChanged(f.name, true)
+  findButton(W, "Save key"):Click()
+  local _, m = Core.me()
+  H.eq(#m.customSeq, 1, "saved")
+  H.eq(m.customSeq[1].name, "Dots", "named")
+  H.ok(not f:IsShown(), "editor closed")
+  H.eq(W.calls.CreateMacro, nil, "saving writes nothing to the game")
+  local ctx = Core.compute()
+  local c1
+  for _, d in ipairs(ctx.desired) do if d.name == "WBX C1" then c1 = d end end
+  H.ok(c1 and c1.body:find("Corruption, Immolate, Shadow Bolt", 1, true), "WBX C1 planned: " .. tostring(c1 and c1.body))
+  -- edit it from the preview
+  UI.panels.keys.selected = "WBX C1"
+  UI.Refresh()
+  H.ok(UI.panels.keys.editKey:IsShown(), "Edit shown for an own key")
+  UI.panels.keys.editKey:Click()
+  H.eq(f.index, 1, "editing C1")
+  f.draft.kind = "priority"; KE.Refresh()
+  H.ok(not f.reset:IsShown(), "no reset option for a priority list")
+  findButton(W, "Save key"):Click()
+  H.eq(m.customSeq[1].kind, "priority", "kind changed")
+  -- limits and delete
+  for i = 2, 8 do KE.save(m, { name = "K" .. i, kind = "sequence", aim = "harm", steps = { "Immolate" }, filler = "Shadow Bolt", fills = 1, reset = "combat" }) end
+  UI.Refresh()
+  H.ok(not findButton(W, "New key"):IsEnabled(), "New key disabled at 8 keys")
+  H.eq(select(1, KE.save(m, { name = "x", kind = "sequence", aim = "harm", steps = { "Immolate" }, filler = "", fills = 1, reset = "combat" })), nil, "9th key refused")
+  UI.panels.keys.editKey:Click()
+  findButton(W, "Delete key"):Click()
+  findButton(W, "Sure?"):Click()
+  H.eq(#m.customSeq, 7, "deleted with two clicks")
+  H.eq(#errors(ns), 0, "no errors (editor): " .. table.concat(errors(ns), " | "))
+end
+
 os.exit(H.report("features") and 0 or 1)
