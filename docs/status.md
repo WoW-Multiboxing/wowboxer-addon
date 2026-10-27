@@ -36,6 +36,6 @@ them as "Visit your trainer".
   addons, secret unit names, Skyborne `UnitRace` file names (`Compat.playerRace` guesses by faction).]
 - Companion bug seen while porting (WS A): `kitLists` builds racial spell objects twice, so a pinned racial would
   appear in both primary and "others". Vectors avoid pinned racials; the Lua port does not have the bug.
-- An auto-diagnose a few seconds after login (mentioned in CLAUDE.md) is not implemented yet; today it is `/wbx selftest`.
+- Auto-diagnose: done (local session, 2026-10-27): `Core.selftest(true)` runs 5 s after login; read it with `python tools/read_log.py`.
 - Later (plan §3): Classic Era dataset, talent read-back via `C_ClassTalents/C_Traits`, keybind helper, display-only
   team status, compressed `!WBX:2!`, companion/website buttons using `share/wbx-string.js` (WS A/D).

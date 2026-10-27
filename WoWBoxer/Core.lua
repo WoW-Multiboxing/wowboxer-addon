@@ -203,7 +203,7 @@ end
 function Core.changed() if ns.UI and ns.UI.Refresh then ns.UI.Refresh() end end
 
 -- ------------------------------------------------------------------ selftest (for testing without looking at the screen)
-function Core.selftest()
+function Core.selftest(quiet)
   local db = Core.db
   local r = { at = time and time() or 0, version = Core.VERSION, probe = C.probe(), player = Core.playerInfo() }
   local ctx, why = Core.compute()
@@ -226,7 +226,7 @@ function Core.selftest()
   r.focus = C.unitName("focus") or "-"
   db.diag[Core.charKey or "?"] = r
   Core.log("info", "selftest written to WoWBoxerDB.diag[" .. tostring(Core.charKey) .. "]")
-  chat("Selftest done. /reload (or log out) to save it to WTF\\...\\SavedVariables\\WoWBoxer.lua.")
+  if not quiet then chat("Selftest done. /reload (or log out) to save it to WTF\\...\\SavedVariables\\WoWBoxer.lua.") end
   return r
 end
 
@@ -285,6 +285,13 @@ function Core.onEvent(event, ...)
     safeRegister("LEARNED_SPELL_IN_TAB")
     safeRegister("LEARNED_SPELL_IN_SKILL_LINE")
     if C_Timer and C_Timer.After then C_Timer.After(3, function() Core.checkOffer("login") end) end
+    -- read-only diagnose a few seconds after login, so a /reload is enough to see how the addon behaves in this client
+    if C_Timer and C_Timer.After then
+      C_Timer.After(5, function()
+        local ok, err = pcall(Core.selftest, true)
+        if not ok then Core.log("error", "auto selftest: " .. tostring(err)) end
+      end)
+    end
   elseif event == "PLAYER_REGEN_ENABLED" then
     Core.runQueue()
   elseif event == "PLAYER_LEVEL_UP" then
