@@ -1,0 +1,25 @@
+## Interface: 16001, 11509
+## Title: WoWBoxer
+## Notes: Multiboxing companion: squad setup, talents, recommended macros and sequence keys per level, action bars, settings and addon checks. One key press = one action on one character.
+## Author: WoWBoxer (WoW-Multiboxing)
+## Version: @project-version@
+## SavedVariables: WoWBoxerDB
+## SavedVariablesPerCharacter: WoWBoxerCharDB
+## IconTexture: Interface\Icons\Ability_Hunter_Pet_Wolf
+## X-License: MIT
+## X-Website: https://github.com/WoW-Multiboxing/wowboxer-addon
+## X-Credits: Talent data: Zephras (zephras.com, CC BY 4.0) + The Forever Era. World of Warcraft names and icons (c) Blizzard Entertainment.
+
+Data\Common.lua
+Data\Class_warrior.lua
+Data\Class_paladin.lua
+Data\Class_hunter.lua
+Data\Class_rogue.lua
+Data\Class_priest.lua
+Data\Class_shaman.lua
+Data\Class_mage.lua
+Data\Class_warlock.lua
+Data\Class_druid.lua
+Engine.lua
+Kit.lua
+Json.lua

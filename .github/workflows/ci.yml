@@ -1,0 +1,34 @@
+name: ci
+on:
+  push:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        lua: ["5.1.5", "luajit-2.1.0-beta3"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: leafo/gh-actions-lua@v10
+        with:
+          luaVersion: ${{ matrix.lua }}
+      - uses: leafo/gh-actions-luarocks@v4
+      - name: Install luacheck
+        run: luarocks install luacheck
+      - name: Generated data is up to date
+        run: node tools/build_data.js --check
+      - name: Lua 5.1 syntax + compliance lint
+        run: python3 tools/lint51.py
+      - name: luacheck
+        run: luacheck WoWBoxer tests
+      - name: Export parity vectors from the companion's JavaScript
+        run: node tools/export_vectors.js
+      - name: Share-string reference tests (JS)
+        run: if [ -f share/test.js ]; then node share/test.js; fi
+      - name: Lua tests (parity, mocks, UI smoke)
+        run: LUA=lua tests/run_all.sh
