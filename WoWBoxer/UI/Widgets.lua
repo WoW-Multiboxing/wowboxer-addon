@@ -54,12 +54,59 @@ function W.text(parent, font, size, color, justify)
   return fs
 end
 
-function W.button(parent, label, width, height, onClick)
+--- Width a text needs in a font size (real client: measured with a hidden font string; same formula in the simulator).
+local ruler
+function W.measure(text, font)
+  if not ruler then ruler = UIParent:CreateFontString(nil, "OVERLAY", "GameFontNormal"); ruler:Hide() end
+  if ruler.SetFontObject and font then ruler:SetFontObject(_G[font] or font) end
+  ruler:SetText(text or "")
+  return ruler:GetStringWidth() or 0
+end
+
+--- A Blizzard button that is always wide enough for its label (minimum `width`). tip = "text" or {title, text}:
+--- the tooltip says what the click will do in the game.
+function W.button(parent, label, width, height, onClick, tip)
   local b = W.frame("Button", parent, "UIPanelButtonTemplate")
-  b:SetSize(width or 110, height or 22)
-  b:SetText(label)
+  b.minWidth = width or 80
+  b:SetHeight(height or 22)
+  W.setLabel(b, label)
   if onClick then b:SetScript("OnClick", function(self, button) onClick(self, button) end) end
+  if tip then W.tip(b, type(tip) == "table" and tip[1] or label, type(tip) == "table" and tip[2] or tip) end
   return b
+end
+--- Change a button's label and grow it to fit (text width + 24).
+function W.setLabel(b, label)
+  b:SetText(label)
+  local tw = (b.GetTextWidth and b:GetTextWidth()) or 0
+  if not tw or tw <= 0 then tw = W.measure(label, "GameFontNormal") end
+  b:SetWidth(math.max(b.minWidth or 0, math.ceil(tw + 24)))
+end
+--- A simple tooltip: gold title + one wrapped line (+ optional grey hint).
+function W.tip(frame, title, text, hint)
+  W.tooltip(frame, function(GT)
+    GT:AddLine(type(title) == "function" and title() or title, 1, 0.82, 0)
+    local t = type(text) == "function" and text() or text
+    if t and t ~= "" then GT:AddLine(t, 1, 1, 1, true) end
+    if hint then GT:AddLine(hint, 0.66, 0.6, 0.49, true) end
+  end)
+end
+--- A one-line text that is cut with "…" when too long; the full text goes into the owner's tooltip (fs.wbxTrunc).
+function W.line(parent, font, size, color, justify)
+  local fs = W.text(parent, font, size, color, justify)
+  if fs.SetWordWrap then fs:SetWordWrap(false) end
+  if fs.SetMaxLines then fs:SetMaxLines(1) end
+  fs.wbxTrunc = true
+  return fs
+end
+--- Lay out buttons in a row from right to left (anchor = first button's RIGHT point), `gap` apart.
+function W.rowRight(buttons, gap)
+  local prev
+  for _, b in ipairs(buttons) do
+    if b:IsShown() then
+      if prev then b:ClearAllPoints(); b:SetPoint("RIGHT", prev, "LEFT", -(gap or 6), 0) end
+      prev = b
+    end
+  end
 end
 
 function W.check(parent, label, onClick)
@@ -77,11 +124,11 @@ end
 function W.cycle(parent, opts)
   local f = CreateFrame("Frame", nil, parent)
   f:SetSize(opts.width or 150, 22)
-  local prev = W.button(f, "<", 22, 22)
-  local nxt = W.button(f, ">", 22, 22)
+  local prev = W.button(f, "<", 24, 22)
+  local nxt = W.button(f, ">", 24, 22)
   prev:SetPoint("LEFT")
   nxt:SetPoint("RIGHT")
-  local label = W.text(f, "GameFontHighlightSmall", nil, nil, "CENTER")
+  local label = W.line(f, "GameFontHighlightSmall", nil, nil, "CENTER")
   label:SetPoint("LEFT", prev, "RIGHT", 2, 0)
   label:SetPoint("RIGHT", nxt, "LEFT", -2, 0)
   f.label = label
@@ -104,6 +151,7 @@ function W.cycle(parent, opts)
     opts.set(vals[i][1])
     f.Refresh()
   end
+  f.step = step
   prev:SetScript("OnClick", function() step(-1) end)
   nxt:SetScript("OnClick", function() step(1) end)
   return f
@@ -194,4 +242,49 @@ function W.pool(content, make)
     return r
   end
   return p
+end
+
+--- A small click menu at `anchor`: items = {{label, fn, tip?}}. One menu at a time; Esc closes it.
+function W.menu(anchor, items)
+  local m = W.menuFrame
+  if not m then
+    m = W.box(UIParent, 0.07, 0.055, 0.035, 0.97)
+    m:SetFrameStrata("TOOLTIP")
+    m:SetClampedToScreen(true)
+    m.rows = {}
+    m:Hide()
+    _G.WoWBoxerMenu = m
+    table.insert(UISpecialFrames, "WoWBoxerMenu")
+    W.menuFrame = m
+  end
+  if m:IsShown() and m.anchor == anchor then m:Hide(); return m end
+  local width = 120
+  for _, it in ipairs(items) do width = math.max(width, W.measure(it[1], "GameFontHighlightSmall") + 24) end
+  for i, it in ipairs(items) do
+    local b = m.rows[i]
+    if not b then
+      b = CreateFrame("Button", nil, m)
+      b:SetHeight(20)
+      local hl = b:CreateTexture(nil, "HIGHLIGHT")
+      hl:SetAllPoints()
+      hl:SetColorTexture(1, 0.82, 0, 0.18)
+      b.label = W.text(b, "GameFontHighlightSmall", nil, W.TEXT)
+      b.label:SetPoint("LEFT", 8, 0)
+      b.label:SetPoint("RIGHT", -4, 0)
+      m.rows[i] = b
+    end
+    b:SetWidth(width)
+    b:SetPoint("TOPLEFT", 6, -6 - (i - 1) * 21)
+    b.label:SetText(it[1])
+    b:SetScript("OnClick", function() m:Hide(); it[2]() end)
+    if it[3] then W.tip(b, it[1], it[3]) end
+    b:Show()
+  end
+  for i = #items + 1, #m.rows do m.rows[i]:Hide() end
+  m:SetSize(width + 12, 12 + #items * 21)
+  m.anchor = anchor
+  m:ClearAllPoints()
+  m:SetPoint("TOPLEFT", anchor, "BOTTOMRIGHT", -8, 8)
+  m:Show()
+  return m
 end

@@ -2,9 +2,9 @@
   box. Only SavedVariables change here; macros change when the player presses Create & place keys. ]]
 local _, ns = ...
 local UI, W = ns.UI, ns.Widgets
-local tab = { key = "squad", label = "Squad" }
+local tab = { key = "squad", label = "Squad", icon = "Spell_Holy_PrayerOfFortitude", tip = "The characters you play together: names, classes, roles, who leads." }
 local CARD_H = 48
-local LIST_W = 596 -- + scrollbar
+local LIST_W = 640 -- + scrollbar
 
 local function D() return ns.Data end
 local function S() return ns.State end
@@ -20,7 +20,7 @@ end
 local function playsAsText(m, s)
   if m.leader then return "Leader · plays normally" end
   local L = S().leaderOf(s)
-  return "Assists " .. (L and L.name or "the leader") .. " via " .. m.unit
+  return "Follows " .. (L and L.name or "the leader") .. " (" .. m.unit .. ")"
 end
 
 -- ------------------------------------------------------------------ editor (add + edit)
@@ -49,23 +49,23 @@ local function buildEditor(p)
   e.role:SetPoint("LEFT", e.race, "RIGHT", 4, 0)
   e.plays = cyc(170, function()
     local v = { { "leader", "Leader" } }
-    for _, u in ipairs(ns.Engine.UNITS) do v[#v + 1] = { u, "Follower via " .. u } end
+    for _, u in ipairs(ns.Engine.UNITS) do v[#v + 1] = { u, "Follower (" .. u .. ")" } end
     return v
   end, "plays")
   e.plays:SetPoint("TOPLEFT", 10, -56)
-  e.save = W.button(e, "Add", 90, 22, function() p.saveEditor() end)
+  e.save = W.button(e, "Add", 90, 22, function() p.saveEditor() end, "Saves the character in WoWBoxer. Nothing changes in the game.")
   e.save:SetPoint("BOTTOMRIGHT", -8, 6)
-  e.cancel = W.button(e, "Cancel", 70, 22, function() p.closeEditor() end)
+  e.cancel = W.button(e, "Cancel", 70, 22, function() p.closeEditor() end, "Closes the editor without saving.")
   e.cancel:SetPoint("RIGHT", e.save, "LEFT", -6, 0)
   e.remove = W.button(e, "Remove", 80, 22, function(self)
-    if not self.armed then self.armed = true; self:SetText("Sure?"); return end
-    self.armed = false; self:SetText("Remove")
+    if not self.armed then self.armed = true; W.setLabel(self, "Sure?"); return end
+    self.armed = false; W.setLabel(self, "Remove")
     local s = squad()
     for i, x in ipairs(s.members) do if x == e.member then table.remove(s.members, i) break end end
     S().fixLeader(s)
     Core().log("info", "removed " .. e.member.name)
     p.closeEditor(); Core().changed()
-  end)
+  end, "Removes this character from the squad (click twice).")
   e.remove:SetPoint("RIGHT", e.cancel, "LEFT", -6, 0)
   function e.refresh()
     -- keep race/role valid for the class
@@ -91,21 +91,21 @@ function tab.build(p)
   p.delSquad = W.button(p, "Delete squad", 100, 22, function(self)
     local s = squad()
     if not s then return end
-    if not self.armed then self.armed = true; self:SetText("Click to confirm"); return end
+    if not self.armed then self.armed = true; W.setLabel(self, "Click to confirm"); return end
     for i, x in ipairs(Core().db.squads) do if x == s then table.remove(Core().db.squads, i) break end end
     Core().db.active = Core().db.squads[1] and Core().db.squads[1].id or nil
-    self.armed = false; self:SetText("Delete squad"); Core().changed()
-  end)
+    self.armed = false; W.setLabel(self, "Delete squad"); Core().changed()
+  end, "Deletes this squad from WoWBoxer (click twice). Your macros in the game stay.")
   p.delSquad:SetPoint("LEFT", p.squadCycle, "RIGHT", 6, 0)
-  p.addChar = W.button(p, "Add character", 120, 22, function() p.openEditor(nil) end)
+  p.addChar = W.button(p, "Add character", 120, 22, function() p.openEditor(nil) end, "Adds another character you play together with this one.")
   p.addChar:SetPoint("TOPRIGHT", 0, -2)
   p.newSquad = W.button(p, "New squad", 90, 22, function()
     local s = S().newSquad({ name = "New squad", faction = ns.Compat.playerFaction() })
     table.insert(Core().db.squads, s); Core().db.active = s.id; Core().changed()
-  end)
+  end, "Starts an empty squad. Your current squad stays and can be picked again.")
   p.newSquad:SetPoint("RIGHT", p.addChar, "LEFT", -6, 0)
 
-  local sf, content = W.scroll(p, LIST_W, 226)
+  local sf, content = W.scroll(p, LIST_W, 296)
   sf:SetPoint("TOPLEFT", 0, -32)
   p.list = content
   p.pool = W.pool(content, function(parent)
@@ -114,29 +114,28 @@ function tab.build(p)
     r.badge = r:CreateTexture(nil, "ARTWORK")
     r.badge:SetSize(30, 30)
     r.badge:SetPoint("LEFT", 8, 0)
-    r.name = W.text(r, "GameFontNormal")
+    r.name = W.line(r, "GameFontNormal")
     r.name:SetPoint("TOPLEFT", 46, -7)
-    r.name:SetWidth(250)
-    if r.name.SetWordWrap then r.name:SetWordWrap(false) end
-    r.sub = W.text(r, "GameFontHighlightSmall", nil, W.MUTED)
+    r.name:SetWidth(300)
+    r.sub = W.line(r, "GameFontHighlightSmall", nil, W.MUTED)
     r.sub:SetPoint("TOPLEFT", 46, -24)
-    r.sub:SetWidth(250)
-    if r.sub.SetWordWrap then r.sub:SetWordWrap(false) end
-    r.role = W.text(r, "GameFontHighlightSmall", nil, W.TEXT)
-    r.role:SetPoint("TOPLEFT", 300, -7)
-    r.role:SetWidth(130)
-    r.plays = W.text(r, "GameFontHighlightSmall", nil, W.MUTED)
-    r.plays:SetPoint("TOPLEFT", 300, -24)
-    r.plays:SetWidth(150)
-    if r.plays.SetWordWrap then r.plays:SetWordWrap(false) end
-    r.edit = W.button(r, "Edit", 54, 20, function() p.openEditor(r.m) end)
+    r.sub:SetWidth(300)
+    r.role = W.line(r, "GameFontHighlightSmall", nil, W.TEXT)
+    r.role:SetPoint("TOPLEFT", 352, -7)
+    r.role:SetWidth(110)
+    r.plays = W.line(r, "GameFontHighlightSmall", nil, W.MUTED)
+    r.plays:SetPoint("TOPLEFT", 352, -24)
+    r.plays:SetWidth(170)
+    W.tooltip(r, function(GT) GT:AddLine(r.name:GetText() or "", 1, 1, 1); GT:AddLine(r.sub:GetText() or "", 0.8, 0.8, 0.8, true); GT:AddLine(r.plays:GetText() or "", 0.8, 0.8, 0.8, true) end)
+    r.edit = W.button(r, "Edit", 54, 20, function() p.openEditor(r.m) end, "Change name, class, race, role or who this character follows.")
     r.edit:SetPoint("TOPRIGHT", -6, -4)
-    r.me = W.button(r, "This is me", 82, 20, function() Core().setMe(squad().id, r.m.id) end)
+    r.me = W.button(r, "This is me", 82, 20, function() Core().setMe(squad().id, r.m.id) end,
+      "Tells WoWBoxer that the character you are logged in on is this one (its keys and role are used here).")
     r.me:SetPoint("BOTTOMRIGHT", -6, 4)
     r.lead = W.button(r, "Make leader", 84, 20, function()
       for _, x in ipairs(squad().members) do x.leader = (x == r.m) end
       S().applyLink(squad()); Core().changed()
-    end)
+    end, "Makes this character the leader: the others' keys use its target. Update the keys on every client afterwards.")
     r.lead:SetPoint("RIGHT", r.edit, "LEFT", -4, 0)
     return r
   end)
@@ -163,16 +162,16 @@ function tab.build(p)
       e.v = { cls = m.cls, race = m.race, role = m.role, plays = m.leader and "leader" or m.unit }
       e.name:SetText(m.name)
       e.title:SetText("Edit " .. m.name)
-      e.save:SetText("Save")
+      W.setLabel(e.save, "Save")
       e.remove:Show()
     else
       e.v = { cls = "priest", plays = "party1" }
       e.name:SetText("")
       e.title:SetText("Add a character")
-      e.save:SetText("Add")
+      W.setLabel(e.save, "Add")
       e.remove:Hide()
     end
-    e.remove.armed = false; e.remove:SetText("Remove")
+    e.remove.armed = false; W.setLabel(e.remove, "Remove")
     e.refresh()
     e:Show(); p.info:Hide()
     UI.Refresh()
@@ -233,11 +232,11 @@ function tab.refresh(p)
     r:SetPoint("TOPLEFT", 0, -y)
     y = y + CARD_H
     setClassIcon(r.badge, m.cls)
-    r.name:SetText(W.hex(W.classColor(m.cls)) .. m.name .. "|r" .. (m.leader and "  |cffffd100LEADER|r" or "") .. (m == me and "  |cff7cc7ffTHIS CHARACTER|r" or ""))
+    r.name:SetText(W.hex(W.classColor(m.cls)) .. m.name .. "|r" .. (m.leader and "  |cffffd100Leader|r" or "") .. (m == me and "  |cff7cc7ff(you)|r" or ""))
     local g = ns.Kit.guide(m.cls, m.guide)
     local race = ns.Kit.race(m.race)
     r.sub:SetText(D().classes[m.cls].n .. " · " .. (race and race.n or m.race) .. " · Level " .. m.level .. (g and (" · " .. g.spec) or "") ..
-      (m.seq ~= "off" and (" · Seq " .. m.seq) or ""))
+      (m.seq ~= "off" and (" · Sequences " .. m.seq) or ""))
     r.role:SetText(S().ROLE_NAME[m.role] or m.role)
     r.plays:SetText(playsAsText(m, s))
     r.lead:SetShown(not m.leader)

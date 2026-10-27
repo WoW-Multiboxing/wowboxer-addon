@@ -54,7 +54,8 @@ end
 -- ------------------------------------------------------------------ right-click menu
 local ITEMS = {
   { "Open WoWBoxer", function() ns.UI.Open("keys") end },
-  { "Create & place keys", function() ns.Core.sync({ replace = ns.Core.cdb.replace }) end },
+  { "Place all keys", function() ns.Core.sync({ replace = ns.Core.cdb.replace }) end },
+  { "Show the guide", function() ns.Book.ShowGuide() end },
   { "Setup checklist & settings", function() ns.UI.Open("setup") end },
   { "Key bindings", function() ns.Core.openKeyBindings() end },
   { "Hide minimap button", function() MM.SetHidden(true) end },

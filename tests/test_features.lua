@@ -8,14 +8,17 @@ local function boot(opts)
   local W = Mock.new(H, opts)
   local ns = H.loadAddon({ env = W.env })
   W.fire("ADDON_LOADED", "WoWBoxer"); W.fire("PLAYER_LOGIN")
+  ns.Core.cdb.guide = "done" -- the first-run guide is tested in test_ui
   for _, s in ipairs(ns.Data.spells[(opts.class or "PALADIN"):lower()]) do if s.level <= (opts.level or 10) and s.gate ~= "talent" then W.known[s.name] = true end end
   return W, ns
 end
 local function findButton(W, text)
   for _, f in ipairs(W.frames) do if f._kind == "Button" and rawget(f, "_text") == text and f:IsVisible() then return f end end
 end
+--- A visible spell button of the open book page whose cell matches pred(cell).
 local function row(ns, pred)
-  for _, r in ipairs(ns.UI.panels.keys.pool.rows) do if r:IsShown() and pred(r) then return r end end
+  local p = ns.UI.panels[ns.UI.current]
+  for _, r in ipairs(p.cells or {}) do if r:IsShown() and r.cell and pred(r.cell) then return r end end
 end
 local function errors(ns)
   local n = {}
@@ -84,8 +87,8 @@ do
   W.fire("ACTIONBAR_SLOT_CHANGED", 7)
   W.flush()
   H.eq(Core.cdb.slots["WBX K1"], 7, "the drop position is remembered")
-  findButton(W, "Create & place keys"):Click()
-  H.eq(W.slotMacroName(7), "WBX K1", "Create & place keeps K1 where it was dropped")
+  findButton(W, "Place all"):Click()
+  H.eq(W.slotMacroName(7), "WBX K1", "Place all keeps K1 where it was dropped")
   local k1 = 0
   for slot = 1, 120 do if W.slotMacroName(slot) == "WBX K1" then k1 = k1 + 1 end end
   H.eq(k1, 1, "K1 is placed once")
@@ -98,11 +101,11 @@ do
   H.ok(W.cursor and W.cursor.ref.name == "WBX K2", "K2 on the cursor")
   W.env.ClearCursor()
   -- a spell from the spell list becomes an extra key
-  findButton(W, "All spells"):Click()
-  local sr = row(ns, function(x) return rawget(x, "spellId") and W.known[x.label._text] end)
+  UI.tabButtons.spells:Click()
+  local sr = row(ns, function(x) return x.kind == "spell" and not x.name and W.known[x.label] end)
   H.ok(sr ~= nil, "a learned spell without a key is listed")
   if sr then
-    local spellName = sr.label._text
+    local spellName = sr.cell.label
     sr._scripts.OnDragStart(sr)
     H.ok(W.cursor and W.cursor.ref.name:sub(1, 4) == "WBX " and spellName:find(W.cursor.ref.name:sub(5), 1, true) == 1, "spell became a WBX key on the cursor: " .. tostring(W.cursor and W.cursor.ref.name))
     H.eq(#Core.cdb.extras, 1, "kept as an extra key for this character")
@@ -110,7 +113,7 @@ do
   W.env.ClearCursor()
   -- not in combat
   W.combat = true
-  findButton(W, "My keys"):Click()
+  UI.tabButtons.keys:Click()
   r = row(ns, function(x) return x.name == "WBX K3" end)
   local n = W.calls.CreateMacro
   if r then r._scripts.OnDragStart(r) end
@@ -125,7 +128,7 @@ do
   local W, ns = boot({ name = "Warlocker", class = "PRIEST", race = "Scourge", level = 20 })
   local Core, UI, KB = ns.Core, ns.UI, ns.Binds
   UI.Open("keys")
-  findButton(W, "Create & place keys"):Click()
+  findButton(W, "Place all"):Click()
   -- K1 sits on Action Bar 1 button 1, which is bound to "1"
   local keys = KB.keysFor("WBX K1", 1)
   H.eq(keys[1] and keys[1].key, "1", "K1 is pressed with 1 (its action button)")
@@ -135,8 +138,8 @@ do
   H.eq(KB.compose("F", true, false, true), "ALT-SHIFT-F", "modifier order")
   H.eq(KB.compose("LSHIFT", false, false, true), nil, "a modifier alone is not a key")
   local r = row(ns, function(x) return x.name == "WBX K2" end)
-  r._scripts.OnClick(r)
-  H.eq(UI.panels.keys.selected, "WBX K2", "row click selects")
+  r:Click("LeftButton")
+  H.eq(UI.panels.keys.selected, "WBX K2", "click selects")
   findButton(W, "Bind key"):Click()
   local cap = UI.panels.keys.capture
   H.ok(cap:IsShown(), "key capture open")
@@ -157,7 +160,7 @@ do
   local list = KB.keysFor("WBX K2", 2)
   H.eq(#list, 3, "K2: F, SHIFT-G and its button key 2")
   UI.Refresh()
-  H.ok((UI.panels.keys.keysLine._text or ""):find("sG") ~= nil, "keys shown for the selected macro")
+  H.ok((UI.panels.keys.detText._text or ""):find("sG") ~= nil, "keys shown for the selected macro")
   findButton(W, "Unbind"):Click()
   H.eq(W.bindings.F, nil, "unbind removes F")
   H.eq(W.bindings["SHIFT-G"], nil, "and SHIFT-G")
@@ -236,15 +239,19 @@ do
   W.env.MultiBarBottomLeft = W.newFrame("Frame", "MultiBarBottomLeft", W.env.UIParent)
   W.env.MultiBarBottomLeft:Hide()
   UI.Open("keys")
-  H.ok((UI.panels.keys.warn._text or ""):find("hidden") ~= nil, "hidden bar explained: " .. tostring(UI.panels.keys.warn._text))
+  local step = function() return UI.panels.keys.stepText._text or "" end
+  H.ok(step():find("hidden") ~= nil, "hidden bar explained: " .. step())
+  H.ok(findButton(W, "Choose bars") ~= nil, "with a button that leads to the fix")
   W.env.MultiBarBottomLeft:Show()
   Core.cdb.primaryBar = 1
   W.env.GetBonusBarOffset = function() return 1 end
   UI.Refresh()
-  H.ok((UI.panels.keys.warn._text or ""):find("stance") ~= nil, "stance page on bar 1 explained")
+  H.ok(step():find("stance") ~= nil, "stance page on bar 1 explained")
+  findButton(W, "Use Bottom Left"):Click()
+  H.eq(Core.cdb.primaryBar, 61, "one click moves the keys to Bottom Left")
   W.env.GetBonusBarOffset = function() return 0 end
   UI.Refresh()
-  H.eq(UI.panels.keys.warn._text, "", "no warning when all is fine")
+  H.ok(step():find("Step 2 of 3") ~= nil, "no warning when all is fine: the next step is placing the keys")
   -- plays as: a solo character becomes a follower via party2
   Core.setPlaysAs("party2")
   local s, m = Core.me()
@@ -270,12 +277,12 @@ do
   -- window position + scale + slash commands
   UI.frame.GetPoint = function() return "TOPLEFT", nil, "TOPLEFT", 120.4, -80.6 end
   UI.frame._scripts.OnDragStop(UI.frame)
-  H.eq(Core.db.settings.window[3], 120, "window x saved")
-  H.eq(Core.db.settings.window[4], -81, "window y saved")
+  H.eq(Core.cdb.window[3], 120, "window x saved (per character)")
+  H.eq(Core.cdb.window[4], -81, "window y saved")
   W.env.SlashCmdList.WOWBOXER("scale 2")
   H.eq(Core.db.settings.scale, 1.3, "scale clamped")
   W.env.SlashCmdList.WOWBOXER("reset")
-  H.eq(Core.db.settings.window, nil, "reset clears the position")
+  H.eq(Core.cdb.window, nil, "reset clears the position")
   W.env.SlashCmdList.WOWBOXER("bars")
   H.ok(W.chatHas("WBX K1"), "/wbx bars lists the keys")
   H.eq(#errors(ns), 0, "no errors (warrior): " .. table.concat(errors(ns), " | "))
@@ -365,8 +372,9 @@ end
 do
   local W, ns = boot({ name = "Kirra", class = "WARLOCK", race = "Scourge", level = 40 })
   local Core, UI, KE = ns.Core, ns.UI, ns.KeyEditor
-  UI.Open("keys")
-  findButton(W, "New key"):Click()
+  UI.Open("custom")
+  H.ok(row(ns, function(c) return c.kind == "new" end) ~= nil, "a New own key button in the book")
+  row(ns, function(c) return c.kind == "new" end):Click("LeftButton")
   local f = KE.frame
   H.ok(f and f:IsShown(), "editor opens")
   local function pick(name, btn)
@@ -402,11 +410,11 @@ do
   local c1
   for _, d in ipairs(ctx.desired) do if d.name == "WBX C1" then c1 = d end end
   H.ok(c1 and c1.body:find("Corruption, Immolate, Shadow Bolt", 1, true), "WBX C1 planned: " .. tostring(c1 and c1.body))
-  -- edit it from the preview
-  UI.panels.keys.selected = "WBX C1"
+  -- edit it from the details line
+  H.eq(UI.panels.custom.selected, "WBX C1", "the saved key is selected")
   UI.Refresh()
-  H.ok(UI.panels.keys.editKey:IsShown(), "Edit shown for an own key")
-  UI.panels.keys.editKey:Click()
+  H.ok(UI.panels.custom.edit:IsShown(), "Edit shown for an own key")
+  UI.panels.custom.edit:Click()
   H.eq(f.index, 1, "editing C1")
   f.draft.kind = "priority"; KE.Refresh()
   H.ok(not f.reset:IsShown(), "no reset option for a priority list")
@@ -415,9 +423,9 @@ do
   -- limits and delete
   for i = 2, 8 do KE.save(m, { name = "K" .. i, kind = "sequence", aim = "harm", steps = { "Immolate" }, filler = "Shadow Bolt", fills = 1, reset = "combat" }) end
   UI.Refresh()
-  H.ok(not findButton(W, "New key"):IsEnabled(), "New key disabled at 8 keys")
+  H.ok(row(ns, function(c) return c.kind == "new" end) == nil, "no New own key button at 8 keys")
   H.eq(select(1, KE.save(m, { name = "x", kind = "sequence", aim = "harm", steps = { "Immolate" }, filler = "", fills = 1, reset = "combat" })), nil, "9th key refused")
-  UI.panels.keys.editKey:Click()
+  UI.panels.custom.edit:Click()
   findButton(W, "Delete key"):Click()
   findButton(W, "Sure?"):Click()
   H.eq(#m.customSeq, 7, "deleted with two clicks")
@@ -540,10 +548,9 @@ do
   local keep = ns.UI.current
   -- a one-line label that is far too long for its width
   local p = ns.UI.panels.keys
-  p.trainer:SetWidth(120)
-  local long = "Visit your trainer: " .. string.rep("Greater Heal, ", 20)
-  local orig = p.trainer.SetText
-  p.trainer.SetText = function(self) orig(self, long) end
+  local long = "Visit your trainer: " .. string.rep("Greater Heal, ", 40)
+  local orig = p.stepText.SetText
+  p.stepText.SetText = function(self) orig(self, long) end
   W.flush()
   local d = ns.Core.db.diag["Warlocker-Realm"]
   H.ok(d and d.layout, "audit ran after the first open")

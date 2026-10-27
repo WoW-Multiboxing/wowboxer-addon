@@ -436,6 +436,7 @@ function Core.slash(msg)
   elseif cmd == "keys" then Core.openKeyBindings()
   elseif cmd == "reset" then
     Core.db.settings.window, Core.db.settings.scale = nil, nil
+    if Core.cdb then Core.cdb.window = nil end
     if ns.UI and ns.UI.ApplyWindowSettings then ns.UI.ApplyWindowSettings() end
     chat("Window position and size reset.")
   elseif cmd == "scale" then

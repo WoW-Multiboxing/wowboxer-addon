@@ -47,20 +47,36 @@ for _, scenario in ipairs({
   end
   for _, t in ipairs(UI.tabs) do UI.Select(t.key); H.ok(UI.panels[t.key]:IsShown(), tag .. "tab " .. t.key .. " shows") end
   UI.Select("keys")
-  H.ok(anyText(W, "Create your %d+ WBX key") ~= nil, tag .. "banner invites to create the keys")
-  local apply = findButton(W, "Create & place keys")
-  H.ok(apply ~= nil, tag .. "apply button")
-  apply:Click()
-  H.eq(Core.compute().macros.changes, 0, tag .. "apply creates everything")
+  -- first run: the 3-step guide
+  local guide = UI.panels.keys.guide
+  H.ok(guide:IsShown(), tag .. "guide on a fresh character")
+  H.ok(anyText(W, "^Step 1 of 3") ~= nil, tag .. "guide step 1")
+  findButton(W, "Next"):Click()
+  H.ok(anyText(W, "^Step 2 of 3") ~= nil, tag .. "guide step 2")
+  H.ok(anyText(W, "Place all puts your %d+ keys on Action Bar 1") ~= nil, tag .. "step 2 says where the keys go")
+  H.eq(W.calls.CreateMacro, nil, tag .. "the guide writes nothing before the click")
+  findButton(W, "Place all"):Click()
+  H.eq(Core.compute().macros.changes, 0, tag .. "Place all creates everything")
   local onBar = 0
   for slot = 1, 12 do if (W.slotMacroName(slot) or ""):sub(1, 3) == "WBX" then onBar = onBar + 1 end end
   H.ok(onBar > 0, tag .. "keys on action bar 1")
-  -- sequence tier buttons (paladin/priest)
+  H.ok(anyText(W, "^Step 3 of 3") ~= nil, tag .. "guide step 3")
+  findButton(W, "Close"):Click()
+  H.ok(not guide:IsShown(), tag .. "guide closed")
+  H.ok(anyText(W, "All keys are on your bars") ~= nil, tag .. "next step: all done")
+  -- plain words: no internal macro names or status codes on the page
+  H.ok(anyText(W, "WBX K%d") == nil and anyText(W, "noslot") == nil, tag .. "plain words on the page")
+  -- every visible button has a tooltip
+  local bare = {}
+  for _, f in ipairs(W.frames) do
+    if f._kind == "Button" and f._text and f:IsVisible() and not f._scripts.OnEnter and f._text ~= "<" and f._text ~= ">" then bare[#bare + 1] = f._text end
+  end
+  H.eq(table.concat(bare, ", "), "", tag .. "every button has a tooltip")
+  -- sequence tier (paladin/priest)
   if ns.Engine.seqSupported(scenario.class:lower()) then
-    local adv = findButton(W, "Advanced")
-    H.ok(adv ~= nil, tag .. "tier buttons")
-    adv:Click()
-    H.eq(select(2, Core.me()).seq, "advanced", tag .. "tier set")
+    local p = UI.panels.keys
+    p.seq.step(1)
+    H.ok(select(2, Core.me()).seq ~= "medium", tag .. "sequence tier changes")
   end
   -- squad tab: add a character
   UI.Select("squad")
@@ -106,7 +122,9 @@ for _, scenario in ipairs({
   -- combat: buttons disabled, nothing written
   W.combat = true
   UI.Select("keys")
-  H.ok(not findButton(W, "Create & place keys"):IsEnabled(), tag .. "apply disabled in combat")
+  H.ok(anyText(W, "In combat") ~= nil, tag .. "combat explained in the next step")
+  UI.panels.keys.cells[1]:Click("LeftButton")
+  H.ok(not findButton(W, "Bind key"):IsEnabled(), tag .. "Bind key disabled in combat")
   W.combat = false
   -- slash commands
   W.env.SlashCmdList.WOWBOXER("help"); W.env.SlashCmdList.WOWBOXER("show"); W.env.SlashCmdList.WOWBOXER("log 3"); W.env.SlashCmdList.WOWBOXER("selftest")
@@ -114,6 +132,68 @@ for _, scenario in ipairs({
   H.ok(not UI.frame:IsShown(), tag .. "/wbx toggles the window")
   local errs = uiErrors(ns)
   H.eq(#errs, 0, tag .. "no errors logged: " .. table.concat(errs, " | "))
+end
+
+
+-- ------------------------------------------------------------------ layout at every resolution and UI scale
+-- docs/ui-spec-v2.md §3: no text may overlap a button or another text, run out of its window or be cut off, and no
+-- window may leave the screen – on every screen in Layout.MATRIX, in every state of the window.
+local Layout = dofile(dir .. "/layout.lua")
+local function layoutPass(screen, opts)
+  opts = opts or {}
+  local W, ns = boot({ name = opts.name or "Dorin", class = opts.class or "PALADIN", race = "Scourge", level = opts.level or 24,
+    toc = opts.toc, spellbookStyle = opts.toc and "classic" or nil, screen = { w = screen.w, h = screen.h }, fontFactor = opts.fontFactor })
+  for _, s in ipairs(ns.Data.spells[(opts.class or "PALADIN"):lower()]) do if s.level <= (opts.level or 24) then W.known[s.name] = true end end
+  local UI, Core = ns.UI, ns.Core
+  if opts.scale then Core.db.settings.scale = opts.scale end
+  local problems = {}
+  local function check(what, extra)
+    for _, msg in ipairs(Layout.check(W, extra or { UI.frame })) do problems[#problems + 1] = what .. ": " .. msg end
+  end
+  UI.Open("keys")
+  check("guide step 1")
+  UI.panels.keys.guide.next:Click()
+  check("guide step 2")
+  findButton(W, "I'll drag them myself"):Click()
+  check("guide step 3")
+  findButton(W, "Close"):Click()
+  for _, t in ipairs(UI.tabs) do UI.Select(t.key); check("tab " .. t.key) end
+  UI.Select("keys")
+  local p = UI.panels.keys
+  p.cells[3]:Click("LeftButton")
+  check("key selected")
+  p.capture:Start(p.selected, "Some key")
+  check("key capture")
+  p.capture:Stop()
+  findButton(W, "Place all"):Click()
+  check("after Place all")
+  UI.Select("custom")
+  UI.panels.custom.cells[1]:Click("LeftButton")
+  check("key editor", { UI.frame })
+  W.player.level = W.player.level + 4
+  for _, s in ipairs(ns.Data.spells[(opts.class or "PALADIN"):lower()]) do if s.level <= W.player.level then W.known[s.name] = true end end
+  W.fire("PLAYER_LEVEL_UP", W.player.level); W.fire("SPELLS_CHANGED"); W.flush()
+  if UI.offer and UI.offer:IsShown() then check("level-up toast", { UI.offer }) end
+  UI.Select("keys")
+  check("keys after level-up")
+  return problems
+end
+local total, shown = 0, 0
+for _, screen in ipairs(Layout.MATRIX) do
+  local probs = layoutPass(screen)
+  total = total + #probs
+  for _, m in ipairs(probs) do if shown < 12 then shown = shown + 1; print("  " .. screen.name .. " " .. m) end end
+end
+H.eq(total, 0, "layout: no overlaps on " .. #Layout.MATRIX .. " screens")
+-- the worst case: long names, Classic Era, a wider real font, the biggest window scale on the smallest screen
+for _, o in ipairs({
+  { name = "Pellucidarian", class = "WARLOCK", level = 40, toc = 11509, fontFactor = 0.62 },
+  { name = "Shadowpriest", class = "PRIEST", level = 30, fontFactor = 0.62, scale = 1.3 },
+  { name = "Hunty", class = "HUNTER", level = 50, fontFactor = 0.62 },
+}) do
+  local probs = layoutPass({ w = 835, h = 668 }, o)
+  for i, m in ipairs(probs) do if i <= 8 then print("  stress " .. o.class .. " " .. m) end end
+  H.eq(#probs, 0, "layout stress " .. o.class .. " (font x" .. o.fontFactor .. ")")
 end
 
 os.exit(H.report("ui") and 0 or 1)

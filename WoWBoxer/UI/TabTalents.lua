@@ -2,8 +2,9 @@
   and the whole point order by level. Forever talent data; on other clients it is shown with a warning. ]]
 local _, ns = ...
 local UI, W = ns.UI, ns.Widgets
-local tab = { key = "talents", label = "Talents" }
+local tab = { key = "talents", label = "Talents", icon = "Ability_Marksmanship", tip = "The talent order of your guide and the next point to take." }
 local ROW_H = 20
+local LEFT_W, LIST_W = 300, 322
 
 local KIND = { ["exact-order"] = "Exact point order from the guide", ["final-derived"] = "Guide's final build; order derived by the companion",
   priorities = "Priorities only (no point order)", adaptation = "Companion adaptation of a guide" }
@@ -25,45 +26,49 @@ function tab.build(p)
   p.guide:SetPoint("LEFT", lg, "RIGHT", 6, 0)
   p.kind = W.text(p, "GameFontHighlightSmall", nil, W.GREEN)
   p.kind:SetPoint("TOPLEFT", 0, -30)
-  p.kind:SetWidth(250)
+  p.kind:SetWidth(LEFT_W)
 
   local nb = W.box(p, 0.16, 0.13, 0.08, 0.95)
-  nb:SetPoint("TOPLEFT", 0, -50)
-  nb:SetSize(250, 128)
+  nb:SetPoint("TOPLEFT", p.kind, "BOTTOMLEFT", 0, -6)
+  nb:SetWidth(LEFT_W)
+  nb:SetHeight(120)
+  p.nb = nb
   p.nextTitle = W.text(nb, "GameFontNormal", nil, W.GOLD)
   p.nextTitle:SetPoint("TOPLEFT", 10, -8)
+  p.nextTitle:SetPoint("TOPRIGHT", -10, -8)
   p.nextIcon = W.icon(nb, 30)
-  p.nextIcon:SetPoint("TOPLEFT", 10, -28)
+  p.nextIcon:SetPoint("TOPLEFT", p.nextTitle, "BOTTOMLEFT", 0, -6)
   p.nextName = W.text(nb, "GameFontHighlight", nil, W.TEXT)
   p.nextName:SetPoint("TOPLEFT", p.nextIcon, "TOPRIGHT", 8, 0)
-  p.nextName:SetWidth(190)
+  p.nextName:SetWidth(LEFT_W - 58)
   p.nextSub = W.text(nb, "GameFontHighlightSmall", nil, W.MUTED)
   p.nextSub:SetPoint("TOPLEFT", p.nextName, "BOTTOMLEFT", 0, -2)
-  p.nextSub:SetWidth(190)
+  p.nextSub:SetPoint("TOPRIGHT", p.nextName, "BOTTOMRIGHT", 0, -2)
   p.then_ = W.text(nb, "GameFontHighlightSmall", nil, W.TEXT)
-  p.then_:SetPoint("TOPLEFT", 10, -68)
-  p.then_:SetWidth(230)
+  p.then_:SetPoint("TOPLEFT", p.nextIcon, "BOTTOMLEFT", 0, -8)
+  p.then_:SetWidth(LEFT_W - 20)
   p.readback = W.text(p, "GameFontHighlightSmall", nil, W.TEXT)
   p.readback:SetPoint("TOPLEFT", nb, "BOTTOMLEFT", 0, -8)
-  p.readback:SetWidth(250)
+  p.readback:SetWidth(LEFT_W)
   p.readback:SetJustifyV("TOP")
   p.source = W.text(p, "GameFontHighlightSmall", nil, W.MUTED)
   p.source:SetPoint("TOPLEFT", p.readback, "BOTTOMLEFT", 0, -8)
-  p.source:SetWidth(250)
+  p.source:SetWidth(LEFT_W)
   p.prio = W.text(p, "GameFontHighlightSmall", nil, W.TEXT)
   p.prio:SetPoint("TOPLEFT", p.source, "BOTTOMLEFT", 0, -8)
-  p.prio:SetWidth(250)
+  p.prio:SetWidth(LEFT_W)
+  if p.prio.SetMaxLines then p.prio:SetMaxLines(8) end
 
   local head = W.text(p, "GameFontNormal", nil, W.GOLD)
-  head:SetPoint("TOPLEFT", 266, -30)
+  head:SetPoint("TOPLEFT", LEFT_W + 16, -30)
   head:SetText("Point order")
-  local sf, content = W.scroll(p, 336, 320)
-  sf:SetPoint("TOPLEFT", 266, -50)
+  local sf, content = W.scroll(p, LIST_W, 340)
+  sf:SetPoint("TOPLEFT", LEFT_W + 16, -50)
   p.list = content
   p.sf = sf
   p.pool = W.pool(content, function(parent)
     local r = CreateFrame("Frame", nil, parent)
-    r:SetSize(332, ROW_H)
+    r:SetSize(LIST_W - 4, ROW_H)
     r.bg = r:CreateTexture(nil, "BACKGROUND")
     r.bg:SetAllPoints()
     r.lvl = W.text(r, "GameFontHighlightSmall")
@@ -71,11 +76,12 @@ function tab.build(p)
     r.lvl:SetWidth(44)
     r.icon = W.icon(r, 16)
     r.icon:SetPoint("LEFT", 50, 0)
-    r.name = W.text(r, "GameFontHighlightSmall")
-    r.name:SetPoint("LEFT", 72, 0)
-    r.name:SetWidth(200)
     r.rank = W.text(r, "GameFontHighlightSmall", nil, W.MUTED, "RIGHT")
     r.rank:SetPoint("RIGHT", -4, 0)
+    r.name = W.line(r, "GameFontHighlightSmall")
+    r.name:SetPoint("LEFT", 72, 0)
+    r.name:SetPoint("RIGHT", -40, 0)
+    W.tooltip(r, function(GT) GT:AddLine(r.name:GetText() or "", 1, 0.82, 0) end)
     return r
   end)
 end
@@ -114,6 +120,9 @@ function tab.refresh(p)
     if n then thenParts[#thenParts + 1] = n.n .. " (" .. E.levelForPoint(i - 1, m.talented) .. ")" end
   end
   p.then_:SetText(#thenParts > 0 and ("Then: " .. table.concat(thenParts, ", ")) or "")
+  local th = (p.nextTitle:GetStringHeight() or 14) + math.max(30, (p.nextName:GetStringHeight() or 14) + 2 + (p.nextSub:GetStringHeight() or 12))
+    + (#thenParts > 0 and (8 + (p.then_:GetStringHeight() or 12)) or 0)
+  p.nb:SetHeight(math.ceil(8 + th + 6 + 10))
   if g and kind == "guide" then
     local src = g.source or {}
     p.source:SetText("Source: " .. (src.site or "?") .. (src.author and (", " .. src.author) or "") .. (src.updated and (" (" .. src.updated .. ")") or "") ..

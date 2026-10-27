@@ -38,11 +38,26 @@ local function walk(root, visit, depth)
   for _, k in ipairs(all(root, "GetChildren")) do if type(k) == "table" then walk(k, visit, depth + 1) end end
 end
 
---- Problems on the tab currently shown: {{kind, text, need, have}}
+local function rect(obj)
+  local l, r, b, t = num(call(obj, "GetLeft")), num(call(obj, "GetRight")), num(call(obj, "GetBottom")), num(call(obj, "GetTop"))
+  if l and r and b and t then return { l, b, r, t } end
+end
+local function inter(a, b)
+  return math.min(a[3], b[3]) - math.max(a[1], b[1]) > 1.5 and math.min(a[4], b[4]) - math.max(a[2], b[2]) > 1.5
+end
+local function inside(a, obj)
+  local p = call(obj, "GetParent")
+  while p do if p == a then return true end p = call(p, "GetParent") end
+  return false
+end
+local function plain(txt) return (txt:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("\n", " ")) end
+
+--- Problems on the tab currently shown: {{kind, text, need, have}}. kind: cut (text cut off without a tooltip),
+--- button (label wider than the button), overlap (text over a button or another text), outside (sticks out).
 function AU.scan(frame, tabKey)
   local out = {}
   local fl, fr, fb = num(call(frame, "GetLeft")), num(call(frame, "GetRight")), num(call(frame, "GetBottom"))
-  local seen = {}
+  local seen, texts, buttons, modals = {}, {}, {}, {}
   walk(frame, function(obj, kind)
     if seen[obj] or #out >= AU.MAX then return end
     seen[obj] = true
@@ -51,11 +66,20 @@ function AU.scan(frame, tabKey)
       if type(txt) ~= "string" or txt == "" then return end
       local w, sw = num(call(obj, "GetWidth")), num(call(obj, "GetStringWidth"))
       local wraps = call(obj, "CanWordWrap")
-      if w and sw and w > 0 and wraps == false and sw > w + 2 then
-        out[#out + 1] = { tab = tabKey, kind = "cut", text = txt:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):sub(1, 50), need = math.floor(sw), have = math.floor(w) }
+      local cut = (w and sw and w > 0 and wraps == false and sw > w + 2) or (wraps ~= false and call(obj, "IsTruncated") == true)
+      if cut and not obj.wbxTrunc then
+        out[#out + 1] = { tab = tabKey, kind = "cut", text = plain(txt):sub(1, 50), need = math.floor(sw or 0), have = math.floor(w or 0) }
       end
+      local r = rect(obj)
+      if r then texts[#texts + 1] = { obj = obj, r = r, text = plain(txt):sub(1, 30) } end
     else
-      if call(obj, "GetObjectType") == "Button" then
+      if obj.wbxModal then local r = rect(obj); if r then modals[#modals + 1] = { obj = obj, r = r } end end
+      local ot = call(obj, "GetObjectType")
+      if ot == "Button" or ot == "CheckButton" then
+        local r = rect(obj)
+        if r then buttons[#buttons + 1] = { obj = obj, r = r } end
+      end
+      if ot == "Button" then
         local fs = call(obj, "GetFontString")
         local bw = num(call(obj, "GetWidth"))
         local sw = fs and num(call(fs, "GetStringWidth"))
@@ -71,6 +95,27 @@ function AU.scan(frame, tabKey)
       end
     end
   end)
+  local function covered(obj, r)
+    for _, m in ipairs(modals) do if obj ~= m.obj and not inside(m.obj, obj) and inter(r, m.r) then return true end end
+    return false
+  end
+  for _, t in ipairs(texts) do
+    if not covered(t.obj, t.r) then
+      for _, b in ipairs(buttons) do
+        if #out < AU.MAX and not inside(b.obj, t.obj) and not covered(b.obj, b.r) and inter(t.r, b.r) then
+          out[#out + 1] = { tab = tabKey, kind = "overlap", text = t.text .. " x button", need = 0, have = 0 }
+        end
+      end
+    end
+  end
+  for i = 1, #texts do
+    for j = i + 1, #texts do
+      local a, b = texts[i], texts[j]
+      if #out < AU.MAX and not covered(a.obj, a.r) and not covered(b.obj, b.r) and inter(a.r, b.r) then
+        out[#out + 1] = { tab = tabKey, kind = "overlap", text = a.text .. " x " .. b.text, need = 0, have = 0 }
+      end
+    end
+  end
   return out
 end
 

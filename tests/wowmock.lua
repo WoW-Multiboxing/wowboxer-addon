@@ -170,18 +170,194 @@ function Mock.new(H, opts)
   function methods:SetText(t) self._text = t end
   function methods:GetText() return self._text end
   function methods:SetFormattedText(fmt, ...) self._text = string.format(fmt, ...) end
-  function methods:CreateFontString(name) return newFrame("FontString", name, self) end
+  function methods:CreateFontString(name, _, template)
+    local fs = newFrame("FontString", name, self)
+    fs._fontSize = W.FONT_SIZE[template or "GameFontNormal"] or 12
+    return fs
+  end
   function methods:CreateTexture(name) return newFrame("Texture", name, self) end
   function methods:GetName() return self._name end
   function methods:GetParent() return self._parent end
   function methods:SetParent(p) self._parent = p end
-  function methods:GetWidth() return self._w end
-  function methods:GetHeight() return self._h end
-  function methods:SetWidth(w) self._w = w end
-  function methods:SetHeight(h) self._h = h end
-  function methods:SetSize(w, h) self._w, self._h = w, h end
-  function methods:GetStringWidth() return #(self._text or "") * 6 end
-  function methods:GetStringHeight() return 12 end
+  function methods:SetWidth(w) self._w = w; self._wSet = true end
+  function methods:SetHeight(h) self._h = h; self._hSet = true end
+  function methods:SetSize(w, h) self._w, self._h = w, h; self._wSet, self._hSet = true, true end
+  -- ---------------------------------------------------------------- geometry (anchors, scale, text metrics)
+  -- Text is measured like the spec says: width = characters x font size x W.fontFactor (0.55), line height = size + 2.
+  -- Rects are computed from the anchors in UIParent units (y up), so tests can find overlaps (tests/layout.lua).
+  W.fontFactor = opts.fontFactor or 0.55
+  local FONT_SIZE = { GameFontHighlightSmall = 10, GameFontNormalSmall = 10, GameFontDisableSmall = 10, GameFontNormal = 12,
+    GameFontHighlight = 12, GameFontDisable = 12, GameFontNormalLarge = 16, GameFontNormalHuge = 20, ChatFontNormal = 14,
+    GameFontHighlightLarge = 16, GameFontNormalMed3 = 14, NumberFontNormal = 12, GameFontWhite = 12 }
+  W.FONT_SIZE = FONT_SIZE
+  function W.plain(t)
+    t = tostring(t or "")
+    t = t:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("|T.-|t", "##"):gsub("|n", "\n")
+    return t
+  end
+  local function chars(s) local n = 0; for _ in s:gmatch("[^\128-\191]") do n = n + 1 end return n end
+  function W.textWidth(t, size)
+    local w = 0
+    for line in (W.plain(t) .. "\n"):gmatch("([^\n]*)\n") do w = math.max(w, chars(line) * size * W.fontFactor) end
+    return w
+  end
+  --- Lines a text needs at `width` (word wrap like the client: break at spaces, long words are split).
+  function W.textLines(t, size, width)
+    local n = 0
+    for line in (W.plain(t) .. "\n"):gmatch("([^\n]*)\n") do
+      if not width or width <= 0 then n = n + 1
+      else
+        local cur, count = 0, 1
+        local space = size * W.fontFactor
+        for word in line:gmatch("%S+") do
+          local ww = chars(word) * size * W.fontFactor
+          if cur > 0 and cur + space + ww > width + 0.5 then count = count + 1; cur = 0 end
+          if cur == 0 then
+            while ww > width + 0.5 do count = count + 1; ww = ww - width end
+            cur = ww
+          else cur = cur + space + ww end
+        end
+        n = n + count
+      end
+    end
+    return n
+  end
+  local function fontSize(f) return f._fontSize or 12 end
+  function methods:GetFont() return "Fonts\\FRIZQT__.TTF", fontSize(self), "" end
+  function methods:SetFont(_, size) if size then self._fontSize = size end return true end
+  function methods:SetFontObject(o) if type(o) == "table" and o._name and FONT_SIZE[o._name] then self._fontSize = FONT_SIZE[o._name] end end
+  function methods:SetMaxLines(n) self._maxLines = n end
+  function methods:GetStringWidth() return W.textWidth(self._text, fontSize(self)) end
+  function methods:GetUnboundedStringWidth() return W.textWidth(self._text, fontSize(self)) end
+  function methods:GetTextWidth() return W.textWidth(self._text, self._kind == "FontString" and fontSize(self) or 12) end
+  function methods:GetLineHeight() return fontSize(self) + 2 end
+  function methods:SetPoint(point, a, b, c, d)
+    self._points = self._points or {}
+    local rel, rp, x, y
+    if type(a) == "number" or a == nil then rel, rp, x, y = nil, point, a or 0, b or 0
+    elseif type(b) == "number" then rel, rp, x, y = a, point, b, c or 0
+    else rel, rp, x, y = a, b or point, c or 0, d or 0 end
+    if type(rel) == "string" then rel = env[rel] end
+    for i = #self._points, 1, -1 do if self._points[i][1] == point then table.remove(self._points, i) end end
+    self._points[#self._points + 1] = { point, rel or self._parent, rp, x, y }
+  end
+  function methods:SetAllPoints(rel)
+    self._points = {}
+    self:SetPoint("TOPLEFT", rel or self._parent, "TOPLEFT", 0, 0)
+    self:SetPoint("BOTTOMRIGHT", rel or self._parent, "BOTTOMRIGHT", 0, 0)
+  end
+  function methods:ClearAllPoints() self._points = {} end
+  function methods:GetNumPoints() return #(self._points or {}) end
+  function methods:GetPoint(i)
+    local p = (self._points or {})[i or 1]
+    if p then return p[1], p[2], p[3], p[4], p[5] end
+  end
+  function methods:SetScale(s) self._scale = s end
+  function methods:GetScale() return self._scale or 1 end
+  function methods:GetEffectiveScale()
+    local s, f = 1, self
+    while f do s = s * (f._scale or 1); f = f._parent end
+    return s
+  end
+  function methods:SetScrollChild(c) self._scrollChild = c; c._scrollParent = self end
+  function methods:GetScrollChild() return self._scrollChild end
+  --- {l, b, r, t} in UIParent units, or nil when the frame is not placed.
+  local function factor(f) return f:GetEffectiveScale() / env.UIParent:GetEffectiveScale() end
+  local POS = { TOPLEFT = { 0, 1 }, TOP = { 0.5, 1 }, TOPRIGHT = { 1, 1 }, LEFT = { 0, 0.5 }, CENTER = { 0.5, 0.5 }, RIGHT = { 1, 0.5 },
+    BOTTOMLEFT = { 0, 0 }, BOTTOM = { 0.5, 0 }, BOTTOMRIGHT = { 1, 0 } }
+  W.POS = POS
+  local rectOf
+  local function intrinsic(f, k, width)
+    if f._kind == "FontString" then
+      local size = fontSize(f) * k
+      local natural = W.textWidth(f._text, fontSize(f)) * k
+      local w = width or ((f._wSet and f._w > 0) and f._w * k) or natural
+      local lines = 1
+      if f._wrap ~= false and (width or (f._wSet and f._w > 0)) then lines = W.textLines(f._text, fontSize(f), w / k) end
+      if f._maxLines and f._maxLines > 0 then lines = math.min(lines, f._maxLines) end
+      local h = (f._hSet and f._h > 0) and f._h * k or lines * (size + 2 * k)
+      return w, h, lines
+    end
+    return (f._w or 0) * k, (f._h or 0) * k
+  end
+  rectOf = function(f, seen)
+    if f == env.UIParent then return { 0, 0, W.screen.w, W.screen.h } end
+    seen = seen or {}
+    if seen[f] then return nil end
+    seen[f] = true
+    local k = factor(f)
+    local pts = f._points
+    if (not pts or #pts == 0) and f._scrollParent then
+      local pr = rectOf(f._scrollParent, seen)
+      seen[f] = nil
+      if not pr then return nil end
+      return { pr[1], pr[4] - f._h * k, pr[1] + f._w * k, pr[4] }
+    end
+    if not pts or #pts == 0 then seen[f] = nil; return nil end
+    local L, R, CX, T, B, CY
+    for _, p in ipairs(pts) do
+      local rr = p[2] and rectOf(p[2], seen)
+      if not rr then seen[f] = nil; return nil end
+      local rp, mp = POS[p[3]], POS[p[1]]
+      local ax = rr[1] + (rr[3] - rr[1]) * rp[1] + p[4] * k
+      local ay = rr[2] + (rr[4] - rr[2]) * rp[2] + p[5] * k
+      if mp[1] == 0 then L = ax elseif mp[1] == 1 then R = ax else CX = ax end
+      if mp[2] == 0 then B = ay elseif mp[2] == 1 then T = ay else CY = ay end
+    end
+    -- two points on one axis set the size, like the client (TOP + CENTER gives height 2 x (top - centre))
+    local width = (L and R) and (R - L) or (L and CX) and 2 * (CX - L) or (R and CX) and 2 * (R - CX) or nil
+    if width and not (L and R) then L = L or (R - width) end
+    local iw, ih = intrinsic(f, k, width)
+    local w = width or iw
+    if not L then L = R and (R - w) or ((CX or 0) - w / 2) end
+    R = L + w
+    local h = (T and B) and (T - B) or (T and CY) and 2 * (T - CY) or (B and CY) and 2 * (CY - B) or nil
+    if h and not (T and B) then B = B or (T - h) end
+    if not h then h = ih end
+    if not B then B = T and (T - h) or ((CY or 0) - h / 2) end
+    T = B + h
+    seen[f] = nil
+    return { L, B, R, T }
+  end
+  W.rect = rectOf
+  W.factor = factor
+  function methods:GetLeft() local r = rectOf(self); return r and r[1] / factor(self) end
+  function methods:GetRight() local r = rectOf(self); return r and r[3] / factor(self) end
+  function methods:GetBottom() local r = rectOf(self); return r and r[2] / factor(self) end
+  function methods:GetTop() local r = rectOf(self); return r and r[4] / factor(self) end
+  function methods:GetCenter() local r = rectOf(self); if r then local k = factor(self); return (r[1] + r[3]) / 2 / k, (r[2] + r[4]) / 2 / k end end
+  local function placed(f) return f._points and #f._points > 0 end
+  function methods:GetWidth()
+    if self._kind == "FontString" or (placed(self) and not self._wSet) then
+      local r = rectOf(self); if r then return (r[3] - r[1]) / factor(self) end
+      if self._kind == "FontString" then return W.textWidth(self._text, fontSize(self)) end
+    end
+    return self._w
+  end
+  function methods:GetHeight()
+    if self._kind == "FontString" or (placed(self) and not self._hSet) then
+      local r = rectOf(self); if r then return (r[4] - r[2]) / factor(self) end
+      if self._kind == "FontString" then return fontSize(self) + 2 end
+    end
+    return self._h
+  end
+  function methods:GetStringHeight()
+    local r = rectOf(self)
+    local w = r and (r[3] - r[1]) / factor(self) or nil
+    local lines = W.textLines(self._text, fontSize(self), (self._wrap ~= false) and w or nil)
+    if self._maxLines and self._maxLines > 0 then lines = math.min(lines, self._maxLines) end
+    return lines * (fontSize(self) + 2)
+  end
+  function methods:IsTruncated()
+    local r = rectOf(self)
+    if not r then return false end
+    local k = factor(self)
+    local w = (r[3] - r[1]) / k
+    if W.textWidth(self._text, fontSize(self)) <= w + 0.5 then return false end
+    if self._wrap == false then return true end
+    local need = W.textLines(self._text, fontSize(self), w) * (fontSize(self) + 2)
+    return need > (r[4] - r[2]) / k + 0.5
+  end
   function methods:SetChecked(v) self._checked = not not v end
   function methods:GetChecked() return self._checked end
   function methods:SetValue(v) self._value = v end
@@ -218,6 +394,10 @@ function Mock.new(H, opts)
   W.newFrame = newFrame
   env.CreateFrame = function(kind, name, parent, template) local f = newFrame(kind, name, parent); f._template = template; return f end
   env.UIParent = newFrame("Frame", "UIParent")
+  W.screen = opts.screen or { w = 1365, h = 768 }
+  env.UIParent._w, env.UIParent._h = W.screen.w, W.screen.h
+  env.GetScreenWidth = function() return W.screen.w end
+  env.GetScreenHeight = function() return W.screen.h end
   env.GameTooltip = newFrame("GameTooltip", "GameTooltip", env.UIParent)
   env.UISpecialFrames = {}
   env.StaticPopupDialogs = {}

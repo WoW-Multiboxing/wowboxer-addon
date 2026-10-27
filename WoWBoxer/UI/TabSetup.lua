@@ -1,7 +1,7 @@
 --[[ WoWBoxer – Setup tab: multibox checklist, recommended settings (apply / restore), recommended addons. ]]
 local _, ns = ...
 local UI, W = ns.UI, ns.Widgets
-local tab = { key = "setup", label = "Setup" }
+local tab = { key = "setup", label = "Setup", icon = "INV_Misc_Gear_01", tip = "Multibox checklist, action bars, window and game settings." }
 
 function tab.build(p)
   local h1 = W.text(p, "GameFontNormal", nil, W.GOLD)

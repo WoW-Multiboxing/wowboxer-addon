@@ -78,6 +78,7 @@ function KE.Build(parent)
   f:SetAllPoints()
   f:SetFrameLevel((parent:GetFrameLevel() or 1) + 20)
   f:EnableMouse(true)
+  f.wbxModal = true
   f:Hide()
   KE.frame = f
 
@@ -152,14 +153,15 @@ function KE.Build(parent)
     r:SetSize(246, 22)
     r.icon = W.icon(r, 18)
     r.icon:SetPoint("LEFT", 2, 0)
-    r.name = W.text(r, "GameFontHighlightSmall", nil, W.TEXT)
-    r.name:SetPoint("LEFT", 24, 0)
-    r.name:SetWidth(118)
-    if r.name.SetWordWrap then r.name:SetWordWrap(false) end
-    r.add = W.button(r, "Add", 44, 18, function() KE.addStep(r.spell.name) end)
-    r.add:SetPoint("RIGHT", -50, 0)
-    r.fill = W.button(r, "Filler", 48, 18, function() f.draft.filler = r.spell.name; KE.Refresh() end)
+    r.fill = W.button(r, "Filler", 48, 18, function() f.draft.filler = r.spell.name; KE.Refresh() end,
+      "Makes this spell the filler: it is cast between the steps (sequence keys only).")
     r.fill:SetPoint("RIGHT", 0, 0)
+    r.add = W.button(r, "Add", 44, 18, function() KE.addStep(r.spell.name) end, "Adds this spell as the next step of the key.")
+    r.add:SetPoint("RIGHT", r.fill, "LEFT", -4, 0)
+    r.name = W.line(r, "GameFontHighlightSmall", nil, W.TEXT)
+    r.name:SetPoint("LEFT", 24, 0)
+    r.name:SetPoint("RIGHT", r.add, "LEFT", -4, 0)
+    W.tooltip(r, function(GT) GT:AddLine(r.spell and r.spell.name or "", 1, 0.82, 0) end)
     return r
   end)
 
@@ -186,18 +188,18 @@ function KE.Build(parent)
     if not idx then Core().print("|cffff8a80" .. err .. "|r"); return end
     Core().log("info", "custom key C" .. idx .. " saved: " .. tostring(m.customSeq[idx] and m.customSeq[idx].name))
     KE.Close()
-    if UI.panels and UI.panels.keys then UI.panels.keys.selected = "WBX C" .. idx end
+    if UI.panels and UI.panels.custom then UI.panels.custom.selected = "WBX C" .. idx end
     Core().changed()
-  end)
+  end, "Saves this own key. It is created in the game when you place it or press Place all.")
   f.save:SetPoint("BOTTOMRIGHT", -10, 8)
-  f.cancel = W.button(f, "Cancel", 80, 24, function() KE.Close() end)
+  f.cancel = W.button(f, "Cancel", 80, 24, function() KE.Close() end, "Closes the editor without saving.")
   f.cancel:SetPoint("RIGHT", f.save, "LEFT", -6, 0)
   f.delete = W.button(f, "Delete key", 90, 24, function(self)
-    if not self.armed then self.armed = true; self:SetText("Sure?"); return end
+    if not self.armed then self.armed = true; W.setLabel(self, "Sure?"); return end
     local _, m = Core().me()
     if m and f.index then KE.delete(m, f.index); Core().log("info", "custom key C" .. f.index .. " deleted") end
     KE.Close(); Core().changed()
-  end)
+  end, "Deletes this own key from WoWBoxer (click twice). The game macro is removed the next time you update your keys.")
   f.delete:SetPoint("BOTTOMLEFT", 10, 8)
   return f
 end
@@ -219,6 +221,7 @@ function KE.Open(parent, index)
   local _, m = Core().me()
   if not m then return end
   local f = KE.Build(parent)
+  if f:GetParent() ~= parent then f:SetParent(parent); f:ClearAllPoints(); f:SetAllPoints(parent); f:SetFrameLevel((parent:GetFrameLevel() or 1) + 20) end
   local src = index and m.customSeq and m.customSeq[index]
   f.index = src and index or nil
   f.draft = { id = src and src.id or nil, name = src and src.name or "My key", kind = src and src.kind or "sequence",
@@ -226,9 +229,9 @@ function KE.Open(parent, index)
     reset = src and src.reset or "combat" }
   for i, s in ipairs(src and src.steps or {}) do f.draft.steps[i] = s end
   f.name:SetText(f.draft.name)
-  f.title:SetText(f.index and ("Edit own key WBX C" .. f.index) or "New own key")
+  f.title:SetText(f.index and ("Edit own key " .. f.index) or "New own key")
   f.delete:SetShown(f.index ~= nil)
-  f.delete.armed = false; f.delete:SetText("Delete key")
+  f.delete.armed = false; W.setLabel(f.delete, "Delete key")
   f:Show()
   KE.Refresh()
 end
