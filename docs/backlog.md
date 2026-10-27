@@ -55,7 +55,7 @@ Built behind probes and tested in the simulator; only the real client can confir
 - [x] (d43a145: minimap, reset, scale, bars) `/wbx` sub-commands: `minimap`, `reset` (window position), `bars` (print where each key is).
 
 ## P2 – squad basics
-- [x] (NEXT: cards + inline editor for add/edit/remove, plays-as, leader) Squad tab works for: add, rename, change class/race/role, remove, make leader, follower unit, "this is me".
+- [x] (0d168b8: cards + inline editor for add/edit/remove, plays-as, leader) Squad tab works for: add, rename, change class/race/role, remove, make leader, follower unit, "this is me".
       Editing a member = small inline editor (name box + cycles) instead of the current row of cycles.
 - [x] (already in M3: Import squad jumps to Keys) Import on a second client: after "Import squad", jump to Keys with "You are <name>" confirmed.
 - [x] (d43a145: Fix button "Use partyN") Checklist: show "Leader is partyN" with the fix inline (one click sets the unit).
