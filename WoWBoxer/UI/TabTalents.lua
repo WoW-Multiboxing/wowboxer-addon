@@ -97,7 +97,9 @@ function tab.refresh(p)
   -- next point
   local nextIdx = have > 0 and have or 1
   local k = order[nextIdx]
-  p.nextTitle:SetText(have > 0 and ("At level " .. level .. " (" .. have .. " points)") or ("First point at level " .. E.firstPointLevel(m.talented)))
+  -- spec: "Next at level N" (the point for this level; before level 10 the first point)
+  p.nextTitle:SetText(have > 0 and ("Next at level " .. E.levelForPoint(nextIdx - 1, m.talented) .. "  |cffa89a7e(" .. have .. " points by now)|r")
+    or ("First point at level " .. E.firstPointLevel(m.talented)))
   if k and T.byKey[k] then
     local n = T.byKey[k]
     local rank = 0
