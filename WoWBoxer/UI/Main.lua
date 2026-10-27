@@ -136,9 +136,13 @@ end
 function UI.Toggle()
   ns.Core.ensureMe()
   UI.Build()
-  if UI.frame:IsShown() then UI.frame:Hide() else UI.frame:Show() end
+  if UI.frame:IsShown() then UI.frame:Hide() else UI.frame:Show(); if ns.Audit then ns.Audit.onFirstOpen() end end
 end
-function UI.Open(tab) ns.Core.ensureMe(); UI.Build(); UI.frame:Show(); if tab then UI.Select(tab) end end
+function UI.Open(tab)
+  ns.Core.ensureMe(); UI.Build(); UI.frame:Show()
+  if tab then UI.Select(tab) end
+  if ns.Audit then ns.Audit.onFirstOpen() end
+end
 
 -- ------------------------------------------------------------------ level-up offer toast
 function UI.ShowOffer(ctx)

@@ -10,6 +10,7 @@ minimap button, much more drag & drop of macros onto the action bars.
 
 ## Needs the owner in game
 Built behind probes and tested in the simulator; only the real client can confirm these. (Claude Code keeps this list.)
+- Layout audit (NEXT): opening `/wbx` once writes measured cut-off texts / too-narrow buttons / overflow to the diagnose → `tools/read_log.py`. Then screenshots only for what the audit cannot see.
 - Layout of every tab at the real font sizes (screenshots with PrtScn → `_classic_era_\Screenshots`).
 - Drag from the Keys tab onto an action button (`PickupMacro` after creating the macro).
 - "Bind key": key capture frame (`EnableKeyboard`/`SetPropagateKeyboardInput`), `SetBindingMacro` + `SaveBindings(2)`.

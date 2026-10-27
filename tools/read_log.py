@@ -84,6 +84,13 @@ def main():
                 print(f"   not in spellbook: {d.get('missing')}")
             print(f"   cvars { {k: (v.get('cur'), v.get('want'), v.get('status')) for k, v in (d.get('cvars') or {}).items()} }")
             print(f"   addons {d.get('addons')}  party {d.get('party')} focus {d.get('focus')}")
+            if d.get("talents"):
+                print(f"   talents {d.get('talents')}")
+            lay = d.get("layout")
+            if lay:
+                print(f"   layout audit: {lay.get('count')} finding(s), scale {lay.get('scale')}, {lay.get('game')}")
+                for it in lay.get("items") or []:
+                    print(f"     [{it.get('tab')}] {it.get('kind')}: {it.get('text')!r} needs {it.get('need')} has {it.get('have')}")
         log = data.get("log") or []
         print(f"-- log (last {a.log} of {len(log)})")
         for e in log[-a.log:]:

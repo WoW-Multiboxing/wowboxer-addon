@@ -429,6 +429,10 @@ function Core.slash(msg)
     Core.db.settings.team = on and nil or false
     if ns.TeamFrame then ns.TeamFrame.SetShown(on) end
     chat("Team status " .. (on and "on (shown while your squad is grouped)." or "off: nothing is sent or shown."))
+  elseif cmd == "audit" then
+    if ns.UI then ns.UI.Open() end
+    local res = ns.Audit and ns.Audit.run()
+    chat("Layout audit: " .. (res and #res or 0) .. " finding(s), saved for the next /reload.")
   elseif cmd == "keys" then Core.openKeyBindings()
   elseif cmd == "reset" then
     Core.db.settings.window, Core.db.settings.scale = nil, nil

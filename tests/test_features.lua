@@ -533,4 +533,27 @@ do
   for _, d in ipairs(low) do if d.label == "Shadow Word: Pain" then H.eq(d.name, "WBX Shadow Word2", "stable name at a lower level") end end
 end
 
+-- ------------------------------------------------------------------ layout audit (read-only measurements)
+do
+  local W, ns = boot({ name = "Warlocker", class = "PRIEST", race = "Scourge", level = 20 })
+  ns.UI.Toggle()
+  local keep = ns.UI.current
+  -- a one-line label that is far too long for its width
+  local p = ns.UI.panels.keys
+  p.trainer:SetWidth(120)
+  local long = "Visit your trainer: " .. string.rep("Greater Heal, ", 20)
+  local orig = p.trainer.SetText
+  p.trainer.SetText = function(self) orig(self, long) end
+  W.flush()
+  local d = ns.Core.db.diag["Warlocker-Realm"]
+  H.ok(d and d.layout, "audit ran after the first open")
+  local found = false
+  for _, it in ipairs(d and d.layout and d.layout.items or {}) do if it.kind == "cut" and it.text:find("Visit your trainer") then found = true end end
+  H.ok(found, "cut-off label reported")
+  H.eq(ns.UI.current, keep, "the player's tab is restored")
+  H.eq(W.calls.CreateMacro, nil, "audit changes nothing")
+  W.env.SlashCmdList.WOWBOXER("audit")
+  H.ok(W.chatHas("Layout audit"), "/wbx audit reports")
+end
+
 os.exit(H.report("features") and 0 or 1)

@@ -201,6 +201,13 @@ function Mock.new(H, opts)
   function methods:HasFocus() return false end
   function methods:GetObjectType() return self._kind end
   function methods:GetCursorPosition() return 0 end
+  function methods:SetWordWrap(v) self._wrap = v and true or false end
+  function methods:CanWordWrap() return rawget(self, "_wrap") ~= false end
+  function methods:GetRegions()
+    local out = {}
+    for _, c in ipairs(self._children) do if c._kind == "FontString" or c._kind == "Texture" then out[#out + 1] = c end end
+    return unpack(out)
+  end
   function methods:GetNumLetters() return #(self._text or "") end
   -- unknown API methods (CamelCase) are no-ops; unknown fields (_x, lowercase) are nil, like on a real frame
   FrameMT.__index = function(t, k)

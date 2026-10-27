@@ -41,6 +41,7 @@ UI\Main.lua
 UI\Minimap.lua
 UI\KeyEditor.lua
 UI\TeamFrame.lua
+UI\Audit.lua
 UI\TabKeys.lua
 UI\TabSquad.lua
 UI\TabTalents.lua
