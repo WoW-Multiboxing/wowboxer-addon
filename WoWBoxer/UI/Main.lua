@@ -96,7 +96,6 @@ function UI.Refresh()
   ns.Core.batch(UI.RefreshNow)
 end
 function UI.RefreshNow()
-  local f = UI.frame
   local Core = ns.Core
   local ctx = Core.compute()
   local _, m = Core.me()
