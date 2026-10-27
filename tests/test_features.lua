@@ -424,4 +424,89 @@ do
   H.eq(#errors(ns), 0, "no errors (editor): " .. table.concat(errors(ns), " | "))
 end
 
+-- ------------------------------------------------------------------ team status between two clients (display only)
+do
+  local A, nsA = boot({ name = "Dorin", class = "PALADIN", race = "Scourge", level = 20, party = { party1 = "Wowtwo" } })
+  local B, nsB = boot({ name = "Wowtwo", class = "PRIEST", race = "Scourge", level = 20, party = { party1 = "Dorin" } })
+  -- same squad on both: Dorin leads, Wowtwo follows via party1
+  local str
+  do
+    nsA.UI.Open("squad")
+    local s = nsA.Core.me()
+    table.insert(s.members, nsA.State.newMember({ name = "Wowtwo", cls = "priest", race = "undead", role = "healer", unit = "party1" }))
+    str = nsA.Core.exportString()
+    local res = nsB.Core.importString(str)
+    nsB.Core.applyImport(res)
+  end
+  H.ok(A.prefixes.WBX1 and B.prefixes.WBX1, "prefix registered on both clients")
+  local function deliver(from, to, fromName)
+    for _, m in ipairs(from.sent) do to.fire("CHAT_MSG_ADDON", m.prefix, m.msg, m.chan, fromName .. "-Realm") end
+    from.sent = {}
+  end
+  A.now, B.now = 100, 100
+  local TA, TB = nsA.Team, nsB.Team
+  H.ok(TA.active() and TB.active(), "active: grouped squad of two")
+  -- leader targets a mob and fights; follower follows and has another target
+  A.targetGUID, A.inCombatUnit = "Creature-0-1-2-3-111-AAAA", true
+  B.targetGUID, B.inCombatUnit = "Creature-0-1-2-3-222-BBBB", true
+  B.fire("AUTOFOLLOW_BEGIN", "Dorin")
+  TA.send(true); TB.send(true)
+  H.eq(#A.sent, 1, "one message from the leader")
+  H.ok(A.sent[1].msg:match("^S|20|%d+|0|1|Creature"), "message format: " .. A.sent[1].msg)
+  deliver(A, B, "Dorin"); deliver(B, A, "Wowtwo")
+  local function flagsOf(ns, name)
+    for _, r in ipairs(ns.Team.rows()) do if r.name == name then local t = {}; for _, f in ipairs(r.flags) do t[#t + 1] = f[1] end; return table.concat(t, ",") end end
+  end
+  H.eq(flagsOf(nsA, "Wowtwo"), "other target", "leader sees the follower on another target")
+  B.targetGUID = A.targetGUID
+  B.now = 102; TB.send()
+  deliver(B, A, "Wowtwo")
+  H.eq(flagsOf(nsA, "Wowtwo"), "", "same target: no problem")
+  -- out of combat the follower stops following, mana drops
+  B.inCombatUnit, A.inCombatUnit = false, false
+  B.fire("AUTOFOLLOW_END")
+  B.mana = 150
+  B.now = 104; TB.send()
+  deliver(B, A, "Wowtwo")
+  H.eq(flagsOf(nsA, "Wowtwo"), "not following,low mana", "lost follow and low mana shown")
+  -- throttle: a burst of changes sends at most one message per MIN_GAP
+  B.now = 104.5
+  B.targetGUID = "Creature-0-1-2-3-333-CCCC"; TB.send()
+  H.eq(#B.sent, 0, "throttled within MIN_GAP")
+  B.flush()
+  H.ok(#B.sent <= 1, "one coalesced message later")
+  B.sent = {}
+  -- unchanged state: nothing until the heartbeat
+  B.now = 110; TB.send(); B.sent = {}
+  B.now = 112; TB.send()
+  H.eq(#B.sent, 0, "no resend of an unchanged state")
+  B.now = 126; TB.send()
+  H.eq(#B.sent, 1, "heartbeat resends after 15 s")
+  -- stale: no signal after 40 s
+  A.now = 200
+  H.eq(flagsOf(nsA, "Wowtwo"), "no signal", "no signal when a client goes quiet")
+  -- hostile/garbage messages are ignored
+  A.fire("CHAT_MSG_ADDON", "WBX1", "S|20|50|0|0|/run x", "PARTY", "Wowtwo-Realm")
+  A.fire("CHAT_MSG_ADDON", "WBX1", string.rep("x", 300), "PARTY", "Wowtwo-Realm")
+  A.fire("CHAT_MSG_ADDON", "OTHER", "S|20|50|1|0|-", "PARTY", "Wowtwo-Realm")
+  H.eq(flagsOf(nsA, "Wowtwo"), "no signal", "bad messages ignored")
+  -- display only: receiving never writes macros, bindings, targets or CVars
+  H.eq(A.calls.CreateMacro, nil, "no macro written by team status")
+  H.eq(A.calls.SetBindingMacro, nil, "no binding")
+  -- panel shows while grouped; /wbx team off silences it
+  nsA.TeamFrame.Refresh()
+  H.ok(nsA.TeamFrame.frame and nsA.TeamFrame.frame:IsShown(), "team panel shown")
+  A.env.SlashCmdList.WOWBOXER("team off")
+  H.ok(not nsA.TeamFrame.frame:IsShown(), "team off hides it")
+  A.sent = {}
+  A.now = 300; TA.send(true)
+  H.eq(#A.sent, 0, "team off sends nothing")
+  -- solo: nothing sent
+  local S, nsS = boot({ name = "Solo", class = "MAGE", race = "Human", level = 20, faction = "Alliance" })
+  nsS.UI.Open("keys")
+  nsS.Team.send(true)
+  H.eq(#S.sent, 0, "solo character sends nothing")
+  H.eq(#errors(nsA) + #errors(nsB), 0, "no errors (team)")
+end
+
 os.exit(H.report("features") and 0 or 1)

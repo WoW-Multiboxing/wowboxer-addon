@@ -20,6 +20,7 @@ Built behind probes and tested in the simulator; only the real client can confir
 - Talent read-back on Forever: `C_ClassTalents.GetActiveConfigID` → `C_Traits` nodes → names match the data? (diagnose: `talents.source/spent/unknown`).
 - `/wbx keys` / minimap "Key bindings": `QuickKeybindFrame` on Forever, `KeyBindingFrame` on Era.
 - Custom-key editor: dropping a spell from the spellbook (`GetCursorInfo` → "spell", …, spellID) on the steps strip.
+- Team status with 2–3 grouped clients: `C_ChatInfo.SendAddonMessage` on PARTY, `AUTOFOLLOW_BEGIN/END`, `UnitGUID("target")` (may be secret on Forever → shown as "?").
 - Minimap level-up dot texture `Interface\COMMON\Indicator-Yellow`.
 
 ## P0 – own character, polish and bugs
@@ -67,7 +68,7 @@ Built behind probes and tested in the simulator; only the real client can confir
 - [x] (54ee117: Forever only via C_Traits like Leatrix/Questie; Era says why not; "Take next" + "Off the plan" on the Talents tab; diagnose records it) Talent read-back: Forever via `C_ClassTalents` + `C_Traits` (as Leatrix Plus Forever does), Era via
       `GetTalentInfo`; show "you are off the guide" and the next point to take.
 - [x] (877ff61: Keys tab "New key" / "Edit"; picker + drop from the spellbook; preview + companion warnings; WBX C1–C8) Custom-key editor in game (drag spells into a sequence via `OnReceiveDrag`), same rules as the companion.
-- [ ] Display-only team status over addon messages (lost follow, different target than the leader, low mana).
+- [x] (NEXT: Team.lua + team panel, /wbx team on|off; throttled 1.5 s + 15 s heartbeat; checklist line) Display-only team status over addon messages (lost follow, different target than the leader, low mana).
 - [ ] Classic Era dataset (talents/spells/guides for 1.15), TBC Anniversary.
 - [ ] Release pipeline (BigWigsMods packager → CurseForge/Wago) when the repo goes public.
 

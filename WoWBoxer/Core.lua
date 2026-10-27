@@ -391,6 +391,7 @@ local HELP = {
   "/wbx minimap – show or hide the minimap button",
   "/wbx bars – list where each key is and which key presses it",
   "/wbx keys – open the game's key bindings (Quick Keybind mode where available)",
+  "/wbx team on|off – team status panel (display only: follow, target, mana of your other clients)",
   "/wbx scale 0.9 – window size (0.7–1.3); /wbx reset – window back to the middle",
   "/wbx show – list your keys and what would change",
   "/wbx cvars | /wbx cvars restore – apply recommended settings / put the old ones back",
@@ -404,6 +405,12 @@ function Core.slash(msg)
   if cmd == "" then if ns.UI and ns.UI.Toggle then ns.UI.Toggle() else chat("window not available") end
   elseif cmd == "help" or cmd == "?" then for _, l in ipairs(HELP) do chat(l) end
   elseif cmd == "sync" then Core.sync({ replace = rest == "replace" })
+  elseif cmd == "team" then
+    local on = rest == "on" or (rest == "" and Core.db.settings.team == false)
+    if rest == "off" then on = false end
+    Core.db.settings.team = on and nil or false
+    if ns.TeamFrame then ns.TeamFrame.SetShown(on) end
+    chat("Team status " .. (on and "on (shown while your squad is grouped)." or "off: nothing is sent or shown."))
   elseif cmd == "keys" then Core.openKeyBindings()
   elseif cmd == "reset" then
     Core.db.settings.window, Core.db.settings.scale = nil, nil
@@ -468,6 +475,7 @@ function Core.onEvent(event, ...)
     safeRegister("UPDATE_BINDINGS")
     Core.scanBars()
     if ns.Minimap and ns.Minimap.Init then ns.Minimap.Init() end
+    if ns.Team and ns.Team.Init then ns.Team.Init() end
     if C_Timer and C_Timer.After then C_Timer.After(3, function() Core.checkOffer("login") end) end
     -- read-only diagnose a few seconds after login, so a /reload is enough to see how the addon behaves in this client
     if C_Timer and C_Timer.After then

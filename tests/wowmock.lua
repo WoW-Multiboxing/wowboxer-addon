@@ -92,7 +92,7 @@ function Mock.new(H, opts)
     if u == "focus" then return W.focus end
     return W.party[u]
   end
-  env.UnitExists = function(u) return env.UnitName(u) ~= nil end
+  env.UnitExists = function(u) if u == "target" then return W.targetGUID ~= nil end return env.UnitName(u) ~= nil end
   env.UnitClass = function(u) local c = W.player.class; return c:sub(1, 1) .. c:sub(2):lower(), c end
   env.UnitRace = function(u) return W.player.race, W.player.race end
   env.UnitLevel = function(u) return W.player.level end
@@ -131,7 +131,17 @@ function Mock.new(H, opts)
   local clock = 1793100000
   env.time = function() clock = clock + 1; return clock end
   env.date = function(f, t) return os.date(f, t) end
-  env.GetTime = function() return clock end
+  env.GetTime = function() return W.now or clock end
+  -- addon messages, target, power (for the team status)
+  W.sent, W.prefixes = {}, {}
+  W.targetGUID, W.mana, W.manaMax, W.inCombatUnit = nil, 500, 1000, false
+  env.C_ChatInfo = { SendAddonMessage = function(prefix, msg, chan) W.sent[#W.sent + 1] = { prefix = prefix, msg = msg, chan = chan }; return true end,
+    RegisterAddonMessagePrefix = function(p) W.prefixes[p] = true; return true end }
+  env.UnitGUID = function(u) if u == "target" then return W.targetGUID end return nil end
+  env.UnitPower = function(u) return W.mana end
+  env.UnitPowerMax = function(u) return W.manaMax end
+  env.UnitAffectingCombat = function(u) return W.inCombatUnit end
+  env.IsInRaid = function() return false end
   env.C_Timer = { After = function(sec, fn) W.timers[#W.timers + 1] = fn end, NewTicker = function() return { Cancel = function() end } end }
   function W.flush() local t = W.timers; W.timers = {}; for _, fn in ipairs(t) do fn() end end
 

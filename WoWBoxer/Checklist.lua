@@ -43,6 +43,13 @@ function CL.items()
     if not m.leader then add(nil, "Follow and Assist keys", "Press them yourself. WoWBoxer never follows or targets for you.") end
     if #ctx.missing > 0 then add(false, #ctx.missing .. " spell(s) to learn at your trainer", "They are left out of your keys until you learn them.") end
   end
+  local TM = ns.Team
+  if TM and TM.enabled() and #s.members > 1 and C.inParty() then
+    local heard = 0
+    for _, row in ipairs(TM.rows()) do if row.st and not row.me then heard = heard + 1 end end
+    add(heard == #s.members - 1, "Team status: " .. heard .. " of " .. (#s.members - 1) .. " other clients report",
+      heard == #s.members - 1 and "The team panel shows follow, target and mana. Display only." or "Clients without WoWBoxer (or not grouped yet) show 'no signal'.")
+  end
   local changes = 0
   for _, cv in ipairs(Core.cvarPlan(Core.cdb.importCVars)) do if cv.status == "change" then changes = changes + 1 end end
   add(changes == 0, "Recommended settings", changes == 0 and "All set." or (changes .. " differ: see the list."))
