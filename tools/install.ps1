@@ -17,7 +17,9 @@ foreach ($c in $Clients) {
   Copy-Item -Recurse $src $dst
   # stamp the dev version so the in-game log shows which build is installed
   $toc = Join-Path $dst 'WoWBoxer.toc'
-  (Get-Content -Raw $toc) -replace '@project-version@', "dev-$version" | Set-Content -NoNewline -Encoding utf8 $toc
+  # write without a BOM: WoW would not read '## Interface' behind one (PowerShell 5.1's -Encoding utf8 adds a BOM)
+  $text = [IO.File]::ReadAllText($toc) -replace '@project-version@', "dev-$version"
+  [IO.File]::WriteAllText($toc, $text, (New-Object Text.UTF8Encoding $false))
   $n = (Get-ChildItem -Recurse -File $dst).Count
   Write-Host "installed $c -> $dst ($n files, dev-$version)"
 }
