@@ -23,4 +23,26 @@ for _, toc in ipairs({ 16001, 11509 }) do
   for _, e in ipairs(Core.db.log) do H.ok(e.l ~= "error", toc .. ": " .. e.m) end
 end
 
+-- bridge for the window app (WS-C contract): who is logged in on this account
+do
+  local W = Mock.new(H, { name = "Dorin", class = "PALADIN", race = "Scourge", level = 12 })
+  local ns = H.loadAddon({ env = W.env })
+  W.fire("ADDON_LOADED", "WoWBoxer")
+  W.fire("PLAYER_LOGIN")
+  local b = W.env.WoWBoxerDB.bridge
+  H.ok(b ~= nil, "bridge written at login")
+  H.eq(b.version, 1, "bridge version")
+  H.eq(b.character, "Dorin", "character")
+  H.eq(b.realm, "Realm", "realm")
+  H.eq(b.class, "PALADIN", "class file token")
+  H.eq(b.level, 12, "level")
+  H.ok(b.loggedInAt and b.savedAt and b.savedAt >= b.loggedInAt, "timestamps")
+  local first = b.savedAt
+  W.player.level = 13
+  W.fire("PLAYER_LOGOUT")
+  H.eq(b.level, 13, "level updated on logout/reload")
+  H.ok(b.savedAt > first, "savedAt moves on logout/reload")
+  H.eq(W.calls.CreateMacro, nil, "bridge writes nothing but SavedVariables")
+end
+
 os.exit(H.report("diag") and 0 or 1)

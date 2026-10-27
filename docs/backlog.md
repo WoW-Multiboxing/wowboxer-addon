@@ -65,6 +65,8 @@ Built behind probes and tested in the simulator; only the real client can confir
 - [x] (d43a145: Fix button "Use partyN") Checklist: show "Leader is partyN" with the fix inline (one click sets the unit).
 
 ## P3 – later (plan §3)
+- [x] (NEXT) Bridge for WoWBoxer Window Layouts (WS-C contract, `wowboxer-layouts/docs/classes-and-accounts.md`):
+      `WoWBoxerDB.bridge = {version, character, realm, class, level, loggedInAt, savedAt}` at login and logout/reload.
 - [x] (54ee117: Forever only via C_Traits like Leatrix/Questie; Era says why not; "Take next" + "Off the plan" on the Talents tab; diagnose records it) Talent read-back: Forever via `C_ClassTalents` + `C_Traits` (as Leatrix Plus Forever does), Era via
       `GetTalentInfo`; show "you are off the guide" and the next point to take.
 - [x] (877ff61: Keys tab "New key" / "Edit"; picker + drop from the spellbook; preview + companion warnings; WBX C1–C8) Custom-key editor in game (drag spells into a sequence via `OnReceiveDrag`), same rules as the companion.

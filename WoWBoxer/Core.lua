@@ -129,6 +129,24 @@ function Core.sync(opts)
   end)
 end
 
+-- ------------------------------------------------------------------ bridge for WoWBoxer Window Layouts (WS-C)
+--- Which character this account has logged in, for the window app (it reads WTF\Account\<ACC>\SavedVariables--- WoWBoxer.lua; contract in wowboxer-layouts/docs/classes-and-accounts.md). Only our own SavedVariables are written.
+function Core.writeBridge(event)
+  local db = Core.db
+  if not db then return end
+  local b = type(db.bridge) == "table" and db.bridge or {}
+  local _, cls = UnitClass("player")
+  b.version = 1
+  b.character = C.playerName() or b.character
+  b.realm = (GetRealmName and C.safe(GetRealmName())) or b.realm
+  b.class = cls and cls:upper() or b.class
+  b.level = C.playerLevel()
+  local t = time and time() or 0
+  if event == "login" then b.loggedInAt = t end
+  b.savedAt = t
+  db.bridge = b
+end
+
 -- ------------------------------------------------------------------ single character
 --- A character that is in no squad gets a solo squad (leader = itself) the first time the window opens, so the
 --- Keys tab works right away. Only SavedVariables change; nothing is written to the game.
@@ -464,6 +482,8 @@ function Core.onEvent(event, ...)
     _G.WoWBoxerDB, _G.WoWBoxerCharDB = Core.db, Core.cdb
   elseif event == "PLAYER_LOGIN" then
     Core.charKey = (C.playerName() or "?") .. "-" .. (GetRealmName and GetRealmName() or "?")
+    Core.writeBridge("login")
+    safeRegister("PLAYER_LOGOUT")
     Core.log("info", "login " .. Core.charKey .. " " .. C.buildString() .. " (" .. C.game() .. ", toc " .. C.interface() .. ")")
     safeRegister("PLAYER_LEVEL_UP")
     safeRegister("PLAYER_REGEN_ENABLED")
@@ -484,6 +504,8 @@ function Core.onEvent(event, ...)
         if not ok then Core.log("error", "auto selftest: " .. tostring(err)) end
       end)
     end
+  elseif event == "PLAYER_LOGOUT" then
+    Core.writeBridge("logout") -- also fires on /reload, right before SavedVariables are written
   elseif event == "PLAYER_REGEN_ENABLED" then
     Core.runQueue()
   elseif event == "PLAYER_LEVEL_UP" then
