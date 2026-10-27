@@ -22,6 +22,7 @@ Built behind probes and tested in the simulator; only the real client can confir
 - `/wbx keys` / minimap "Key bindings": `QuickKeybindFrame` on Forever, `KeyBindingFrame` on Era.
 - Custom-key editor: dropping a spell from the spellbook (`GetCursorInfo` → "spell", …, spellID) on the steps strip.
 - Team status with 2–3 grouped clients: `C_ChatInfo.SendAddonMessage` on PARTY, `AUTOFOLLOW_BEGIN/END`, `UnitGUID("target")` (may be secret on Forever → shown as "?").
+- Non-English client (if anyone tries one): macros use `C_Spell.GetSpellName` names.
 - Minimap level-up dot texture `Interface\COMMON\Indicator-Yellow`.
 
 ## P0 – own character, polish and bugs
@@ -79,7 +80,7 @@ Built behind probes and tested in the simulator; only the real client can confir
 - [ ] Release pipeline part 2: BigWigsMods packager → CurseForge/Wago when the owner makes the repo public (needs his
       accounts/tokens and the project IDs in the TOC).
 
-- [ ] Non-English clients: macros use the English spell names from the data, so `/cast` fails on e.g. deDE/frFR.
+- [x] (NEXT: Macros.localize, token-wise; round-trip test over every engine macro) Non-English clients: macros use the English spell names from the data, so `/cast` fails on e.g. deDE/frFR.
       Design note (Claude Code): build a map English name → `C_Spell.GetSpellName(rank-1 spell ID)` once per login and
       localise *tokens* in the finished body (after `/cast [..] `, between `, ` in `/castsequence`, after `#showtooltip`),
       longest names first, never substrings ("Heal" inside "Greater Heal"); re-check 255 characters after. The owner's

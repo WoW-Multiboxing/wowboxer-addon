@@ -24,6 +24,59 @@ end
 local function shortName(name) local s = R.PREFIX .. " " .. name; if #s > R.NAME_LIMIT then s = s:sub(1, R.NAME_LIMIT) end return s end
 M.shortName = shortName
 
+-- ------------------------------------------------------------------ non-English clients
+-- The data (and so every macro) uses English spell names. On other locales /cast needs the client's own names: they come
+-- from the spell IDs in the data (C_Spell.GetSpellName / GetSpellInfo). Only whole tokens are replaced – the name after
+-- #showtooltip, after the conditions of /cast (optionally "!"), and each entry of a /castsequence – never substrings,
+-- so "Heal" inside "Greater Heal" stays intact. English clients skip all of this.
+local nameMaps = {}
+function M.nameMap(m)
+  if not C.needsLocalNames() then return nil end
+  local key = m.cls .. ":" .. tostring(m.race)
+  if nameMaps[key] ~= nil then return nameMaps[key] or nil end
+  local map, n = {}, 0
+  for _, s in ipairs(K.spellsOf(m)) do
+    local id = s.ranks and s.ranks[1] and s.ranks[1].id
+    local loc = id and C.spellName(id)
+    if loc and loc ~= s.name then map[s.name] = loc; n = n + 1 end
+  end
+  nameMaps[key] = n > 0 and map or false
+  return n > 0 and map or nil
+end
+local function locName(map, name)
+  local bang, base = name:match("^(!?)(.*)$")
+  return bang .. (map[base] or base)
+end
+--- Translate the spell names in a macro body with `map` (English -> client name). Pure function.
+function M.localize(body, map)
+  if not map then return body end
+  local out = {}
+  for line in (body .. "\n"):gmatch("([^\n]*)\n") do
+    local tip = line:match("^#showtooltip (.+)$")
+    if tip then line = "#showtooltip " .. locName(map, tip)
+    else
+      local cmd, rest = line:match("^(/castsequence )(.*)$")
+      if not cmd then cmd, rest = line:match("^(/cast )(.*)$") end
+      if cmd then
+        local conds, i = "", 1
+        while rest:sub(i, i) == "[" do
+          local j = rest:find("]", i, true)
+          if not j then break end
+          conds = conds .. rest:sub(i, j); i = j + 1
+        end
+        local tail = rest:sub(i):gsub("^%s+", "")
+        local reset, list = tail:match("^(reset=%S+ )(.*)$")
+        if not reset then reset, list = "", tail end
+        local parts = {}
+        for item in (list .. ", "):gmatch("(.-), ") do parts[#parts + 1] = locName(map, item) end
+        line = cmd .. conds .. ((conds ~= "" and #parts > 0) and " " or "") .. reset .. table.concat(parts, ", ")
+      end
+    end
+    out[#out + 1] = line
+  end
+  return table.concat(out, "\n")
+end
+
 --- The macros member m should have at level L. opts: {live=fn|nil, extras={spellIds}}
 --- Each item: {name, key, group, label, body, spell?, icon}
 function M.desired(m, L, opts)
@@ -76,7 +129,12 @@ function M.desired(m, L, opts)
       end
     end
   end
-  for _, d in ipairs(out) do d.icon = M.ICON; d.ok, d.why = R.validateMacro(d.name, d.body) end
+  local map = M.nameMap(m)
+  for _, d in ipairs(out) do
+    if map then d.body = M.localize(d.body, map) end
+    d.icon = M.ICON; d.ok, d.why = R.validateMacro(d.name, d.body)
+    if not d.ok and map and #d.body > R.MACRO_LIMIT then d.why = "too long with your client's spell names (" .. #d.body .. "/255)" end
+  end
   return out
 end
 

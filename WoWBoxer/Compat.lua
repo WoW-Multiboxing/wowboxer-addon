@@ -186,6 +186,21 @@ function C.openKeyBindings()
   return nil
 end
 
+-- ------------------------------------------------------------------ locale
+--- True on clients whose spell names are not English (the data's names then need translating in macros).
+function C.needsLocalNames()
+  local loc = G.GetLocale and G.GetLocale() or "enUS"
+  return loc ~= "enUS" and loc ~= "enGB"
+end
+--- The client's name for a spell ID (localised), or nil.
+function C.spellName(id)
+  if not id then return nil end
+  local CS = G.C_Spell
+  local ok, n
+  if CS and CS.GetSpellName then ok, n = pcall(CS.GetSpellName, id) elseif G.GetSpellInfo then ok, n = pcall(G.GetSpellInfo, id) end
+  return ok and type(n) == "string" and C.safe(n) or nil
+end
+
 -- ------------------------------------------------------------------ talents (read-only)
 local function spellName(id)
   if not id then return nil end
