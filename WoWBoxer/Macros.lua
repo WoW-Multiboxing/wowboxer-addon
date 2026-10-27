@@ -51,10 +51,28 @@ function M.desired(m, L, opts)
   end
   -- extra single-spell keys the player added from the spell list
   local all = K.spellsOf(m)
+  -- names are cut to 16 characters, so two spells can share one ("Shadow Word: Pain"/"Death"): the later one gets a
+  -- digit instead of its last character. Taken in the order of the extras list, so a name never changes by level.
+  local taken = {}
+  for _, d in ipairs(out) do taken[d.name] = true end
+  local function unique(name)
+    if not taken[name] then return name end
+    for i = 2, 9 do
+      local n = name:sub(1, R.NAME_LIMIT - 1) .. i
+      if not taken[n] then return n end
+    end
+    return nil
+  end
   for _, id in ipairs(opts.extras or {}) do
     for _, s in ipairs(all) do
-      if s.id == id and K.learned(m, s, L) and (not live or live(s.name, s)) and s.action ~= "passive" then
-        out[#out + 1] = { key = "X:" .. s.id, name = shortName(s.name), group = "extra", label = s.name, body = E.makeMacro(s, ctx), spell = s }
+      if s.id == id and s.action ~= "passive" then
+        local name = unique(shortName(s.name)) -- reserved even when not learned yet, so it never moves
+        if name then
+          taken[name] = true
+          if K.learned(m, s, L) and (not live or live(s.name, s)) then
+            out[#out + 1] = { key = "X:" .. s.id, name = name, group = "extra", label = s.name, body = E.makeMacro(s, ctx), spell = s }
+          end
+        end
       end
     end
   end

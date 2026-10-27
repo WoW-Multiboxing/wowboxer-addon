@@ -509,4 +509,28 @@ do
   H.eq(#errors(nsA) + #errors(nsB), 0, "no errors (team)")
 end
 
+-- ------------------------------------------------------------------ extra keys: unique, stable names
+do
+  local W, ns = boot({ name = "Pri", class = "PRIEST", race = "Scourge", level = 60 })
+  for _, s in ipairs(ns.Data.spells.priest) do W.known[s.name] = true end
+  W.fire("SPELLS_CHANGED")
+  ns.UI.Open("keys")
+  local pain, death
+  for _, s in ipairs(ns.Data.spells.priest) do
+    if s.name == "Shadow Word: Pain" then pain = s.id elseif s.name == "Shadow Word: Death" then death = s.id end
+  end
+  ns.Core.cdb.extras = { death, pain }
+  local names, labels = {}, {}
+  for _, d in ipairs(ns.Core.compute().desired) do
+    H.ok(not names[d.name], "unique macro name " .. d.name); names[d.name] = d.label; labels[d.label] = d.name
+    H.ok(#d.name <= 16, "name within 16 characters: " .. d.name)
+  end
+  H.eq(labels["Shadow Word: Death"], "WBX Shadow Word:", "first extra keeps the plain name")
+  H.eq(labels["Shadow Word: Pain"], "WBX Shadow Word2", "second gets a digit")
+  -- the names do not swap when the first spell is not learned yet (low level)
+  local _, m = ns.Core.me()
+  local low = ns.Macros.desired(m, 10, { extras = ns.Core.cdb.extras })
+  for _, d in ipairs(low) do if d.label == "Shadow Word: Pain" then H.eq(d.name, "WBX Shadow Word2", "stable name at a lower level") end end
+end
+
 os.exit(H.report("features") and 0 or 1)

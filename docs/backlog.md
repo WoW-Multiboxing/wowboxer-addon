@@ -69,8 +69,12 @@ Built behind probes and tested in the simulator; only the real client can confir
       `GetTalentInfo`; show "you are off the guide" and the next point to take.
 - [x] (877ff61: Keys tab "New key" / "Edit"; picker + drop from the spellbook; preview + companion warnings; WBX C1–C8) Custom-key editor in game (drag spells into a sequence via `OnReceiveDrag`), same rules as the companion.
 - [x] (0bf1f4d: Team.lua + team panel, /wbx team on|off; throttled 1.5 s + 15 s heartbeat; checklist line) Display-only team status over addon messages (lost follow, different target than the leader, low mana).
-- [ ] Classic Era dataset (talents/spells/guides for 1.15), TBC Anniversary.
-- [ ] Release pipeline (BigWigsMods packager → CurseForge/Wago) when the repo goes public.
+- [ ] Classic Era dataset (talents/spells/guides for 1.15), TBC Anniversary. Decision (Claude Code, 2026-10-27): not
+      built autonomously – it is a research/data job for the companion pipeline (workstream A). Until then Era uses
+      Forever data filtered by the real spellbook, and the Talents tab says the trees differ.
+- [x] (NEXT: `.github/workflows/release.yml`, tag-only: same checks, zip on a GitHub Release) Release pipeline, part 1.
+- [ ] Release pipeline part 2: BigWigsMods packager → CurseForge/Wago when the owner makes the repo public (needs his
+      accounts/tokens and the project IDs in the TOC).
 
 ## Done
 - [x] M0–M3 (data, engine parity, macro sync, bars, share string, UI) – see `docs/status.md`.

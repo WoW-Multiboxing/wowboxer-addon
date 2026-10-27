@@ -1,0 +1,39 @@
+name: release
+# Runs only when a version tag is pushed (git tag v0.2.0 && git push origin v0.2.0). Same checks as CI, then the zip
+# from tools/package.sh is attached to a GitHub Release. CurseForge/Wago upload (BigWigsMods packager) is added
+# when the repo goes public - see docs/backlog.md.
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Lua 5.1 and luacheck
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq lua5.1 liblua5.1-0-dev luarocks
+          sudo luarocks --lua-version 5.1 install luacheck
+      - name: Checks
+        run: |
+          node tools/build_data.js --check
+          python3 tools/lint51.py
+          luacheck WoWBoxer tests
+          node tools/export_vectors.js
+          LUA=lua5.1 tests/run_all.sh
+          node share/test.js
+      - name: Package
+        run: bash tools/package.sh "${GITHUB_REF_NAME#v}"
+      - name: GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VER="${GITHUB_REF_NAME#v}"
+          gh release create "$GITHUB_REF_NAME" "dist/WoWBoxer-$VER.zip" --title "WoWBoxer $VER" \
+            --notes "In-game addon for WoW: Forever and Classic Era. Unzip into Interface\\AddOns. See README."
