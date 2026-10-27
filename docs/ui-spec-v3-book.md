@@ -76,3 +76,25 @@ be a visual distinction between the spells you actually use and the helper spell
   or must go; every button needs a label or a tooltip.
 - Spell list: **Add** / **Filler** buttons are fine; mark spells already in the key; keep drag & drop onto Steps.
 - Add this editor to `tests/test_copy.lua` and the overlap matrix (long macro of 255 characters must be fully visible).
+
+## Help on every tab + a squad guide (the owner 23:42)
+- **A "?" button on every page** (top-right corner of the page, the game's round help-button look – Blizzard uses the
+  same pattern in its talent/collections windows: `MainHelpPlateButton` + help plates).
+  - **Hover** = tooltip with "How to use this page" in 2–4 short lines.
+  - **Click** = help overlay on the page: the page dims and 3–5 numbered gold callouts point at the real controls
+    ("1 Drag a key to your bar", "2 Orange dot = changed", "3 Update keys"). Click anywhere or ESC closes it.
+    Use Blizzard's `HelpPlate` if the client has it (probe), otherwise our own overlay frame with the same look.
+  - First time a player opens a page, the "?" pulses once (no auto-popup).
+  - Callout text follows the copy rules (≤ 8 words each).
+- **Squad guide** (like the 3-step first-run guide, opened from the Squad page's "?" menu, from the minimap menu, and
+  offered once when a second character joins the party):
+  1. **Make the squad** – Add my party (or a template), pick the leader.
+  2. **Roles** – role + sequence per character (dropdowns).
+  3. **Share** – Send to party → on every other client: Review → Import.
+  4. **Keys on every client** – Place all on each character.
+  5. **Check** – Readiness page all green; play with Follow + Assist.
+  One short line per step, a **Next** button, the step's button right there (e.g. "Add my party"), and progress dots.
+- Every tab gets its own "?" content: My keys, All spells, Custom keys (editor), Talents, Setup, Squad (Home, Edit,
+  Readiness, Key map, Plan), Share.
+- Tests: each page has a "?" with tooltip text and 3–5 callouts anchored to visible controls; callouts obey the copy
+  budgets and stay inside the window at every resolution in the matrix.
