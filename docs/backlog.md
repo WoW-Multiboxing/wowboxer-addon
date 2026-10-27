@@ -8,17 +8,22 @@ The owner's direction (2026-10-27, after the first in-game test: "it works as an
 **own character first** – the single-character flow must be excellent; the squad stays but simple. Optimise, bug-fix,
 minimap button, much more drag & drop of macros onto the action bars.
 
-## The owner: in-game test (one round, Classic Era)
-1. Close every WoW client completely and start one again (new addon files are only read at client start).
-   Log in on one character; WoWBoxer must be ticked under AddOns.
-2. Type `/wbx` (or click the new minimap button) and click through all five tabs once – the addon measures the layout
-   itself. Press PrtScn on the Keys and Squad tabs.
-3. Keys tab: click **Create & place keys**; then drag one key row onto another action button; then select a key,
-   click **Bind key** and press a free key (e.g. F6).
-4. `/reload`, then tell Claude "done" – Claude reads the log, layout audit, macros and screenshots and fixes the rest.
+## The owner: in-game test (one round, Classic Era) – the new spellbook window
+1. Close every WoW client completely and start one again (new files are only read at client start). Log in on a
+   **new or low-level** character so the 3-step guide shows.
+2. Type `/wbx`: go through the guide (Step 1 role + leads/follows, Step 2 **Place all** – watch the icons fly to your
+   bar, Step 3 Close). Press PrtScn on the book, then click each bookmark on the right once.
+3. In the book: drag one key onto another action button, right-click a key → **Bind key…** → press a free key (e.g. F6).
+4. `/reload`, then tell Claude "done" (Claude reads the layout audit – it now reports overlaps measured with the real
+   fonts – the log, macros and screenshots and fixes the rest).
 
 ## Needs the owner in game
 Built behind probes and tested in the simulator; only the real client can confirm these. (Claude Code keeps this list.)
+- **Spellbook window (2e69fb4):** textures `UI-Quickslot2`, `UI-ActionButton-Border` (new-key glow),
+  `UI-SpellbookIcon-Prev/NextPage-*`, bookmark icons; the 2 x 6 grid at the real font; `SetMaxLines` on the step line.
+- **Fly to the bar (bbe0aee):** AnimationGroup Translation/Scale/Alpha on Era 1.15 and Forever; which buttons
+  `Fly.buttonForSlot` finds (diagnose `fly.buttons`, `fly.iconIntro`); flash position over the button.
+- **Layout audit now reports overlaps** (text over button / text over text) with the real fonts (`kind = overlap`).
 - Layout audit (4d5b52b): opening `/wbx` once writes measured cut-off texts / too-narrow buttons / overflow to the diagnose → `tools/read_log.py`. Then screenshots only for what the audit cannot see.
 - Layout of every tab at the real font sizes (screenshots with PrtScn → `_classic_era_\Screenshots`).
 - Drag from the Keys tab onto an action button (`PickupMacro` after creating the macro).
@@ -34,12 +39,39 @@ Built behind probes and tested in the simulator; only the real client can confir
 - Non-English client (if anyone tries one): macros use `C_Spell.GetSpellName` names.
 - Minimap level-up dot texture `Interface\COMMON\Indicator-Yellow`.
 
+## UI v2 – spellbook, guide, any resolution, fly to the bar (`docs/ui-spec-v2.md`, the owner 2026-10-27 evening)
+- [x] (2e69fb4) §3 Layout engine: the simulator computes boxes from anchors, scale and text metrics; `tests/layout.lua`
+      fails on text over a button/text, cut text, labels wider than their button, windows off screen. Matrix in
+      `tests/test_ui.lua`: 1024x768, 1920x1080, 2560x1080, 3440x1440, 1280x1024, 870x696 x UI scale 1 / 0.64 / 1.15,
+      plus stress runs (font x0.62, long names, window scale 1.3 on 835x668). Buttons size to their label; one-line
+      labels truncate with the full text in a tooltip; window scaled to fit (96 % x 94 %), position per character,
+      back to the centre when off screen; level-up toast sized from its text (one sentence + Update keys / Later).
+- [x] (2e69fb4) §1 The main view is a spellbook: two pages of 2 x 6 spell buttons (icon + `UI-Quickslot2` border, gold
+      name, plain second line "Key 3 · Bar 1 · 3 · F6"), new/changed keys glow, bookmarks on the right (My keys, All
+      spells, Custom keys, Talents, Setup, Squad, Share), page arrows "Page 1 / 2". Drag = create/update + PickupMacro;
+      click = select (details line with Bind key / Unbind / Leave out / Edit); right-click or Shift-click = menu.
+      Hover = spell-like tooltip: what the key does in plain words, macro text in green, "Drag to your action bar".
+- [x] (2e69fb4) §2 Next step line on top of the book, always one sentence + the one button (Place all, Update keys,
+      Use Bottom Left, Choose bars, Key bindings) – combat, hidden bar, stance page, no macro slot, trainer covered.
+      3-step first-run guide (role + leads/follows, Place all with where/what gets replaced, done); "Show the guide"
+      in the minimap menu and Setup.
+- [x] (bbe0aee) §5 Fly to the bar: own AnimationGroups on UIParent (Translation + Scale up/down + Alpha, 0.7 s, stagger
+      0.12 s), then an additive flash over the button. For Place all, Update keys and new keys. No visible Blizzard
+      button (bar addons, hidden bar, other stance page) = no flight. Setting "Animations" in Setup.
+      Decision: Blizzard's `IconIntroTracker` is not reused – it is driven by `SPELL_PUSHED_TO_ACTIONBAR` and calling
+      it from addon code would taint the action bar code; ours only reads button positions.
+- [x] (bbe0aee) Setup tab: Main keys on / Other keys on, Window size (70–130 %), Replace other buttons, Animations,
+      Show the guide, Macros only – moved out of the main view.
+- [x] (be12851) Plain words everywhere ("Key 3", "No free macro slot", "Left out", "Smite (Key 2) is now on F");
+      tests fail on internal names in the window and on any visible button without a tooltip, on every tab.
+- [x] (90e5375) Right-click menu offers nothing in combat (no pick-up or key capture while fighting).
+
 ## P0 – own character, polish and bugs
 - [x] (66c60fc) **Solo by default.** First `/wbx` on a character without a squad: create a one-character squad silently (this
       character, leader) instead of the empty "Start a squad" page. Keys tab header gets the two choices that matter for
       one character: **Role** (cycle from the class's roles) and **Plays as** (Leader / Follower via party1–4/focus).
       The Squad tab stays for multiboxers but is not needed to get keys.
-- [ ] (partly 66c60fc: Keys overlaps fixed) Walk every tab in Classic Era and screenshot it; fix overlaps and cut-off text. Known risks in the M3 code:
+- [x] (2e69fb4: anchor layout + overlap matrix in test_ui on 18 screens/UI scales + stress; in-game audit reports overlaps; screenshots still welcome) Walk every tab in Classic Era and screenshot it; fix overlaps and cut-off text. Known risks in the M3 code:
       the `UIPanelScrollFrameTemplate` scrollbar sits outside the scroll frame's width and can overlap the preview
       panel on the Keys tab (list 360 px wide, preview starts at x 368); fixed pixel widths everywhere (window 660×480);
       Setup's header uses spaces for column alignment.

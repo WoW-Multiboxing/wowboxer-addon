@@ -1,7 +1,7 @@
-# Status and handover (updated 2026-10-27 evening, local Claude Code session – owner of the code)
+# Status and handover (updated 2026-10-27 late evening, local Claude Code session – owner of the code)
 
 Plan: `02_Spec/Addon-plan.md` in the project folder. Work list: `docs/backlog.md` (top: "Needs the owner in game").
-Look: `docs/ui-spec.md`. Research: `docs/research/`.
+Look: `docs/ui-spec-v2.md` (spellbook, guide, any resolution, fly to the bar) over `docs/ui-spec.md`. Research: `docs/research/`.
 
 ## Files (WoWBoxer/, TOC order)
 | File | What |
@@ -16,11 +16,13 @@ Look: `docs/ui-spec.md`. Research: `docs/research/`.
 | `Checklist.lua` | Setup checklist (with "Use partyN" fix) |
 | `Core.lua` | SavedVariables, events, combat queue (`whenSafe`), `compute` (+ `batch` memo), sync, `pickup`/`pickupSpell` (drag), `scanBars` (remembers where keys are), `setPlaysAs`, CVars, import/export, level-up offer, login diagnose + bridge for WS-C, slash commands |
 | `Team.lua` | Display-only team status over addon messages (prefix `WBX1`) |
-| `UI/*` | Widgets, Main (header, tabs, window position/scale, error note), Minimap (button, menu, compartment, square minimaps, level-up dot), Keys / Squad / Talents / Setup / Share tabs, KeyEditor (own keys C1–C8), TeamFrame, Audit (layout measurements) |
+| `UI/*` | Widgets (auto-sized buttons with tooltips, truncating lines, menu), Main (the book: cover, pages, bookmark tabs, character line, fit-to-screen scale, position per character, level-up toast), Book (My keys / All spells / Custom keys pages, next-step line, 3-step guide, key capture, right-click menu), Fly (icons fly to the action buttons), Minimap, Talents / Setup / Squad / Share tabs, KeyEditor (own keys C1–C8), TeamFrame, Audit (in-game layout measurements incl. overlaps) |
 
 ## Tests (all in the simulator, `tests/wowmock.lua`; plus parity against the companion's JS)
-core 82 · diag 28 · features 177 · ui 84 · share 72 (+20 JS) · parity 139,404 · lint51 (5.2+ syntax, forbidden API,
-invalid string escapes) · luacheck. `bash tools/check.sh` runs everything; `bash tools/ship.sh` rebases, checks, pushes,
+core 82 · diag 35 · features 203 · ui 161 (incl. the layout matrix: 18 screens/UI scales + 3 stress runs, every tab
+and state; `tests/layout.lua`) · locale 9 · share 72 (+20 JS) · parity 139,404 · lint51 · luacheck. The simulator
+computes frame boxes from anchors and text metrics (`tests/wowmock.lua`); `python tools/lua.py tests/probe_layout.lua`
+prints the problems per tab while developing. `bash tools/check.sh` runs everything; `bash tools/ship.sh` rebases, checks, pushes,
 installs into both clients and waits for CI.
 
 ## Verified in the real client so far
@@ -34,4 +36,7 @@ Classic Era 1.15.9 (2026-10-27): loads without errors, diagnose written; `MAX_CH
 - Talent read-back only on Forever (Era trees differ). Never purchases or commits talents.
 - Team status on by default while a squad of 2+ is grouped; display only; `/wbx team off` silences it.
 - Classic Era dataset not built here (data job for the companion pipeline).
+- Main view is a spellbook with bookmarks; bar choices, Replace, window size and Animations live in Setup.
+- Window keeps its design size (760 x 500) and is scaled to fit the screen; the player's size option comes on top.
+- Fly-to-bar uses own AnimationGroups; Blizzard's IconIntroTracker is not reused (taint risk on the action bars).
 - Release workflow on tags only, GitHub Release; CurseForge/Wago when the repo is public (the owner's call).

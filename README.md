@@ -6,15 +6,18 @@ puts them on your action bars, and keeps them up to date when you level. Made fo
 always one action on one character.
 
 ## What it does
-- **Keys** – your recommended keys (`WBX K1`–`K8`), optional sequence keys (`S1`/`S2`: Off / Simple / Medium / Advanced),
-  your own keys (`C1`–`C8`, built in the in-game editor) and helpers (Follow, Assist, Focus, pet keys).
-  - **Create & place keys** creates or updates them and places them on your bars, or **drag** any key (or any learned
-    spell from *All spells*) onto any action button. Keys you moved stay where you put them.
-  - Shows which key presses each macro, and can **bind a key** per character.
-  - **Level-up:** offers to update changed keys (same buttons, new macros); nothing changes without a click.
+- **The book** – `/wbx` opens a spellbook with your keys: the recommended keys for your level, optional sequence keys
+  (Off / Simple / Medium / Advanced), your own keys (built in the in-game editor) and helpers (Follow, Assist, Focus,
+  pet keys). Bookmarks on the right: *My keys*, *All spells*, *Custom keys*, *Talents*, *Setup*, *Squad*, *Share*.
+  - **Drag** any key (or any learned spell from *All spells*) onto any action button, or press **Place all**. Keys you
+    moved stay where you put them. When WoWBoxer places keys, their icons fly to the buttons (can be turned off).
+  - The line at the top always says the next thing to do, with the button that does it. A 3-step guide on a new
+    character. Hover a key to see what it does; right-click it to bind a key or leave it out.
+  - **Level-up:** offers to update changed keys (same buttons, new spells); nothing changes without a click.
+- Works at any resolution and UI scale: the window fits the screen, and a size option is in Setup.
 - **Squad** – your characters, their roles and who leads. Followers' keys assist the leader via party1–4 or focus.
 - **Talents** – the guide's point order for your level; on Forever also what you have actually spent.
-- **Setup** – multibox checklist, recommended settings (with backup/restore) and recommended addons.
+- **Setup** – which bars your keys go on, window size, animations, multibox checklist, recommended settings (with backup/restore) and recommended addons.
 - **Share** – copy your squad as a `!WBX:1!` string to your other characters, the website or the companion.
 - **Team status** (optional, display only) – a small panel showing which of your clients lost follow, has another
   target than the leader, or is low on mana.
@@ -30,7 +33,7 @@ Unzip `WoWBoxer` into `World of Warcraft\_forever_\Interface\AddOns` (or `_class
 `/wbx`. On Classic Era the addon uses WoW: Forever data filtered by your real spellbook; the talent trees differ.
 
 ## Commands
-`/wbx` open · `/wbx sync` create & place keys · `/wbx show` list keys · `/wbx bars` where each key is ·
+`/wbx` open · `/wbx sync` place all keys · `/wbx show` list keys · `/wbx bars` where each key is ·
 `/wbx keys` game key bindings · `/wbx cvars` / `/wbx cvars restore` · `/wbx team on|off` · `/wbx minimap` ·
 `/wbx scale 0.9` · `/wbx reset` · `/wbx selftest` · `/wbx log` · `/wbx debug` · `/wbx help`
 
