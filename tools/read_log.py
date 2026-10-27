@@ -84,6 +84,8 @@ def main():
                 print(f"   not in spellbook: {d.get('missing')}")
             print(f"   cvars { {k: (v.get('cur'), v.get('want'), v.get('status')) for k, v in (d.get('cvars') or {}).items()} }")
             print(f"   addons {d.get('addons')}  party {d.get('party')} focus {d.get('focus')}")
+            if d.get("strip"):
+                print(f"   strip {d.get('strip')}")
             if d.get("ui"):
                 print(f"   ui {d.get('ui')}")
             if d.get("fly"):

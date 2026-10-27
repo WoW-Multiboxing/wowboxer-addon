@@ -137,8 +137,8 @@ function C.characterMacros()
   local _, numChar = C.numMacros()
   local out = {}
   for i = accMax + 1, accMax + numChar do
-    local name, _, body = C.macroInfo(i)
-    if name then out[#out + 1] = { index = i, name = name, body = body or "" } end
+    local name, icon, body = C.macroInfo(i)
+    if name then out[#out + 1] = { index = i, name = name, body = body or "", icon = icon } end
   end
   return out
 end
@@ -193,6 +193,22 @@ function C.needsLocalNames()
   return loc ~= "enUS" and loc ~= "enGB"
 end
 --- The client's name for a spell ID (localised), or nil.
+--- The icon file ID of a spell from the client (rank IDs of the data, first that answers), or nil.
+function C.spellTexture(spell)
+  if not spell or not spell.ranks then return nil end
+  local CS = G.C_Spell
+  local f = (CS and CS.GetSpellTexture) or G.GetSpellTexture
+  if not f then return nil end
+  for _, r in ipairs(spell.ranks) do
+    if r.id then
+      local ok, tex = pcall(f, r.id)
+      tex = ok and C.safe(tex) or nil
+      if type(tex) == "number" and tex > 0 then return tex end
+    end
+  end
+  return nil
+end
+
 function C.spellName(id)
   if not id then return nil end
   local CS = G.C_Spell

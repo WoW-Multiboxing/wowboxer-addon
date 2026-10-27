@@ -75,6 +75,11 @@ function Mock.new(H, opts)
     return a.kind, a.id
   end
   env.HasAction = function(slot) return W.actions[slot] ~= nil end
+  env.GetActionText = function(slot) local a = W.actions[slot]; return a and a.kind == "macro" and a.ref.name or nil end
+  -- castsequence position (W.castSeq[text] = index) and the spell a macro would cast now (W.macroSpell[name] = id)
+  W.castSeq, W.macroSpell = {}, {}
+  env.QueryCastSequence = function(text) return W.castSeq[text] or 1, nil, nil end
+  env.GetMacroSpell = function(i) local m = byIndex(i); return m and W.macroSpell[m.name] or nil end
   env.PickupMacro = function(i) protected("PickupMacro"); local m = byIndex(i); if m then W.cursor = { kind = "macro", ref = m } end end
   env.PlaceAction = function(slot) protected("PlaceAction"); call("PlaceAction"); local old = W.actions[slot]; W.actions[slot] = W.cursor; W.cursor = old end
   env.PickupAction = function(slot) protected("PickupAction"); local old = W.actions[slot]; W.actions[slot] = W.cursor; W.cursor = old end
@@ -110,13 +115,15 @@ function Mock.new(H, opts)
       GetSpellBookSkillLineInfo = function(i) return { itemIndexOffset = 0, numSpellBookItems = #knownList() } end,
       GetSpellBookItemName = function(i, bank) return knownList()[i] end,
     }
-    env.C_Spell = { GetSpellName = function(id) return "Spell" .. tostring(id) end }
+    env.C_Spell = { GetSpellName = function(id) return "Spell" .. tostring(id) end,
+      GetSpellTexture = function(id) return 200000 + (tonumber(id) or 0) end }
   elseif W.spellbookStyle == "classic" then
     env.GetNumSpellTabs = function() return 1 end
     env.GetSpellTabInfo = function(i) return "General", nil, 0, #knownList() end
     env.GetSpellBookItemName = function(i) return knownList()[i], "" end
     env.BOOKTYPE_SPELL = "spell"
     env.GetSpellInfo = function(id) return "Spell" .. tostring(id) end
+    env.GetSpellTexture = function(id) return 200000 + (tonumber(id) or 0) end
   end
   env.IsPlayerSpell = function(id) return false end
 

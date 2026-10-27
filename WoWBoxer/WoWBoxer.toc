@@ -41,6 +41,7 @@ UI\Dropdown.lua
 UI\Main.lua
 UI\Minimap.lua
 UI\Fly.lua
+UI\SeqStrip.lua
 UI\KeyEditor.lua
 UI\TeamFrame.lua
 UI\Audit.lua

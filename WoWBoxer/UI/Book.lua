@@ -32,8 +32,11 @@ Book.STATUS = {
 --- What a key does, in plain words, from its macro text.
 function Book.describe(d, mem)
   if not d then return "" end
+  if d.seq and d.seq.base == "priority" then
+    return "Each press casts the first spell in the list that is ready (top to bottom) – one spell per press."
+  end
   if d.group == "sequence" or (d.group == "custom" and d.seq) then
-    return "Each press casts the next spell of the " .. (d.label or "sequence") .. " – one spell per press."
+    return "Each press casts the next spell of the " .. (d.label or "sequence") .. " – one spell per press. It starts over after combat."
   end
   if d.group == "helper" then return (d.label or "") .. "." end
   local body, spell = d.body or "", d.label or "the spell"
@@ -72,10 +75,24 @@ local function iconFor(d, it)
   if d and d.spell and d.spell.icon then return d.spell.icon end
   if it and it.group == "helper" then return ({ Follow = "Ability_Tracking", Assist = "Ability_Hunter_SniperShot", Focus = "Ability_Hunter_MarkedForDeath",
     Pet = "Ability_Hunter_Pet_Wolf", PetBack = "Ability_Hunter_BeastCall" })[it.key] or "INV_Misc_QuestionMark" end
-  if d and d.seq and d.seq.steps and d.seq.steps[1] then return d.seq.steps[1].icon end
+  if d and d.main then return d.main.icon end
   return nil
 end
 Book.iconFor = iconFor
+--- The pictures of a sequence/priority key for a composite icon: the main spell first, then the others (max 4).
+function Book.iconsFor(d)
+  if not (d and d.steps and #d.steps > 1) then return nil end
+  local out, seen = {}, {}
+  local function add(s) if s and not seen[s] and #out < 4 then seen[s] = true; out[#out + 1] = s.icon end end
+  add(d.main)
+  for _, s in ipairs(d.steps) do add(s) end
+  return #out > 1 and out or nil
+end
+--- "SEQ" for a castsequence key, "PRI" for a priority key, nil otherwise.
+function Book.badge(d)
+  if not (d and d.seq) or d.seq.kind == "single" then return nil end
+  return d.seq.base == "priority" and "PRI" or "SEQ"
+end
 
 --- The visible book button of key `name` (where its flight starts), or nil.
 function Book.cellFrame(name)
@@ -127,6 +144,7 @@ function Book.cells(mode, ctx)
         col = W.MUTED
       else sub, col = Book.kindName(it) .. " · Not on a bar", W.ORANGE end
       out[#out + 1] = { kind = "key", name = it.name, label = it.label, sub = sub, color = col, icon = iconFor(d, it), item = it, d = d,
+        icons = Book.iconsFor(d), badge = Book.badge(d),
         glow = it.status == "create" or it.status == "update" or (it.status == "same" and not (b and b.status == "placed")),
         dim = it.status == "skipped" }
     end
@@ -271,10 +289,17 @@ local function makeCell(p, parent)
   b.slotBg:SetColorTexture(0, 0, 0, 0.55)
   b.icon = W.icon(b, 34)
   b.icon:SetPoint("CENTER", b.slotBg, "CENTER", 0, 0)
+  b.multi = W.composite(b, b.icon)
   b.frame = b:CreateTexture(nil, "OVERLAY")
   b.frame:SetSize(62, 62)
   b.frame:SetPoint("CENTER", b.slotBg, "CENTER", 0, 0)
   b.frame:SetTexture("Interface\\Buttons\\UI-Quickslot2")
+  b.badge = W.text(b, "GameFontHighlightSmall", 8, { 0.85, 0.72, 1 })
+  b.badge:SetPoint("TOPLEFT", b.slotBg, "TOPLEFT", 2, -2)
+  b.badgeBg = b:CreateTexture(nil, "OVERLAY")
+  b.badgeBg:SetPoint("TOPLEFT", b.badge, "TOPLEFT", -1, 1)
+  b.badgeBg:SetPoint("BOTTOMRIGHT", b.badge, "BOTTOMRIGHT", 1, -1)
+  b.badgeBg:SetColorTexture(0.32, 0.2, 0.52, 0.85)
   b.glow = b:CreateTexture(nil, "OVERLAY")
   b.glow:SetSize(66, 66)
   b.glow:SetPoint("CENTER", b.slotBg, "CENTER", 0, 0)
@@ -313,6 +338,7 @@ local function makeCell(p, parent)
       d = { group = "extra", label = c.spell.name, body = ns.Engine.makeMacro(c.spell, ns.Kit.memberCtx(ns.Core.compute().member)) }
     end
     GT:AddLine(Book.describe(d, nil), 1, 1, 1, true)
+    if d and d.steps and #d.steps > 1 then GT:AddLine(W.stepsText(d.steps), 0.85, 0.72, 1, true) end
     if d and d.body then for line in (d.body .. "\n"):gmatch("([^\n]*)\n") do if line ~= "" then GT:AddLine(line, 0.56, 0.85, 0.45) end end end
     if c.item and c.item.why then GT:AddLine(c.item.why, 1, 0.54, 0.5, true) end
     if not c.dim then GT:AddLine("Drag to your action bar · Right-click for more", 0.66, 0.6, 0.49) end
@@ -456,11 +482,15 @@ local function refresh(p, ctx)
     if c then
       b:Show()
       W.setIcon(b.icon, c.icon)
+      if c.icons then b.multi.set(c.icons); b.icon:SetAlpha(0) else b.multi.Hide() end
+      b.badge:SetText(c.badge or ""); b.badge:SetShown(c.badge ~= nil); b.badgeBg:SetShown(c.badge ~= nil)
+      if c.badge then b.frame:SetVertexColor(0.72, 0.55, 1) else b.frame:SetVertexColor(1, 1, 1) end
       b.name:SetText(c.label)
       b.sub:SetText(c.sub)
       b.sub:SetTextColor(c.color[1], c.color[2], c.color[3])
       if b.icon.SetDesaturated then b.icon:SetDesaturated(c.dim and true or false) end
-      b.icon:SetAlpha(c.dim and 0.5 or 1)
+      if not c.icons then b.icon:SetAlpha(c.dim and 0.5 or 1) end
+      b.multi:SetDesaturated(c.dim and true or false); b.multi:SetAlpha(c.dim and 0.5 or 1)
       b.glow:SetShown(c.glow and true or false)
       local id = c.name or (c.spell and ("spell:" .. c.spell.id)) or nil
       b.sel:SetShown(id ~= nil and id == p.selected)

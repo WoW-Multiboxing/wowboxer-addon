@@ -97,8 +97,10 @@ function Core.computeFresh()
   local desired = M.desired(m, L, { live = live, extras = Core.cdb.extras })
   local mplan = M.plan(desired, Core.cdb.skip)
   local bplan = B.plan(desired, Core.cdb, Core.cdb.skip)
-  return { squad = s, member = m, level = L, live = live, desired = desired, macros = mplan, bars = bplan,
+  local ctx = { squad = s, member = m, level = L, live = live, desired = desired, macros = mplan, bars = bplan,
     missing = M.missingFromBook(m, L, live) }
+  Core.ctxGen, Core.lastCtx = (Core.ctxGen or 0) + 1, ctx -- the strip on the action bars reuses it
+  return ctx
 end
 
 --- Create/update the macros, then place them on the bars. opts: {replace=bool, barsOnly=bool, macrosOnly=bool}
@@ -127,6 +129,7 @@ function Core.sync(opts)
     if ns.Minimap and ns.Minimap.SetAttention then ns.Minimap.SetAttention(false) end
     Core.changed()
     Core.flyKeys(ctx, mres.changed, bres.list)
+    if ns.SeqStrip then ns.SeqStrip.markDirty(); ns.SeqStrip.request() end
   end)
 end
 
@@ -392,7 +395,10 @@ function Core.checkOffer(reason)
 end
 
 -- ------------------------------------------------------------------ change notification for the UI
-function Core.changed() if ns.UI and ns.UI.Refresh then ns.UI.Refresh() end end
+function Core.changed()
+  if ns.SeqStrip then ns.SeqStrip.markDirty() end
+  if ns.UI and ns.UI.Refresh then ns.UI.Refresh() end
+end
 
 -- ------------------------------------------------------------------ selftest (for testing without looking at the screen)
 function Core.selftest(quiet)
@@ -431,6 +437,8 @@ function Core.selftest(quiet)
   -- fly-to-bar probe: which action buttons exist and are visible (bar addons hide Blizzard's), Blizzard's own tracker
   r.fly = { iconIntro = _G.IconIntroTracker ~= nil, buttons = {} }
   if ns.Fly then for _, slot in ipairs({ 1, 13, 25, 37, 49, 61, 145 }) do r.fly.buttons[tostring(slot)] = ns.Fly.buttonForSlot(slot) ~= nil end end
+  r.strip = { query = _G.QueryCastSequence ~= nil, macroSpell = _G.GetMacroSpell ~= nil, actionText = _G.GetActionText ~= nil,
+    shown = ns.SeqStrip and ns.SeqStrip.shown or 0, on = ns.SeqStrip and ns.SeqStrip.enabled() or false }
   r.ui = { dropdown = (ns.Widgets and ns.Widgets.hasBlizzardDropdown and ns.Widgets.hasBlizzardDropdown()) and "blizzard" or "own" }
   db.diag[Core.charKey or "?"] = r
   Core.log("info", "selftest written to WoWBoxerDB.diag[" .. tostring(Core.charKey) .. "]")
@@ -541,6 +549,7 @@ function Core.onEvent(event, ...)
     Core.scanBars()
     if ns.Minimap and ns.Minimap.Init then ns.Minimap.Init() end
     if ns.Team and ns.Team.Init then ns.Team.Init() end
+    if ns.SeqStrip and ns.SeqStrip.Init then ns.SeqStrip.Init() end
     if C_Timer and C_Timer.After then C_Timer.After(3, function() Core.checkOffer("login") end) end
     -- read-only diagnose a few seconds after login, so a /reload is enough to see how the addon behaves in this client
     if C_Timer and C_Timer.After then

@@ -130,12 +130,34 @@ function M.desired(m, L, opts)
     end
   end
   local map = M.nameMap(m)
+  local byName = {}
+  for _, s in ipairs(all) do byName[s.name] = s end
   for _, d in ipairs(out) do
     if map then d.body = M.localize(d.body, map) end
-    d.icon = M.ICON; d.ok, d.why = R.validateMacro(d.name, d.body)
+    d.icon = M.ICON
+    if d.seq then M.seqIcon(d, byName) end
+    d.ok, d.why = R.validateMacro(d.name, d.body)
     if not d.ok and map and #d.body > R.MACRO_LIMIT then d.why = "too long with your client's spell names (" .. #d.body .. "/255)" end
   end
   return out
+end
+
+--- Sequence and priority keys: their steps as spell objects and a real icon. A bare #showtooltip shows "?" whenever no
+--- line's conditions match (no hostile target, docs/squad-overhaul.md §1), so these macros get the main spell's icon:
+--- the filler of a castsequence, the first line of a priority key. d.steps = spells in cast order, d.main = that spell.
+function M.seqIcon(d, byName)
+  local x = d.seq
+  local steps = {}
+  for _, n in ipairs(x.spells or {}) do if byName[n] then steps[#steps + 1] = byName[n] end end
+  if x.base == "sequence" and x.filler and byName[x.filler] then
+    -- cast order: the steps, then the filler (fills) times
+    steps = {}
+    for _, n in ipairs(x.spells) do if n ~= x.filler and byName[n] then steps[#steps + 1] = byName[n] end end
+    for _ = 1, math.max(1, x.fills or 1) do steps[#steps + 1] = byName[x.filler] end
+  end
+  d.steps = steps
+  d.main = (x.base == "sequence" and x.filler and byName[x.filler]) or steps[1]
+  d.icon = C.spellTexture(d.main) or M.ICON
 end
 
 --- Spells the character should know at level L (data) but the spellbook does not have: visit the trainer.
@@ -146,6 +168,14 @@ function M.missingFromBook(m, L, live)
     if K.learned(m, s, L) and s.gate ~= "racial" and s.action ~= "passive" and not live(s.name, s) then out[#out + 1] = s end
   end
   return out
+end
+
+--- True when an existing macro needs a new icon: it still has the "?" while we want a real one, or another real one.
+function M.iconChanged(have, want)
+  if want == nil or want == M.ICON then return false end
+  if type(have) == "string" and not tonumber(have) then return have:lower():find("questionmark", 1, true) ~= nil end
+  have = tonumber(have)
+  return have == nil or have == M.ICON or have ~= want
 end
 
 --- Diff desired against existing character macros. skip = {[name]=true} to leave out.
@@ -160,11 +190,11 @@ function M.plan(desired, skip)
   local counts = { create = 0, update = 0, same = 0, noslot = 0, invalid = 0, skipped = 0 }
   for _, d in ipairs(desired) do
     wanted[d.name] = true
-    local it = { name = d.name, key = d.key, label = d.label, body = d.body, icon = d.icon, group = d.group }
+    local it = { name = d.name, key = d.key, label = d.label, body = d.body, icon = d.icon, group = d.group, seq = d.seq ~= nil }
     local cur = byName[d.name]
     if skip[d.name] then it.status = "skipped"
     elseif not d.ok then it.status = "invalid"; it.why = d.why
-    elseif cur and cur.body == d.body then it.status = "same"; it.index = cur.index
+    elseif cur and cur.body == d.body and not M.iconChanged(cur.icon, d.icon) then it.status = "same"; it.index = cur.index
     elseif cur then it.status = "update"; it.index = cur.index; it.old = cur.body
     elseif free > 0 then it.status = "create"; free = free - 1
     else it.status = "noslot" end

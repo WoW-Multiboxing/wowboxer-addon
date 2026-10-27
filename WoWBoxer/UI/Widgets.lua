@@ -167,6 +167,57 @@ function W.icon(parent, size, border)
   end
   return t
 end
+--- A composite icon of up to 4 spells over `box` (docs/squad-overhaul.md §1.3): 1 = whole icon, 2 = side by side,
+--- 3 = the main spell on the left half + two quarters, 4 = 2 x 2. The first icon in the list (the main spell) gets the
+--- biggest part. Returns {set(list), Hide(), Show(), parts}.
+function W.composite(parent, box, layer)
+  local c = { parts = {} }
+  for i = 1, 4 do
+    local t = parent:CreateTexture(nil, layer or "ARTWORK")
+    t:Hide()
+    c.parts[i] = t
+  end
+  local function place(t, x0, y0, x1, y1, crop)
+    t:ClearAllPoints()
+    t:SetPoint("TOPLEFT", box, "TOPLEFT", x0, -y0)
+    t:SetPoint("BOTTOMRIGHT", box, "TOPLEFT", x1, -y1)
+    if t.SetTexCoord then t:SetTexCoord(crop[1], crop[2], crop[3], crop[4]) end
+    t:Show()
+  end
+  local HALF, SQUARE = { 0.29, 0.71, 0.08, 0.92 }, { 0.2, 0.8, 0.2, 0.8 }
+  function c.set(list, size)
+    local n = math.min(#list, 4)
+    local S, g = size or 34, 1
+    for i = 1, 4 do c.parts[i]:Hide() end
+    for i = 1, n do W.setIcon(c.parts[i], list[i]) end
+    local h = S / 2
+    if n == 1 then place(c.parts[1], 0, 0, S, S, { 0.08, 0.92, 0.08, 0.92 })
+    elseif n == 2 then place(c.parts[1], 0, 0, h - g, S, HALF); place(c.parts[2], h, 0, S, S, HALF)
+    elseif n == 3 then
+      place(c.parts[1], 0, 0, h - g, S, HALF); place(c.parts[2], h, 0, S, h - g, SQUARE); place(c.parts[3], h, h, S, S, SQUARE)
+    elseif n == 4 then
+      place(c.parts[1], 0, 0, h - g, h - g, SQUARE); place(c.parts[2], h, 0, S, h - g, SQUARE)
+      place(c.parts[3], 0, h, h - g, S, SQUARE); place(c.parts[4], h, h, S, S, SQUARE)
+    end
+  end
+  function c.Hide() for i = 1, 4 do c.parts[i]:Hide() end end
+  function c.SetDesaturated(_, v) for i = 1, 4 do if c.parts[i].SetDesaturated then c.parts[i]:SetDesaturated(v) end end end
+  function c.SetAlpha(_, a) for i = 1, 4 do c.parts[i]:SetAlpha(a) end end
+  return c
+end
+--- "|T…|t Immolate → |T…|t Shadow Bolt ×4": the steps of a sequence in cast order with small icons.
+function W.stepsText(steps, size)
+  local out, i = {}, 1
+  while i <= #steps do
+    local s, n = steps[i], 1
+    while steps[i + n] == s do n = n + 1 end
+    local icon = type(s.icon) == "number" and s.icon or ("Interface\\Icons\\" .. (s.icon or "INV_Misc_QuestionMark"))
+    out[#out + 1] = "|T" .. icon .. ":" .. (size or 14) .. "|t " .. s.name .. (n > 1 and (" ×" .. n) or "")
+    i = i + n
+  end
+  return table.concat(out, " → ")
+end
+
 --- Scrollbar width of UIPanelScrollFrameTemplate: it sits to the right, OUTSIDE the scroll frame. Keep this much free.
 W.SCROLLBAR = 24
 function W.setIcon(tex, slugOrId)
