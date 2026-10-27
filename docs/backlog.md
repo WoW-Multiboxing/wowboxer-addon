@@ -118,6 +118,15 @@ Built behind probes and tested in the simulator; only the real client can confir
       built autonomously – it is a research/data job for the companion pipeline (workstream A). Until then Era uses
       Forever data filtered by the real spellbook, and the Talents tab says the trees differ.
 - [x] (f238e40: `.github/workflows/release.yml`, tag-only: same checks, zip on a GitHub Release) Release pipeline, part 1.
+- [ ] **Fit the action bar per client** (from WS-C, 2026-10-27; their backlog item 2a). UI Scale is one shared value per
+      install (`WTF\Config.wtf`), so the Window Layouts app has to shrink the whole UI to make small follower windows
+      show the whole bar. Per client instead: `barScale = min(1, UIParent:GetWidth() / 1024)` (Classic main bar incl.
+      gryphons = 1024 UI units; 830x664 followers lose the bags below ~1.26 aspect) on `MainMenuBar` (Edit Mode bars on
+      Forever: probe), applied on PLAYER_LOGIN / UI_SCALE_CHANGED / DISPLAY_SIZE_CHANGED, out of combat only.
+      Hard rule 4: it changes the action bars, so it is **opt-in** – a Setup checkbox "Fit the action bar to this
+      window" (one click, remembered per character), never on by default. Handshake for WS-C:
+      `WoWBoxerDB.bridge.barFit = true` + `bridge.barScale` while it is on, so the app's Auto-fit can leave UI Scale
+      alone. Waiting for the owner's go (new feature); needs a taint check on `MainMenuBar:SetScale` in both clients.
 - [ ] Release pipeline part 2: BigWigsMods packager → CurseForge/Wago when the owner makes the repo public (needs his
       accounts/tokens and the project IDs in the TOC).
 
