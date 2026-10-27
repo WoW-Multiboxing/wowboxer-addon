@@ -45,4 +45,30 @@ do
   H.eq(W.calls.CreateMacro, nil, "bridge writes nothing but SavedVariables")
 end
 
+-- hard rule: events alone (login, level-ups, spells, bars, bindings, combat, group, team messages) never write to the game
+do
+  local W = Mock.new(H, { name = "Dorin", class = "WARRIOR", race = "Orc", level = 9, party = { party1 = "Wowtwo" } })
+  local ns = H.loadAddon({ env = W.env })
+  W.fire("ADDON_LOADED", "WoWBoxer")
+  W.fire("PLAYER_LOGIN")
+  for _, sp in ipairs(ns.Data.spells.warrior) do if sp.level <= 20 then W.known[sp.name] = true end end
+  ns.State.quickStart(ns.Core.db, ns.Core.cdb, ns.Core.playerInfo())
+  ns.Core.cdb.lastSync = { level = 9, at = 1 } -- a player who already uses WoWBoxer keys gets offers
+  for lvl = 10, 20 do
+    W.player.level = lvl
+    W.fire("PLAYER_LEVEL_UP", lvl); W.fire("SPELLS_CHANGED"); W.fire("LEARNED_SPELL_IN_TAB")
+    W.fire("ACTIONBAR_SLOT_CHANGED", 1); W.fire("UPDATE_BINDINGS")
+    W.combat = true; W.fire("PLAYER_REGEN_DISABLED"); W.combat = false; W.fire("PLAYER_REGEN_ENABLED")
+    W.fire("GROUP_ROSTER_UPDATE"); W.fire("AUTOFOLLOW_BEGIN", "Wowtwo"); W.fire("AUTOFOLLOW_END")
+    W.fire("CHAT_MSG_ADDON", "WBX1", "S|20|50|0|1|Creature-0-1", "PARTY", "Wowtwo-Realm")
+    W.flush()
+  end
+  W.fire("PLAYER_LOGOUT")
+  for _, api in ipairs({ "CreateMacro", "EditMacro", "PlaceAction", "SetBindingMacro", "SetBinding" }) do
+    H.eq(W.calls[api], nil, "no " .. api .. " without a click")
+  end
+  H.eq(W.cvars.autoLootDefault, "0", "no CVar changed without a click")
+  H.ok(W.chatHas("key%(s%) changed"), "but the level-up offer was shown")
+end
+
 os.exit(H.report("diag") and 0 or 1)
