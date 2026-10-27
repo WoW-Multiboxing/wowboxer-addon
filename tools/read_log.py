@@ -38,7 +38,7 @@ def macros_cache(path):
             line = line.rstrip("\r\n")
             if line.startswith("VER ") or line.startswith("MACRO "):
                 parts = line.split('"')
-                cur = {"name": parts[1] if len(parts) > 1 else "?", "body": []}
+                cur = {"name": parts[1] if len(parts) > 1 else "?", "body": [], "icon": parts[3] if len(parts) > 3 else None}
             elif line == "END" and cur:
                 out.append(cur)
                 cur = None
@@ -86,6 +86,8 @@ def main():
             print(f"   addons {d.get('addons')}  party {d.get('party')} focus {d.get('focus')}")
             if d.get("strip"):
                 print(f"   strip {d.get('strip')}")
+            if d.get("team"):
+                print(f"   team {d.get('team')}")
             if d.get("ui"):
                 print(f"   ui {d.get('ui')}")
             if d.get("fly"):
@@ -103,12 +105,21 @@ def main():
             print(f"   {e.get('t')} {e.get('c')} {e.get('l')}: {e.get('m')}")
     if not found:
         print(f"No WoWBoxer.lua under {wtf} yet (log in with the addon enabled, then /reload).")
+    # taint: lines that name WoWBoxer in Logs\taint.log (after /console taintLog 1)
+    taint = os.path.join(WOW, a.client, "Logs", "taint.log")
+    if os.path.exists(taint):
+        with open(taint, encoding="utf-8", errors="replace") as fh:
+            hits = [l.rstrip() for l in fh if "WoWBoxer" in l]
+        print(f"=== taint.log: {len(hits)} line(s) naming WoWBoxer")
+        for l in hits[-15:]:
+            print(f"   {l}")
     for mc in sorted(glob.glob(os.path.join(wtf, "*", "*", "*", "macros-cache.txt"))):
         wbx = [x for x in macros_cache(mc) if x["name"].startswith("WBX")]
         if wbx:
             print(f"=== WBX macros in {os.path.relpath(mc, wtf)}")
             for x in wbx:
-                print(f"   {x['name']}: " + " | ".join(x["body"]))
+                icon = f" [{x['icon']}]" if x.get("icon") else ""
+                print(f"   {x['name']}{icon}: " + " | ".join(x["body"]))
     return 0
 
 

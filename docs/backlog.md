@@ -8,17 +8,27 @@ The owner's direction (2026-10-27, after the first in-game test: "it works as an
 **own character first** – the single-character flow must be excellent; the squad stays but simple. Optimise, bug-fix,
 minimap button, much more drag & drop of macros onto the action bars.
 
-## The owner: in-game test (one round, Classic Era) – the new spellbook window
-1. Close every WoW client completely and start one again (new files are only read at client start). Log in on a
-   **new or low-level** character so the 3-step guide shows.
-2. Type `/wbx`: go through the guide (Step 1 role + leads/follows, Step 2 **Place all** – watch the icons fly to your
-   bar, Step 3 Close). Press PrtScn on the book, then click each bookmark on the right once.
-3. In the book: drag one key onto another action button, right-click a key → **Bind key…** → press a free key (e.g. F6).
-4. `/reload`, then tell Claude "done" (Claude reads the layout audit – it now reports overlaps measured with the real
-   fonts – the log, macros and screenshots and fixes the rest).
+## The owner: in-game test (2–3 clients in one party, Classic Era) – dropdowns, sequence icons, the new squad
+1. Close every WoW client and start 2–3 Classic Era clients (new files load only at client start). In one of them type
+   `/console taintLog 1` once (it is saved; Claude reads `Logs\taint.log`).
+2. Log in your characters and invite them into one party with Dorin as party leader.
+3. On Dorin: `/wbx` → bookmark **Squad** → **Edit squad** → **Add my party**; drag one row by its grip to another
+   place; change a role with its dropdown. Then **Home** → **Send squad to my party**.
+4. On every other client: the card "Dorin shares squad …" → **Review** → **Import squad**, then **My keys** → **Place all**.
+5. On a Paladin, Priest or Warlock: My keys → tick **Use sequence keys**, pick **Medium**, press **Update keys**. Look at
+   the action bar: the sequence key has a real icon and small step icons; cast it a few times (the gold frame moves).
+6. On Dorin: Squad → Home, Readiness, Key map and Plan – PrtScn each. Then `/reload` on every client and tell Claude "done".
 
 ## Needs the owner in game
 Built behind probes and tested in the simulator; only the real client can confirm these. (Claude Code keeps this list.)
+- **Dropdowns (2b3d34d):** which kind each client uses (diagnose `ui.dropdown`: `blizzard` = `WowStyle1DropdownTemplate`
+  + `SetupMenu`, `own` = WoWBoxer's list); our list's look, Esc and click-outside; the Blizzard menu's radios on Forever.
+- **Sequence icons (b35eb80):** the macro icon file ID from `C_Spell.GetSpellTexture`/`GetSpellTexture` (macros-cache
+  shows it in `read_log`); the step strip on Blizzard action buttons: `GetActionText`, `QueryCastSequence` (diagnose
+  `strip.query`), `GetMacroSpell` for priority keys; **taint**: `Logs\taint.log` must not name WoWBoxer (read_log prints it).
+- **Squad sync (2c338bf):** chunked `Q|` messages on PARTY between 2–3 clients (throttling), the offer card, Review →
+  Import; `P|` preset offers; `R|` readiness + version in the team status (diagnose `team.peers`); the session card
+  ~20 s after login when grouped; `UnitIsGroupLeader`/`UnitClass`/`UnitRace` on party units for Add my party.
 - **Spellbook window (2e69fb4):** textures `UI-Quickslot2`, `UI-ActionButton-Border` (new-key glow),
   `UI-SpellbookIcon-Prev/NextPage-*`, bookmark icons; the 2 x 6 grid at the real font; `SetMaxLines` on the step line.
 - **Fly to the bar (bbe0aee):** AnimationGroup Translation/Scale/Alpha on Era 1.15 and Forever; which buttons
@@ -38,6 +48,39 @@ Built behind probes and tested in the simulator; only the real client can confir
 - Team status with 2–3 grouped clients: `C_ChatInfo.SendAddonMessage` on PARTY, `AUTOFOLLOW_BEGIN/END`, `UnitGUID("target")` (may be secret on Forever → shown as "?").
 - Non-English client (if anyone tries one): macros use `C_Spell.GetSpellName` names.
 - Minimap level-up dot texture `Interface\COMMON\Indicator-Yellow`.
+
+## Squad overhaul, dropdowns, sequence icons (`docs/squad-overhaul.md`, the owner 2026-10-27 22:16)
+- [x] (2b3d34d) §2 Real dropdowns everywhere: `W.dropdown` = Blizzard's `DropdownButton` + `WowStyle1DropdownTemplate`
+      + `SetupMenu`/`CreateRadio` when the client has the menu system, else our own list dropdown (shared list frame,
+      radio rows, Esc / click outside / choice closes it). Never `UIDropDownMenu`. Every "‹ value ›" cycle replaced: role,
+      plays as, sequence tier, class, race, guide, bars, window size, squad picker, templates, key editor.
+- [x] (2b3d34d) Sequence control: `[x] Use sequence keys` + Simple / Medium / Advanced (disabled while off, the tier is
+      remembered as `seqTier`) on the My keys header, in guide step 1 and in every member row of Edit squad. Classes
+      without sequences: box disabled + "Not for this class" with the Paladin/Priest/Warlock note in the tooltip.
+- [x] (b35eb80) §1.1 The "?" fix: sequence and priority keys get the main spell's icon file ID (filler of a
+      castsequence, first line of a priority key); an old "?" counts as a change, so Update keys does one EditMacro.
+- [x] (b35eb80) §1.3 Composite icons in the book (2 = side by side, 3 = main half + two quarters, 4 = 2 x 2), purple
+      SEQ/PRI badge and frame, the steps with small icons and ×N in the tooltip.
+- [x] (b35eb80) §1.2 Step strip on the action bars (`UI/SeqStrip.lua`): mini icons along the bottom of the Blizzard
+      button, gold frame around the next step (`QueryCastSequence`, `GetMacroSpell`), SEQ/PRI badge; own frames with
+      textures only, anchors only out of combat, event-driven and coalesced (0.2 s); Setup "Sequence strip on action
+      bars". Taint check in Era: in the checklist above.
+- [x] (bcc0e91) §3.1 Data model: slot order (= member order, drag to reorder), tags (whitelist + automatic from
+      class/role), leader presets (leader + roles), notes; all in the share string.
+- [x] (bcc0e91) §3.2 Squad bookmark with sub-pages: **Home** (party-frame cards: class, name, crown, role, level, keys,
+      follow, same target, mana; this character in gold; composition hints, follow chain, version check, leader
+      preset dropdown + Save as preset), **Edit squad** (rows with grip, name, class/race/role/plays-as dropdowns,
+      sequence keys, This is me, Remove; Add character, **Add my party**, templates Duo/Trio/Quad/5-man/Undead trio,
+      everyone's sequence keys, New / Duplicate / Delete), **Readiness** (party, unit, keys, Follow/Assist, settings,
+      signal; the fix button on your own line), **Key map** (member x key with icons, gaps in red, the key of this
+      client in the header, Copy cheat sheet), **Plan** (level, next trainer visit, next talent, leader's level).
+- [x] (bcc0e91) §3.4 "Dorin is party2 here – use party2?" in the book's next step (one click on this client).
+- [x] (2c338bf) §3.3 Send squad to my party: the share string in chunks (`Q|id|i|n|…`, 0.3 s apart, max 90), checked
+      like a pasted string; the card "Dorin shares squad … – Review / Ignore"; Import only after the click on that
+      client; logged on both sides; only from your own party. Leader preset switch → "Apply / Ignore" on clients that
+      have that squad. Version check (Home + Readiness) and a session card after login when grouped.
+- [x] Tests: `tests/test_dropdown.lua`, `tests/test_seqicons.lua`, `tests/test_squad.lua`, `tests/test_sync.lua`
+      (three simulated clients in one party), every squad page and offer card in the layout matrix.
 
 ## UI v2 – spellbook, guide, any resolution, fly to the bar (`docs/ui-spec-v2.md`, the owner 2026-10-27 evening)
 - [x] (2e69fb4) §3 Layout engine: the simulator computes boxes from anchors, scale and text metrics; `tests/layout.lua`

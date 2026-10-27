@@ -439,6 +439,13 @@ function Core.selftest(quiet)
   if ns.Fly then for _, slot in ipairs({ 1, 13, 25, 37, 49, 61, 145 }) do r.fly.buttons[tostring(slot)] = ns.Fly.buttonForSlot(slot) ~= nil end end
   r.strip = { query = _G.QueryCastSequence ~= nil, macroSpell = _G.GetMacroSpell ~= nil, actionText = _G.GetActionText ~= nil,
     shown = ns.SeqStrip and ns.SeqStrip.shown or 0, on = ns.SeqStrip and ns.SeqStrip.enabled() or false }
+  if ns.Team then
+    local s, me = Core.me()
+    local peers = {}
+    for k, p in pairs(ns.Team.peers) do peers[k] = { level = p.level, version = p.version, keys = p.ready and p.ready.keys or nil } end
+    r.team = { active = ns.Team.active(), version = ns.Team.version(), members = s and #s.members or 0, presets = s and #(s.presets or {}) or 0,
+      me = me and me.name or nil, peers = peers }
+  end
   r.ui = { dropdown = (ns.Widgets and ns.Widgets.hasBlizzardDropdown and ns.Widgets.hasBlizzardDropdown()) and "blizzard" or "own" }
   db.diag[Core.charKey or "?"] = r
   Core.log("info", "selftest written to WoWBoxerDB.diag[" .. tostring(Core.charKey) .. "]")

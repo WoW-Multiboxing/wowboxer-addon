@@ -15,7 +15,11 @@ always one action on one character.
     character. Hover a key to see what it does; right-click it to bind a key or leave it out.
   - **Level-up:** offers to update changed keys (same buttons, new spells); nothing changes without a click.
 - Works at any resolution and UI scale: the window fits the screen, and a size option is in Setup.
-- **Squad** – your characters, their roles and who leads. Followers' keys assist the leader via party1–4 or focus.
+- **Squad** – your characters, their roles and who leads (Home cards, Edit squad with Add my party and templates,
+  Readiness, Key map, Plan). Followers' keys assist the leader via party1–4 or focus. *Send squad to my party* offers
+  it to your other clients – they review and import it with a click; nothing ever acts for another client.
+- **Sequence keys** – tick *Use sequence keys* and pick Simple / Medium / Advanced; the key gets the main spell's icon
+  and a strip of small step icons on the action button that frames the next spell.
 - **Talents** – the guide's point order for your level; on Forever also what you have actually spent.
 - **Setup** – which bars your keys go on, window size, animations, multibox checklist, recommended settings (with backup/restore) and recommended addons.
 - **Share** – copy your squad as a `!WBX:1!` string to your other characters, the website or the companion.
