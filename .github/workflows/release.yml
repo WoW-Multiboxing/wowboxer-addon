@@ -37,8 +37,8 @@ jobs:
           python3 tools/lint51.py
           luacheck WoWBoxer tests
           node tools/export_vectors.js
+          node share/test.js          # writes the fixtures tests/test_share.lua reads
           LUA=lua5.1 tests/run_all.sh
-          node share/test.js
           python3 tools/cf_upload.py --selftest
       - name: Package
         run: |
