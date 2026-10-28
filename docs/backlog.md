@@ -1,5 +1,11 @@
 # WoWBoxer addon – backlog
 
+## The owner: in-game check of the new book (one Classic Era client is enough)
+1. Restart WoW, log in the warlock, `/wbx`: spells left, helpers + "Selected" right, nothing across the middle.
+2. Hover a key with an orange dot, then press **Update keys** in the banner; the dot goes away.
+3. Custom keys → New key → **Paste…** your warlock macro: it wraps inside the box, no scrolling.
+4. Click the **?** on My keys, Squad and Setup (PrtScn each), then `/reload` and tell Claude "done".
+
 Shared work list. **Claude Code (PC) owns the code** and ticks items off here (`[x]` + commit hash). The cloud session
 only adds research and items here and in `docs/research/`; it never edits code. Read this file at the start of every
 milestone. Research behind the items: `docs/research/2026-10-27-ui-bars-minimap.md`.
@@ -8,7 +14,7 @@ The owner's direction (2026-10-27, after the first in-game test: "it works as an
 **own character first** – the single-character flow must be excellent; the squad stays but simple. Optimise, bug-fix,
 minimap button, much more drag & drop of macros onto the action bars.
 
-## The owner: in-game test (2–3 clients in one party, Classic Era) – dropdowns, sequence icons, the new squad
+## Earlier in-game test (2–3 clients in one party, Classic Era) – dropdowns, sequence icons, the new squad
 1. Close every WoW client and start 2–3 Classic Era clients (new files load only at client start). In one of them type
    `/console taintLog 1` once (it is saved; Claude reads `Logs\taint.log`).
 2. Log in your characters and invite them into one party with Dorin as party leader.
@@ -23,6 +29,11 @@ minimap button, much more drag & drop of macros onto the action bars.
 
 ## Needs the owner in game
 Built behind probes and tested in the simulator; only the real client can confirm these. (Claude Code keeps this list.)
+- **Book v3 + help (11a8094, ece3175):** the orange "changed" dot (`Interface\COMMON\Indicator-Yellow` tinted orange),
+  the round "?" and callout badges (`TempPortraitAlphaMask`), the warning icon `UI-Dialog-Icon-AlertNew`;
+  `SetNonSpaceWrap` on the macro box; the scroll bar hiding when the spell list fits (`scrollBarHideable`, tooltips
+  on the arrows); `HelpPlate_Show` on Era / Forever (diagnose `ui.helpPlate`, `ui.helpUsed`) – if Blizzard's plates
+  look wrong, we switch to our own overlay; Esc closes the overlay (`EnableKeyboard` + propagate other keys).
 - **Dropdowns (2b3d34d):** which kind each client uses (diagnose `ui.dropdown`: `blizzard` = `WowStyle1DropdownTemplate`
   + `SetupMenu`, `own` = WoWBoxer's list); our list's look, Esc and click-outside; the Blizzard menu's radios on Forever.
 - **Sequence icons (b35eb80):** the macro icon file ID from `C_Spell.GetSpellTexture`/`GetSpellTexture` (macros-cache
@@ -95,6 +106,35 @@ Built behind probes and tested in the simulator; only the real client can confir
       Summon Imp stalled the sequence). Addon-side for now; WS-A should add the same warning to the companion.
 - [x] Tests: `tests/test_keys.lua` (helpers, paste/copy, warnings, box layout), `tests/test_dropdown.lua`, `tests/test_seqicons.lua`, `tests/test_squad.lua`, `tests/test_sync.lua`
       (three simulated clients in one party), every squad page and offer card in the layout matrix.
+
+## UI v3 – the book, less text (`docs/ui-spec-v3-book.md`, the owner 2026-10-27 23:38–23:42)
+- [x] (11a8094) "My keys" spread: LEFT page = next-step banner + **Spells** then **Sequences**; RIGHT page = Role,
+      Plays as, sequence keys, **Party helpers** / **Pet**, the **Selected** key (icon, name, key + binding, one
+      sentence, macro text small and muted, Bind key) and `11/30 macros`. Section headers are full-width rules, never
+      grid cells; nothing crosses the spine; the bottom detail strip with the "?" icon is gone. All spells / Custom
+      keys: banner + hint, 2 x 8 per page; clicking an own key opens the editor.
+- [x] (11a8094) Visual hierarchy: spells = 37 px buttons with the action-button border, gold name (two lines rather
+      than "…"), the hotkey on the icon; sequences purple + SEQ/PRI + composite icon + "Imm › SB ×4"; helpers 26 px,
+      silver border, desaturated, grey short names (Follow, Assist, Focus, Pet attack, Pet back), no second line.
+- [x] (11a8094) Status by colour: new = glow, changed = orange dot, not on a bar = dimmed border, left out = grey; the
+      words live in the tooltips. Right-click gets Unbind when a key is bound directly.
+- [x] (11a8094) Header `Name · Class N · Leader/Follower` + small **Era** tag (squad, leader, client in the tooltip);
+      banner `N keys changed` + Update keys (names in the tooltip); toast `Level N: X keys changed` + Update / Later.
+- [x] (11a8094) Key editor: macro in a scroll box whose text width = the inner width, word + non-space wrap, grows down
+      with a scroll bar; box 312 x 186, a 255-character macro fits without scrolling; counter `234/255`. **Steps**
+      (tooltip), **Filler: Shadow Bolt ×2** / **No filler**, warnings = orange ! + at most two short lines (full text
+      in the tooltip); spells already in the key marked; the unlabeled icons were the scroll bar – it hides when the
+      list fits and its arrows have tooltips.
+- [x] (ece3175) "?" in the title bar for every page (tabs, squad sub-pages, key editor): hover = 2–4 lines, click =
+      dimmed page + 3–5 numbered gold callouts on the real controls + legend (HelpPlate if the client has it), click or
+      Esc closes; pulses once on the first visit.
+- [x] (ece3175) Squad guide (Make the squad → Roles → Share → Keys everywhere → Check) with the step's button and
+      progress dots; from the Squad "?", the minimap menu, and offered once when a second character joins the party.
+- [x] (f9c3bea) Copy rules on every tab, the toast, the guides, the cards and the editor (labels ≤ 3 words, buttons ≤ 2,
+      status ≤ 2, hints ≤ 8; sentences in tooltips/guides only).
+- [x] (f9c3bea) `tests/test_copy.lua`: word budgets in five states, no cut names, no header in a grid cell, nothing
+      across the spine, a 255-character macro fully visible, a "?" with tooltip and 3–5 callouts on every page; the
+      resolution/scale matrix also covers the long macro, the help overlays and the squad guide.
 
 ## UI v2 – spellbook, guide, any resolution, fly to the bar (`docs/ui-spec-v2.md`, the owner 2026-10-27 evening)
 - [x] (2e69fb4) §3 Layout engine: the simulator computes boxes from anchors, scale and text metrics; `tests/layout.lua`

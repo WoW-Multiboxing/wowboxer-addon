@@ -1,7 +1,8 @@
-# Status and handover (updated 2026-10-27 night, local Claude Code session – owner of the code)
+# Status and handover (updated 2026-10-28 morning, local Claude Code session – owner of the code)
 
 Plan: `02_Spec/Addon-plan.md` in the project folder. Work list: `docs/backlog.md` (top: "Needs the owner in game").
-Look: `docs/ui-spec-v2.md` (spellbook, guide, any resolution, fly to the bar) over `docs/ui-spec.md`; squad, dropdowns
+Look: `docs/ui-spec-v3-book.md` (book spread, status by colour, copy rules, help on every page) over
+`docs/ui-spec-v2.md` (spellbook, guide, any resolution, fly to the bar) over `docs/ui-spec.md`; squad, dropdowns
 and sequence icons: `docs/squad-overhaul.md` (over `docs/squad-spec.md`). Research: `docs/research/`.
 
 ## Files (WoWBoxer/, TOC order)
@@ -19,7 +20,7 @@ and sequence icons: `docs/squad-overhaul.md` (over `docs/squad-spec.md`). Resear
 | `Team.lua` | Display-only team status over addon messages (prefix `WBX1`): `S|` state, `R|` readiness + version |
 | `Squad.lua` | Live party (Add my party), "Dorin is party2 here", readiness per member, key map + cheat sheet, levelling plan |
 | `Sync.lua` | Offers between your clients: Send squad (`Q|` chunks of the share string → Review / Ignore → Import), preset switch (`P|` → Apply / Ignore), session card |
-| `UI/*` | Widgets (auto-sized buttons with tooltips, truncating lines, menu, composite icons), Dropdown (Blizzard menu or our own list; sequence control), SeqStrip (step icons on the action buttons), TabSquad + SquadPages (Home, Edit squad, Readiness, Key map, Plan), Main (the book: cover, pages, bookmark tabs, character line, fit-to-screen scale, position per character, level-up toast), Book (My keys / All spells / Custom keys pages, next-step line, 3-step guide, key capture, right-click menu), Fly (icons fly to the action buttons), Minimap, Talents / Setup / Squad / Share tabs, KeyEditor (own keys C1–C8), TeamFrame, Audit (in-game layout measurements incl. overlaps) |
+| `UI/*` | Widgets (auto-sized buttons with tooltips, truncating lines, menu, composite icons), Dropdown (Blizzard menu or our own list; sequence control), SeqStrip (step icons on the action buttons), TabSquad + SquadPages (Home, Edit squad, Readiness, Key map, Plan), Main (the book: cover, pages, bookmark tabs, character line, fit-to-screen scale, position per character, level-up toast), Book (My keys spread: spells left, helpers + selected key right; All spells / Custom keys; next-step banner, 3-step guide, key capture, right-click menu), Help ("?" per page: tooltip + numbered overlay, squad guide), Fly (icons fly to the action buttons), Minimap, Talents / Setup / Squad / Share tabs, KeyEditor (own keys C1–C8), TeamFrame, Audit (in-game layout measurements incl. overlaps) |
 
 ## Tests (all in the simulator, `tests/wowmock.lua`; plus parity against the companion's JS)
 core 82 · diag 35 · dropdown 51 · features 212 · seqicons 45 · squad 93 · sync 45 (three clients in one party) · ui 179 (incl. the layout matrix: 18 screens/UI scales + 3 stress runs, every tab
