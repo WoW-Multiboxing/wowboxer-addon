@@ -48,6 +48,7 @@ function tab.build(p)
   p.then_ = W.text(nb, "GameFontHighlightSmall", nil, W.TEXT)
   p.then_:SetPoint("TOPLEFT", p.nextIcon, "BOTTOMLEFT", 0, -8)
   p.then_:SetWidth(LEFT_W - 20)
+  p.then_.wbxCopy = "data"
   p.readback = W.text(p, "GameFontHighlightSmall", nil, W.TEXT)
   p.readback:SetPoint("TOPLEFT", nb, "BOTTOMLEFT", 0, -8)
   p.readback:SetWidth(LEFT_W)
@@ -59,6 +60,7 @@ function tab.build(p)
   p.prio:SetPoint("TOPLEFT", p.source, "BOTTOMLEFT", 0, -8)
   p.prio:SetWidth(LEFT_W)
   if p.prio.SetMaxLines then p.prio:SetMaxLines(8) end
+  p.prio.wbxCopy = "data"
 
   local head = W.text(p, "GameFontNormal", nil, W.GOLD)
   head:SetPoint("TOPLEFT", LEFT_W + 16, -30)
@@ -127,8 +129,8 @@ function tab.refresh(p)
   if g and kind == "guide" then
     local src = g.source or {}
     p.source:SetText("Source: " .. (src.site or "?") .. (src.author and (", " .. src.author) or "") .. (src.updated and (" (" .. src.updated .. ")") or "") ..
-      ". Talent data: Zephras (CC BY 4.0) + The Forever Era.")
-  else p.source:SetText("Talent data: Zephras (CC BY 4.0) + The Forever Era.") end
+      "\nTalent data: Zephras (CC BY 4.0) + The Forever Era")
+  else p.source:SetText("Talent data: Zephras (CC BY 4.0) + The Forever Era") end
   p.prio:SetText(g and g.kind == "priorities" and g.priorities and g.priorities:sub(1, 600) or "")
   p.readback:SetText(tab.readbackText(m, level))
   -- list
@@ -161,18 +163,18 @@ end
 --- One or two lines comparing the talents spent in game with the plan (Forever only: other clients have other trees).
 function tab.readbackText(m, level)
   local C = ns.Compat
-  if not C.isForever() then return "|cffa89a7eYour spent talents are only compared on WoW: Forever.|r" end
+  if not C.isForever() then return "|cffa89a7eCompared on WoW: Forever only|r" end
   local ranks, src = C.talentRanks()
-  if not ranks then return "|cffa89a7eCan't read your talents on this client (" .. tostring(src) .. ").|r" end
+  if not ranks then return "|cffa89a7eCan't read talents here (" .. tostring(src) .. ")|r" end
   local st = ns.Kit.talentStatus(m, ranks, level)
-  local parts = { "In game: " .. st.spent .. " of " .. st.available .. " points spent." }
+  local parts = { "In game: " .. st.spent .. "/" .. st.available .. " points spent" }
   if #st.off > 0 then
     local n = {}
     for i, o in ipairs(st.off) do if i <= 2 then n[#n + 1] = o.name .. " " .. o.have .. "/" .. o.plan end end
-    parts[#parts + 1] = "|cfff0b43cOff the plan: " .. table.concat(n, ", ") .. (#st.off > 2 and ", …" or "") .. "|r"
-  elseif st.spent > 0 then parts[#parts + 1] = "|cff8fbf6aOn the plan.|r" end
+    parts[#parts + 1] = "|cfff0b43cOff plan: " .. table.concat(n, ", ") .. (#st.off > 2 and ", …" or "") .. "|r"
+  elseif st.spent > 0 then parts[#parts + 1] = "|cff8fbf6aOn the plan|r" end
   if st.next and st.spent < st.available then parts[#parts + 1] = "Take next: |cffffd100" .. st.next.name .. "|r (rank " .. st.next.rank .. ")" end
-  return table.concat(parts, " ")
+  return table.concat(parts, "\n")
 end
 
 UI.RegisterTab(tab)

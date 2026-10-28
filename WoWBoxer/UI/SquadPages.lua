@@ -13,11 +13,14 @@ local function S() return ns.State end
 local function squad() return S().activeSquad(Core().db) end
 
 local function header(f, cols, y)
+  f.heads = {}
   for _, c in ipairs(cols) do
     local t = W.line(f, "GameFontNormalSmall", nil, W.GOLD, c[3] or "LEFT")
     t:SetPoint("TOPLEFT", c[2], y or 0)
     t:SetWidth(c[4] or 60)
     t:SetText(c[1])
+    t.wbxCopy = "label"
+    f.heads[#f.heads + 1] = t
   end
 end
 
@@ -57,7 +60,7 @@ SP.register({ key = "ready", label = "Readiness", tip = "Is everyone set up? One
     header(f, RCOLS)
     local sf, content = W.scroll(f, LIST_W, 10 * 26)
     sf:SetPoint("TOPLEFT", 0, -18)
-    f.list = content
+    f.sf, f.list = sf, content
     f.pool = W.pool(content, function(parent)
       local r = CreateFrame("Frame", nil, parent)
       r:SetSize(LIST_W - 4, 24)
@@ -123,14 +126,14 @@ SP.register({ key = "ready", label = "Readiness", tip = "Is everyone set up? One
         local bad = false
         for _, key in ipairs(CHECKS) do if c[key] == false then bad = true end end
         r.where:SetShown(bad and row.signal)
-        r.where:SetText("Fix on " .. row.m.name .. "'s window")
+        r.where:SetText("Fix there")
       end
       if row.version and row.version ~= myVer and not row.me then
-        notes[#notes + 1] = "|cfff0b43c" .. row.m.name .. " runs WoWBoxer " .. row.version .. ", this client " .. myVer .. ".|r Install the same version on every client."
+        notes[#notes + 1] = "|cfff0b43c" .. row.m.name .. " runs WoWBoxer " .. row.version .. "|r (here " .. myVer .. ")"
       end
     end
     f.list:SetHeight(math.max(10, #rows * 26))
-    notes[#notes + 1] = "Each client only changes itself: fix your own line here, the others on their own windows. Hover a line for details."
+    notes[#notes + 1] = "Fix your line here, others on their clients"
     f.note:SetText(table.concat(notes, "\n"))
   end })
 
@@ -152,7 +155,7 @@ SP.register({ key = "keymap", label = "Key map", tip = "Same key, same job: whic
     end
     local sf, content = W.scroll(f, LIST_W, 9 * 30)
     sf:SetPoint("TOPLEFT", 0, -18)
-    f.list = content
+    f.sf, f.list = sf, content
     f.pool = W.pool(content, function(parent)
       local r = CreateFrame("Frame", nil, parent)
       r:SetSize(LIST_W - 4, 28)
@@ -178,7 +181,7 @@ SP.register({ key = "keymap", label = "Key map", tip = "Same key, same job: whic
     f.note:SetWidth(LIST_W - 150)
     f.note:SetJustifyV("TOP")
     if f.note.SetMaxLines then f.note:SetMaxLines(4) end
-    f.copy = W.button(f, "Copy cheat sheet", 130, 22, function() SP.showCheatSheet(f) end,
+    f.copy = W.button(f, "Cheat sheet", 100, 22, function() SP.showCheatSheet(f) end,
       "Shows the key map as text: Select all, Ctrl+C, and paste it wherever you keep notes.")
     f.copy:SetPoint("TOPRIGHT", 0, -18 - 9 * 30 - 4)
     -- the cheat sheet box
@@ -231,8 +234,8 @@ SP.register({ key = "keymap", label = "Key map", tip = "Same key, same job: whic
       end
     end
     f.list:SetHeight(math.max(10, #map.rows * 30))
-    f.note:SetText("Every client puts the same key on the same action button, so one keyboard layout works for all characters." ..
-      (map.gaps > 0 and (" |cfff0b43c" .. map.gaps .. " gap" .. (map.gaps == 1 and "" or "s") .. "|r (red): a key some characters have and others not yet.") or ""))
+    f.note:SetText("Same key, same job on every client" ..
+      (map.gaps > 0 and ("\n|cfff0b43c" .. map.gaps .. " gap" .. (map.gaps == 1 and "" or "s") .. "|r (red): not everyone has it") or ""))
     f.sheet.text = ns.Squad.cheatSheet(s)
   end })
 function SP.showCheatSheet(f)
@@ -249,7 +252,7 @@ SP.register({ key = "plan", label = "Plan", tip = "Levelling together: levels, t
     header(f, PCOLS)
     local sf, content = W.scroll(f, LIST_W, 10 * 26)
     sf:SetPoint("TOPLEFT", 0, -18)
-    f.list = content
+    f.sf, f.list = sf, content
     f.pool = W.pool(content, function(parent)
       local r = CreateFrame("Frame", nil, parent)
       r:SetSize(LIST_W - 4, 24)
@@ -261,18 +264,19 @@ SP.register({ key = "plan", label = "Plan", tip = "Levelling together: levels, t
         local t = W.line(r, "GameFontHighlightSmall", nil, i == 1 and W.TEXT or W.TEXT, c[3])
         t:SetPoint("LEFT", c[2], 0)
         t:SetWidth(c[4])
+        if i >= 3 then t.wbxCopy = "data" end
         r.cols[i] = t
       end
       W.tooltip(r, function(GT) GT:AddLine(r.title or "", 1, 0.82, 0); for _, l in ipairs(r.lines or {}) do GT:AddLine(l, 1, 1, 1, true) end end)
       return r
     end)
-    f.link = W.check(f, "Followers use the leader's level", function(_, v) local s = squad(); if s then s.linkLevels = v; S().applyLink(s); Core().changed() end end)
+    f.link = W.check(f, "Leader's level", function(_, v) local s = squad(); if s then s.linkLevels = v; S().applyLink(s); Core().changed() end end)
     f.link:SetPoint("TOPLEFT", -4, -18 - 10 * 26 - 6)
     W.tip(f.link, "Leader's level", "For planning: everyone is shown at the leader's level (levels from the team status win when a client reports one).")
     f.note = W.text(f, "GameFontHighlightSmall", nil, W.MUTED)
     f.note:SetPoint("TOPLEFT", 0, -18 - 10 * 26 - 34)
     f.note:SetWidth(LIST_W)
-    f.note:SetText("Levels come from the team status when a client reports one, else from the squad. Trainer and talents follow each character's guide.")
+    f.note:SetText("Levels from team status, else the squad")
   end,
   refresh = function(f)
     local s = squad()

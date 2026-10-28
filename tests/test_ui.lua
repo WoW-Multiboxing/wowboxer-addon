@@ -212,6 +212,20 @@ local function layoutPass(screen, opts)
   UI.Select("custom")
   UI.panels.custom.cells[1]:Click("LeftButton")
   check("key editor", { UI.frame })
+  -- a full 255-character macro: wraps inside the box and needs no scrolling
+  local KE = ns.KeyEditor
+  local long = "#showtooltip\n/petattack [@mouseover,harm,nodead][@party1target,harm,nodead][]\n/castsequence [@mouseover,harm,nodead][@party1target,harm,nodead][] reset=combat Immolate, Corruption, Shadow Bolt"
+  long = long .. string.rep("x", 255 - #long)
+  local orig = KE.preview
+  KE.preview = function() return { kind = "sequence", macro = long }, {} end
+  KE.Refresh()
+  KE.preview = orig
+  local b, sf = W.rect(KE.frame.body), W.rect(KE.frame.macroSf)
+  if b[3] > sf[3] + 0.5 or b[2] < sf[2] - 0.5 then problems[#problems + 1] = "key editor: 255-character macro not fully visible" end
+  check("key editor, 255 characters")
+  -- help on the editor, then close it
+  UI.helpBtn:Click(); check("help overlay (editor)"); ns.Help.Hide()
+  KE.Close()
   W.player.level = W.player.level + 4
   for _, s in ipairs(ns.Data.spells[(opts.class or "PALADIN"):lower()]) do if s.level <= W.player.level then W.known[s.name] = true end end
   W.fire("PLAYER_LEVEL_UP", W.player.level); W.fire("SPELLS_CHANGED"); W.flush()
@@ -228,6 +242,16 @@ local function layoutPass(screen, opts)
   ns.Sync.dismiss()
   UI.Select("keys")
   check("keys after level-up")
+  -- help overlays and the squad guide stay inside the window
+  for _, key in ipairs({ "keys", "setup", "share" }) do
+    UI.Select(key); UI.helpBtn:Click(); check("help overlay " .. key); ns.Help.Hide()
+  end
+  UI.Select("squad")
+  for _, def in ipairs(ns.SquadPages.pages) do
+    ns.SquadPages.select(UI.panels.squad, def.key); UI.helpBtn:Click(); check("help overlay squad " .. def.key); ns.Help.Hide()
+  end
+  ns.Help.ShowSquadGuide()
+  for i = 1, 5 do check("squad guide " .. i); ns.Help.guide.next:Click() end
   return problems
 end
 local total, shown = 0, 0

@@ -393,7 +393,7 @@ do
   H.ok(st.next ~= nil, "next point from the plan")
   UI.Refresh()
   local txt = UI.panels.talents.readback._text or ""
-  H.ok(txt:find("3 of 11") and txt:find("Off the plan"), "talents tab shows the read-back: " .. txt)
+  H.ok(txt:find("3/11") and txt:find("Off plan"), "talents tab shows the read-back: " .. txt)
   H.ok(not calls.purchase and not calls.commit, "read-back never changes talents")
   W.flush()
   local d = Core.db.diag["Warlocker-Realm"]
@@ -403,7 +403,7 @@ end
 do
   local W, ns = boot({ name = "Era", class = "PRIEST", race = "Scourge", level = 20, toc = 11509, spellbookStyle = "classic" })
   ns.UI.Open("talents")
-  H.ok((ns.UI.panels.talents.readback._text or ""):find("only compared on WoW: Forever") ~= nil, "Era: read-back explained, not faked")
+  H.ok((ns.UI.panels.talents.readback._text or ""):find("Compared on WoW: Forever only") ~= nil, "Era: read-back explained, not faked")
 end
 
 -- ------------------------------------------------------------------ custom key editor
@@ -648,9 +648,10 @@ do
   W.flush() -- staggered starts
   H.ok(placed > 0, "keys placed")
   H.eq(Fly.flights, placed, "every placed key flies to its button")
-  local ag = W.playing[1]
   local move
-  for _, a in ipairs(ag and ag._children or {}) do if a._animKind == "Translation" then move = a end end
+  for _, ag in ipairs(W.playing) do
+    for _, a in ipairs(ag._children or {}) do if a._animKind == "Translation" and not move then move = a end end
+  end
   H.ok(move and move._offset and move._offset[2] < 0, "the icon flies down to the bar")
   local before = W.calls.PlaceAction
   W.finishAnims()

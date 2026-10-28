@@ -106,7 +106,7 @@ function SP.cardInfo(row, s)
   local m, rd = row.m, row.ready
   local info = { tip = {} }
   local lvl = row.level or m.level
-  info.sub = (row.me and "|cffffd100This character|r · " or "") .. "Lv " .. lvl .. " · " .. (S().ROLE_NAME[m.role] or m.role) .. " · Slot " .. (S().slotOf(s, m) or "?")
+  info.sub = (row.me and "|cffffd100You|r · " or "") .. "Lv " .. lvl .. " · " .. (S().ROLE_NAME[m.role] or m.role) .. " · Slot " .. (S().slotOf(s, m) or "?")
   if rd then
     if rd.keys == 0 then info.keys, info.keysColor = "Keys OK", W.GREEN
     else info.keys, info.keysColor = rd.keys .. (rd.keys == 1 and " key" or " keys") .. " to update", W.ORANGE end
@@ -138,7 +138,7 @@ SP.register({ key = "home", label = "Home", tip = "Everyone in the squad at a gl
   build = function(f, p)
     local sf, content = W.scroll(f, LIST_W, 2 * (CARD_H + CARD_GAP))
     sf:SetPoint("TOPLEFT", 0, 0)
-    f.cards = content
+    f.sf, f.cards = sf, content
     f.pool = W.pool(content, function(parent) return buildCard(parent) end)
     f.hints = W.text(f, "GameFontHighlightSmall", nil, W.MUTED)
     f.hints:SetPoint("TOPLEFT", 0, -2 * (CARD_H + CARD_GAP) - 6)
@@ -153,7 +153,7 @@ SP.register({ key = "home", label = "Home", tip = "Everyone in the squad at a gl
     local pl = W.labelled(f, "Leader preset", f.preset)
     pl:SetPoint("BOTTOMLEFT", 0, 40)
     W.ddTip(f.preset, "Leader preset", "Who leads for what you do (e.g. \"Questing – Dorin leads\"). Choosing one changes the leader here and offers the switch to your other clients – they apply it with one click.")
-    f.savePreset = W.button(f, "Save as preset", 110, 22, function()
+    f.savePreset = W.button(f, "Save preset", 100, 22, function()
       local s = squad()
       local p0 = s and S().savePreset(s, nil)
       if p0 then Core().print("Saved preset \"" .. p0.name .. "\".") end
@@ -163,7 +163,7 @@ SP.register({ key = "home", label = "Home", tip = "Everyone in the squad at a gl
     -- buttons
     f.edit = W.button(f, "Edit squad", 96, 24, function() SP.select(p, "edit") end, "Add, remove, reorder and change the characters of this squad.")
     f.edit:SetPoint("BOTTOMLEFT", 0, 0)
-    f.send = W.button(f, "Send squad to my party", 170, 24, function() if ns.Sync then ns.Sync.sendSquad(squad()) end end,
+    f.send = W.button(f, "Send squad", 100, 24, function() if ns.Sync then ns.Sync.sendSquad(squad()) end end,
       "Offers this squad to your other clients in the party. Nothing changes there until you click Review and Import on that client.")
     f.send:SetPoint("LEFT", f.edit, "RIGHT", 6, 0)
     f.ready = W.button(f, "Readiness", 90, 24, function() SP.select(p, "ready") end, "One line per character: party, unit, keys, Follow/Assist, settings.")
@@ -198,18 +198,18 @@ SP.register({ key = "home", label = "Home", tip = "Everyone in the squad at a gl
     local hints = {}
     for _, h in ipairs(S().composition(s)) do hints[#hints + 1] = h end
     local hu, L = ns.Squad.unitHint()
-    if hu then hints[#hints + 1] = "|cfff0b43c" .. L.name .. " is " .. hu .. " here|r – My keys offers to use " .. hu .. "." end
+    if hu then hints[#hints + 1] = "|cfff0b43c" .. L.name .. " is " .. hu .. " here|r – see My keys" end
     local myVer = ns.Team.version()
     for _, row in ipairs(rows) do
       if row.version and row.version ~= myVer and not row.me then
-        hints[#hints + 1] = "|cfff0b43c" .. row.m.name .. " runs WoWBoxer " .. row.version .. "|r (this client: " .. myVer .. ") – install the same version everywhere."
+        hints[#hints + 1] = "|cfff0b43c" .. row.m.name .. " runs WoWBoxer " .. row.version .. "|r (here " .. myVer .. ")"
       end
     end
-    if s and #s.members == 1 then hints[#hints + 1] = "Playing with more characters? Edit squad → Add my party (when grouped) or a template." end
+    if s and #s.members == 1 then hints[#hints + 1] = "More characters? Edit squad → Add party" end
     local chain = {}
     for _, m in ipairs(s and s.members or {}) do if not m.leader then chain[#chain + 1] = m.name end end
     local Lm = S().leaderOf(s)
-    if Lm and #chain > 0 then hints[#hints + 1] = "Follow chain: " .. table.concat(chain, ", ") .. " → " .. Lm.name .. "." end
+    if Lm and #chain > 0 then hints[#hints + 1] = "Follow: " .. table.concat(chain, ", ") .. " → " .. Lm.name end
     f.hints:SetText(table.concat(hints, "\n"))
     f.preset.Refresh()
     f.preset:SetEnabled(s ~= nil and #(s.presets or {}) > 0)
@@ -303,7 +303,7 @@ local function buildRow(f, parent)
   r.plays:SetPoint("TOPLEFT", 46, -29)
   r.seq = W.seqControl(r, { member = function() return r.m end, width = 96 })
   r.seq:SetPoint("LEFT", r.plays, "RIGHT", 10, 0)
-  r.me = W.button(r, "This is me", 90, 22, function() Core().setMe(squad().id, r.m.id) end,
+  r.me = W.button(r, "That's me", 80, 22, function() Core().setMe(squad().id, r.m.id) end,
     "Tells WoWBoxer that the character you are logged in on is this one (its keys and role are used here).")
   r.me:SetPoint("TOPRIGHT", -4, -29)
   r.meText = W.text(r, "GameFontNormalSmall", nil, W.GOLD, "RIGHT")
@@ -332,13 +332,13 @@ SP.register({ key = "edit", label = "Edit squad", tip = "Names, classes, roles, 
     f.nameBox:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
     f.add = W.button(f, "Add character", 110, 22, function() SP.addCharacter() end, "Adds another character you play together with this one (a follower).")
     f.add:SetPoint("TOPRIGHT", 0, 0)
-    f.party = W.button(f, "Add my party", 104, 22, function() SP.addParty() end,
+    f.party = W.button(f, "Add party", 90, 22, function() SP.addParty() end,
       "Adds everyone in your party who is not in the squad yet (names and classes from the game; the party leader leads).")
     f.party:SetPoint("RIGHT", f.add, "LEFT", -6, 0)
 
     local sf, content = W.scroll(f, LIST_W, 4 * ROW_H)
     sf:SetPoint("TOPLEFT", 0, -28)
-    f.list = content
+    f.sf, f.list = sf, content
     f.pool = W.pool(content, function(parent) return buildRow(f, parent) end)
     f.dropLine = f:CreateTexture(nil, "OVERLAY")
     f.dropLine:SetColorTexture(1, 0.82, 0, 0.8)
@@ -359,7 +359,7 @@ SP.register({ key = "edit", label = "Edit squad", tip = "Names, classes, roles, 
         Core().print("New squad \"" .. s.name .. "\" from a template. Rename the characters, then pick yourself with This is me.")
         Core().changed()
       end })
-    local tl = W.labelled(f, "New from template", f.template)
+    local tl = W.labelled(f, "Template", f.template)
     tl:SetPoint("BOTTOMLEFT", 0, 36)
     W.ddTip(f.template, "Templates", "Duo, Trio, Quad, 5-man or the Undead trio example. Creates a new squad; your current one stays.")
     f.allSeq = W.dropdown(f, { width = 110, placeholder = "Choose…",
@@ -372,7 +372,7 @@ SP.register({ key = "edit", label = "Edit squad", tip = "Names, classes, roles, 
         end
         Core().changed()
       end })
-    local al = W.labelled(f, "Everyone's sequence keys", f.allSeq)
+    local al = W.labelled(f, "All sequences", f.allSeq)
     al:SetPoint("LEFT", f.template, "RIGHT", 16, 0)
     W.ddTip(f.allSeq, "Everyone's sequence keys", "Sets sequence keys for every character whose class has them. Each client then updates its own keys.")
     f.new = W.button(f, "New squad", 86, 22, function()
@@ -392,7 +392,7 @@ SP.register({ key = "edit", label = "Edit squad", tip = "Names, classes, roles, 
     f.del = W.button(f, "Delete squad", 100, 22, function(self)
       local s = squad()
       if not s then return end
-      if not self.armed then self.armed = true; W.setLabel(self, "Click to confirm"); return end
+      if not self.armed then self.armed = true; W.setLabel(self, "Confirm"); return end
       for i, x in ipairs(Core().db.squads) do if x == s then table.remove(Core().db.squads, i) break end end
       Core().db.active = Core().db.squads[1] and Core().db.squads[1].id or nil
       self.armed = false; W.setLabel(self, "Delete squad"); Core().changed()

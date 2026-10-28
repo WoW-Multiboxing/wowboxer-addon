@@ -303,9 +303,9 @@ function S.composition(s)
   local out, n = {}, { tank = 0, healer = 0 }
   for _, m in ipairs(s and s.members or {}) do if n[m.role] then n[m.role] = n[m.role] + 1 end end
   local size = #(s and s.members or {})
-  if size >= 2 and n.healer == 0 then out[#out + 1] = "No healer in this squad." end
-  if n.tank > 1 then out[#out + 1] = n.tank .. " tanks in this squad." end
-  if size >= 3 and n.tank == 0 then out[#out + 1] = "No tank – fine for questing, hard in dungeons." end
+  if size >= 2 and n.healer == 0 then out[#out + 1] = "No healer" end
+  if n.tank > 1 then out[#out + 1] = n.tank .. " tanks" end
+  if size >= 3 and n.tank == 0 then out[#out + 1] = "No tank – hard in dungeons" end
   return out
 end
 

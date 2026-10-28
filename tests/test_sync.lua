@@ -87,7 +87,7 @@ deliver()
 local chunks = 0
 H.ok(B.ns.Sync.frame and B.ns.Sync.frame:IsShown(), "B: offer card shown")
 H.ok(C.ns.Sync.frame and C.ns.Sync.frame:IsShown(), "C: offer card shown")
-H.ok(B.ns.Sync.frame.text:GetText():find("Dorin", 1, true) and B.ns.Sync.frame.text:GetText():find("(3 characters)", 1, true), "B: who shares what")
+H.ok(B.ns.Sync.frame.text:GetText():find("Dorin", 1, true) and B.ns.Sync.frame.text:GetText():find("(3)", 1, true), "B: who shares what")
 H.eq(#B.ns.Core.db.squads, bSquads, "B: nothing imported before a click")
 H.ok(logHas(A.ns, "offered squad") and logHas(B.ns, "squad offer from Dorin"), "logged on both sides")
 -- B reviews and imports

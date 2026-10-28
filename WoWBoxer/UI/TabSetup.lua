@@ -12,7 +12,7 @@ function tab.build(p)
   -- your keys + window
   local h0 = W.text(p, "GameFontNormal", nil, W.GOLD)
   h0:SetPoint("TOPLEFT", 0, -4)
-  h0:SetText("Your keys and this window")
+  h0:SetText("Keys and window")
   local Bars = ns.Bars
   local function barValues() local v = {}; for _, b in ipairs(Bars.BARS) do v[#v + 1] = { b.first, b.label } end return v end
   local function row(y, label, widget, tip)
@@ -25,24 +25,24 @@ function tab.build(p)
   end
   p.bar1 = W.dropdown(p, { width = 170, values = barValues, get = function() return Core().cdb.primaryBar end,
     set = function(v) Core().cdb.primaryBar = v; Core().cdb.slots = {}; Core().changed() end })
-  row(-22, "Main keys on", p.bar1, "Where Place all puts keys 1–8, the sequences and Follow/Assist. Keys you dragged somewhere yourself stay there.")
+  row(-22, "Main keys", p.bar1, "Where Place all puts keys 1–8, the sequences and Follow/Assist. Keys you dragged somewhere yourself stay there.")
   p.bar2 = W.dropdown(p, { width = 170, values = barValues, get = function() return Core().cdb.secondaryBar end,
     set = function(v) Core().cdb.secondaryBar = v; Core().cdb.slots = {}; Core().changed() end })
-  row(-50, "Other keys on", p.bar2, "Where Place all puts your own keys, Focus and the pet keys.")
+  row(-50, "Other keys", p.bar2, "Where Place all puts your own keys, Focus and the pet keys.")
   p.scale = W.dropdown(p, { width = 170, values = function() return SCALES end,
     get = function() local v = tonumber(Core().db.settings.scale) or 1; return math.floor(v * 10 + 0.5) / 10 end,
     set = function(v) Core().db.settings.scale = v; UI.ApplyWindowSettings() end })
   row(-78, "Window size", p.scale, "Makes this window bigger or smaller. It always fits the screen. Same as /wbx scale.")
-  p.replace = W.check(p, "Place all may replace other buttons", function(_, v) Core().cdb.replace = v; Core().changed() end)
+  p.replace = W.check(p, "Replace buttons", function(_, v) Core().cdb.replace = v; Core().changed() end)
   p.replace:SetPoint("TOPLEFT", -4, -104)
   W.tip(p.replace, "Replace buttons", "Off: a button that holds a spell or item is kept, and that key waits for you to drag it. On: Place all puts the key there.")
-  p.anim = W.check(p, "Animations (keys fly to your bar)", function(_, v) Core().db.settings.animations = v; Core().changed() end)
+  p.anim = W.check(p, "Animations", function(_, v) Core().db.settings.animations = v; Core().changed() end)
   p.anim:SetPoint("TOPLEFT", -4, -126)
   W.tip(p.anim, "Animations", "When WoWBoxer places or updates keys, their icons fly to the action buttons and the buttons flash. Only a picture: it changes nothing.")
-  p.strip = W.check(p, "Sequence strip on action bars", function(_, v) Core().db.settings.seqStrip = v; ns.SeqStrip.markDirty(); ns.SeqStrip.request(); Core().changed() end)
+  p.strip = W.check(p, "Sequence strip", function(_, v) Core().db.settings.seqStrip = v; ns.SeqStrip.markDirty(); ns.SeqStrip.request(); Core().changed() end)
   p.strip:SetPoint("TOPLEFT", -4, -148)
   W.tip(p.strip, "Sequence strip", "Shows the steps of your sequence keys as small icons on the action button and frames the spell that comes next. Only a picture: it changes nothing.")
-  p.guideBtn = W.button(p, "Show the guide", 120, 22, function() ns.Book.ShowGuide() end, "Opens the 3-step guide again on the My keys page.")
+  p.guideBtn = W.button(p, "Guide", 80, 22, function() ns.Book.ShowGuide() end, "Opens the 3-step guide again on the My keys page.")
   p.guideBtn:SetPoint("TOPLEFT", 0, -174)
   p.macrosOnly = W.button(p, "Macros only", 100, 22, function() Core().sync({ macrosOnly = true }) end,
     "Creates or updates your WoWBoxer macros without touching your action bars (drag them yourself from the book).")
@@ -54,7 +54,7 @@ function tab.build(p)
   h1:SetText("Multibox checklist")
   local sf, content = W.scroll(p, LEFT_W - 24, 196)
   sf:SetPoint("TOPLEFT", 0, -222)
-  p.checks = content
+  p.checkSf, p.checks = sf, content
   p.checkPool = W.pool(content, function(parent)
     local r = CreateFrame("Frame", nil, parent)
     r:SetSize(LEFT_W - 28, 36)
@@ -64,8 +64,7 @@ function tab.build(p)
     r.fix:SetPoint("TOPRIGHT", 0, -1)
     r.text = W.text(r, "GameFontHighlightSmall", nil, W.TEXT)
     r.text:SetPoint("TOPLEFT", 20, -2)
-    r.hint = W.text(r, "GameFontHighlightSmall", nil, W.MUTED)
-    r.hint:SetPoint("TOPLEFT", r.text, "BOTTOMLEFT", 0, -1)
+    W.tooltip(r, function(GT) GT:AddLine(r.text:GetText() or "", 1, 0.82, 0); if r.tip and r.tip ~= "" then GT:AddLine(r.tip, 1, 1, 1, true) end end)
     return r
   end)
 
@@ -99,7 +98,7 @@ function tab.build(p)
   p.applyCv = W.button(p, "Apply settings", 130, 22, function() Core().applyCVars(Core().cdb.importCVars) end,
     "Changes the game settings marked Change (they apply to this game installation). The old values are kept so you can restore them.")
   p.applyCv:SetPoint("TOPLEFT", X, -262)
-  p.restore = W.button(p, "Restore old values", 130, 22, function() Core().restoreCVars() end,
+  p.restore = W.button(p, "Restore", 90, 22, function() Core().restoreCVars() end,
     "Puts back the game settings WoWBoxer changed.")
   p.restore:SetPoint("LEFT", p.applyCv, "RIGHT", 6, 0)
 
@@ -112,7 +111,7 @@ function tab.build(p)
   p.addons:SetJustifyV("TOP")
 end
 
-local STATE = { loaded = { "Loaded", W.GREEN }, installed = { "Installed, not loaded", W.ORANGE }, missing = { "Missing", W.RED } }
+local STATE = { loaded = { "Loaded", W.GREEN }, installed = { "Not loaded", W.ORANGE }, missing = { "Missing", W.RED } }
 
 function tab.refresh(p)
   local C, R = ns.Compat, ns.Rules
@@ -134,10 +133,10 @@ function tab.refresh(p)
     r.fixFn = it.fix and it.fix.fn or false
     local tw = LEFT_W - 28 - 20
     if it.fix then W.setLabel(r.fix, it.fix.label); r.fix:Show(); tw = tw - r.fix:GetWidth() - 6 else r.fix:Hide() end
-    r.text:SetWidth(tw); r.hint:SetWidth(tw)
+    r.text:SetWidth(tw)
     r.text:SetText(it.text)
-    r.hint:SetText(it.hint or "")
-    local h = (r.text:GetStringHeight() or 12) + ((it.hint and it.hint ~= "") and ((r.hint:GetStringHeight() or 12) + 1) or 0) + 6
+    r.tip = it.hint
+    local h = (r.text:GetStringHeight() or 12) + 6
     r:SetHeight(math.max(22, math.ceil(h)))
     y = y + math.max(22, math.ceil(h)) + 2
   end
@@ -155,7 +154,8 @@ function tab.refresh(p)
   p.addons:SetText(table.concat(lines, "\n"))
   -- cvars
   local plan, role = Core().cvarPlan(cdb.importCVars)
-  p.cvTitle:SetText("Game settings for a " .. role)
+  p.cvTitle:SetText("Game settings")
+  p.cvRole = role
   p.cvPool:reset()
   local nChange = 0
   for _, c in ipairs(plan) do
