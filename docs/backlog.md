@@ -224,8 +224,9 @@ Built behind probes and tested in the simulator; only the real client can confir
       window" (one click, remembered per character), never on by default. Handshake for WS-C:
       `WoWBoxerDB.bridge.barFit = true` + `bridge.barScale` while it is on, so the app's Auto-fit can leave UI Scale
       alone. Waiting for the owner's go (new feature); needs a taint check on `MainMenuBar:SetScale` in both clients.
-- [ ] Release pipeline part 2: BigWigsMods packager → CurseForge/Wago when the owner makes the repo public (needs his
-      accounts/tokens and the project IDs in the TOC).
+- [x] Release pipeline part 2: CurseForge upload from the tag workflow (`tools/cf_upload.py`, `docs/release.md`); the
+      repo can stay private. Waiting for the owner: CurseForge project + `CF_API_KEY` secret + `CF_PROJECT_ID` variable,
+      then tag `v0.9.0` (beta).
 
 - [x] (1a50919: Macros.localize, token-wise; round-trip test over every engine macro) Non-English clients: macros use the English spell names from the data, so `/cast` fails on e.g. deDE/frFR.
       Design note (Claude Code): build a map English name → `C_Spell.GetSpellName(rank-1 spell ID)` once per login and

@@ -1,17 +1,28 @@
 name: release
-# Runs only when a version tag is pushed (git tag v0.2.0 && git push origin v0.2.0). Same checks as CI, then the zip
-# from tools/package.sh is attached to a GitHub Release. CurseForge/Wago upload (BigWigsMods packager) is added
-# when the repo goes public - see docs/backlog.md.
+# Runs when a version tag is pushed (git tag v0.9.0 && git push origin v0.9.0), or by hand for an existing tag
+# (Actions -> release -> Run workflow, e.g. to upload to CurseForge after the project was set up). Same checks as CI,
+# then the zip from tools/package.sh goes on a GitHub Release and to CurseForge (tools/cf_upload.py; skipped until the
+# CF_API_KEY secret and the CF_PROJECT_ID variable exist - see docs/release.md).
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to release, e.g. v0.9.0"
+        required: true
 permissions:
   contents: write
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -28,12 +39,27 @@ jobs:
           node tools/export_vectors.js
           LUA=lua5.1 tests/run_all.sh
           node share/test.js
+          python3 tools/cf_upload.py --selftest
       - name: Package
-        run: bash tools/package.sh "${GITHUB_REF_NAME#v}"
+        run: |
+          VER="${TAG#v}"
+          bash tools/package.sh "$VER"
+          # changelog: commit subjects since the previous tag
+          PREV=$(git describe --tags --abbrev=0 "$TAG^" 2>/dev/null || true)
+          { echo "## WoWBoxer $VER"; echo; git log --no-merges --format='- %s' ${PREV:+$PREV..}"$TAG" | grep -v -E '^- (docs|tests?|ci)[:(]' | head -40; } > dist/CHANGELOG.md
+          cat dist/CHANGELOG.md
       - name: GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          VER="${GITHUB_REF_NAME#v}"
-          gh release create "$GITHUB_REF_NAME" "dist/WoWBoxer-$VER.zip" --title "WoWBoxer $VER" \
-            --notes "In-game addon for WoW: Forever and Classic Era. Unzip into Interface\\AddOns. See README."
+          VER="${TAG#v}"
+          if gh release view "$TAG" > /dev/null 2>&1; then echo "release $TAG exists"; else
+            gh release create "$TAG" "dist/WoWBoxer-$VER.zip" --title "WoWBoxer $VER" --notes-file dist/CHANGELOG.md \
+              $( [[ "$VER" == 0.* || "$VER" == *-* ]] && echo --prerelease )
+          fi
+      - name: CurseForge
+        env:
+          CF_API_KEY: ${{ secrets.CF_API_KEY }}
+          CF_PROJECT_ID: ${{ vars.CF_PROJECT_ID }}
+          CF_GAME_VERSIONS: ${{ vars.CF_GAME_VERSIONS }}
+        run: python3 tools/cf_upload.py "dist/WoWBoxer-${TAG#v}.zip" "${TAG#v}" dist/CHANGELOG.md
