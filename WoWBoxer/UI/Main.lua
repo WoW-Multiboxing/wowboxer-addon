@@ -133,6 +133,7 @@ function UI.Build()
     UI.panels[tab.key] = p
     tab.build(p)
   end
+  if ns.Help then ns.Help.attach(f) end
   UI.ApplyWindowSettings()
   UI.Select(UI.current)
   return f
@@ -191,9 +192,10 @@ function UI.RefreshNow()
         Core.log("error", "UI " .. tab.key .. ": " .. tostring(err))
         if Core.db.settings.debug then Core.print("|cffff6060UI error:|r " .. tostring(err)) end
       end
-      UI.errText:SetText(ok and "" or "Something went wrong here. Type /wbx log")
+      UI.errText:SetText(ok and "" or "Error – type /wbx log")
     end
   end
+  if ns.Help then ns.Help.onPage() end
 end
 
 --- The player's scale (/wbx scale, Setup; 0.7-1.3), but never bigger than what fits the screen.

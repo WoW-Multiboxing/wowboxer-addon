@@ -130,19 +130,20 @@ function SY.show()
   if not x then o:Hide(); return end
   local text, go, goTip
   if x.kind == "squad" then
-    text = "|cffffd100" .. x.from .. "|r shares squad |cffffd100\"" .. x.name .. "\"|r (" .. x.count .. (x.count == 1 and " character" or " characters") ..
-      "). Review it before you import it here."
+    text = "|cffffd100" .. x.from .. "|r shares |cffffd100\"" .. x.name .. "\"|r (" .. x.count .. ")"
     go, goTip = "Review", "Opens the import preview on the Share page. Nothing changes until you press Import squad there."
   elseif x.kind == "preset" then
-    text = "|cffffd100" .. x.from .. "|r switched to |cffffd100\"" .. x.name .. "\"|r (" .. x.leader .. " leads). Apply it here?"
+    text = "|cffffd100" .. x.from .. "|r: |cffffd100\"" .. x.name .. "\"|r, " .. x.leader .. " leads"
     go, goTip = "Apply", "Makes " .. x.leader .. " the leader in WoWBoxer on this client. Your keys change after you press Update keys."
+  elseif x.kind == "guide" then
+    text, go, goTip = x.text, "Open guide", "Opens the 5-step squad guide on the Squad page."
   else
     text, go, goTip = x.text, "Open squad", "Opens the Squad page."
   end
   o.goTip = goTip
   o.text:SetText(text)
   ns.Widgets.setLabel(o.go, go)
-  ns.Widgets.setLabel(o.no, x.kind == "session" and "Close" or "Ignore")
+  ns.Widgets.setLabel(o.no, (x.kind == "session" or x.kind == "guide") and "Close" or "Ignore")
   local maxW = math.min(460, (UIParent:GetWidth() or 800) * 0.9)
   local w = math.max(300, o.go:GetWidth() + o.no:GetWidth() + 26, math.min(maxW, ns.Widgets.measure(text, "GameFontHighlightSmall") + 24))
   o:SetWidth(w)
@@ -180,6 +181,8 @@ function SY.accept()
       Core().print("Preset \"" .. x.name .. "\" applied. Press Update keys to change your keys.")
       Core().changed()
     end
+  elseif x.kind == "guide" then
+    if ns.Help then ns.Help.ShowSquadGuide() end
   else
     ns.UI.Open("squad")
   end
