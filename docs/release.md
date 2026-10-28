@@ -7,8 +7,7 @@ and the CurseForge upload (`tools/cf_upload.py`). `0.x` and `-rc` versions go ou
 the last tag. To upload an existing tag again: Actions → release → Run workflow → tag.
 
 Game versions come from the TOC `## Interface:` list: 11509 → Classic Era 1.15.9, 16001 → Forever 1.60.1.
-[AFKLAR: does CurseForge list a "1.60.1" game version for WoW: Forever before launch (4 Nov 2026)? If not, the upload
-goes out for Classic Era only and logs a warning; add the ID later in the `CF_GAME_VERSIONS` repo variable.]
+CurseForge knows both (checked 2026-10-28: 1.60.1 = id 17053, 1.15.9 = id 16630). Project ID 1771228.
 
 ## One-time CurseForge setup (the owner, in the browser)
 1. https://authors.curseforge.com → **Create project** → World of Warcraft → Addon. Name `WoWBoxer`, summary and
