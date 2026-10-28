@@ -61,6 +61,24 @@ function KE.extraWarnings(c, sp, filler)
   return out
 end
 
+--- One short line for a warning (the full text goes into the tooltip).
+function KE.shortWarning(w)
+  local one = w:match("^(.-) is a buff or summon:")
+  local many = w:match("^(.-) are buffs or summons:")
+  if one then return one .. ": a buff – put it on its own key" end
+  if many then return many .. ": buffs – put them on their own key" end
+  local slow = w:match("^Long casts: (.-) – ")
+  if slow then return "Long cast: " .. slow end
+  local head = w:match("^(.-)[:;]") or w:match("^(.-)%.%s") or w
+  local words, out = 0, {}
+  for word in head:gmatch("%S+") do
+    words = words + 1
+    if words > 12 then out[#out + 1] = "…"; break end
+    out[#out + 1] = word
+  end
+  return table.concat(out, " ")
+end
+
 --- Save a draft into the member's custom keys (index = nil adds a new one). Returns index or nil, reason.
 function KE.save(m, c, index)
   local list = m.customSeq or {}
@@ -134,9 +152,13 @@ function KE.Build(parent)
   W.ddTip(f.fills, "Filler", "How many times the filler spell is cast between the other steps.")
 
   -- steps strip: icons in order; click removes; drop a spell from the spellbook to add it
-  local sl = W.text(f, "GameFontHighlightSmall", nil, W.MUTED)
+  local sl = W.text(f, "GameFontNormalSmall", nil, W.GOLD)
   sl:SetPoint("TOPLEFT", 10, -112)
-  sl:SetText("Steps (click to remove, drop spells here)")
+  sl:SetText("Steps")
+  sl.wbxCopy = "label"
+  local slHit = CreateFrame("Frame", nil, f)
+  slHit:SetAllPoints(sl)
+  W.tip(slHit, "Steps", "The spells of this key in order. Click a step to remove it; drop a spell from your spellbook here to add it.")
   f.strip = W.box(f, 0.05, 0.04, 0.025, 0.95)
   f.strip:SetPoint("TOPLEFT", 10, -128)
   f.strip:SetSize(312, 34)
@@ -161,20 +183,25 @@ function KE.Build(parent)
     W.tooltip(b, function(GT) GT:AddLine(f.draft.steps[b.i] or "", 1, 0.82, 0); GT:AddLine("Click to remove", 0.66, 0.6, 0.49) end)
     f.stepBtns[i] = b
   end
-  f.fillerText = W.text(f, "GameFontHighlightSmall", nil, W.TEXT)
+  f.fillerText = W.line(f, "GameFontHighlightSmall", nil, W.TEXT)
   f.fillerText:SetPoint("TOPLEFT", f.strip, "BOTTOMLEFT", 0, -6)
   f.fillerText:SetWidth(312)
+  f.fillerText.wbxCopy = "hint"
+  local fHit = CreateFrame("Frame", nil, f)
+  fHit:SetAllPoints(f.fillerText)
+  W.tip(fHit, "Filler", "A sequence key can repeat one spell between the other steps. Pick it with Filler in the spell list; set how often with Filler × N.")
 
   -- spell picker (right)
   local pl = W.text(f, "GameFontNormal", nil, W.GOLD)
   pl:SetPoint("TOPLEFT", 340, -10)
   pl:SetText("Your spells")
-  local sf, content = W.scroll(f, 250, 176)
+  pl.wbxCopy = "label"
+  local sf, content = W.scroll(f, 290, 250)
   sf:SetPoint("TOPLEFT", 340, -30)
-  f.pick = content
+  f.pick, f.pickSf = content, sf
   f.pickPool = W.pool(content, function(par)
     local r = CreateFrame("Frame", nil, par)
-    r:SetSize(246, 22)
+    r:SetSize(286, 22)
     r.icon = W.icon(r, 18)
     r.icon:SetPoint("LEFT", 2, 0)
     r.fill = W.button(r, "Filler", 48, 18, function() f.draft.filler = r.spell.name; KE.Refresh() end,
@@ -182,28 +209,58 @@ function KE.Build(parent)
     r.fill:SetPoint("RIGHT", 0, 0)
     r.add = W.button(r, "Add", 44, 18, function() KE.addStep(r.spell.name) end, "Adds this spell as the next step of the key.")
     r.add:SetPoint("RIGHT", r.fill, "LEFT", -4, 0)
+    r.check = r:CreateTexture(nil, "OVERLAY")
+    r.check:SetSize(14, 14)
+    r.check:SetPoint("RIGHT", r.add, "LEFT", -2, 0)
+    r.check:SetTexture("Interface\\Buttons\\UI-CheckBox-Check")
     r.name = W.line(r, "GameFontHighlightSmall", nil, W.TEXT)
     r.name:SetPoint("LEFT", 24, 0)
-    r.name:SetPoint("RIGHT", r.add, "LEFT", -4, 0)
-    W.tooltip(r, function(GT) GT:AddLine(r.spell and r.spell.name or "", 1, 0.82, 0) end)
+    r.name:SetPoint("RIGHT", r.check, "LEFT", -2, 0)
+    r.name.wbxCopy = "data"
+    W.tooltip(r, function(GT)
+      GT:AddLine(r.spell and r.spell.name or "", 1, 0.82, 0)
+      if r.inKey then GT:AddLine("Already in this key", 0.56, 0.75, 0.42) end
+    end)
     return r
   end)
 
-  -- preview + warnings
+  -- the macro as WoW will run it: one command per line, wraps inside the box, grows downwards with a scroll bar
   local pv = W.box(f, 0.05, 0.04, 0.025, 0.95)
-  pv:SetPoint("TOPLEFT", 10, -196)
-  pv:SetSize(312, 86)
-  f.body = W.text(pv, "GameFontHighlightSmall", 10, { 0.85, 0.94, 0.75 })
-  f.body:SetPoint("TOPLEFT", 6, -6)
-  f.body:SetPoint("BOTTOMRIGHT", -6, 6)
+  pv:SetPoint("TOPLEFT", 10, -186)
+  pv:SetSize(312, 186)
+  local MW = 312 - 12 - W.SCROLLBAR
+  local msf, mc = W.scroll(pv, MW, 186 - 12)
+  msf:SetPoint("TOPLEFT", 6, -6)
+  f.macroSf, f.macroContent = msf, mc
+  f.body = W.text(mc, "GameFontHighlightSmall", 10, { 0.72, 0.8, 0.62 })
+  f.body:SetPoint("TOPLEFT", 0, 0)
+  f.body:SetWidth(MW)
   f.body:SetJustifyV("TOP")
+  if f.body.SetNonSpaceWrap then f.body:SetNonSpaceWrap(true) end
+  f.body.wbxCopy = "data"
   f.info = W.text(f, "GameFontHighlightSmall", nil, W.MUTED)
   f.info:SetPoint("TOPLEFT", pv, "BOTTOMLEFT", 2, -4)
-  f.info:SetWidth(310)
+  f.info.wbxCopy = "status"
+  local iHit = CreateFrame("Frame", nil, f)
+  iHit:SetAllPoints(f.info)
+  W.tooltip(iHit, function(GT) GT:AddLine("Characters", 1, 0.82, 0); GT:AddLine(f.infoTip or "A macro holds at most 255 characters.", 1, 1, 1, true) end)
+  -- warnings: an orange ! and at most two short lines; the full text in the tooltip
+  f.warnIcon = f:CreateTexture(nil, "ARTWORK")
+  f.warnIcon:SetSize(16, 16)
+  f.warnIcon:SetPoint("TOPLEFT", 340, -292)
+  f.warnIcon:SetTexture("Interface\\DialogFrame\\UI-Dialog-Icon-AlertNew")
   f.warn = W.text(f, "GameFontHighlightSmall", nil, W.ORANGE)
-  f.warn:SetPoint("TOPLEFT", 340, -214)
-  f.warn:SetWidth(270)
+  f.warn:SetPoint("TOPLEFT", 362, -294)
+  f.warn:SetWidth(290)
   f.warn:SetJustifyV("TOP")
+  if f.warn.SetMaxLines then f.warn:SetMaxLines(2) end
+  f.warn.wbxCopy = "warn"
+  local wHit = CreateFrame("Frame", nil, f)
+  wHit:SetAllPoints(f.warn)
+  W.tooltip(wHit, function(GT)
+    GT:AddLine("Warnings", 1, 0.54, 0.24)
+    for _, w in ipairs(f.warnList or {}) do GT:AddLine(w, 1, 1, 1, true) end
+  end)
 
   f.save = W.button(f, "Save key", 100, 24, function()
     local _, m = Core().me()
@@ -309,29 +366,46 @@ function KE.Refresh()
     b.i = i
     if n then W.setIcon(b.icon, byName[n] and byName[n].icon or nil); b:Show() else b:Hide() end
   end
-  f.fillerText:SetText(seq and ("Filler: " .. ((d.filler ~= "" and ("|cffffd100" .. d.filler .. "|r")) or "|cff9d9d9dnone – pick one with Filler|r") ..
-    "  ·  repeated " .. d.fills .. "×") or "Priority list: highest first, one /cast line per spell.")
+  f.fillerText:SetText(seq and ((d.filler ~= "" and ("Filler: |cffffd100" .. d.filler .. "|r ×" .. d.fills)) or "|cff9d9d9dNo filler|r")
+    or "Top spell first")
   -- picker
   f.pickPool:reset()
+  local inKey = {}
+  for _, n in ipairs(d.steps) do inKey[n] = true end
+  if d.filler ~= "" then inKey[d.filler] = true end
   local y = 0
   for _, s in ipairs(KE.spellChoices(m, L)) do
     local r = f.pickPool:get()
-    r.spell = s
+    r.spell, r.inKey = s, inKey[s.name] or false
     r:SetPoint("TOPLEFT", 0, -y)
     y = y + 23
     W.setIcon(r.icon, s.icon)
     r.name:SetText(s.name)
+    local c = r.inKey and W.GOLD or W.TEXT
+    r.name:SetTextColor(c[1], c[2], c[3])
+    r.check:SetShown(r.inKey)
     r.fill:SetShown(seq)
   end
   f.pick:SetHeight(math.max(y, 10))
+  W.tidyScroll(f.pickSf, y)
   -- preview
   local r, warn = KE.preview(m, d, L)
-  if r.kind == "empty" then f.body:SetText("|cff9d9d9d(add spells: the macro appears here)|r"); f.info:SetText("")
+  if r.kind == "empty" then f.body:SetText("|cff9d9d9dAdd spells|r"); f.info:SetText(""); f.infoTip = nil
   else
     f.body:SetText(r.macro)
-    f.info:SetText(#r.macro .. " / 255 characters" .. (r.compact and " · shortened to fit" or "") .. (r.tooLong and " |cffff8a80too long|r" or ""))
+    f.info:SetText((r.tooLong and "|cffff8a80" or "") .. #r.macro .. "/255" .. (r.tooLong and "|r" or ""))
+    f.infoTip = #r.macro .. " of 255 characters." .. (r.compact and " Shortened to fit." or "") .. (r.tooLong and " Too long: remove a step." or "")
   end
-  f.warn:SetText(#warn > 0 and table.concat(warn, "\n") or "|cff8fbf6aNo warnings.|r")
+  local th = f.body:GetStringHeight() or 10
+  f.macroContent:SetHeight(math.max(10, math.ceil(th)))
+  W.tidyScroll(f.macroSf, th)
+  f.warnList = warn
+  local short = {}
+  for i, w in ipairs(warn) do if i <= 2 then short[#short + 1] = KE.shortWarning(w) end end
+  if #warn > 2 then short[2] = short[2] .. " (+" .. (#warn - 2) .. ")" end
+  f.warn:SetText(table.concat(short, "\n"))
+  f.warnFull = table.concat(warn, "\n")
+  f.warnIcon:SetShown(#warn > 0)
   f.save:SetEnabled(#d.steps > 0 or (seq and d.filler ~= ""))
 end
 

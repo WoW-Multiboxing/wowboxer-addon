@@ -52,27 +52,25 @@ for _, fileIds in ipairs({ false, true }) do
   -- the book: sections and plain explanations
   UI.Select("keys")
   local heads, helperCell = {}, nil
+  for _, r in ipairs(UI.panels.keys.rules) do if r:IsVisible() then heads[#heads + 1] = r.text:GetText() end end
   for _, b in ipairs(UI.panels.keys.cells) do
-    if b:IsShown() and b.cell then
-      if b.cell.kind == "header" then heads[#heads + 1] = b.cell.label end
-      if b.cell.name == "WBX Follow" then helperCell = b end
-    end
+    if b:IsShown() and b.cell and b.cell.name == "WBX Follow" then helperCell = b end
   end
-  H.ok(table.concat(heads, ","):find("Spell keys", 1, true) and table.concat(heads, ","):find("Helpers", 1, true), tag .. "sections: " .. table.concat(heads, ","))
+  H.ok(table.concat(heads, ","):find("Spells", 1, true) and table.concat(heads, ","):find("Party helpers", 1, true), tag .. "sections: " .. table.concat(heads, ","))
+  H.eq(helperCell and helperCell.name:GetText(), "Follow", tag .. "short helper name")
+  H.ok(helperCell and helperCell.small, tag .. "helpers are the small buttons")
   H.ok(helperCell ~= nil, tag .. "Follow is in the book")
   local lines = {}
   W.env.GameTooltip.AddLine = function(_, t) lines[#lines + 1] = t end
   helperCell._scripts.OnEnter(helperCell)
   local all = table.concat(lines, "\n")
-  H.ok(all:find("Follows", 1, true) and all:find("One press = one action", 1, true) and all:find("because this character follows", 1, true),
+  H.ok(all:find("Follows", 1, true) and all:find("One press, one action", 1, true) and all:find("because this character follows", 1, true),
     tag .. "hover explains what Follow does and why it is there")
   H.ok(all:find("/follow party1", 1, true) ~= nil, tag .. "and shows the macro text")
-  -- a header is not a key
-  local head
-  for _, b in ipairs(UI.panels.keys.cells) do if b:IsShown() and b.cell and b.cell.kind == "header" then head = b end end
-  W.cursor = nil
-  head._scripts.OnDragStart(head)
-  H.eq(W.cursor, nil, tag .. "a section header cannot be dragged")
+  -- a header is a rule, never a key button
+  local bad = 0
+  for _, b in ipairs(UI.panels.keys.cells) do if b.cell and (b.cell.kind == "header" or b.wbxRule) then bad = bad + 1 end end
+  H.eq(bad, 0, tag .. "no section header among the key buttons")
   H.eq(errors(ns), "", tag .. "no errors")
 end
 
@@ -128,7 +126,8 @@ do
   H.ok(not box:IsShown(), "Use it closes the box")
   H.eq(table.concat(f.draft.steps, ","), "Demon Skin,Summon Imp,Immolate", "the editor got the steps")
   H.eq(f.draft.filler, "Shadow Bolt", "and the filler")
-  local warn = f.warn:GetText()
+  local warn = f.warnFull
+  H.ok((f.warn:GetText() or ""):find("buffs – put them on their own key", 1, true) ~= nil, "short warning line: " .. tostring(f.warn:GetText()))
   H.ok(warn:find("Demon Skin, Summon Imp are buffs or summons", 1, true) ~= nil, "warns about buffs and summons in an enemy key: " .. warn)
   H.ok(warn:find("Summon Imp (10 s)", 1, true) ~= nil, "warns about the 10 s summon")
   H.eq(W.calls.CreateMacro, nil, "pasting writes nothing to the game")

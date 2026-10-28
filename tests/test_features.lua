@@ -132,7 +132,7 @@ do
   H.eq(table.concat(labels, ", "), "Pick up, Bind key…, Leave out, Copy…", "menu entries")
   m.rows[3]:Click()
   H.ok(Core.cdb.skip["WBX K3"], "Leave out from the menu")
-  H.ok(row(ns, function(x) return x.name == "WBX K3" end).cell.sub:find("Left out") ~= nil, "shown as Left out")
+  H.ok(row(ns, function(x) return x.name == "WBX K3" end).cell.st.off, "shown as left out (greyed)")
   ns.Book.menuFor(UI.panels.keys, row(ns, function(x) return x.name == "WBX K3" end).cell)[3][2]()
   H.eq(Core.cdb.skip["WBX K3"], nil, "Use again")
   H.eq(#errors(ns), 0, "no errors (drag): " .. table.concat(errors(ns), " | "))
@@ -175,8 +175,11 @@ do
   local list = KB.keysFor("WBX K2", 2)
   H.eq(#list, 3, "K2: F, SHIFT-G and its button key 2")
   UI.Refresh()
-  H.ok((UI.panels.keys.detText._text or ""):find("sG") ~= nil, "keys shown for the selected macro")
-  findButton(W, "Unbind"):Click()
+  H.ok((UI.panels.keys.detSub._text or ""):find("sG") ~= nil, "keys shown for the selected macro")
+  local un
+  for _, it in ipairs(ns.Book.menuFor(UI.panels.keys, row(ns, function(x) return x.name == "WBX K2" end).cell)) do if it[1] == "Unbind" then un = it[2] end end
+  H.ok(un ~= nil, "Unbind in the right-click menu")
+  un()
   H.eq(W.bindings.F, nil, "unbind removes F")
   H.eq(W.bindings["SHIFT-G"], nil, "and SHIFT-G")
   H.eq(W.bindings["2"], "ACTIONBUTTON2", "the button key stays")
@@ -282,11 +285,11 @@ do
   W.env.GetBonusBarOffset = function() return 1 end
   UI.Refresh()
   H.ok(step():find("stance") ~= nil, "stance page on bar 1 explained")
-  findButton(W, "Use Bottom Left"):Click()
+  findButton(W, "Move keys"):Click()
   H.eq(Core.cdb.primaryBar, 61, "one click moves the keys to Bottom Left")
   W.env.GetBonusBarOffset = function() return 0 end
   UI.Refresh()
-  H.ok(step():find("Step 2 of 3") ~= nil, "no warning when all is fine: the next step is placing the keys")
+  H.ok(findButton(W, "Place all") ~= nil, "no warning when all is fine: the next step is placing the keys")
   -- plays as: a solo character becomes a follower via party2
   Core.setPlaysAs("party2")
   local s, m = Core.me()
@@ -433,7 +436,7 @@ do
   H.ok((f.body._text or ""):find("/petattack", 1, true) ~= nil, "warlock key sends the pet")
   H.ok(#(f.body._text or "") <= 255, "within 255 characters")
   pick("Conflagrate")
-  if f.draft.steps[3] == "Conflagrate" then H.ok((f.warn._text or ""):find("Immolate") ~= nil, "Conflagrate warning shown") ; f.stepBtns[3]:Click() end
+  if f.draft.steps[3] == "Conflagrate" then H.ok((f.warnFull or ""):find("Immolate") ~= nil, "Conflagrate warning shown") ; f.stepBtns[3]:Click() end
   f.name:SetText("Dots"); f.name._scripts.OnTextChanged(f.name, true)
   findButton(W, "Save key"):Click()
   local _, m = Core.me()
@@ -448,8 +451,9 @@ do
   -- edit it from the details line
   H.eq(UI.panels.custom.selected, "WBX C1", "the saved key is selected")
   UI.Refresh()
-  H.ok(UI.panels.custom.edit:IsShown(), "Edit shown for an own key")
-  UI.panels.custom.edit:Click()
+  local c1cell = row(ns, function(c) return c.name == "WBX C1" end)
+  H.ok(c1cell ~= nil, "own key in the book")
+  c1cell:Click("LeftButton")
   H.eq(f.index, 1, "editing C1")
   f.draft.kind = "priority"; KE.Refresh()
   H.ok(not f.reset:IsShown(), "no reset option for a priority list")
@@ -460,7 +464,7 @@ do
   UI.Refresh()
   H.ok(row(ns, function(c) return c.kind == "new" end) == nil, "no New own key button at 8 keys")
   H.eq(select(1, KE.save(m, { name = "x", kind = "sequence", aim = "harm", steps = { "Immolate" }, filler = "", fills = 1, reset = "combat" })), nil, "9th key refused")
-  UI.panels.custom.edit:Click()
+  row(ns, function(c) return c.name == "WBX C1" end):Click("LeftButton")
   findButton(W, "Delete key"):Click()
   findButton(W, "Sure?"):Click()
   H.eq(#m.customSeq, 7, "deleted with two clicks")

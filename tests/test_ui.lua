@@ -63,7 +63,7 @@ for _, scenario in ipairs({
   H.ok(anyText(W, "^Step 3 of 3") ~= nil, tag .. "guide step 3")
   findButton(W, "Close"):Click()
   H.ok(not guide:IsShown(), tag .. "guide closed")
-  H.ok(anyText(W, "All keys are on your bars") ~= nil, tag .. "next step: all done")
+  H.ok(anyText(W, "All keys on your bars") ~= nil, tag .. "next step: all done")
   -- plain words: no internal macro names or status codes on the page
   H.ok(anyText(W, "WBX K%d") == nil and anyText(W, "noslot") == nil, tag .. "plain words on the page")
   -- every visible button has a tooltip
@@ -146,14 +146,14 @@ for _, scenario in ipairs({
   W.fire("PLAYER_LEVEL_UP", W.player.level)
   W.flush()
   if UI.offer and UI.offer:IsShown() then
-    findButton(W, "Update keys"):Click()
+    findButton(W, "Update"):Click()
     H.eq(Core.compute().macros.changes, 0, tag .. "toast updates keys")
   end
   -- combat: buttons disabled, nothing written
   W.combat = true
   UI.Select("keys")
   H.ok(anyText(W, "In combat") ~= nil, tag .. "combat explained in the next step")
-  UI.panels.keys.cells[2]:Click("LeftButton") -- cell 1 is the "Spell keys" header
+  UI.panels.keys.cells[1]:Click("LeftButton")
   H.ok(not findButton(W, "Bind key"):IsEnabled(), tag .. "Bind key disabled in combat")
   W.combat = false
   -- slash commands
@@ -184,7 +184,7 @@ local function layoutPass(screen, opts)
   check("guide step 1")
   UI.panels.keys.guide.next:Click()
   check("guide step 2")
-  findButton(W, "I'll drag them myself"):Click()
+  findButton(W, "Drag myself"):Click()
   check("guide step 3")
   findButton(W, "Close"):Click()
   for _, t in ipairs(UI.tabs) do UI.Select(t.key); check("tab " .. t.key) end

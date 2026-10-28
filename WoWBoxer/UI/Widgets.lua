@@ -121,13 +121,36 @@ function W.check(parent, label, onClick)
   return c
 end
 
+--- The template's scroll bar: arrows get a tooltip; the bar hides when the content fits (contentH given).
+--- No unlabeled buttons (docs/ui-spec-v3-book.md, key editor).
+function W.tidyScroll(sf, contentH)
+  local bar = rawget(sf, "ScrollBar")
+  if type(bar) ~= "table" then return end
+  if not rawget(bar, "wbxTips") then
+    bar.wbxTips = true
+    for _, k in ipairs({ { "ScrollUpButton", "Scroll up" }, { "ScrollDownButton", "Scroll down" } }) do
+      local b = rawget(bar, k[1])
+      if type(b) == "table" and b.HookScript then
+        b:HookScript("OnEnter", function(self) local GT = _G.GameTooltip; GT:SetOwner(self, "ANCHOR_RIGHT"); GT:AddLine(k[2], 1, 0.82, 0); GT:Show() end)
+        b:HookScript("OnLeave", function() _G.GameTooltip:Hide() end)
+      end
+    end
+  end
+  if contentH then
+    local fits = contentH <= (sf:GetHeight() or 0) + 1
+    if fits and bar.Hide then bar:Hide() elseif bar.Show then bar:Show() end
+  end
+end
+
 --- Scroll area with a content frame. Returns scroll, content.
 function W.scroll(parent, width, height)
   local sf = W.frame("ScrollFrame", parent, "UIPanelScrollFrameTemplate")
+  sf.scrollBarHideable = true
   sf:SetSize(width, height)
   local content = CreateFrame("Frame", nil, sf)
   content:SetSize(width, height)
   sf:SetScrollChild(content)
+  W.tidyScroll(sf)
   return sf, content
 end
 
@@ -144,6 +167,7 @@ function W.editBox(parent, width, height)
   eb:SetMaxLetters(20000)
   eb:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
   sf:SetScrollChild(eb)
+  W.tidyScroll(sf)
   local bg = W.box(parent, 0.04, 0.03, 0.02, 0.95)
   bg:SetPoint("TOPLEFT", sf, "TOPLEFT", -4, 4)
   bg:SetPoint("BOTTOMRIGHT", sf, "BOTTOMRIGHT", 4, -4)

@@ -78,15 +78,27 @@ function UI.Build()
   close:SetSize(28, 28)
   close:SetPoint("TOPRIGHT", -4, -4)
   close:SetScript("OnClick", function() f:Hide() end)
-  -- character line between the title and the close button, one line, full text in the tooltip
+  -- character line between the title and the help/close buttons: "Name · Warlock 4 · Follower" + a small client tag;
+  -- squad, leader and client in the tooltip
   local whoHit = CreateFrame("Frame", nil, f)
   whoHit:SetPoint("TOPLEFT", 112, -14)
-  whoHit:SetPoint("TOPRIGHT", -40, -14)
+  whoHit:SetPoint("TOPRIGHT", -100, -14)
   whoHit:SetHeight(18)
   UI.who = W.line(whoHit, "GameFontHighlightSmall", nil, W.TEXT)
   UI.who:SetPoint("LEFT", 0, 0)
   UI.who:SetPoint("RIGHT", 0, 0)
-  W.tooltip(whoHit, function(GT) GT:AddLine(UI.who:GetText() or "", 1, 1, 1, true) end)
+  UI.who.wbxCopy = "data"
+  W.tooltip(whoHit, function(GT)
+    GT:AddLine(UI.who:GetText() or "", 1, 0.82, 0)
+    for _, l in ipairs(UI.whoTip or {}) do GT:AddLine(l, 1, 1, 1, true) end
+  end)
+  UI.tag = W.text(f, "GameFontNormalSmall", nil, { 0.85, 0.7, 0.42 }, "RIGHT")
+  UI.tag:SetPoint("TOPRIGHT", -72, -16)
+  UI.tag.wbxCopy = "status"
+  local tagHit = CreateFrame("Frame", nil, f)
+  tagHit:SetAllPoints(UI.tag)
+  W.tip(tagHit, "Classic Era", "This client is Classic Era. WoWBoxer uses WoW: Forever data; spells and talents can differ here.")
+  UI.tagHit = tagHit
   UI.errText = W.line(f, "GameFontHighlightSmall", nil, W.RED, "RIGHT")
   UI.errText:SetPoint("BOTTOMRIGHT", -(UI.TAB_W + 14), 3)
   UI.errText:SetWidth(260)
@@ -157,14 +169,20 @@ function UI.RefreshNow()
   local _, m = Core.me()
   local info = Core.playerInfo()
   local cls = D().classes[info.cls or ""]
-  local line = W.hex(W.classColor(info.cls)) .. (info.name or "?") .. "|r · " .. (cls and cls.n or "?") .. " · Level " .. tostring(info.level)
+  local line = W.hex(W.classColor(info.cls)) .. (info.name or "?") .. "|r · " .. (cls and cls.n or "?") .. " " .. tostring(info.level)
+  local tip = {}
   if m then
     local s = Core.me()
     local L = ns.State.leaderOf(s)
-    line = line .. " · " .. (m.leader and "Leader" or ("follows " .. (L and L.name or "the leader") .. " (" .. m.unit .. ")"))
-    if #s.members > 1 then line = line .. " · squad " .. s.name end
+    line = line .. " · " .. (m.leader and "Leader" or "Follower")
+    if not m.leader then tip[#tip + 1] = "Follows " .. (L and L.name or "the leader") .. " (" .. m.unit .. ")" end
+    tip[#tip + 1] = "Squad: " .. s.name .. " (" .. #s.members .. ")"
   end
-  if ns.Compat.game() ~= "forever" then line = line .. " · |cffd9b36cClassic Era (Forever data)|r" end
+  local era = ns.Compat.game() ~= "forever"
+  tip[#tip + 1] = era and "Classic Era client, WoW: Forever data" or "WoW: Forever"
+  UI.whoTip = tip
+  UI.tag:SetText(era and "Era" or "")
+  UI.tagHit:SetShown(era)
   UI.who:SetText(line)
   for _, tab in ipairs(UI.tabs) do
     if tab.key == UI.current and tab.refresh then
@@ -229,19 +247,23 @@ function UI.ShowOffer(ctx)
     o.text = W.text(o, "GameFontHighlightSmall", nil, W.TEXT)
     o.text:SetPoint("TOPLEFT", 12, -10)
     o.text:SetPoint("TOPRIGHT", -12, -10)
-    o.go = W.button(o, "Update keys", 100, 22, function() o:Hide(); ns.Core.sync({ replace = ns.Core.cdb.replace }) end,
+    o.go = W.button(o, "Update", 80, 22, function() o:Hide(); ns.Core.sync({ replace = ns.Core.cdb.replace }) end,
       "Updates the changed WoWBoxer macros. They stay on the same action buttons and keys.")
     o.go:SetPoint("BOTTOMRIGHT", -10, 8)
     o.later = W.button(o, "Later", 60, 22, function() o:Hide() end, "Closes this. Open WoWBoxer (/wbx or the minimap button) whenever you like.")
     o.later:SetPoint("RIGHT", o.go, "LEFT", -6, 0)
+    o.text.wbxCopy = "hint"
+    local hit = CreateFrame("Frame", nil, o)
+    hit:SetAllPoints(o.text)
+    W.tooltip(hit, function(GT) GT:AddLine(o.text:GetText() or "", 1, 0.82, 0); GT:AddLine(o.tip or "", 1, 1, 1, true) end)
     UI.offer = o
   end
   local o = UI.offer
   local names = {}
-  for _, it in ipairs(ctx.macros.items) do if (it.status == "create" or it.status == "update") and #names < 3 then names[#names + 1] = it.label end end
+  for _, it in ipairs(ctx.macros.items) do if it.status == "create" or it.status == "update" then names[#names + 1] = ns.Book.shortLabel(it) end end
   local n = ctx.macros.changes
-  local text = "|cffffd100Level " .. ctx.level .. ":|r " .. n .. (n == 1 and " key changed" or " keys changed") ..
-    (#names > 0 and (" (" .. table.concat(names, ", ") .. (n > #names and ", …" or "") .. ")") or "") .. ". Same buttons, new spells."
+  local text = "|cffffd100Level " .. ctx.level .. ":|r " .. n .. (n == 1 and " key changed" or " keys changed")
+  o.tip = table.concat(names, ", ") .. ". Same buttons, new spells."
   o.text:SetText(text)
   local maxW = math.min(480, (UIParent:GetWidth() or 800) * 0.9)
   local want = W.measure(text, "GameFontHighlightSmall") + 24
