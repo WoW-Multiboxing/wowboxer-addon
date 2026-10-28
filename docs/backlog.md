@@ -226,7 +226,7 @@ Built behind probes and tested in the simulator; only the real client can confir
       alone. Waiting for the owner's go (new feature); needs a taint check on `MainMenuBar:SetScale` in both clients.
 - [x] Release pipeline part 2: CurseForge upload from the tag workflow (`tools/cf_upload.py`, `docs/release.md`); the
       repo can stay private. Waiting for the owner: CurseForge project + `CF_API_KEY` secret + `CF_PROJECT_ID` variable,
-      then tag `v0.9.0` (beta).
+      then re-run the release workflow for `v0.9.0` (already tagged: GitHub pre-release with the zip).
 
 - [x] (1a50919: Macros.localize, token-wise; round-trip test over every engine macro) Non-English clients: macros use the English spell names from the data, so `/cast` fails on e.g. deDE/frFR.
       Design note (Claude Code): build a map English name → `C_Spell.GetSpellName(rank-1 spell ID)` once per login and
