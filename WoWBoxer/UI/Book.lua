@@ -760,7 +760,6 @@ local function refresh(p, ctx)
   if not ctx then if p.det then p.det:Hide() end; return end
   if p.role then p.role.Refresh(); p.playsAs.Refresh(); p.seq.Refresh() end
 
-  local PW = Book.pageGeom()
   local pages, spread
   if p.mode == "keys" then
     spread = Book.spread(ctx)
@@ -794,7 +793,7 @@ local function refresh(p, ctx)
     local y = 62
     local hc = spread.helpers.cells
     if #hc > 0 then
-      local r = getRule(p, ri); ri = ri + 1
+      local r = getRule(p, ri)
       r:SetParent(p.right); r:ClearAllPoints()
       r:SetPoint("TOPLEFT", p.right, "TOPLEFT", 0, -y)
       r.text:SetText(spread.helpers.title)
@@ -835,7 +834,6 @@ local function refresh(p, ctx)
     p.slots:SetText(used .. "/" .. charMax .. " macros")
     p.slotsTip = used .. " of " .. charMax .. " character macro slots used."
   end
-  local _ = PW
   if ns.KeyEditor.IsOpen() then ns.KeyEditor.Refresh() end
   if p.guide then Book.refreshGuide(p, ctx) end
 end
