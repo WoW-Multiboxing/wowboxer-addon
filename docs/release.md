@@ -14,7 +14,8 @@ goes out for Classic Era only and logs a warning; add the ID later in the `CF_GA
    description below, licence MIT, categories **Action Bars** and **Miscellaneous**, logo: any square image.
 2. CurseForge reviews new projects (usually a day). Copy the **Project ID** from the project page (right side).
 3. https://legacy.curseforge.com/account/api-tokens → generate a token named `wowboxer-release`.
-4. In this terminal: `! gh secret set CF_API_KEY` (paste the token) and `! gh variable set CF_PROJECT_ID --body <id>`.
+4. github.com/WoW-Multiboxing/wowboxer-addon → Settings → Secrets and variables → Actions: secret `CF_API_KEY` = the
+   token, variable `CF_PROJECT_ID` = the project ID.
    Then tell Claude "CurseForge ready" – Claude tags the release.
 
 ## Project page text
