@@ -3,7 +3,8 @@
 A version tag does everything: `git tag v0.9.0 && git push origin v0.9.0` runs `.github/workflows/release.yml` –
 all checks, `tools/package.sh` (one `WoWBoxer/` folder, version stamped into the TOC, LICENSE.txt), a GitHub Release
 and the CurseForge upload (`tools/cf_upload.py`). `0.x` and `-rc` versions go out as **beta**, from `1.0.0` as
-**release**. To upload an existing tag again: Actions → release → Run workflow → tag.
+**release**. Changelog: `docs/changes/<version>.md` (short, for players) or, without it, the commit subjects since
+the last tag. To upload an existing tag again: Actions → release → Run workflow → tag.
 
 Game versions come from the TOC `## Interface:` list: 11509 → Classic Era 1.15.9, 16001 → Forever 1.60.1.
 [AFKLAR: does CurseForge list a "1.60.1" game version for WoW: Forever before launch (4 Nov 2026)? If not, the upload

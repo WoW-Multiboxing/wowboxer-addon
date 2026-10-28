@@ -44,9 +44,11 @@ jobs:
         run: |
           VER="${TAG#v}"
           bash tools/package.sh "$VER"
-          # changelog: commit subjects since the previous tag
-          PREV=$(git describe --tags --abbrev=0 "$TAG^" 2>/dev/null || true)
-          { echo "## WoWBoxer $VER"; echo; git log --no-merges --format='- %s' ${PREV:+$PREV..}"$TAG" | grep -v -E '^- (docs|tests?|ci)[:(]' | head -40; } > dist/CHANGELOG.md
+          # changelog: docs/changes/<version>.md if written, else commit subjects since the previous tag
+          if [ -f "docs/changes/$VER.md" ]; then cp "docs/changes/$VER.md" dist/CHANGELOG.md; else
+            PREV=$(git describe --tags --abbrev=0 "$TAG^" 2>/dev/null || true)
+            { echo "## WoWBoxer $VER"; echo; git log --no-merges --format='- %s' ${PREV:+$PREV..}"$TAG" | grep -v -E '^- (docs|tests?|ci|release)[:(/]' | head -30; } > dist/CHANGELOG.md
+          fi
           cat dist/CHANGELOG.md
       - name: GitHub Release
         env:
