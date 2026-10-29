@@ -1,10 +1,10 @@
 # WoWBoxer addon – backlog
 
-## The owner: in-game check of Squad v2 (0.9.3, 2–3 Classic Era clients in one party, Dorin leads)
-1. Restart WoW. On Dorin: `/wbx` → **Squad** → **Use my party (2)**; click a crown, change a role, add one character by name.
-2. **Send to my other characters**; on each other client: card → **Review** → **Import**, then My keys → **Place all**.
-3. On Dorin press the **Invite squad** key (others accept by hand); on a follower press **Follow** and **Assist**.
-4. `/reload` everywhere: no reminder for what you already saw. PrtScn the Squad page, then tell Claude "done".
+## The owner: in-game check of 0.9.5 (one Classic Era client is enough)
+1. Restart WoW, `/wbx` → My keys: click a key → **Bind key** → press **4**: the key lands on button 4, no warning.
+2. Bind another key to a key with something on its button: plain question, then **Put it there**.
+3. Press **Place spells** (left) and **Place squad keys** (right); both put only their page's keys on the bars.
+4. Setup: "Clear target on click" and the nameplate rows → **Apply**; `/reload` and tell Claude "done".
 
 ## The owner: screenshots for the website (one client, any character, ~2 min)
 1. Log in, `/wbx`, then Print Screen on **My keys**, **All spells**, **Talents**, **Squad** and **Setup** (one each).
@@ -36,7 +36,7 @@ minimap button, much more drag & drop of macros onto the action bars.
       `cvarProbe`), only existing ones offered; Setup hides settings the client does not have.
 - [x] 2. Place spells (left page) + Place squad keys (right page).
 - [x] 3. Bind key: action-button keys are not conflicts; plain-language questions.
-- [ ] 4. Release.
+- [x] 4. Release 0.9.5.
 
 ## Squad v2 – simple (docs/squad-v2-simple.md, the owner 2026-10-29)
 - [x] 1. Templates removed; nothing switches the active squad as a side effect (Duplicate gone too).
