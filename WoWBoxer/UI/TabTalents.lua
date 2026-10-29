@@ -1,5 +1,5 @@
---[[ WoWBoxer – Talents tab: the character's guide (or own build from the companion), what to take at this level,
-  and the whole point order by level. Forever talent data; on other clients it is shown with a warning. ]]
+--[[ WoWBoxer – Talents tab: the character's guide (picked from a list that shows each guide's source and type) or
+  own build, what to take at this level, "plan ahead" to a chosen level, and the whole point order by level. Forever talent data; on other clients it is shown with a warning. ]]
 local _, ns = ...
 local UI, W = ns.UI, ns.Widgets
 local tab = { key = "talents", label = "Talents", icon = "Ability_Marksmanship", tip = "The talent order of your guide and the next point to take." }
@@ -18,13 +18,13 @@ function tab.build(p)
       local _, m = ns.Core.me()
       local v = {}
       if not m then return v end
-      for _, g in ipairs(ns.Kit.guidesOf(m.cls)) do v[#v + 1] = { g.id, g.label .. (g.default and " *" or "") } end
+      for _, g in ipairs(ns.Kit.guidesOf(m.cls)) do v[#v + 1] = { g.id, g.label .. (g.default and " *" or ""), tab.guideTip(g) } end
       return v
     end,
     get = function() local _, m = ns.Core.me(); return m and m.guide end,
     set = function(v) local _, m = ns.Core.me(); if m then m.guide = v; ns.Core.changed() end end })
   p.guide:SetPoint("LEFT", lg, "RIGHT", 6, 0)
-  W.ddTip(p.guide, "Guide", "The talent guide WoWBoxer follows for this character. * = recommended for your role.")
+  W.ddTip(p.guide, "Guide", "The talent guide WoWBoxer follows for this character. * = recommended for your role. Each guide shows its source and type when you hover it in the list.")
   p.kind = W.text(p, "GameFontHighlightSmall", nil, W.GREEN)
   p.kind:SetPoint("TOPLEFT", 0, -30)
   p.kind:SetWidth(LEFT_W)
@@ -57,6 +57,13 @@ function tab.build(p)
   p.source:SetPoint("TOPLEFT", p.readback, "BOTTOMLEFT", 0, -8)
   p.source:SetWidth(LEFT_W)
   p.source.wbxCopy = "data" -- guide source + the licence credit (exact wording required)
+  p.aheadText = W.text(p, "GameFontHighlightSmall", nil, { 0.85, 0.72, 1 })
+  p.aheadText:SetPoint("TOPLEFT", p.readback, "BOTTOMLEFT", 0, -8)
+  p.aheadText:SetWidth(LEFT_W)
+  if p.aheadText.SetMaxLines then p.aheadText:SetMaxLines(3) end
+  p.aheadText.wbxCopy = "data"
+  p.source:ClearAllPoints()
+  p.source:SetPoint("TOPLEFT", p.aheadText, "BOTTOMLEFT", 0, -8)
   p.prio = W.text(p, "GameFontHighlightSmall", nil, W.TEXT)
   p.prio:SetPoint("TOPLEFT", p.source, "BOTTOMLEFT", 0, -8)
   p.prio:SetWidth(LEFT_W)
@@ -66,6 +73,18 @@ function tab.build(p)
   local head = W.text(p, "GameFontNormal", nil, W.GOLD)
   head:SetPoint("TOPLEFT", LEFT_W + 16, -30)
   head:SetText("Point order")
+  -- plan ahead: the points from now up to a chosen level (display only; you spend them in the game)
+  p.ahead = W.dropdown(p, { width = 120,
+    values = function()
+      local v, L = {}, ns.Compat.playerLevel()
+      for _, x in ipairs({ L + 1, L + 2, L + 5, L + 10 }) do if x <= 60 then v[#v + 1] = { x, "Plan to " .. x } end end
+      if L < 60 then v[#v + 1] = { 60, "Plan to 60" } end
+      return v
+    end,
+    get = function() return tab.planTo() end,
+    set = function(v) ns.Core.cdb.planTo = v; ns.Core.changed() end })
+  p.ahead:SetPoint("TOPRIGHT", p, "TOPRIGHT", -4, -26)
+  W.ddTip(p.ahead, "Plan ahead", "Highlights your guide's points from now up to this level and sums them up. Display only: you spend the points in the game's talent window.")
   local sf, content = W.scroll(p, LIST_W, 340)
   sf:SetPoint("TOPLEFT", LEFT_W + 16, -50)
   p.list = content
@@ -90,6 +109,39 @@ function tab.build(p)
   end)
 end
 
+local KIND_SHORT = { ["exact-order"] = "Exact order", ["final-derived"] = "Final build, order by WoWBoxer", priorities = "Priorities only",
+  adaptation = "Adaptation" }
+--- A guide's source and type in one tooltip text.
+function tab.guideTip(g)
+  local src = g.source or {}
+  local parts = { (KIND_SHORT[g.kind] or g.kind or "?") .. "." }
+  parts[#parts + 1] = "Source: " .. (src.site or "?") .. (src.author and (", " .. src.author) or "") .. (src.updated and (" (" .. src.updated .. ")") or "") .. "."
+  if src.scope then parts[#parts + 1] = "Levels " .. src.scope .. "." end
+  if g.note and g.note ~= "" then parts[#parts + 1] = g.note end
+  return table.concat(parts, " ")
+end
+--- The level "Plan ahead" looks to (default: 5 levels on, at most 60).
+function tab.planTo()
+  local L = ns.Compat.playerLevel()
+  local v = tonumber(ns.Core.cdb.planTo)
+  if not v or v <= L then v = math.min(60, L + 5) end
+  return v
+end
+--- {points, text} for the guide's points after level `from` up to level `to`.
+function tab.aheadSummary(m, order, from, to)
+  local E, T = ns.Engine, ns.Kit.tree(m.cls)
+  local a, b = E.pointsAt(from, m.talented), E.pointsAt(to, m.talented)
+  local counts, seen = {}, {}
+  for i = a + 1, math.min(b, #order) do
+    local k = order[i]
+    if T.byKey[k] then if not counts[k] then seen[#seen + 1] = k end counts[k] = (counts[k] or 0) + 1 end
+  end
+  local parts = {}
+  for _, k in ipairs(seen) do parts[#parts + 1] = T.byKey[k].n .. (counts[k] > 1 and (" x" .. counts[k]) or "") end
+  local n = math.max(0, math.min(b, #order) - a)
+  return n, n > 0 and ("By level " .. to .. ": " .. n .. (n == 1 and " point – " or " points – ") .. table.concat(parts, ", ")) or ""
+end
+
 function tab.refresh(p)
   local Core, K, E = ns.Core, ns.Kit, ns.Engine
   local _, m = Core.me()
@@ -101,7 +153,7 @@ function tab.refresh(p)
   local g = K.guide(m.cls, m.guide)
   local level = ns.Compat.playerLevel()
   local warn = ns.Compat.isForever() and "" or "|cffd9b36c(WoW: Forever talents – this client differs)|r "
-  if kind == "build" then p.kind:SetText(warn .. "Your own build from the companion (" .. #order .. " points)")
+  if kind == "build" then p.kind:SetText(warn .. "Your own build (" .. #order .. " points)")
   else p.kind:SetText(warn .. (g and (KIND[g.kind] or g.kind) or "No guide")) end
   local have = E.pointsAt(level, m.talented)
   -- next point
@@ -134,6 +186,11 @@ function tab.refresh(p)
   else p.source:SetText("Talent data: Zephras (zephras.com), CC BY 4.0, changed by WoWBoxer; The Forever Era") end
   p.prio:SetText(g and g.kind == "priorities" and g.priorities and g.priorities:sub(1, 600) or "")
   p.readback:SetText(tab.readbackText(m, level))
+  p.ahead.Refresh()
+  local to = tab.planTo()
+  local _, aheadText = tab.aheadSummary(m, order, level, to)
+  p.aheadText:SetText(aheadText)
+  local toIdx = E.pointsAt(to, m.talented)
   -- list
   local y, counts, current = 0, {}, nil
   for i, key in ipairs(order) do
@@ -148,8 +205,10 @@ function tab.refresh(p)
       r.name:SetText(n.n)
       r.rank:SetText(counts[key] .. "/" .. n.m)
       local past, now = i < nextIdx, i == nextIdx
+      local planned = not past and not now and i <= toIdx
       if now then current = y end
-      r.bg:SetColorTexture(1, 0.82, 0, now and 0.18 or (i % 2 == 0 and 0.03 or 0))
+      if planned then r.bg:SetColorTexture(0.6, 0.45, 1, 0.12)
+      else r.bg:SetColorTexture(1, 0.82, 0, now and 0.18 or (i % 2 == 0 and 0.03 or 0)) end
       local c = past and W.MUTED or W.TEXT
       r.name:SetTextColor(c[1], c[2], c[3])
       local lc = now and W.GOLD or c

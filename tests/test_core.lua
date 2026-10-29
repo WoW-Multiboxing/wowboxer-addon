@@ -209,4 +209,28 @@ do
   H.eq(W.calls.CreateMacro and W.calls.CreateMacro > 0 and "ok" or "ok", "ok", "display only")
 end
 
+-- Talents: the guide list shows source + type; plan ahead sums up the next points (display only)
+do
+  local W = Mock.new(H, { name = "Dorin", class = "PALADIN", level = 20 })
+  local ns = H.loadAddon({ env = W.env })
+  W.fire("ADDON_LOADED", "WoWBoxer"); W.fire("PLAYER_LOGIN")
+  ns.Core.cdb.guide = "done"
+  ns.UI.Open("talents")
+  local p = ns.UI.panels.talents
+  local tab
+  for _, t in ipairs(ns.UI.tabs) do if t.key == "talents" then tab = t end end
+  local vals = p.guide.opts.values()
+  H.ok(#vals > 1, "several guides to pick from")
+  H.ok(vals[1][3]:find("Source: ", 1, true) and (vals[1][3]:find("order", 1, true) or vals[1][3]:find("Priorities", 1, true) or vals[1][3]:find("Adaptation", 1, true)),
+    "each guide's tooltip has its type and source: " .. vals[1][3])
+  H.ok(p.source:GetText():find("Zephras (zephras.com), CC BY 4.0, changed by WoWBoxer; The Forever Era", 1, true), "the data credit")
+  p.ahead.select(30)
+  H.eq(ns.Core.cdb.planTo, 30, "plan to level 30")
+  local _, m = ns.Core.me()
+  local n, text = tab.aheadSummary(m, ns.Kit.plan(m), 20, 30)
+  H.eq(n, 10, "ten points from 20 to 30")
+  H.ok(p.aheadText:GetText() == text and text:find("By level 30: 10 points", 1, true), "plan ahead summary: " .. tostring(p.aheadText:GetText()))
+  H.eq(W.calls.LearnTalent, nil, "nothing is spent in the game")
+end
+
 os.exit(H.report("core") and 0 or 1)
