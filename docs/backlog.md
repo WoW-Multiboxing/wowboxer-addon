@@ -1,10 +1,10 @@
 # WoWBoxer addon – backlog
 
-## The owner: in-game check of 0.11.0 (2–3 Classic Era clients, Dorin leads)
-1. On every client: `/wbx` → Setup → **Automation…** → **Levelling squad**.
-2. Dorin accepts a quest: the others get the share and accept it; turn it in on all (each opens the NPC himself).
-3. Dorin picks a gossip line / flight with the others' same window open: they pick the same. Visit a vendor: junk sold.
-4. Hold **Shift** at a vendor: nothing happens. `/reload` everywhere, tell Claude "done" (also from 0.10.0: Give 3 back).
+## The owner: in-game check of 0.12.0
+1. Follower: Setup → **Apply** → "Clear target on click" OK; `/reload` → still OK (Sticky Targeting unticked in Options).
+2. Paladin (Classic Era, Boxtester): at login **Fix now** → press 3: action button 3 works again (keybind 3).
+3. Right-click the minimap button → **First-run guide**: it starts at step 1 (also right-click on **?**).
+4. Header **Reset** → tick Action bars → type RESET: your bars are as before WoWBoxer. `/reload`, tell Claude "done".
 
 ## The owner: screenshots for the website (one client, any character, ~2 min)
 1. Log in, `/wbx`, then Print Screen on **My keys**, **All spells**, **Talents**, **Squad** and **Setup** (one each).
@@ -30,6 +30,17 @@ minimap button, much more drag & drop of macros onto the action bars.
 6. On the warlock: My keys – check the **Helpers** section (hover Follow) and that Follow/Assist/Pet show real icons on
    the bar after **Update keys**. Custom keys → New own key → **Paste…** your macro → read the warnings → **Copy…**.
 7. On Dorin: Squad → Home, Readiness, Key map and Plan – PrtScn each. Then `/reload` on every client and tell Claude "done".
+
+## Feedback 30 Oct night (docs/feedback-2026-10-30-night.md)
+- [x] 1. One Macro editor for every entry point; KeyEditor is its Spells section; own-macro flows end to end + diagnose (test_ownmacros).
+- [x] 2. CVars through Settings.GetSetting (deselectOnClick negated), read back, Didn't stick + Open Options, cvarLog in the diagnose.
+- [x] 3. Keybinds: broken 1–= keys = their action button; login popup Fix now; one write layer (Binds/Bars, source= logs, lint rule);
+      binding set kept; diagnose buttons 1–12. The owner's Boxtester "bind 3 MACRO WBX K2" is detected (read_log + SavedVariables).
+- [x] 4. First-run guide restarts at step 1 (minimap/compartment menu, ? right-click, /wbx guide).
+- [x] 5. Accept from (Squad / Squad, friends and guild / Everyone with a warning), per-row override in Advanced.
+- [x] 6. Automation bookmark, guide step, nudge once per character, Setup line, checklist line, share string carries it.
+- [x] 7. Reset in the header; cdb.barOriginal; restores bars, keybinds, CVars; deletes WBX macros; lists what it could not restore.
+- [ ] In game: Settings.OpenToCategory id on Era/Forever [AFKLAR]; Sticky Targeting through Settings on Forever.
 
 ## Automation policy (docs/automation-policy.md, the owner 2026-10-29 23:41)
 - [x] CLAUDE.md hard rules 1 + 5 replaced (no input broadcasting; addon automation via WoW's API as squad-only options);
