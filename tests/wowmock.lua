@@ -20,7 +20,8 @@ function Mock.new(H, opts)
   W.acc, W.char = {}, {}
   W.actions, W.cursor = {}, nil
   W.cvars = opts.cvars or { autoLootDefault = "0", deselectOnClick = "1", autoSelfCast = "1", maxfpsbk = "8", Sound_EnableSoundWhenGameIsInBG = "1",
-    Sound_EnableErrorSpeech = "1", showTargetOfTarget = "0", ActionButtonUseKeyDown = "1", autoClearAFK = "1" }
+    Sound_EnableErrorSpeech = "1", showTargetOfTarget = "0", ActionButtonUseKeyDown = "1", autoClearAFK = "1",
+    nameplateShowEnemies = "0", nameplateShowFriends = "0", showVKeyCastbar = "0" }
   W.addons = opts.addons or { Questie = "loaded", Leatrix_Plus = "installed" }
   local seq = 0
 

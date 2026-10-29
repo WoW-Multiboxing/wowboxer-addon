@@ -65,7 +65,7 @@ end
 -- Every entry is checked on the running client first (missing CVars are skipped).
 R.CVARS = {
   { name = "autoLootDefault", leader = "1", follower = "1", label = "Auto loot", why = "Loot with one click on every character." },
-  { name = "deselectOnClick", leader = "0", follower = "0", label = "Sticky targeting", why = "Clicking the ground does not clear your target, so followers keep assisting the leader's target." },
+  { name = "deselectOnClick", leader = "1", follower = "1", label = "Clear target on click", why = "On (the game's normal): clicking empty ground clears your target. WoWBoxer's keys use mouseover and the leader's target, so sticky targeting is not needed." },
   { name = "autoSelfCast", leader = "1", follower = "1", label = "Auto self cast", why = "Friendly spells fall back to yourself when nothing friendly is targeted." },
   { name = "maxfpsbk", leader = "30", follower = "30", label = "Background FPS cap", why = "Windows in the background draw at most 30 frames per second, so several clients run smoothly." },
   { name = "Sound_EnableSoundWhenGameIsInBG", leader = "1", follower = "0", label = "Sound in background", why = "Only the leader plays sound when its window is in the background." },
@@ -74,7 +74,22 @@ R.CVARS = {
   { name = "ActionButtonUseKeyDown", leader = "1", follower = "1", label = "Cast on key down", why = "Actions fire when the key goes down (the game's default)." },
   { name = "AutoPushSpellToActionBar", leader = "0", follower = "0", label = "No auto-placed spells", why = "New spells are not dropped onto your bars, so WoWBoxer keys stay where you put them." },
   { name = "autoClearAFK", leader = "1", follower = "1", label = "Clear AFK automatically", why = "Moving or acting clears AFK." },
+  { name = "nameplateShowEnemies", leader = "1", follower = "1", label = "Enemy nameplates", why = "Health bars over enemies: see what the squad is fighting." },
+  { name = "nameplateShowFriends", leader = "1", follower = "1", label = "Friendly nameplates", why = "Health bars over your squad and other friends: easier healing and mouseover." },
+  { name = "nameplateShowSelf", leader = "1", follower = "1", label = "Personal nameplate", why = "Your own health and mana under your character (modern clients only)." },
 }
+-- Cast bars on friendly nameplates / party frames: the names differ per client and are not verified
+-- [AFKLAR: real CVar names on Forever and Era – the diagnose lists every CVar with "cast" in its name (cvarProbe)].
+-- Only the candidates that exist on the running client are offered (a missing CVar is never shown or set).
+R.CAST_CVARS = {
+  { "nameplateShowFriendlyCastBar", "Friendly cast bars" }, { "nameplateShowFriendlyCastBars", "Friendly cast bars" },
+  { "nameplateShowCastBars", "Nameplate cast bars" }, { "showVKeyCastbar", "Cast bars on nameplates" },
+  { "showPartyCastbar", "Party cast bars" }, { "raidFramesDisplayCastBars", "Raid frame cast bars" },
+}
+for _, c in ipairs(R.CAST_CVARS) do
+  R.CVARS[#R.CVARS + 1] = { name = c[1], leader = "1", follower = "1", label = c[2], cast = true,
+    why = "Shows cast bars, so you see what your friends (and enemies) are casting." }
+end
 R.CVAR_BY_NAME = {}
 for _, c in ipairs(R.CVARS) do R.CVAR_BY_NAME[c.name] = c end
 

@@ -175,6 +175,30 @@ do
   Core.restoreCVars()
   H.eq(W.cvars.autoLootDefault, "0", "restored")
   H.eq(W.cvars.maxfpsbk, "8", "restored fps")
+  -- The owner 2026-10-29: clear target on click (the game's normal), nameplates, cast bars only where the CVar exists
+  local by = {}
+  for _, c in ipairs(Core.cvarPlan()) do by[c.name] = c end
+  H.ok(by.deselectOnClick.want == "1" and by.deselectOnClick.status == "ok" and by.deselectOnClick.label == "Clear target on click", "clear target on click: recommended On")
+  H.eq(by.nameplateShowEnemies.status, "change", "enemy nameplates recommended")
+  H.eq(by.nameplateShowFriends.status, "change", "friendly nameplates recommended")
+  H.eq(by.nameplateShowSelf.status, "missing", "no personal nameplate on this client: not offered")
+  H.eq(by.showVKeyCastbar.status, "change", "the cast bar CVar that exists is offered")
+  H.eq(by.nameplateShowFriendlyCastBar.status, "missing", "cast bar names that do not exist stay hidden")
+  W.env.C_Console = { GetAllCommands = function() return { { command = "showVKeyCastbar" }, { command = "autoLootDefault" }, { command = "ShowTargetCastbar" } } end }
+  local pr = ns.Compat.cvarProbe()
+  H.ok(pr.candidates.showVKeyCastbar and not pr.candidates.nameplateShowCastBars, "probe: which candidates exist")
+  H.eq(table.concat(pr.found, ","), "ShowTargetCastbar,showVKeyCastbar", "probe: every CVar with cast in its name, for the diagnose")
+  H.ok(Core.selftest(true).cvarProbe.source == "console", "the diagnose logs the probe")
+  ns.UI.Open("setup")
+  local shown = 0
+  for _, r in ipairs(ns.UI.panels.setup.cvPool.rows) do if r:IsShown() then shown = shown + 1 end end
+  local exist = 0
+  for _, c in ipairs(Core.cvarPlan()) do if c.status ~= "missing" then exist = exist + 1 end end
+  H.eq(shown, exist, "Setup lists only the settings this client has")
+  Core.applyCVars()
+  H.ok(W.cvars.nameplateShowFriends == "1" and W.cvars.showVKeyCastbar == "1" and W.cvars.nameplateShowSelf == nil, "applied through the allow-list")
+  Core.restoreCVars()
+  H.ok(W.cvars.nameplateShowFriends == "0" and W.cvars.showVKeyCastbar == "0", "and restored")
 end
 
 -- ------------------------------------------------------------------ era client, classic spellbook, secrets

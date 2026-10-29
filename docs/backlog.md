@@ -31,6 +31,13 @@ minimap button, much more drag & drop of macros onto the action bars.
    the bar after **Update keys**. Custom keys → New own key → **Paste…** your macro → read the warnings → **Copy…**.
 7. On Dorin: Squad → Home, Readiness, Key map and Plan – PrtScn each. Then `/reload` on every client and tell Claude "done".
 
+## Feedback 2026-10-29 evening (docs/feedback-2026-10-29-evening.md)
+- [x] 1. Settings: Clear target on click = On; enemy/friendly/personal nameplates; cast-bar CVars probed (diagnose
+      `cvarProbe`), only existing ones offered; Setup hides settings the client does not have.
+- [ ] 2. Place spells (left page) + Place squad keys (right page).
+- [ ] 3. Bind key: action-button keys are not conflicts; plain-language questions.
+- [ ] 4. Release.
+
 ## Squad v2 – simple (docs/squad-v2-simple.md, the owner 2026-10-29)
 - [x] 1. Templates removed; nothing switches the active squad as a side effect (Duplicate gone too).
 - [x] 2. One-screen Squad page: empty state, rows (crown, role, [x], inline editor), Add character, Add my party,

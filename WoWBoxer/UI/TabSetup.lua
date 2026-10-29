@@ -83,7 +83,7 @@ function tab.build(p)
   p.cvPool = W.pool(p, function(parent, i)
     local r = CreateFrame("Frame", nil, parent)
     r:SetSize(330, 20)
-    r:SetPoint("TOPLEFT", X, -40 - (i - 1) * 21)
+    r:SetPoint("TOPLEFT", X, -40 - (i - 1) * 19)
     r.label = W.line(r, "GameFontHighlightSmall", nil, W.TEXT)
     r.label:SetPoint("LEFT", 0, 0)
     r.label:SetWidth(170)
@@ -106,7 +106,7 @@ function tab.build(p)
   p.restore:SetPoint("LEFT", p.applyCv, "RIGHT", 6, 0)
 
   local h2 = W.text(p, "GameFontNormal", nil, W.GOLD)
-  h2:SetPoint("TOPLEFT", X, -298)
+  h2:SetPoint("TOPLEFT", p.applyCv, "BOTTOMLEFT", 0, -12)
   h2:SetText("Recommended addons")
   p.addons = W.text(p, "GameFontHighlightSmall", nil, W.TEXT)
   p.addons:SetPoint("TOPLEFT", h2, "BOTTOMLEFT", 0, -4)
@@ -162,7 +162,10 @@ function tab.refresh(p)
   p.cvRole = role
   p.cvPool:reset()
   local nChange = 0
+  local rows = 0
   for _, c in ipairs(plan) do
+    if c.status ~= "missing" then -- only settings this client has
+    rows = rows + 1
     local r = p.cvPool:get()
     r.label:SetText(c.label)
     r.now:SetText(c.current == nil and "–" or tostring(c.current))
@@ -171,7 +174,10 @@ function tab.refresh(p)
     r.st:SetText(st[1]); r.st:SetTextColor(st[2][1], st[2][2], st[2][3])
     if c.status == "change" then nChange = nChange + 1 end
     W.tooltip(r, function(GT) GT:AddLine(c.label .. " (" .. c.name .. ")", 1, 0.82, 0); GT:AddLine(c.why, 1, 1, 1, true) end)
+    end
   end
+  p.applyCv:ClearAllPoints()
+  p.applyCv:SetPoint("TOPLEFT", LEFT_W + 20, -40 - rows * 19 - 6)
   W.setLabel(p.applyCv, nChange > 0 and ("Apply " .. nChange .. " setting" .. (nChange > 1 and "s" or "")) or "Settings OK")
   p.applyCv:SetEnabled(nChange > 0)
   p.restore:SetEnabled(next(cdb.cvarBackup) ~= nil)

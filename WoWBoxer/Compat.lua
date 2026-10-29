@@ -352,6 +352,22 @@ function C.partyUnitOf(name)
 end
 function C.inParty() return (G.IsInGroup and G.IsInGroup()) or (G.GetNumGroupMembers and G.GetNumGroupMembers() > 0) or false end
 
+--- Which cast-bar CVar candidates exist here, plus every CVar whose name has "cast" in it (read-only, diagnose).
+function C.cvarProbe()
+  local r = { candidates = {}, found = {} }
+  for _, c in ipairs(ns.Rules.CAST_CVARS) do r.candidates[c[1]] = C.getCVar(c[1]) ~= nil end
+  local list
+  local CC = G.C_Console
+  if CC and CC.GetAllCommands then local ok, l = pcall(CC.GetAllCommands); if ok then list = l end end
+  if not list and G.ConsoleGetAllCommands then local ok, l = pcall(G.ConsoleGetAllCommands); if ok then list = l end end
+  r.source = list and "console" or "none"
+  for _, cmd in ipairs(list or {}) do
+    local n = type(cmd) == "table" and cmd.command or nil
+    if type(n) == "string" and n:lower():find("cast", 1, true) and #r.found < 40 then r.found[#r.found + 1] = n end
+  end
+  table.sort(r.found)
+  return r
+end
 --- Probe results for /wbx selftest.
 function C.probe()
   local r = { interface = C.interface(), build = C.buildString(), game = C.game(), locale = G.GetLocale and G.GetLocale() or "?" }

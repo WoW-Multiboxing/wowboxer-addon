@@ -456,6 +456,8 @@ function Core.selftest(quiet)
   local cv = Core.cvarPlan()
   r.cvars = {}
   for _, c in ipairs(cv) do r.cvars[c.name] = { cur = c.current, want = c.want, status = c.status } end
+  local okP, probe = pcall(C.cvarProbe)
+  r.cvarProbe = okP and probe or { error = tostring(probe) }
   r.addons = {}
   for _, a in ipairs(R.ADDONS) do r.addons[a.name] = C.addonState(a.name) end
   r.party = {}
