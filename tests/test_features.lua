@@ -1021,4 +1021,45 @@ do
   H.ok(table.concat(lines, "|"):find("Help for this page", 1, true) and table.concat(lines, "|"):find("Right-click: start the first-run guide again.", 1, true), "? tooltip says so")
 end
 
+-- Reset to default puts the bars back (cdb.barOriginal, §7) and lists what it could not restore
+do
+  local W, ns = boot({ name = "Dorin", class = "PALADIN", race = "Scourge", level = 10 })
+  local Core, UI = ns.Core, ns.UI
+  W.env.PickupSpell = function(id) W.cursor = { kind = "spell", id = id } end
+  W.env.GetMacroIndexByName = function() return 0 end
+  W.actions[1] = { kind = "spell", id = 635 } -- Holy Light was on button 1 before WoWBoxer
+  W.actions[40] = { kind = "spell", id = 19740 }
+  Core.cdb.guide = "done"
+  UI.Open("keys")
+  Core.scanBars()
+  Core.cdb.replace = true
+  Core.sync({ replace = true })
+  H.ok((W.slotMacroName(1) or ""):find("^WBX"), "Place all (Replace) put a macro on button 1")
+  H.eq(Core.cdb.barOriginal[1].kind, "spell", "button 1's spell was kept before the first change")
+  H.eq(Core.cdb.barOriginal[2].kind, "empty", "an empty button is kept as empty")
+  local first = Core.cdb.barOriginal[1].id
+  Core.sync({ replace = true })
+  H.eq(Core.cdb.barOriginal[1].id, first, "never overwritten")
+  -- the player drags a macro onto button 40 (it held a spell): the watch keeps the spell
+  Core.pickup("WBX K1"); W.env.PlaceAction(40); W.env.ClearCursor(); Core.scanBars()
+  H.ok(Core.cdb.barOriginal[40] and Core.cdb.barOriginal[40].id == 19740, "drag-place: the spell on 40 is kept")
+  -- a slot changed before this version (no copy)
+  W.actions[30] = W.actions[1]
+  Core.cdb.barOriginal[30] = nil
+  local msg, report = Core.resetToDefault({ char = true, bars = true, macros = true, cvars = true })
+  H.ok(W.actions[1] and W.actions[1].kind == "spell" and W.actions[1].id == 635, "Reset: button 1 has Holy Light again")
+  H.eq(W.actions[2], nil, "Reset: button 2 is empty again")
+  H.ok(W.actions[40] and W.actions[40].id == 19740, "Reset: button 40 has its spell again")
+  H.ok(msg:find("Bottom", 1, true) == nil and msg:find("Right Bar button 6", 1, true) or msg:find("changed before WoWBoxer kept a copy", 1, true), "lists what it could not restore: " .. msg)
+  H.ok(#report.failed >= 1, "the report has the failures")
+  H.ok(Core.db.lastReset and Core.db.lastReset.failed[1], "the diagnose keeps what was and was not restored")
+  local wbx = 0
+  for _, x in ipairs(ns.Compat.characterMacros()) do if x.name:find("^WBX") then wbx = wbx + 1 end end
+  H.eq(wbx, 0, "WBX macros deleted")
+  H.ok(not ns.Auto.anyOn() and not Core.advanced(), "Automation and Advanced off")
+  H.ok(UI.resetBtn and UI.resetBtn:IsShown(), "Reset is in the header on every page")
+  UI.Select("talents"); UI.resetBtn:Click()
+  H.ok(ns.Advanced.rf:IsShown() and ns.Advanced.rf.step == 1, "the header Reset opens the two-step window")
+end
+
 os.exit(H.report("features") and 0 or 1)

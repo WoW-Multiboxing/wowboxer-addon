@@ -534,6 +534,12 @@ function Core.resetSummary(ch)
     for _, l in pairs(Core.db.builds or {}) do b = b + #l end
     parts[#parts + 1] = "all " .. plural(#Core.db.squads, "squad", "squads") .. " and " .. plural(b, "saved build", "saved builds")
   end
+  if ch.bars then
+    local n, before = 0, Core.barsUnknown()
+    for _ in pairs(Core.cdb.barOriginal or {}) do n = n + 1 end
+    parts[#parts + 1] = plural(n, "action button", "action buttons") .. " put back" ..
+      (#before > 0 and (" (" .. Core.buttonList(before) .. " were changed before WoWBoxer kept a copy)") or "")
+  end
   if ch.macros then parts[#parts + 1] = plural(#wbxMacros(), "WBX macro", "WBX macros") end
   if ch.cvars then
     local n = 0
@@ -542,19 +548,51 @@ function Core.resetSummary(ch)
   end
   return #parts > 0 and table.concat(parts, ", ") or "nothing"
 end
+--- Slots that hold a WBX macro but have no stored original (changed before 0.11.1): they can't be put back.
+function Core.barsUnknown()
+  local out = {}
+  local orig = Core.cdb.barOriginal or {}
+  for slot = 1, 120 do
+    local c = B.content(slot)
+    if c.kind == "macro" and R.isOurs(c.name) and orig[slot] == nil then out[#out + 1] = slot end
+  end
+  return out
+end
+--- "Button 3 and 8" / "Bottom Left Bar button 2 and Button 9".
+function Core.buttonList(slots)
+  local t = {}
+  for _, s in ipairs(slots) do t[#t + 1] = (s <= 12 and ("Button " .. s)) or ns.Binds.buttonName(s) end
+  if #t <= 1 then return t[1] or "" end
+  return table.concat(t, ", ", 1, #t - 1) .. " and " .. t[#t]
+end
+
 --- Do the reset (out of combat, after the player typed RESET). Only WoWBoxer's own data, WBX macros and the CVars it
 --- changed (restored first, then the backup is forgotten). Returns the summary line.
 function Core.resetToDefault(ch)
   if C.inCombat() then return "Not in combat." end
   local summary = Core.resetSummary(ch)
+  local report = { restored = {}, failed = {} }
+  if ch.bars then -- first, while the WBX macros still exist: every slot WoWBoxer changed gets its original back
+    for _, slot in ipairs(Core.barsUnknown()) do report.failed[#report.failed + 1] = Core.buttonList({ slot }) .. " (changed before WoWBoxer kept a copy)" end
+    for slot, orig in pairs(Core.cdb.barOriginal or {}) do
+      local ok, why = B.restoreSlot(slot, orig, "reset")
+      if ok then report.restored[#report.restored + 1] = "slot " .. slot else report.failed[#report.failed + 1] = Core.buttonList({ slot }) .. ": " .. tostring(why) end
+    end
+    Core.cdb.barOriginal, Core.cdb.barSeen = {}, {}
+  end
   if ch.char then
     local nb = ns.Binds.restoreAll() -- keys WoWBoxer bound go back to what they did before (needs bindPrev: first)
-    if nb > 0 then Core.log("info", "reset: " .. nb .. " keybinds restored") end
+    if nb > 0 then Core.log("info", "reset: " .. nb .. " keybinds restored"); report.restored[#report.restored + 1] = nb .. " keybinds" end
   end
   if ch.cvars then
     local n = 0
-    for name, v in pairs(Core.cdb.cvarBackup) do if R.CVAR_BY_NAME[name] and C.setCVarSure(name, v) then n = n + 1 end end
+    for name, v in pairs(Core.cdb.cvarBackup) do
+      if R.CVAR_BY_NAME[name] then
+        if C.setCVarSure(name, v) then n = n + 1 else report.failed[#report.failed + 1] = "setting " .. name .. " (didn't stick – Open Options)" end
+      end
+    end
     Core.cdb.cvarBackup = {}
+    if n > 0 then report.restored[#report.restored + 1] = n .. " settings" end
     Core.log("info", "reset: " .. n .. " cvars restored")
   end
   if ch.macros then
@@ -576,13 +614,16 @@ function Core.resetToDefault(ch)
     Core.cdb.cvarBackup, Core.cdb.welcomed = keep or {}, true
     Core.defaultBars()
     Core.db.settings.advanced = nil -- a full reset goes back to Standard mode
+    Core.db.settings.auto, Core.db.settings.acceptFrom, Core.db.settings.acceptOverride = {}, nil, nil -- and Automation off
   end
+  Core.db.lastReset = { at = time and time() or 0, char = Core.charKey, restored = report.restored, failed = report.failed }
   Core.lastOffer = nil
   Core.ensureMe()
-  chat("Reset to default: removed " .. summary .. ".")
-  Core.log("info", "reset to default: " .. summary)
+  local notes = #report.failed > 0 and (" Could not restore: " .. table.concat(report.failed, "; ") .. ".") or ""
+  chat("Reset to default: " .. summary .. "." .. notes)
+  Core.log("info", "reset to default: " .. summary .. notes)
   Core.changed()
-  return "Removed " .. summary .. "."
+  return summary:gsub("^%l", string.upper) .. "." .. notes, report
 end
 
 -- ------------------------------------------------------------------ own talent builds (WoWBoxer's data only)
@@ -790,6 +831,10 @@ function Core.selftest(quiet)
     r.buttons[slot] = { content = c.kind .. (c.name and (":" .. c.name) or (c.id and (":" .. c.id) or "")), keys = table.concat(keys, " ") }
   end
   r.bindingSet = ns.Binds.currentSet()
+  r.lastReset = db.lastReset
+  local nOrig = 0
+  for _ in pairs(Core.cdb.barOriginal or {}) do nOrig = nOrig + 1 end
+  r.barOriginal = nOrig
   local okB, direct = pcall(ns.Binds.directWbx)
   r.binds = { direct = okB and direct or { error = tostring(direct) }, prev = Core.cdb.bindPrev, lost = okB and ns.Binds.lostButtons() or nil }
   r.ui = { dropdown = (ns.Widgets and ns.Widgets.hasBlizzardDropdown and ns.Widgets.hasBlizzardDropdown()) and "blizzard" or "own" }

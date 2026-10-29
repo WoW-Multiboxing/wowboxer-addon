@@ -146,10 +146,12 @@ W.env.SlashCmdList.WOWBOXER("reset all")
 local rf = A.rf
 H.ok(rf:IsShown() and rf.step == 1, "/wbx reset all opens step 1 (never resets directly)")
 H.ok(Core.cdb.overrides[healCell.name] ~= nil, "nothing removed yet")
-H.ok(rf.ticks[1]:GetChecked() and not rf.ticks[2]:GetChecked(), "This character ticked by default")
-rf.ticks[1]:Click() -- untick: nothing chosen
+local function tick(key) for _, c in ipairs(rf.ticks) do if c.key == key then return c end end end
+H.ok(tick("char"):GetChecked() and tick("bars"):GetChecked() and tick("macros"):GetChecked() and tick("cvars"):GetChecked() and not tick("account"):GetChecked(),
+  "default: this character, bars, WBX macros, settings – not the squads")
+for _, c in ipairs(rf.ticks) do if c:GetChecked() then c:Click() end end -- untick all: nothing chosen
 H.ok(not rf.next:IsEnabled(), "nothing ticked: Next disabled")
-rf.ticks[1]:Click(); rf.ticks[3]:Click(); rf.ticks[4]:Click()
+tick("char"):Click(); tick("macros"):Click(); tick("cvars"):Click(); tick("bars"):Click()
 rf.next:Click()
 H.ok(rf.step == 2 and rf.summary:GetText():find("macro override", 1, true) and rf.summary:GetText():find("WBX macro", 1, true), "step 2 summary: " .. rf.summary:GetText())
 H.ok(not rf.go:IsEnabled(), "Reset disabled until RESET is typed")
@@ -182,10 +184,11 @@ H.ok(not Core.advanced(), "back to Standard after a full reset")
 H.ok(rf.step == 3 and rf.reload:IsShown(), "offers Reload UI now")
 rf.reload:Click()
 H.ok(W.reloaded, "Reload UI on a click")
-H.ok(W.chatHas("Reset to default: removed"), "one chat line says what was removed")
+H.ok(W.chatHas("Reset to default: "), "one chat line says what was reset")
 -- the account tick removes squads and builds
 A.openReset()
-rf.ticks[1]:Click(); rf.ticks[2]:Click() -- only account
+for _, c in ipairs(rf.ticks) do if c:GetChecked() then c:Click() end end
+tick("account"):Click() -- only account
 rf.next:Click(); rf.typed:SetText("RESET"); rf.typed._scripts.OnTextChanged(rf.typed); rf.go:Click()
 local trio = false
 for _, s in ipairs(Core.db.squads) do if s.name == "Trio" then trio = true end end

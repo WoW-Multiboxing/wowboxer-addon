@@ -30,7 +30,11 @@ function A.attachSwitch(f)
   std:SetPoint("TOPLEFT", 134, -12)
   adv:SetPoint("LEFT", std, "RIGHT", 2, 0)
   UI.modeStd, UI.modeAdv = std, adv
-  if UI.whoHit then UI.whoHit:ClearAllPoints(); UI.whoHit:SetPoint("LEFT", adv, "RIGHT", 10, 0); UI.whoHit:SetPoint("RIGHT", f, "TOPRIGHT", -100, -21) end
+  -- Reset to default on every page (docs/feedback-2026-10-30-night.md §7)
+  local rs = W.button(f, "Reset", 56, 18, function() A.openReset() end, "Reset to default: back to how this character was before WoWBoxer (asks twice).")
+  rs:SetPoint("LEFT", adv, "RIGHT", 6, 0)
+  UI.resetBtn = rs
+  if UI.whoHit then UI.whoHit:ClearAllPoints(); UI.whoHit:SetPoint("LEFT", rs, "RIGHT", 10, 0); UI.whoHit:SetPoint("RIGHT", f, "TOPRIGHT", -100, -21) end
   -- the confirm window (§1)
   local c = modal(f, 420, 200)
   c.title = W.text(c, "GameFontNormalLarge", 15, W.GOLD)
@@ -559,23 +563,24 @@ end
 -- ------------------------------------------------------------------ Reset to default (§5)
 local function resetFrame()
   if A.rf then return A.rf end
-  local f = modal(UI.frame, 520, 330)
+  local f = modal(UI.frame, 520, 350)
   f.title = W.text(f, "GameFontNormalLarge", 15, W.GOLD)
   f.title:SetPoint("TOPLEFT", 16, -14)
   f.title.wbxCopy = "hint"
   f.ticks = {}
   local defs = {
-    { "char", "This character", "Settings, macro choices, overrides, bar memory and reminders of this character." },
+    { "char", "This character", "Settings, macro choices, overrides, keybinds, reminders, Advanced and Automation." },
+    { "bars", "Action bars as before", "Puts back what your buttons held before WoWBoxer changed them." },
     { "account", "All my squads and saved builds", "Every squad and every saved talent build on this account." },
     { "macros", "WoWBoxer macros on this character", "Only macros named WBX – yours are never touched; their buttons become empty." },
     { "cvars", "Game settings WoWBoxer changed", "Restore first puts back the values WoWBoxer saved, then the backup is forgotten." },
   }
   for i, dft in ipairs(defs) do
     local c = W.check(f, dft[2], function() A.refreshReset() end)
-    c:SetPoint("TOPLEFT", 14, -40 - (i - 1) * 46)
+    c:SetPoint("TOPLEFT", 14, -36 - (i - 1) * 40)
     c.key = dft[1]
     c.sub = W.text(f, "GameFontHighlightSmall", nil, W.MUTED)
-    c.sub:SetPoint("TOPLEFT", 40, -40 - (i - 1) * 46 - 22)
+    c.sub:SetPoint("TOPLEFT", 40, -36 - (i - 1) * 40 - 20)
     c.sub:SetWidth(466)
     c.sub:SetText(dft[3])
     c.sub.wbxCopy = "sentence"
@@ -617,10 +622,10 @@ local function resetFrame()
 end
 --- Open the Reset to default window (Setup button, /wbx reset all). It never resets by itself.
 function A.openReset()
-  UI.Open("setup")
+  UI.Open()
   local f = resetFrame()
   f.step = 1
-  for _, c in ipairs(f.ticks) do c:SetChecked(c.key == "char") end
+  for _, c in ipairs(f.ticks) do c:SetChecked(c.key == "char" or c.key == "bars" or c.key == "macros" or c.key == "cvars") end
   f:Show()
   A.refreshReset()
 end
