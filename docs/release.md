@@ -36,6 +36,12 @@ After the tag is pushed and the release is live on CurseForge, wowboxer.com/addo
 
 **Description**
 
+> The live description is edited on CurseForge (authors.curseforge.com → Description) and has moved on from the draft
+> below. Keep its links line under "Type /wbx to open the book" (added 29 Oct 2026 for search, WS-S):
+> **Step-by-step multiboxing guides, the free WoWBoxer window app for Windows and help:** wowboxer.com ·
+> AddOn guide (wowboxer.com/guides/addon/) · Discord. The project's Social Links (General tab) are Website
+> https://wowboxer.com/ and Discord https://discord.gg/Q5xwbqhKzQ.
+
 WoWBoxer gives each of your characters the keys it needs for its class, role and level – and keeps them up to date
 when you level. Made for manual multiboxing in **WoW: Forever** and **Classic Era**.
 
