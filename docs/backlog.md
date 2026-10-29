@@ -35,7 +35,7 @@ minimap button, much more drag & drop of macros onto the action bars.
 - [x] 1. Settings: Clear target on click = On; enemy/friendly/personal nameplates; cast-bar CVars probed (diagnose
       `cvarProbe`), only existing ones offered; Setup hides settings the client does not have.
 - [x] 2. Place spells (left page) + Place squad keys (right page).
-- [ ] 3. Bind key: action-button keys are not conflicts; plain-language questions.
+- [x] 3. Bind key: action-button keys are not conflicts; plain-language questions.
 - [ ] 4. Release.
 
 ## Squad v2 – simple (docs/squad-v2-simple.md, the owner 2026-10-29)

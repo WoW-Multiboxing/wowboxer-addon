@@ -64,6 +64,51 @@ function KB.actionOf(key)
   return a
 end
 
+--- The action slot an action-button binding command presses (ACTIONBUTTON4 -> 4, MULTIACTIONBAR1BUTTON2 -> 62), or nil.
+function KB.slotForCommand(cmd)
+  if type(cmd) ~= "string" then return nil end
+  for first, prefix in pairs(BAR_CMD) do
+    local n = tonumber(cmd:match("^" .. prefix .. "(%d+)$"))
+    if n and n >= 1 and n <= 12 then return first + n - 1 end
+  end
+  return nil
+end
+--- The game's own name for a binding command ("Open All Bags"); never a raw command name.
+function KB.bindingText(cmd)
+  if type(cmd) ~= "string" then return "something else" end
+  local macro = cmd:match("^MACRO (.+)$")
+  if macro then return "the macro \"" .. macro .. "\"" end
+  if G.GetBindingText then
+    local ok, t = pcall(G.GetBindingText, cmd, "BINDING_NAME_")
+    if ok and type(t) == "string" and t ~= "" and t ~= cmd and not t:find("^[%u%d_]+$") then return "\"" .. t .. "\"" end
+  end
+  return "another game function"
+end
+--- What the key would mean for macro `name`: {kind = "free" | "same" | "button" | "other", slot, empty, what, text}.
+--- A key that presses an action button is not a conflict: the key belongs to that button.
+function KB.classify(name, key)
+  local used = KB.actionOf(key)
+  if not used then return { kind = "free" } end
+  if used == "MACRO " .. name then return { kind = "same" } end
+  local slot = KB.slotForCommand(used)
+  if slot then
+    local a = ns.Compat.actionInfo(slot)
+    if not a then return { kind = "button", slot = slot, empty = true } end
+    if a.kind == "macro" and a.name == name then return { kind = "same", slot = slot } end
+    local what = a.name
+    if not what and a.kind == "item" and G.GetItemInfo then local ok, n = pcall(G.GetItemInfo, a.id); what = ok and n or nil end
+    return { kind = "button", slot = slot, what = what or "something" }
+  end
+  return { kind = "other", text = KB.bindingText(used) }
+end
+--- "action button 4" / "Bottom Left Bar button 2" for an action slot.
+function KB.buttonName(slot)
+  local first = slot - (slot - 1) % 12
+  local n = (slot - 1) % 12 + 1
+  if first == 1 then return "action button " .. n end
+  return ns.Bars.barLabel(first) .. " button " .. n
+end
+
 local function save()
   local set = G.CHARACTER_BINDINGS or KB.CHARACTER_SET
   if G.SaveBindings then G.SaveBindings(set) end

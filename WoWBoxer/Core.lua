@@ -327,6 +327,21 @@ function Core.bindKey(name, key)
     Core.changed()
   end)
 end
+--- Put WBX macro `name` on action slot `slot` (the button a key already presses). Out of combat, after a click/key
+--- press; whatever the button held goes back to nothing (the player confirmed that).
+function Core.placeOn(name, slot, key)
+  return Core.whenSafe("Put " .. name .. " on a button", function()
+    local ok, why = Core.pickup(name)
+    if not ok then chat("|cffff6060Could not place:|r " .. tostring(why)); return end
+    PlaceAction(slot)
+    if C.cursorBusy() then ClearCursor() end
+    Core.cdb.slots[name] = slot
+    Core.cdb.placedOnce[name] = true
+    chat(Core.keyLabel(name) .. " is now on " .. ns.Binds.buttonName(slot) .. (key and (" (key " .. key .. ")") or "") .. ".")
+    Core.log("info", "place " .. name .. " on slot " .. slot .. " for key " .. tostring(key))
+    Core.changed()
+  end)
+end
 function Core.unbindKey(name)
   return Core.whenSafe("Unbind " .. name, function()
     local n = ns.Binds.unbind(name)

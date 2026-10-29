@@ -860,4 +860,69 @@ do
   H.eq(#errors(ns), 0, "no errors (place per page)")
 end
 
+-- Bind key (docs/feedback-2026-10-29-evening.md §3): a key of an action button is not a conflict; plain words only
+do
+  local W, ns = boot({ name = "Lock", class = "WARLOCK", race = "Scourge", level = 20,
+    bindings = { ["1"] = "ACTIONBUTTON1", ["2"] = "ACTIONBUTTON2", ["4"] = "ACTIONBUTTON4", ["5"] = "ACTIONBUTTON5", ["B"] = "OPENALLBAGS", ["Q"] = "ACTIONBUTTON9" } })
+  local Core, UI, KB = ns.Core, ns.UI, ns.Binds
+  W.env.GetBindingText = function(cmd) return ({ OPENALLBAGS = "Open All Bags" })[cmd] or cmd end
+  Core.cdb.guide = "done"
+  UI.Open("keys")
+  local cap = UI.panels.keys.capture
+  local function texts() return (cap.text:GetText() or "") .. " " .. (cap.yes:IsShown() and cap.yes:GetText() or "") .. " " .. (cap.no:IsShown() and cap.no:GetText() or "") end
+  local function noRaw(what) H.ok(not texts():find("ACTIONBUTTON", 1, true) and not texts():find("OPENALLBAGS", 1, true), what .. ": no command names: " .. texts()) end
+  -- regression: key 4 belongs to the empty action button 4 -> the key goes onto that button, no warning
+  H.eq(W.slotMacroName(4), nil, "button 4 is empty")
+  cap:Start("WBX K2", "Key 2")
+  cap._scripts.OnKeyDown(cap, "4")
+  H.ok(not cap:IsShown(), "empty action button: no question")
+  H.eq(W.slotMacroName(4), "WBX K2", "regression: key 4 of an empty button puts the key on button 4")
+  H.eq(W.bindings["4"], "ACTIONBUTTON4", "the game binding is not touched")
+  -- the same key already there
+  cap:Start("WBX K2", "Key 2")
+  cap._scripts.OnKeyDown(cap, "4")
+  H.ok(cap:IsShown() and cap.text:GetText():find("Already on", 1, true), "same key there: Already on 4")
+  noRaw("already on")
+  cap:Stop()
+  -- the button holds something else: a plain question with what it holds
+  W.actions[5] = { kind = "spell", id = 686 }
+  W.env.C_Spell = W.env.C_Spell or {}
+  local origName = W.env.C_Spell.GetSpellName
+  W.env.C_Spell.GetSpellName = function(id) if id == 686 then return "Shadow Bolt" end return origName and origName(id) end
+  cap:Start("WBX K2", "Key 2")
+  cap._scripts.OnKeyDown(cap, "5")
+  H.ok(cap:IsShown() and cap.text:GetText():find("is action button 5 (Shadow Bolt)", 1, true), "holds something else: " .. texts())
+  H.eq(cap.yes:GetText(), "Put it there", "button: Put it there")
+  H.eq(cap.no:GetText(), "Another key", "or Another key")
+  noRaw("button question")
+  cap.no:Click()
+  H.ok(cap:IsShown() and not cap.yes:IsShown(), "Another key: waits again")
+  H.eq(W.actions[5].kind, "spell", "nothing changed")
+  cap._scripts.OnKeyDown(cap, "5"); cap.yes:Click()
+  H.eq(W.slotMacroName(5), "WBX K2", "Put it there: on button 5")
+  -- another game binding: the game's own name, Yes/No, then the binding
+  cap:Start("WBX K3", "Key 3")
+  cap._scripts.OnKeyDown(cap, "B")
+  H.ok(cap.text:GetText():find("\"Open All Bags\"", 1, true) and cap.yes:GetText() == "Yes" and cap.no:GetText() == "No", "other binding: " .. texts())
+  noRaw("other binding")
+  H.eq(W.bindings.B, "OPENALLBAGS", "not bound before Yes")
+  cap.yes:Click()
+  H.eq(W.bindings.B, "MACRO WBX K3", "Yes binds it")
+  -- an unbound key: bound at once
+  cap:Start("WBX K3", "Key 3")
+  cap._scripts.OnKeyDown(cap, "J")
+  H.ok(not cap:IsShown() and W.bindings.J == "MACRO WBX K3", "unbound key: bound directly")
+  H.eq(KB.bindingText("ACTIONBUTTON4"), "another game function", "a raw command never shows")
+  H.eq(KB.slotForCommand("MULTIACTIONBAR1BUTTON2"), 62, "bottom left button 2 = slot 62")
+  -- in combat: nothing is placed
+  W.combat = true
+  cap:Start("WBX K1", "Key 1")
+  W.actions[6] = nil; W.bindings["6"] = "ACTIONBUTTON6"
+  cap._scripts.OnKeyDown(cap, "6")
+  H.eq(W.slotMacroName(6), nil, "never in combat")
+  W.combat = false; W.fire("PLAYER_REGEN_ENABLED")
+  H.eq(W.slotMacroName(6), "WBX K1", "placed after combat")
+  H.eq(#errors(ns), 0, "no errors (bind key)")
+end
+
 os.exit(H.report("features") and 0 or 1)

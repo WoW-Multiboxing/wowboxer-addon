@@ -460,10 +460,27 @@ local function buildCapture(p)
   c.text.wbxCopy = "guide"
   c.cancel = W.button(c, "Cancel", 80, 22, function() c:Stop() end, "Stops waiting for a key. Nothing changes.")
   c.cancel:SetPoint("BOTTOM", 0, 10)
+  -- a question: Yes (do it) / No (wait for another key)
+  c.yes = W.button(c, "Yes", 90, 22, function() if c.onYes then local f = c.onYes; c:Stop(); f() end end, "Does what the question says.")
+  c.yes:SetPoint("BOTTOMRIGHT", c, "BOTTOM", -4, 38)
+  c.no = W.button(c, "No", 90, 22, function() c:Wait() end, "Nothing changes; press another key.")
+  c.no:SetPoint("BOTTOMLEFT", c, "BOTTOM", 4, 38)
   c:Hide()
-  function c:Start(name, label)
-    self.name, self.label, self.pending = name, label or name, nil
+  function c:Wait()
+    self.pending, self.onYes = nil, nil
+    self.yes:Hide(); self.no:Hide(); W.setLabel(self.cancel, "Cancel")
     self.text:SetText("Press a key for |cffffd100" .. self.label .. "|r.\n\nEsc cancels.")
+  end
+  --- Ask a plain question; yes runs fn (pressing the same key again also counts as yes).
+  function c:Ask(text, yes, no, fn, key)
+    self.pending, self.onYes = key, fn
+    self.text:SetText(text)
+    W.setLabel(self.yes, yes); W.setLabel(self.no, no)
+    self.yes:Show(); self.no:Show()
+  end
+  function c:Start(name, label)
+    self.name, self.label = name, label or name
+    self:Wait()
     self:Show()
     if self.EnableKeyboard then self:EnableKeyboard(true) end
     if self.SetPropagateKeyboardInput then self:SetPropagateKeyboardInput(false) end
@@ -477,16 +494,33 @@ local function buildCapture(p)
     local full = ns.Binds.compose(key, _G.IsAltKeyDown and _G.IsAltKeyDown(), _G.IsControlKeyDown and _G.IsControlKeyDown(),
       _G.IsShiftKeyDown and _G.IsShiftKeyDown())
     if not full then return end -- a modifier on its own: wait for the real key
-    local used = ns.Binds.actionOf(full)
-    if used and used ~= "MACRO " .. self.name and self.pending ~= full then
-      self.pending = full
-      self.text:SetText("|cffffd100" .. full .. "|r already does |cfff0b43c" .. used .. "|r.\nPress it again to use it, or press another key.")
-      return
-    end
-    self:Stop()
-    Core().bindKey(self.name, full)
+    Book.onBindKey(self, full)
   end)
   return c
+end
+
+--- What a pressed key means for the key being bound (docs/feedback-2026-10-29-evening.md §3). A key that presses an
+--- action button is not a conflict: an empty button gets the key placed on it, the same key there is "Already on",
+--- a button with something else asks first. Other game bindings ask in plain words. Never shows command names.
+function Book.onBindKey(c, full)
+  local name, KB = c.name, ns.Binds
+  if c.pending == full and c.onYes then local f = c.onYes; c:Stop(); f(); return end -- the same key again = Yes
+  local k = KB.classify(name, full)
+  if k.kind == "free" then c:Stop(); Core().bindKey(name, full); return end
+  if k.kind == "same" then
+    c.yes:Hide(); c.no:Hide(); c.pending, c.onYes = nil, nil
+    c.text:SetText("Already on |cffffd100" .. full .. "|r.\n\nPress another key, or Close.")
+    W.setLabel(c.cancel, "Close")
+    return
+  end
+  if k.kind == "button" then
+    if k.empty then c:Stop(); Core().placeOn(name, k.slot, full); return end
+    c:Ask("|cffffd100" .. full .. "|r is " .. KB.buttonName(k.slot) .. " (" .. k.what .. ").\nPut this key there?", "Put it there", "Another key",
+      function() Core().placeOn(name, k.slot, full) end, full)
+    return
+  end
+  c:Ask("|cffffd100" .. full .. "|r is " .. k.text .. " now.\nUse it for " .. c.label .. " anyway?", "Yes", "No",
+    function() Core().bindKey(name, full) end, full)
 end
 
 -- ------------------------------------------------------------------ actions on one key
