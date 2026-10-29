@@ -385,8 +385,23 @@ function Book.nextStep(ctx, mode)
     for _, s in ipairs(ctx.missing) do names[#names + 1] = s.name end
     return { text = "Visit your trainer", tip = table.concat(names, ", ") .. ". They join your keys when you have learned them." }
   end
+  -- talent points to spend (display only: the player spends them in the game's talent window)
+  local free = C.unspentTalentPoints(ctx.member, ctx.level)
+  if free and free > 0 then
+    local nt = ns.Squad.nextTalent(ctx.member)
+    return { text = free .. (free == 1 and " talent point to spend" or " talent points to spend"),
+      tip = (nt and ("Your guide takes " .. nt.name .. " next. ") or "") .. "Spend it in the game's talent window (N).",
+      button = { "Talents", "Opens WoWBoxer's Talents page: your guide's next points.", function() UI.Select("talents") end } }
+  end
   if mode == "spells" then return { text = "Drag a spell to your bar", tip = "Any spell you drag becomes a WoWBoxer key for this character." } end
   if mode == "custom" then return { text = "Build your own keys", tip = "A sequence of your spells. One press is still one spell." } end
+  -- the trainer to-do: the next level that brings something new (display only)
+  local tl, names = ns.Squad.nextTrainer(ctx.member)
+  if tl and tl <= ctx.level + 4 then
+    return { text = "|cff8fbf6aAll set|r · trainer at " .. tl .. ": " .. names[1] .. (#names > 1 and (" +" .. (#names - 1)) or ""),
+      tip = "At level " .. tl .. " your trainer has " .. table.concat(names, ", ") .. ". Your keys update after you learn them.",
+      button = { "Key bindings", "Opens the game's key bindings, so you can choose which keys press your action buttons.", function() Core().openKeyBindings() end } }
+  end
   return { text = "|cff8fbf6aAll keys on your bars|r", tip = "Hover a key to see what it does; drag it to move it.",
     button = { "Key bindings", "Opens the game's key bindings, so you can choose which keys press your action buttons.", function() Core().openKeyBindings() end } }
 end

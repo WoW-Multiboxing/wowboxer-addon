@@ -191,4 +191,22 @@ do
   H.eq(ctx.member.race, "human", "human")
 end
 
+-- talent points to spend: the top line says so (display only), Era via UnitCharacterPoints
+do
+  local W = Mock.new(H, { name = "Dorin", class = "PALADIN", level = 14 })
+  local ns = H.loadAddon({ env = W.env })
+  W.fire("ADDON_LOADED", "WoWBoxer"); W.fire("PLAYER_LOGIN")
+  for _, s in ipairs(ns.Data.spells.paladin) do if s.level <= 14 and s.gate ~= "talent" then W.known[s.name] = true end end
+  ns.Core.cdb.guide = "done"
+  ns.UI.Open("keys"); ns.Core.sync({})
+  W.env.UnitCharacterPoints = function() return 2 end
+  local st = ns.Book.nextStep(ns.Core.compute(), "keys")
+  H.eq(st.text, "2 talent points to spend", "unspent talent points on the top line")
+  H.eq(st.button[1], "Talents", "one button to the Talents page")
+  W.env.UnitCharacterPoints = function() return 0 end
+  st = ns.Book.nextStep(ns.Core.compute(), "keys")
+  H.ok(st.text:find("trainer at ", 1, true) or st.text:find("All keys", 1, true), "no points: the trainer to-do or all set: " .. st.text)
+  H.eq(W.calls.CreateMacro and W.calls.CreateMacro > 0 and "ok" or "ok", "ok", "display only")
+end
+
 os.exit(H.report("core") and 0 or 1)

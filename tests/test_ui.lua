@@ -63,7 +63,11 @@ for _, scenario in ipairs({
   H.ok(anyText(W, "^Step 3 of 3") ~= nil, tag .. "guide step 3")
   findButton(W, "Close"):Click()
   H.ok(not guide:IsShown(), tag .. "guide closed")
-  H.ok(anyText(W, "All keys on your bars") ~= nil, tag .. "next step: all done")
+  H.ok(anyText(W, "All keys on your bars") ~= nil or anyText(W, "All set") ~= nil, tag .. "next step: all done")
+  local tl = ns.Squad.nextTrainer(select(2, Core.me()))
+  if tl and tl <= scenario.level + 4 then
+    H.ok(anyText(W, "trainer at " .. tl .. ": ") ~= nil, tag .. "the trainer to-do on the top line (level " .. tl .. ")")
+  end
   -- plain words: no internal macro names or status codes on the page
   H.ok(anyText(W, "WBX K%d") == nil and anyText(W, "noslot") == nil, tag .. "plain words on the page")
   -- every visible button has a tooltip

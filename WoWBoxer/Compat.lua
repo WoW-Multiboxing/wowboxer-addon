@@ -230,6 +230,22 @@ end
 --- Talent ranks the character has spent, by talent name: {[name] = rank}, source.
 --- Forever: the active C_Traits config (as Leatrix Plus / Questie read it). Other clients: GetTalentInfo.
 --- Never changes anything (no PurchaseRank / CommitConfig).
+--- Talent points not spent yet, or nil when this client cannot tell (read-only).
+function C.unspentTalentPoints(m, level)
+  if G.UnitCharacterPoints then
+    local ok, n = pcall(G.UnitCharacterPoints, "player")
+    n = ok and tonumber(C.safe(n)) or nil
+    if n then return n end
+  end
+  if C.isForever() and ns.Kit then
+    local ok, ranks = pcall(C.talentRanks)
+    if ok and ranks and m then
+      local st = ns.Kit.talentStatus(m, ranks, level)
+      return math.max(0, st.available - st.spent)
+    end
+  end
+  return nil
+end
 function C.talentRanks()
   local CT, TR = G.C_ClassTalents, G.C_Traits
   if CT and CT.GetActiveConfigID and TR and TR.GetConfigInfo and TR.GetTreeNodes and TR.GetNodeInfo then
