@@ -54,7 +54,7 @@ Help.PAGES = {
     callouts = function() local f = sq("edit")
       local r = firstRow(f.pool)
       return { { f.party, "Add everyone in your party" }, { r and r.grip, "Drag to reorder" }, { r and r.role, "Role per character" },
-        { r and r.plays, "Leader or follower" }, { f.template, "Start from a template" } } end },
+        { r and r.plays, "Leader or follower" } } end },
   ["squad:ready"] = { tip = { "Is everyone set up?", "Fix your own line here; the others on their clients." },
     callouts = function() local f = sq("ready")
       local r = firstRow(f.pool)
@@ -335,9 +335,9 @@ function Help.Toggle() if Help.IsShown() then Help.Hide() else Help.Show() end e
 -- ------------------------------------------------------------------ the squad guide (5 steps)
 local SP = function() return ns.SquadPages end
 Help.SQUAD_STEPS = {
-  { "Make the squad", "Add your party or a template, then pick the leader.", function()
+  { "Make the squad", "Add your party or characters by name, then pick the leader.", function()
       if ns.Compat.inParty() then return { "Add party", "Adds everyone in your party who is not in the squad yet.", function() SP().addParty() end } end
-      return { "Edit squad", "Opens Edit squad: add characters or start from a template.", function() SP().select(UI.panels.squad, "edit") end }
+      return { "Edit squad", "Opens Edit squad: add characters by name.", function() SP().select(UI.panels.squad, "edit") end }
     end },
   { "Roles", "Pick a role and sequence keys for every character.", function()
       return { "Edit squad", "Opens Edit squad with a role and sequence dropdown per character.", function() SP().select(UI.panels.squad, "edit") end }

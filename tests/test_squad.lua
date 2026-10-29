@@ -1,4 +1,4 @@
--- The squad (docs/squad-overhaul.md §3): data model (order, tags, presets, notes), templates, Add my party,
+-- The squad (docs/squad-overhaul.md §3): data model (order, tags, presets, notes), Add my party,
 -- unit hint, readiness, key map, levelling plan and the share string carrying it all.
 local dir = (arg[0]:match("^(.*)/[^/]+$") or ".")
 local H = dofile(dir .. "/harness.lua")
@@ -53,17 +53,6 @@ do
   H.ok(hints:find("No healer") and hints:find("2 tanks"), "composition hints: " .. hints)
   -- tags from class + role
   H.eq(table.concat(S.tagsOf(S.newMember({ cls = "warlock", role = "ranged" })), ","), "caster,pet", "auto tags")
-  -- templates
-  for _, t in ipairs(S.TEMPLATES) do
-    local x = S.fromTemplate(t.key, "alliance")
-    H.eq(#x.members, #t.members, "template " .. t.key)
-    H.ok(x.members[1].leader, "template " .. t.key .. ": first leads")
-    for _, m in ipairs(x.members) do
-      local race = ns.Kit.race(m.race)
-      H.ok(race and ns.Engine.contains(race.c, m.cls), "template " .. t.key .. ": race fits " .. m.cls)
-      if t.key ~= "undead" then H.eq(race.f, "alliance", "template " .. t.key .. ": faction race") end
-    end
-  end
   -- setClass resets class-bound data
   local m = S.newMember({ cls = "priest", role = "healer", race = "undead", build = {}, customSeq = { { name = "x", steps = { "Smite" } } } })
   S.setClass(s, m, "warrior")

@@ -348,20 +348,6 @@ SP.register({ key = "edit", label = "Edit squad", tip = "Names, classes, roles, 
     f.dropLine:Hide()
 
     -- footer
-    f.template = W.dropdown(f, { width = 140, placeholder = "Choose…",
-      values = function() local v = {}; for _, t in ipairs(S().TEMPLATES) do v[#v + 1] = { t.key, t.name, t.tip .. " Starts a new squad; your other squads stay." } end return v end,
-      get = function() return nil end,
-      set = function(v)
-        local s = S().fromTemplate(v, ns.Compat.playerFaction())
-        if not s then return end
-        table.insert(Core().db.squads, s); Core().db.active = s.id
-        Core().cdb.squadId, Core().cdb.memberId = nil, nil
-        Core().print("New squad \"" .. s.name .. "\" from a template. Rename the characters, then pick yourself with This is me.")
-        Core().changed()
-      end })
-    local tl = W.labelled(f, "Template", f.template)
-    tl:SetPoint("BOTTOMLEFT", 0, 36)
-    W.ddTip(f.template, "Templates", "Duo, Trio, Quad, 5-man or the Undead trio example. Creates a new squad; your current one stays.")
     f.allSeq = W.dropdown(f, { width = 110, placeholder = "Choose…",
       values = function() return { { "off", "Off" }, { "simple", "Simple" }, { "medium", "Medium" }, { "advanced", "Advanced" } } end,
       get = function() return nil end,
@@ -373,22 +359,13 @@ SP.register({ key = "edit", label = "Edit squad", tip = "Names, classes, roles, 
         Core().changed()
       end })
     local al = W.labelled(f, "All sequences", f.allSeq)
-    al:SetPoint("LEFT", f.template, "RIGHT", 16, 0)
+    al:SetPoint("BOTTOMLEFT", 0, 36)
     W.ddTip(f.allSeq, "Everyone's sequence keys", "Sets sequence keys for every character whose class has them. Each client then updates its own keys.")
     f.new = W.button(f, "New squad", 86, 22, function()
       local s = S().newSquad({ name = "New squad", faction = ns.Compat.playerFaction() })
       table.insert(Core().db.squads, s); Core().db.active = s.id; Core().changed()
     end, "Starts an empty squad. Your current squad stays and can be picked again.")
     f.new:SetPoint("BOTTOMLEFT", 0, 0)
-    f.dup = W.button(f, "Duplicate", 80, 22, function()
-      local s = squad()
-      if not s then return end
-      local copy = S().newSquad({ name = s.name .. " (copy)", faction = s.faction, linkLevels = s.linkLevels, members = s.members, presets = {} })
-      for _, m in ipairs(copy.members) do m.id = S().uid("m") end
-      S().fixLeader(copy)
-      table.insert(Core().db.squads, copy); Core().db.active = copy.id; Core().changed()
-    end, "Makes a copy of this squad to try changes on.")
-    f.dup:SetPoint("LEFT", f.new, "RIGHT", 6, 0)
     f.del = W.button(f, "Delete squad", 100, 22, function(self)
       local s = squad()
       if not s then return end
@@ -397,7 +374,7 @@ SP.register({ key = "edit", label = "Edit squad", tip = "Names, classes, roles, 
       Core().db.active = Core().db.squads[1] and Core().db.squads[1].id or nil
       self.armed = false; W.setLabel(self, "Delete squad"); Core().changed()
     end, "Deletes this squad from WoWBoxer (click twice). Your macros in the game stay.")
-    f.del:SetPoint("LEFT", f.dup, "RIGHT", 6, 0)
+    f.del:SetPoint("LEFT", f.new, "RIGHT", 6, 0)
   end,
   refresh = function(f)
     local s = squad()
@@ -421,7 +398,7 @@ SP.register({ key = "edit", label = "Edit squad", tip = "Names, classes, roles, 
     f.add:SetEnabled(s ~= nil and #s.members < S().MAX_MEMBERS)
     f.party:SetEnabled(ns.Compat.inParty())
     f.del:SetEnabled(s ~= nil)
-    f.template.Refresh(); f.allSeq.Refresh()
+    f.allSeq.Refresh()
   end })
 
 --- A new follower in the active squad (a squad is created when there is none).

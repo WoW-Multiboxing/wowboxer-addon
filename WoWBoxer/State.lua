@@ -201,7 +201,7 @@ function S.applyPreset(s, id)
   return true
 end
 
--- ------------------------------------------------------------------ order, tags, templates, party
+-- ------------------------------------------------------------------ order, tags, party
 --- Move a member from position i to position j (window / slot order).
 function S.moveMember(s, i, j)
   local n = #s.members
@@ -231,29 +231,6 @@ function S.raceFor(cls, faction)
   local races = S.racesFor(cls)
   for _, r in ipairs(races) do if r.f == faction then return r.k end end
   return races[1] and races[1].k
-end
-
-S.TEMPLATES = {
-  { key = "duo", name = "Duo", tip = "Tank + healer.", members = { { "warrior", "tank" }, { "priest", "healer" } } },
-  { key = "trio", name = "Trio", tip = "Tank, healer and a damage dealer.", members = { { "warrior", "tank" }, { "priest", "healer" }, { "mage", "ranged" } } },
-  { key = "quad", name = "Quad", tip = "Tank, healer and two damage dealers.", members = { { "warrior", "tank" }, { "priest", "healer" }, { "mage", "ranged" }, { "warlock", "ranged" } } },
-  { key = "five", name = "5-man", tip = "A dungeon group: tank, healer, three damage dealers.",
-    members = { { "warrior", "tank" }, { "priest", "healer" }, { "mage", "ranged" }, { "warlock", "ranged" }, { "hunter", "ranged" } } },
-  { key = "undead", name = "Undead trio", tip = "Example: Undead Paladin tank, Priest healer, Warlock.", faction = "horde", race = "undead",
-    members = { { "paladin", "tank" }, { "priest", "healer" }, { "warlock", "ranged" } } },
-}
---- A new squad from a template (class names as character names; rename them in Edit squad).
-function S.fromTemplate(key, faction)
-  local t
-  for _, x in ipairs(S.TEMPLATES) do if x.key == key then t = x end end
-  if not t then return nil end
-  faction = t.faction or (faction == "alliance" and "alliance" or "horde")
-  local members = {}
-  for i, x in ipairs(t.members) do
-    members[#members + 1] = { name = D().classes[x[1]].n .. (i > 1 and t.members[i - 1][1] == x[1] and tostring(i) or ""), cls = x[1], role = x[2],
-      race = t.race or S.raceFor(x[1], faction), leader = i == 1, unit = "party1" }
-  end
-  return S.newSquad({ name = t.name, faction = faction, members = members })
 end
 
 --- A squad from the live party: info = {{name, cls, race?, level?, leader?, me?}} (this character first).

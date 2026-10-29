@@ -251,19 +251,12 @@ do
   rr.remove:Click()
   H.eq(#s.members, 1, "removed")
   H.ok(s.members[1].leader, "the remaining character leads again")
-  -- templates + duplicate + everyone's sequence keys
-  f.template.select("undead")
-  local t = ns.State.activeSquad(Core.db)
-  H.eq(t.name, "Undead trio", "new squad from a template")
-  H.eq(#t.members, 3, "three characters")
-  H.eq(t.members[1].race, "undead", "template race")
-  H.ok(t.members[1].leader and t.members[1].role == "tank", "the tank leads")
+  -- everyone's sequence keys; nothing here switches the active squad
+  local active = Core.db.active
   f.allSeq.select("medium")
-  local on = 0
-  for _, m in ipairs(t.members) do if m.seq == "medium" then on = on + 1 end end
-  H.eq(on, 3, "everyone's sequence keys (paladin, priest, warlock)")
-  findButton(W, "Duplicate"):Click()
-  H.eq(ns.State.activeSquad(Core.db).name, "Undead trio (copy)", "duplicate")
+  H.eq(s.members[1].seq, "medium", "everyone's sequence keys (paladin)")
+  H.eq(Core.db.active, active, "no squad switch as a side effect")
+  H.eq(ns.State.TEMPLATES, nil, "templates are gone")
   H.eq(W.calls.CreateMacro, nil, "squad edits write nothing to the game")
   H.eq(#errors(ns), 0, "no errors (squad): " .. table.concat(errors(ns), " | "))
 end
