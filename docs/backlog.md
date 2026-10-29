@@ -1,10 +1,10 @@
 # WoWBoxer addon – backlog
 
-## The owner: in-game check of 0.9.9 (your healer in a party with a Hunter or Warlock)
-1. Restart WoW, `/wbx` → click **Advanced** at the top → tick "I understand" → **Turn on Advanced**.
-2. My keys: right-click a heal key → **Also heal <pet>** → **Update keys**; hover the key: "Your targeting: … <pet>".
-3. Heal the pet with it (mouse not over anyone); then right-click → **Back to WoWBoxer's version** → Update keys.
-4. Setup → **Reset to default…** → look at step 2, then Cancel. `/reload`, tell Claude "done".
+## The owner: in-game check of 0.10.0
+1. Classic Era, log in **Boxtester**, `/wbx`: the top line says "Your 3 presses WBX K2 directly" → **Give 3 back**; press 3 in the world.
+2. Paladin leader (Advanced on): All spells → right-click **Holy Light** → **Edit macro…** → drag **Bo's pet** into the list → Save.
+3. My macros → **Update macros**; hover the Holy Light macro: "Your targeting: … Bo's pet"; heal the pet with it.
+4. My own macros → **New macro** → Single spell → Myself → Save; `/reload`, tell Claude "done".
 
 ## The owner: screenshots for the website (one client, any character, ~2 min)
 1. Log in, `/wbx`, then Print Screen on **My keys**, **All spells**, **Talents**, **Squad** and **Setup** (one each).
@@ -30,6 +30,13 @@ minimap button, much more drag & drop of macros onto the action bars.
 6. On the warlock: My keys – check the **Helpers** section (hover Follow) and that Follow/Assist/Pet show real icons on
    the bar after **Update keys**. Custom keys → New own key → **Paste…** your macro → read the warnings → **Copy…**.
 7. On Dorin: Squad → Home, Readiness, Key map and Plan – PrtScn each. Then `/reload` on every client and tell Claude "done".
+
+## Feedback 29 Oct late (docs/feedback-2026-10-29-late.md)
+- [x] Keybinds: bindPrev, Remove keybind / Reset restore it, "Give 3 back" for keys 1–= (Boxtester's bind 3 MACRO WBX K2 detected), never
+      SetBindingMacro on an action-button key, diagnose + read_log list direct WBX keybinds.
+- [x] Words: macro / keybind in UI, help, guide, README, features (tests/test_words.lua).
+- [x] Macro editor: Edit macro… on every macro and spell, leader and followers; drag and drop targeting; greyed in Standard.
+- [x] New macro: Single spell / Sequence first, presets; tests/test_macroeditor.lua.
 
 ## Advanced mode + Reset to default (docs/advanced-mode.md)
 - [x] Standard | Advanced switch in the header (db.settings.advanced) with the "I understand" confirm; Standard hides it all.
