@@ -125,9 +125,9 @@ function Core.saveLineUnit(u)
   local s, m = Core.me()
   if not m or m.leader then return nil end
   if not u then
-    local how
-    u, _, how = ns.Squad.lineFor(s, m)
+    local lu, _, how = ns.Squad.lineFor(s, m)
     if how ~= "party" and how ~= "leader" then return nil end
+    u = lu
   end
   if u and u ~= "focus" and m.lineUnit ~= u then m.lineUnit = u; Core.log("info", "follow line: " .. u) end
   return u
