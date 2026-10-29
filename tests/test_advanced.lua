@@ -29,6 +29,9 @@ local function labels(items) local t = {}; for _, it in ipairs(items) do t[#t + 
 -- Standard: nothing advanced
 H.ok(not Core.advanced(), "Standard by default")
 H.ok(not labels(Book.menuFor(p, healCell)):find("Targeting", 1, true), "Standard: no Targeting… in the menu")
+local greyed
+for _, it in ipairs(Book.menuFor(p, healCell)) do if it[1] == "Edit macro… (Advanced mode)" then greyed = it end end
+H.ok(greyed and greyed[4] == true and greyed[3]:find("Turn on Advanced in the window header", 1, true), "Standard: Edit macro… (Advanced mode) greyed with a tip")
 H.ok(not labels(Book.menuFor(p, healCell)):find("Also heal", 1, true), "Standard: no Also heal (Standard stays clean)")
 UI.Select("custom")
 p = UI.panels.custom
@@ -45,9 +48,9 @@ H.ok(c.go:IsEnabled(), "ticked: Turn on enabled")
 c.go:Click()
 H.ok(Core.advanced() and not c:IsShown(), "Advanced on")
 H.eq(Core.db.settings.advanced, true, "account-wide setting")
--- the menu: Targeting…, Also heal Bo's pet, Edit macro text…
+-- the menu: Edit macro… and Also heal Bo's pet (no separate Targeting… any more)
 local items = Book.menuFor(p, healCell)
-H.ok(labels(items):find("Targeting…", 1, true) and labels(items):find("Also heal Bo's pet", 1, true) and labels(items):find("Edit macro text…", 1, true),
+H.ok(labels(items):find("Edit macro…", 1, true) and labels(items):find("Also heal Bo's pet", 1, true) and not labels(items):find("Targeting", 1, true),
   "Advanced menu: " .. labels(items))
 for _, it in ipairs(items) do if it[1] == "Also heal Bo's pet" then it[2]() end end
 H.ok(Core.cdb.overrides[healCell.name], "Also heal Bo's pet stored")
@@ -55,22 +58,51 @@ UI.Refresh()
 local hc
 for _, b in ipairs(p.cells) do if b:IsShown() and b.cell and b.cell.name == healCell.name then hc = b end end
 H.ok(hc.edited:IsShown(), "the key shows the edited mark")
--- Targeting window: rows, hover, preview, Save, Back to WoWBoxer's version
-A.openTargeting(p, healCell.name, healCell.label)
-local tf = A.tf
-H.ok(tf:IsShown(), "Targeting… opens")
+-- the Macro editor: 1 Spells · 2 Targeting (drag and drop) · 3 Options · 4 Preview
+for _, it in ipairs(Book.menuFor(p, healCell)) do if it[1] == "Edit macro…" then it[2]() end end
+local tf = A.ef
+H.ok(tf:IsShown(), "Edit macro… opens the Macro editor")
+H.ok(tf.spells:GetText():find(healCell.label, 1, true), "1 Spells: " .. tf.spells:GetText())
 local names = {}
 for _, r in ipairs(tf.rows) do if r:IsShown() then names[#names + 1] = r.name:GetText() end end
-H.ok(table.concat(names, "|"):find("Bo's pet (party1pet)", 1, true), "rows: plain name + unit: " .. table.concat(names, " | "))
+H.ok(table.concat(names, "|"):find("Bo's pet – the pet of party1 (party1pet)", 1, true), "each row says what it targets: " .. table.concat(names, " | "))
 H.ok(tf.info:GetText():find("/255", 1, true), "preview with its length: " .. tf.info:GetText())
+-- drag a tile (Mouseover) from Available into the list at row 1
+local function cursorAt(frame) local x, y = frame:GetCenter(); local k = frame:GetEffectiveScale() or 1; W.cursorPos = { x * k, y * k } end
 local nBefore = #tf.targets
-tf.add.select(1) -- Mouseover
-H.eq(#tf.targets, nBefore + 1, "Add target")
+local moTile
+for _, t in ipairs(tf.tiles) do if t:IsShown() and t.target.who == "focus" then moTile = t end end
+moTile._scripts.OnDragStart(moTile)
+cursorAt(tf.rows[1])
+moTile._scripts.OnDragStop(moTile)
+H.eq(#tf.targets, nBefore + 1, "drag in from Available")
+H.eq(tf.targets[1].who, "focus", "dropped where the cursor is (row 1)")
+-- reorder by drag: row 1 → the last row
+local r1 = tf.rows[1]
+r1._scripts.OnDragStart(r1)
+cursorAt(tf.rows[#tf.targets])
+r1._scripts.OnDragStop(r1)
+H.eq(tf.targets[#tf.targets].who, "focus", "drag inside the list reorders")
+-- drag out removes; × removes
+local rl = tf.rows[#tf.targets]
+rl._scripts.OnDragStart(rl)
+W.cursorPos = { 1, 1 }
+rl._scripts.OnDragStop(rl)
+H.eq(#tf.targets, nBefore, "drag out of the list removes")
+moTile:Click()
+H.eq(#tf.targets, nBefore + 1, "a click on a tile adds it last")
 tf.rows[#tf.targets].remove:Click()
-H.eq(#tf.targets, nBefore, "Remove")
+H.eq(#tf.targets, nBefore, "× removes")
+-- a missing unit is greyed "skipped"
+table.insert(tf.targets, { who = "member", name = "Cid", help = true, nodead = true })
+A.refreshEditor()
+H.ok(tf.rows[#tf.targets].name:GetText() == "Cid is not in your party – skipped", "missing: " .. tf.rows[#tf.targets].name:GetText())
+table.remove(tf.targets)
 tf.mod.select("shift")
 H.ok(tf.preview:GetText():find("[mod:shift,@player]", 1, true), "modifier in the preview")
+local shown = tf.preview:GetText()
 tf.save:Click()
+for _, d in ipairs(Core.compute().desired) do if d.name == healCell.name then H.eq(d.body, shown, "the preview is the macro that is built") end end
 H.eq(Core.cdb.overrides[healCell.name].mod, "shift", "Save stores it")
 -- switch back to Standard: overrides stay active, one line says so
 UI.modeStd:Click()
@@ -80,7 +112,7 @@ Core.sync({}) -- the changed key first; then the line stays as a reminder
 local step = Book.nextStep(Core.compute(), "keys")
 H.ok(step.text:find("your own targeting", 1, true) and step.button[1] == "Show", "My keys: N keys use your own targeting · Show: " .. step.text)
 H.ok(labels(Book.menuFor(p, healCell)):find("Back to WoWBoxer's version", 1, true), "Back to WoWBoxer's version also in Standard")
-H.ok(not labels(Book.menuFor(p, healCell)):find("Targeting", 1, true), "but no Targeting… in Standard")
+H.ok(not labels(Book.menuFor(p, healCell)):find("Edit macro…\"", 1, true), "but Edit macro… only greyed in Standard")
 -- text editor: live checks
 UI.modeAdv:Click(); A.confirmFrame.tick:Click(); A.confirmFrame.go:Click()
 A.openText(p, healCell.name, healCell.label)
@@ -95,11 +127,11 @@ xf:Hide()
 -- KeyEditor shows Targeting… / Macro text… only in Advanced
 UI.Select("custom")
 UI.panels.custom.cells[1]:Click("LeftButton")
-H.ok(ns.KeyEditor.frame.targeting:IsShown() and ns.KeyEditor.frame.textBtn:IsShown(), "KeyEditor: Targeting… + Macro text… in Advanced")
+H.ok(ns.KeyEditor.frame.targeting:IsShown(), "KeyEditor: Edit macro… in Advanced")
 ns.KeyEditor.Close()
 UI.modeStd:Click()
 UI.panels.custom.cells[1]:Click("LeftButton")
-H.ok(not ns.KeyEditor.frame.targeting:IsShown() and not ns.KeyEditor.frame.textBtn:IsShown(), "KeyEditor: hidden in Standard")
+H.ok(not ns.KeyEditor.frame.targeting:IsShown(), "KeyEditor: hidden in Standard")
 ns.KeyEditor.Close()
 
 -- Reset to default

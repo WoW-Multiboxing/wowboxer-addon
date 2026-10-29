@@ -283,7 +283,7 @@ function W.pool(content, make)
   return p
 end
 
---- A small click menu at `anchor`: items = {{label, fn, tip?}}. One menu at a time; Esc closes it.
+--- A small click menu at `anchor`: items = {{label, fn, tip?, disabled?}}. One menu at a time; Esc closes it.
 function W.menu(anchor, items)
   local m = W.menuFrame
   if not m then
@@ -315,7 +315,10 @@ function W.menu(anchor, items)
     b:SetWidth(width)
     b:SetPoint("TOPLEFT", 6, -6 - (i - 1) * 21)
     b.label:SetText(it[1])
-    b:SetScript("OnClick", function() m:Hide(); it[2]() end)
+    local c = it[4] and W.MUTED or W.TEXT -- it[4] = disabled: greyed, a click does nothing (the tip says why)
+    b.label:SetTextColor(c[1], c[2], c[3])
+    b.disabled = it[4] and true or nil
+    b:SetScript("OnClick", function() if it[4] then return end m:Hide(); it[2]() end)
     if it[3] then W.tip(b, it[1], it[3]) end
     b:Show()
   end

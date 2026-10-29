@@ -279,8 +279,8 @@ local function layoutPass(screen, opts)
   for _, b in ipairs(kp.cells) do if not kc and b:IsShown() and b.cell and b.cell.name then kc = b.cell end end
   if kc then
     A.openTargeting(kp, kc.name, kc.label)
-    for i = 1, 4 do A.tf.add.select(i) end
-    check("targeting window"); A.tf:Hide()
+    for i = 1, 4 do A.ef.tiles[i]:Click() end
+    check("targeting window"); A.ef:Hide()
     A.openText(kp, kc.name, kc.label); check("macro text window"); A.xf:Hide()
   end
   A.openReset(); check("reset step 1")

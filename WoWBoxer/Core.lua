@@ -484,6 +484,30 @@ function Core.alsoHeal(name, owner)
   return Core.setOverride(name, ov)
 end
 
+--- A spell becomes an own macro "single spell" (the engine's custom priority with one step; parity unchanged).
+--- Returns its index (WBX C<i>) or nil, reason. preset: nil | "enemy" | "friendly" | "self" | {pet = member name}.
+function Core.newSingle(spell, preset)
+  local _, m = Core.me()
+  if not (m and spell) then return nil, "No spell" end
+  m.customSeq = m.customSeq or {}
+  for i, c in ipairs(m.customSeq) do if c.kind == "priority" and #c.steps == 1 and c.steps[1] == spell.name then return i end end
+  if #m.customSeq >= S.CUSTOM_MAX then return nil, "You have " .. S.CUSTOM_MAX .. " own macros already – delete one first" end
+  local help = ns.Engine.makeMacro(spell, K.memberCtx(m)):find("help", 1, true) ~= nil
+  if preset == "enemy" then help = false elseif preset == "friendly" or preset == "self" or type(preset) == "table" then help = true end
+  local c = S.cleanCustom({ { name = spell.name, kind = "priority", aim = help and "help" or "harm", steps = { spell.name } } })[1]
+  m.customSeq[#m.customSeq + 1] = c
+  local i = #m.customSeq
+  local name = "WBX C" .. i
+  if preset == "self" then Core.cdb.overrides[name] = ns.Override.clean({ targets = { { who = "player", help = true } } })
+  elseif type(preset) == "table" and preset.pet then
+    Core.cdb.overrides[name] = ns.Override.clean({ targets = { { who = "mouseover", help = true, nodead = true },
+      { who = "member", name = preset.pet, pet = true, help = true, nodead = true } } })
+  else Core.cdb.overrides[name] = nil end
+  Core.log("info", "own macro C" .. i .. ": single spell " .. spell.name)
+  Core.changed()
+  return i
+end
+
 -- ------------------------------------------------------------------ Reset to default (docs/advanced-mode.md §5)
 local function wbxMacros()
   local out = {}

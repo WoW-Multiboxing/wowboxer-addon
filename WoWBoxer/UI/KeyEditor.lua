@@ -10,7 +10,7 @@ local KE = {}
 ns.KeyEditor = KE
 
 local MAX_STEPS = 12
-local KINDS = { { "sequence", "Sequence (/castsequence)" }, { "priority", "Priority list" } }
+local KINDS = { { "single", "Single spell" }, { "sequence", "Sequence (/castsequence)" }, { "priority", "Priority list" } }
 local AIMS = { { "harm", "Enemy" }, { "help", "Friendly" } }
 local RESETS = { { "combat", "Reset after combat" }, { "target/combat", "Reset on new target" }, { "combat/12", "Reset after 12 s" } }
 
@@ -30,7 +30,16 @@ function KE.spellChoices(m, L)
 end
 
 --- Macro + warnings for the draft key (what the book will show after saving).
+--- The engine's view of a draft: "single" is the custom priority kind with one step.
+function KE.engineDraft(c)
+  if c.kind ~= "single" then return c end
+  local x = {}
+  for k, v in pairs(c) do x[k] = v end
+  x.kind, x.steps, x.filler = "priority", { c.steps[1] }, ""
+  return x
+end
 function KE.preview(m, c, L)
+  c = KE.engineDraft(c)
   local ctx = ns.Kit.memberCtx(m)
   local has = ns.Kit.seqHas(m, L, nil)
   local r = E().buildCustom(m.cls, c, ctx, has, { melee = ns.Kit.isMelee(m) })
@@ -86,7 +95,7 @@ function KE.save(m, c, index)
   if #(c.steps or {}) == 0 and (c.filler or "") == "" then return nil, "Add at least one spell." end
   local copy = {}
   for i, v in ipairs(list) do copy[i] = v end
-  copy[index or (#copy + 1)] = c
+  copy[index or (#copy + 1)] = KE.engineDraft(c)
   local clean = ns.State.cleanCustom(copy)
   m.customSeq = clean
   return index or #clean
@@ -148,15 +157,39 @@ function KE.Build(parent)
   f.fills:SetPoint("LEFT", f.reset, "RIGHT", 6, 0)
   W.ddTip(f.kind, "Kind", "Sequence: each press casts the next step. Priority: each press casts the first step that is ready.")
   W.ddTip(f.aim, "Aim", "Who the macro casts on: an enemy (your or the leader's target) or a friend.")
+  f.aim:Hide()
+  f.preset = W.dropdown(f, { width = 130, values = function() return KE.presetValues() end,
+    get = function() return f.draft and f.draft.preset end,
+    set = function(v) f.draft.preset = v; f.draft.aim = v == "enemy" and "harm" or "help"; KE.Refresh() end })
+  f.preset:SetPoint("LEFT", f.kind, "RIGHT", 6, 0)
+  W.ddTip(f.preset, "Targets", "Enemy: mouseover > the leader's target > your target. Friendly: mouseover > the leader > you. Myself. Or a squad pet. In Advanced mode the Macro editor has the full target list.")
   -- Advanced mode: full targeting and options, and the macro text itself (saved keys only)
-  f.targeting = W.button(f, "Targeting…", 90, 24, function()
-    if f.index then ns.Advanced.openTargeting(f:GetParent(), "WBX C" .. f.index, f.draft and f.draft.name) end
-  end, "Advanced: who this macro casts on, in order, plus reset, auto attack, pet and a modifier. Save the macro first.")
+  f.targeting = W.button(f, "Edit macro…", 100, 24, function()
+    if f.index then local n, l, par = "WBX C" .. f.index, f.draft and f.draft.name, f:GetParent(); KE.Close(); ns.Advanced.openEditor(par, n, l) end
+  end, "Advanced: the Macro editor – drag and drop targets, options and the macro text. Save this macro first.")
   f.targeting:SetPoint("BOTTOMLEFT", 258, 8)
-  f.textBtn = W.button(f, "Macro text…", 96, 24, function()
-    if f.index then ns.Advanced.openText(f:GetParent(), "WBX C" .. f.index, f.draft and f.draft.name) end
-  end, "Advanced, the last resort: write this macro's macro yourself (checked live). The macro is then frozen on level-ups.")
-  f.textBtn:SetPoint("LEFT", f.targeting, "RIGHT", 4, 0)
+  f.textBtn = f.targeting -- one entry point now (the Macro editor has Edit text)
+  -- New macro: first the choice, Single spell or Sequence (Priority under More)
+  local ch = W.box(f, 0.11, 0.085, 0.05, 1)
+  ch:SetAllPoints()
+  ch:SetFrameLevel((f:GetFrameLevel() or 1) + 5)
+  ch:EnableMouse(true)
+  ch.wbxModal = true
+  ch.q = W.text(ch, "GameFontNormalLarge", 15, W.GOLD, "CENTER")
+  ch.q:SetPoint("TOP", 0, -80)
+  ch.q:SetText("What should the new macro do?")
+  ch.q.wbxCopy = "hint"
+  local function choose(kind) f.draft.kind = kind; ch:Hide(); KE.Refresh() end
+  ch.single = W.button(ch, "Single spell", 150, 34, function() choose("single") end, "One spell, cast on the target you choose (enemy, friend, yourself or a squad pet).")
+  ch.single:SetPoint("TOPRIGHT", ch, "TOP", -8, -120)
+  ch.seq = W.button(ch, "Sequence", 150, 34, function() choose("sequence") end, "Several spells: each press casts the next one (DoTs first, then a filler).")
+  ch.seq:SetPoint("TOPLEFT", ch, "TOP", 8, -120)
+  ch.more = W.button(ch, "Priority", 90, 22, function() choose("priority") end, "More: a priority list – each press casts the first spell that is ready.")
+  ch.more:SetPoint("TOP", 0, -170)
+  ch.cancel = W.button(ch, "Cancel", 80, 24, function() KE.Close() end, "Closes this. Nothing is made.")
+  ch.cancel:SetPoint("BOTTOMRIGHT", -10, 8)
+  ch:Hide()
+  f.choice = ch
   W.ddTip(f.reset, "Starts over", "When the sequence starts again from the first step.")
   W.ddTip(f.fills, "Filler", "How many times the filler spell is cast between the other steps.")
 
@@ -276,6 +309,7 @@ function KE.Build(parent)
     if not m then return end
     local idx, err = KE.save(m, f.draft, f.index)
     if not idx then Core().print("|cffff8a80" .. err .. "|r"); return end
+    KE.applyPreset(idx, f.draft.preset)
     Core().log("info", "own macro C" .. idx .. " saved: " .. tostring(m.customSeq[idx] and m.customSeq[idx].name))
     KE.Close()
     if UI.panels and UI.panels.custom then UI.panels.custom.selected = "WBX C" .. idx end
@@ -332,8 +366,34 @@ function KE.addStep(name)
   local known = false
   for _, s in ipairs(ns.Kit.spellsOf(m)) do if s.name == name then known = true end end
   if not known then Core().print("|cffff8a80" .. tostring(name) .. " is not in WoWBoxer's spell list for your class.|r"); return end
-  f.draft.steps[#f.draft.steps + 1] = name
+  if f.draft.kind == "single" then f.draft.steps = { name } else f.draft.steps[#f.draft.steps + 1] = name end
   KE.Refresh()
+end
+
+--- Targeting presets: Enemy, Friendly, Myself and each squad pet (Hunters and Warlocks in the squad).
+function KE.presetValues()
+  local v = { { "enemy", "Enemy" }, { "friendly", "Friendly" }, { "self", "Myself" } }
+  for _, m in ipairs(ns.Override.squadPets(ns.Override.ctx())) do v[#v + 1] = { "pet:" .. m.name, "Friendly: " .. m.name .. "'s pet" } end
+  return v
+end
+--- The preset of a saved macro (from its aim and its override).
+function KE.presetOf(index, aim)
+  local ov = Core().cdb.overrides["WBX C" .. index]
+  local t = ov and ov.targets
+  if t and #t == 1 and t[1].who == "player" then return "self" end
+  if t and #t == 2 and t[2].who == "member" and t[2].pet then return "pet:" .. t[2].name end
+  return aim == "help" and "friendly" or "enemy"
+end
+--- After saving: the preset as WoWBoxer data (Myself / a pet = an override; Enemy / Friendly = the engine's own).
+function KE.applyPreset(index, preset)
+  local name = "WBX C" .. index
+  local pet = preset and preset:match("^pet:(.+)$")
+  if preset == "self" then Core().cdb.overrides[name] = ns.Override.clean({ targets = { { who = "player", help = true } } })
+  elseif pet then Core().cdb.overrides[name] = ns.Override.clean({ targets = { { who = "mouseover", help = true, nodead = true }, { who = "member", name = pet, pet = true, help = true, nodead = true } } })
+  else
+    local ov = Core().cdb.overrides[name]
+    if ov and not ov.text and not (ns.Advanced and ns.Advanced.on()) then Core().cdb.overrides[name] = nil end
+  end
 end
 
 --- Open the editor for custom key `index` of this character (nil = new key).
@@ -344,10 +404,12 @@ function KE.Open(parent, index)
   if f:GetParent() ~= parent then f:SetParent(parent); f:ClearAllPoints(); f:SetAllPoints(parent); f:SetFrameLevel((parent:GetFrameLevel() or 1) + 20) end
   local src = index and m.customSeq and m.customSeq[index]
   f.index = src and index or nil
-  f.draft = { id = src and src.id or nil, name = src and src.name or "My macro", kind = src and src.kind or "sequence",
+  f.draft = { id = src and src.id or nil, name = src and src.name or "My macro", kind = src and ((src.kind == "priority" and #src.steps == 1) and "single" or src.kind) or "sequence",
     aim = src and src.aim or "harm", steps = {}, filler = src and src.filler or "", fills = src and src.fills or 2,
     reset = src and src.reset or "combat" }
   for i, s in ipairs(src and src.steps or {}) do f.draft.steps[i] = s end
+  f.draft.preset = index and src and KE.presetOf(index, src.aim) or "enemy"
+  f.choice:SetShown(f.index == nil) -- a new macro starts with the choice
   f.name:SetText(f.draft.name)
   f.title:SetText(f.index and ("Edit own macro " .. f.index) or "New macro")
   f.delete:SetShown(f.index ~= nil)
@@ -368,7 +430,7 @@ function KE.Refresh()
   if not m then return end
   local L = ns.Compat.playerLevel()
   local d = f.draft
-  f.kind.Refresh(); f.aim.Refresh(); f.reset.Refresh(); f.fills.Refresh()
+  f.kind.Refresh(); f.aim.Refresh(); f.reset.Refresh(); f.fills.Refresh(); f.preset.Refresh()
   local seq = d.kind == "sequence"
   f.reset:SetShown(seq); f.fills:SetShown(seq)
   local byName = {}

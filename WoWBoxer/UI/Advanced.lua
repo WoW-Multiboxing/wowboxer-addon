@@ -72,118 +72,300 @@ function A.refreshSwitch()
   if on then UI.modeAdv:LockHighlight(); UI.modeStd:UnlockHighlight() else UI.modeStd:LockHighlight(); UI.modeAdv:UnlockHighlight() end
 end
 
--- ------------------------------------------------------------------ Targeting window (§2)
-local ROWS = 8
+-- ------------------------------------------------------------------ the Macro editor (docs/feedback-2026-10-29-late.md §3)
+-- One window for every macro: 1 Spells · 2 Targeting (drag and drop) · 3 Options · 4 Preview. The same on every client –
+-- leader, followers on party1–4, focus users: nothing here checks the role, only what this client can see.
 local function current(name)
   local ctx = Core().compute()
   for _, d in ipairs(ctx and ctx.desired or {}) do if d.name == name then return d end end
 end
-local function targetingFrame(parent)
-  if A.tf then
-    if A.tf:GetParent() ~= parent then A.tf:SetParent(parent); A.tf:ClearAllPoints(); A.tf:SetPoint("CENTER", 0, 0); A.tf:SetFrameLevel((parent:GetFrameLevel() or 1) + 60) end
-    return A.tf
+A.ROW_H = 24
+local ICON = { mouseover = "Ability_EyeOfTheOwl", target = "Ability_Hunter_SniperShot", leadertarget = "Ability_Hunter_SniperShot",
+  focus = "Spell_Holy_MindVision", targettarget = "Ability_Hunter_SniperShot", mypet = "Ability_Hunter_BeastTaming", unit = "INV_Misc_GroupLooking" }
+--- The picture of an available target: class icon for members, a paw for pets, an eye for mouseover, a crosshair for
+--- targets, the portrait for myself.
+function A.iconOf(tex, t, ctx)
+  if t.who == "player" then
+    if _G.SetPortraitTexture then pcall(_G.SetPortraitTexture, tex, "player"); return end
+    W.setIcon(tex, "INV_Misc_Head_Human_01"); return
   end
-  local f = modal(parent, 600, 400)
+  if t.pet or (t.who == "unit" and t.unit:find("pet", 1, true)) then W.setIcon(tex, ICON.mypet); return end
+  if t.who == "member" or t.who == "leader" then
+    local m
+    for _, x in ipairs(ctx.squad and ctx.squad.members or {}) do
+      if (t.who == "member" and x.name:lower() == t.name:lower()) or (t.who == "leader" and x.leader) then m = x end
+    end
+    if m and ns.SquadPages then ns.SquadPages.setClassIcon(tex, m.cls); return end
+  end
+  W.setIcon(tex, ICON[t.who] or "INV_Misc_QuestionMark")
+end
+
+--- One plain line per row: "Bo's pet – the pet of party1 (party1pet)", "Anna – party2", "Your mouseover";
+--- a unit missing here: "Bo is not in your party – skipped".
+function A.rowText(t, ctx)
+  local u = O().unitFor(t, ctx)
+  local w = t.who
+  if not u then
+    local who = (w == "member" and t.name) or ((w == "leader" or w == "leadertarget") and "The leader") or O().label(t, ctx)
+    return who .. " is not in your party – skipped", false
+  end
+  if w == "mouseover" then return "Your mouseover", true end
+  if w == "target" then return "Your target", true end
+  if w == "player" then return "Yourself – player", true end
+  if w == "mypet" then return "Your pet – pet", true end
+  if w == "focus" then return "Your focus – focus", true end
+  if w == "targettarget" then return "Target of target – targettarget", true end
+  if w == "leadertarget" then return "The leader's target – " .. u, true end
+  if w == "unit" then return u, true end
+  if t.pet then
+    local base = u:gsub("pet$", "")
+    return O().label(t, ctx) .. " – the pet of " .. (base == "" and "you" or base) .. " (" .. u .. ")", true
+  end
+  return O().label(t, ctx) .. " – " .. u, true
+end
+
+local function editorFrame(parent)
+  local f = A.ef
+  if f then
+    if f:GetParent() ~= parent then f:SetParent(parent); f:ClearAllPoints(); f:SetAllPoints(parent); f:SetFrameLevel((parent:GetFrameLevel() or 1) + 60) end
+    return f
+  end
+  f = W.box(parent, 0.11, 0.085, 0.05, 0.99)
+  f:SetAllPoints(parent)
+  f:SetFrameLevel((parent:GetFrameLevel() or 1) + 60)
+  f:EnableMouse(true)
+  f.wbxModal = true
+  f:Hide()
+  A.ef = f
+  local function head(text, x, y)
+    local h = W.text(f, "GameFontNormalSmall", nil, W.GOLD)
+    h:SetPoint("TOPLEFT", x, y)
+    h:SetText(text)
+    h.wbxCopy = "hint"
+    return h
+  end
   f.title = W.text(f, "GameFontNormal", nil, W.GOLD)
-  f.title:SetPoint("TOPLEFT", 14, -12)
+  f.title:SetPoint("TOPLEFT", 10, -8)
   f.title.wbxCopy = "data"
-  local hl = W.text(f, "GameFontNormalSmall", nil, W.GOLD)
-  hl:SetPoint("TOPLEFT", 14, -34)
-  hl:SetText("Tries, top first")
-  hl.wbxCopy = "label"
+  -- 1 Spells
+  head("1 Spells", 10, -28)
+  f.spells = W.line(f, "GameFontHighlightSmall", nil, W.TEXT)
+  f.spells:SetPoint("TOPLEFT", 70, -28)
+  f.spells:SetWidth(480)
+  f.spells.wbxCopy = "data"
+  f.editSpells = W.button(f, "Edit spells", 84, 20, function()
+    local i = f.name and tonumber(f.name:match("^WBX C(%d)$"))
+    if i then f:Hide(); ns.KeyEditor.Open(parent, i) end
+  end, "Opens the own-macro editor: steps, filler and kind.")
+  f.editSpells:SetPoint("TOPRIGHT", -10, -24)
+  -- 2 Targeting: Available targets (left) → This macro tries, in order (right)
+  head("2 Targeting – drag a target into the list", 10, -50)
+  f.avail = CreateFrame("Frame", nil, f)
+  f.avail:SetPoint("TOPLEFT", 10, -66)
+  f.avail:SetSize(268, 8 * A.ROW_H)
+  f.availBg = f.avail:CreateTexture(nil, "BACKGROUND")
+  f.availBg:SetAllPoints()
+  f.availBg:SetColorTexture(0, 0, 0, 0.25)
+  f.tiles = {}
+  f.list = CreateFrame("Frame", nil, f)
+  f.list:SetPoint("TOPLEFT", 290, -66)
+  f.list:SetPoint("TOPRIGHT", -10, -66)
+  f.list:SetHeight(8 * A.ROW_H)
+  f.listBg = f.list:CreateTexture(nil, "BACKGROUND")
+  f.listBg:SetAllPoints()
+  f.listBg:SetColorTexture(0.2, 0.15, 0.05, 0.35)
+  f.listHead = W.text(f, "GameFontNormalSmall", nil, W.GOLD)
+  f.listHead:SetPoint("BOTTOMLEFT", f.list, "TOPLEFT", 0, 3)
+  f.listHead:SetText("This macro tries, in order")
+  f.listHead.wbxCopy = "hint"
+  f.empty = W.text(f.list, "GameFontHighlightSmall", nil, W.MUTED, "CENTER")
+  f.empty:SetPoint("CENTER", 0, 0)
+  f.empty:SetText("Drag targets here")
+  f.empty.wbxCopy = "hint"
   f.rows = {}
-  for i = 1, ROWS do
-    local r = CreateFrame("Frame", nil, f)
-    r:SetSize(572, 22)
-    r:SetPoint("TOPLEFT", 14, -50 - (i - 1) * 24)
+  for i = 1, O().MAX_TARGETS do
+    local r = CreateFrame("Button", nil, f.list)
+    r:SetSize(10, A.ROW_H - 2)
+    r:SetPoint("TOPLEFT", 0, -(i - 1) * A.ROW_H)
+    r:SetPoint("TOPRIGHT", f.list, "TOPRIGHT", 0, -(i - 1) * A.ROW_H)
+    r:RegisterForDrag("LeftButton")
     r.bg = r:CreateTexture(nil, "BACKGROUND")
     r.bg:SetAllPoints()
-    r.bg:SetColorTexture(0, 0, 0, i % 2 == 0 and 0.15 or 0.25)
+    r.bg:SetColorTexture(0, 0, 0, i % 2 == 0 and 0.15 or 0.3)
+    r.icon = W.icon(r, 18)
+    r.icon:SetPoint("LEFT", 3, 0)
     r.name = W.line(r, "GameFontHighlightSmall", nil, W.TEXT)
-    r.name:SetPoint("LEFT", 6, 0)
-    r.name:SetWidth(210)
+    r.name:SetPoint("LEFT", 25, 0)
+    r.name:SetWidth(170)
     r.name.wbxCopy = "data"
-    local hit = CreateFrame("Frame", nil, r)
-    hit:SetAllPoints(r.name)
-    W.tooltip(hit, function(GT)
-      local t = f.targets and f.targets[i]
-      if not t then return end
-      local c = O().cond(t, f.ctx)
-      GT:AddLine(O().label(t, f.ctx), 1, 0.82, 0)
-      GT:AddLine(c or "Not in your party here – left out of the macro", 0.56, 0.85, 0.45)
-      GT:AddLine(O().meaning(t, f.ctx) .. ".", 1, 1, 1, true)
-    end)
-    r.aim = W.button(r, "Friendly", 70, 20, function()
+    r.aim = W.button(r, "Friendly", 62, 20, function()
       local t = f.targets[i]; if not t then return end
       if t.help == true then t.help = false elseif t.help == false then t.help = nil else t.help = true end
-      A.refreshTargeting()
+      A.refreshEditor()
     end, "Friendly: only friends. Enemy: only enemies. Either: both.")
-    r.aim:SetPoint("LEFT", 222, 0)
-    r.dead = W.check(r, "Skip if dead", function(_, v) local t = f.targets[i]; if t then t.nodead = v; A.refreshTargeting() end end)
-    r.dead:SetPoint("LEFT", 300, 0)
-    r.up = W.button(r, "Up", 40, 20, function() local t = f.targets; if i > 1 then t[i], t[i - 1] = t[i - 1], t[i]; A.refreshTargeting() end end, "Tries this one earlier.")
-    r.up:SetPoint("LEFT", 404, 0)
-    r.down = W.button(r, "Down", 50, 20, function() local t = f.targets; if t[i + 1] then t[i], t[i + 1] = t[i + 1], t[i]; A.refreshTargeting() end end, "Tries this one later.")
-    r.down:SetPoint("LEFT", r.up, "RIGHT", 2, 0)
-    r.remove = W.button(r, "x", 24, 20, function() table.remove(f.targets, i); A.refreshTargeting() end, { "Remove", "Takes this target out of the macro." })
+    r.aim:SetPoint("LEFT", 198, 0)
+    r.dead = W.frame("CheckButton", r, "UICheckButtonTemplate")
+    r.dead:SetSize(20, 20)
+    r.dead:SetPoint("LEFT", r.aim, "RIGHT", 2, 0)
+    r.dead:SetScript("OnClick", function(self) local t = f.targets[i]; if t then t.nodead = self:GetChecked() and true or false; A.refreshEditor() end end)
+    W.tip(r.dead, "Skip if dead", "Ticked: skips this target when it is dead (untick for resurrection).")
+    local function arrow(tex, d, tipText)
+      local b = CreateFrame("Button", nil, r)
+      b:SetSize(16, 16)
+      b:SetNormalTexture(tex)
+      b:SetScript("OnClick", function() A.moveRow(i, i + d) end)
+      W.tip(b, tipText, "Without dragging: moves this target one place.")
+      return b
+    end
+    r.up = arrow("Interface\\ChatFrame\\UI-ChatIcon-ScrollUp-Up", -1, "Up")
+    r.down = arrow("Interface\\ChatFrame\\UI-ChatIcon-ScrollDown-Up", 1, "Down")
+    r.remove = W.button(r, "x", 22, 20, function() table.remove(f.targets, i); A.refreshEditor() end, { "Remove", "Takes this target out (or drag it out of the list)." })
     r.remove:SetPoint("RIGHT", -2, 0)
+    r.down:SetPoint("RIGHT", r.remove, "LEFT", -2, 0)
+    r.up:SetPoint("RIGHT", r.down, "LEFT", -1, 0)
+    r:SetScript("OnDragStart", function() A.drag = { kind = "row", index = i } end)
+    r:SetScript("OnDragStop", function() A.drop() end)
+    W.tooltip(r, function(GT)
+      local t = f.targets[i]
+      if not t then return end
+      GT:AddLine((A.rowText(t, f.ctx)), 1, 0.82, 0)
+      GT:AddLine(O().cond(t, f.ctx) or "Left out of the macro while it is missing here", 0.56, 0.85, 0.45)
+      GT:AddLine((O().meaning(t, f.ctx):gsub("^Casts on [^w]+ when", "when")) .. ".", 1, 1, 1, true)
+      GT:AddLine("Drag to reorder, drag out to remove", 0.66, 0.6, 0.49)
+    end)
     f.rows[i] = r
   end
-  local y = -50 - ROWS * 24 - 6
-  f.add = W.dropdown(f, { width = 220, placeholder = "Add target",
-    values = function() local v = {}; for k, c in ipairs(O().choices(f.ctx, f.help)) do v[#v + 1] = { k, c[1] } end return v end,
-    get = function() return nil end,
-    set = function(k) local c = O().choices(f.ctx, f.help)[k]; if c and #f.targets < O().MAX_TARGETS then f.targets[#f.targets + 1] = c[2]; A.refreshTargeting() end end })
-  f.add:SetPoint("TOPLEFT", 14, y)
-  W.ddTip(f.add, "Add target", "Mouseover, your target, the leader, the leader's target, each squad member and pet with its unit here, party1–4, focus, target of target, myself.")
-  f.mod = W.dropdown(f, { width = 150,
+  -- 3 Options
+  local oy = -66 - 8 * A.ROW_H - 10
+  head("3 Options", 10, oy)
+  f.mod = W.dropdown(f, { width = 130,
     values = function() return { { "none", "No modifier" }, { "shift", "Shift = myself" }, { "ctrl", "Ctrl = myself" }, { "alt", "Alt = myself" } } end,
-    get = function() return f.opts.mod or "none" end, set = function(v) f.opts.mod = v ~= "none" and v or nil; A.refreshTargeting() end })
-  f.mod:SetPoint("LEFT", f.add, "RIGHT", 10, 0)
-  W.ddTip(f.mod, "Modifier", "Hold Shift (Ctrl, Alt) while you press the macro to cast it on yourself.")
-  local function tri(width, key, labels)
-    return W.dropdown(f, { width = width, values = function() return { { "keep", labels[1] }, { "on", labels[2] }, { "off", labels[3] } } end,
+    get = function() return f.opts.mod or "none" end, set = function(v) f.opts.mod = v ~= "none" and v or nil; A.refreshEditor() end })
+  f.mod:SetPoint("TOPLEFT", 80, oy + 4)
+  W.ddTip(f.mod, "Modifier", "Hold Shift (Ctrl, Alt) while you press the macro's keybind to cast it on yourself.")
+  local function tri(width, key, labels, title, tip)
+    local d = W.dropdown(f, { width = width, values = function() return { { "keep", labels[1] }, { "on", labels[2] }, { "off", labels[3] } } end,
       get = function() local v = f.opts[key]; return v == true and "on" or v == false and "off" or "keep" end,
       set = function(v)
         if v == "on" then f.opts[key] = true elseif v == "off" then f.opts[key] = false else f.opts[key] = nil end
-        A.refreshTargeting()
+        A.refreshEditor()
       end })
+    W.ddTip(d, title, tip)
+    return d
   end
-  f.start = tri(130, "startattack", { "Attack: as built", "Auto attack on", "Auto attack off" })
-  f.start:SetPoint("LEFT", f.mod, "RIGHT", 10, 0)
-  W.ddTip(f.start, "Auto attack", "Adds or removes /startattack (enemy macros).")
-  f.pet = tri(130, "petattack", { "Pet: as built", "Pet attacks", "No pet line" })
-  f.pet:SetPoint("TOPLEFT", 14, y - 28)
-  W.ddTip(f.pet, "Pet", "Adds or removes /petattack (enemy macros).")
-  f.reset = W.dropdown(f, { width = 160,
+  f.start = tri(130, "startattack", { "Attack: as built", "Auto attack on", "Auto attack off" }, "Auto attack", "Adds or removes /startattack (enemy macros).")
+  f.start:SetPoint("LEFT", f.mod, "RIGHT", 8, 0)
+  f.pet = tri(120, "petattack", { "Pet: as built", "Pet attacks", "No pet line" }, "Pet", "Adds or removes /petattack (enemy macros).")
+  f.pet:SetPoint("LEFT", f.start, "RIGHT", 8, 0)
+  f.reset = W.dropdown(f, { width = 130,
     values = function() local v = { { "keep", "Reset: as built" } }; for _, r in ipairs(O().RESETS) do v[#v + 1] = { r, "reset=" .. r } end return v end,
-    get = function() return f.opts.reset or "keep" end, set = function(v) f.opts.reset = v ~= "keep" and v or nil; A.refreshTargeting() end })
-  f.reset:SetPoint("LEFT", f.pet, "RIGHT", 10, 0)
+    get = function() return f.opts.reset or "keep" end, set = function(v) f.opts.reset = v ~= "keep" and v or nil; A.refreshEditor() end })
+  f.reset:SetPoint("LEFT", f.pet, "RIGHT", 8, 0)
   W.ddTip(f.reset, "Reset", "When a sequence macro starts over: after combat, on a new target, after some seconds.")
+  -- 4 Preview
+  local py = oy - 30
+  head("4 Preview", 10, py)
   f.preview = W.text(f, "GameFontHighlightSmall", 9, { 0.6, 0.66, 0.52 })
-  f.preview:SetPoint("TOPLEFT", 14, y - 56)
-  f.preview:SetPoint("TOPRIGHT", -14, y - 56)
+  f.preview:SetPoint("TOPLEFT", 80, py)
+  f.preview:SetPoint("TOPRIGHT", -10, py)
+  f.preview:SetPoint("BOTTOM", f, "BOTTOM", 0, 52)
+  f.preview:SetJustifyV("TOP")
   if f.preview.SetNonSpaceWrap then f.preview:SetNonSpaceWrap(true) end
   f.preview.wbxCopy = "data"
-  f.info = W.text(f, "GameFontHighlightSmall", nil, W.MUTED)
-  f.info:SetPoint("BOTTOMLEFT", 14, 40)
-  f.info:SetPoint("BOTTOMRIGHT", -14, 40)
+  f.info = W.line(f, "GameFontHighlightSmall", nil, W.MUTED)
+  f.info:SetPoint("BOTTOMLEFT", 10, 36)
+  f.info:SetPoint("BOTTOMRIGHT", -10, 36)
   f.info.wbxCopy = "data"
-  f.save = W.button(f, "Save", 70, 24, function() A.saveTargeting() end, "Saves your targeting for this macro. Press Update macros afterwards to write the macro.")
-  f.save:SetPoint("BOTTOMRIGHT", -12, 10)
+  f.save = W.button(f, "Save", 70, 24, function() A.saveEditor() end, "Saves your targeting and options. Press Update macros afterwards to write the macro.")
+  f.save:SetPoint("BOTTOMRIGHT", -10, 8)
   f.cancel = W.button(f, "Cancel", 70, 24, function() f:Hide() end, "Closes this. Nothing changes.")
   f.cancel:SetPoint("RIGHT", f.save, "LEFT", -6, 0)
   f.back = W.button(f, "WoWBoxer's version", 140, 24, function() Core().setOverride(f.name, nil); f:Hide() end,
     "Back to WoWBoxer's version: removes your targeting (and text) for this macro.")
-  f.back:SetPoint("BOTTOMLEFT", 12, 10)
-  A.tf = f
+  f.back:SetPoint("BOTTOMLEFT", 10, 8)
+  f.text = W.button(f, "Edit text", 80, 24, function() local n, l = f.name, f.label; f:Hide(); A.openText(parent, n, l) end,
+    "The last resort: write the macro text yourself (checked live). The macro is then frozen on level-ups.")
+  f.text:SetPoint("LEFT", f.back, "RIGHT", 6, 0)
   return f
 end
---- Open the Targeting window for key `name` (Advanced only).
-function A.openTargeting(parent, name, label)
-  local f = targetingFrame(parent)
-  local d = current(name)
+
+--- An available target tile (left side): drag it into the list, or click it to add it at the end.
+local function tile(f, i)
+  local t = f.tiles[i]
+  if t then return t end
+  t = CreateFrame("Button", nil, f.avail)
+  t:SetSize(132, A.ROW_H - 2)
+  t:SetPoint("TOPLEFT", ((i - 1) % 2) * 134, -math.floor((i - 1) / 2) * A.ROW_H)
+  t:RegisterForDrag("LeftButton")
+  local hl = t:CreateTexture(nil, "HIGHLIGHT")
+  hl:SetAllPoints()
+  hl:SetColorTexture(1, 0.82, 0, 0.15)
+  t.icon = W.icon(t, 18)
+  t.icon:SetPoint("LEFT", 2, 0)
+  t.name = W.line(t, "GameFontHighlightSmall", nil, W.TEXT)
+  t.name:SetPoint("LEFT", 23, 0)
+  t.name:SetPoint("RIGHT", -2, 0)
+  t.name.wbxCopy = "data"
+  t:SetScript("OnDragStart", function() if t.target then A.drag = { kind = "new", target = t.target } end end)
+  t:SetScript("OnDragStop", function() A.drop() end)
+  t:SetScript("OnClick", function() if t.target then A.insert(t.target, #f.targets + 1) end end)
+  W.tooltip(t, function(GT)
+    if not t.target then return end
+    GT:AddLine(t.full or "", 1, 0.82, 0)
+    GT:AddLine(O().cond(t.target, f.ctx) or "Not in your party here", 0.56, 0.85, 0.45)
+    GT:AddLine("Drag into the list on the right (or click to add it last)", 0.66, 0.6, 0.49, true)
+  end)
+  f.tiles[i] = t
+  return t
+end
+
+local function copy(t) local c = {}; for k, v in pairs(t) do c[k] = v end return c end
+function A.insert(t, at)
+  local f = A.ef
+  if #f.targets >= O().MAX_TARGETS then return false end
+  at = math.max(1, math.min(#f.targets + 1, at or (#f.targets + 1)))
+  table.insert(f.targets, at, copy(t))
+  A.refreshEditor()
+  return true
+end
+function A.moveRow(i, j)
+  local f = A.ef
+  if not f.targets[i] then return end
+  j = math.max(1, math.min(#f.targets, j))
+  if i == j then return end
+  local t = table.remove(f.targets, i)
+  table.insert(f.targets, j, t)
+  A.refreshEditor()
+end
+--- Where the cursor is over the list: an index 1..#targets+1, or nil when outside the list.
+function A.dropIndex()
+  local f = A.ef
+  local x, y = _G.GetCursorPosition()
+  local k = f.list:GetEffectiveScale() or 1
+  x, y = x / k, y / k
+  local l, r, top, bottom = f.list:GetLeft(), f.list:GetRight(), f.list:GetTop(), f.list:GetBottom()
+  if not (l and r and top and bottom) or x < l or x > r or y > top or y < bottom then return nil end
+  return math.floor((top - y) / A.ROW_H) + 1
+end
+--- A drag ends: new tile → insert where dropped; a row → move there, or remove when dropped outside the list.
+function A.drop()
+  local d = A.drag
+  A.drag = nil
   if not d then return end
+  local f = A.ef
+  local at = A.dropIndex()
+  if d.kind == "new" then
+    if at then A.insert(d.target, at) end
+  elseif d.kind == "row" then
+    if at then A.moveRow(d.index, math.min(at, #f.targets)) else table.remove(f.targets, d.index); A.refreshEditor() end
+  end
+end
+
+--- Open the Macro editor for macro `name` (any macro: recommended, sequence, squad or own).
+function A.openEditor(parent, name, label)
+  local d = current(name)
+  if not d then return false end
+  local f = editorFrame(parent)
   f.name, f.label, f.ctx = name, label or name, O().ctx()
   local ov = Core().cdb.overrides[name]
   local base = d.engineBody or d.body
@@ -191,55 +373,84 @@ function A.openTargeting(parent, name, label)
   f.help = base:find("help", 1, true) and true or (base:find("harm", 1, true) and false or nil)
   f.targets, f.opts = {}, {}
   local src = (ov and ov.targets and #ov.targets > 0) and ov.targets or O().fromBody(base, f.ctx)
-  for i, t in ipairs(src) do local c = {}; for k, v in pairs(t) do c[k] = v end; f.targets[i] = c end
+  for i, t in ipairs(src) do f.targets[i] = copy(t) end
   for _, k in ipairs({ "mod", "reset", "startattack", "petattack" }) do f.opts[k] = ov and ov[k] end
-  f.title:SetText("Targeting – " .. f.label)
+  -- 1 Spells: what the macro casts
+  local kind = (d.seq and d.seq.base == "priority") and "Priority" or (d.seq and "Sequence") or "Single spell"
+  local names = {}
+  for _, s in ipairs(d.steps or {}) do names[#names + 1] = s.name end
+  if #names == 0 and d.spell then names[1] = d.spell.name end
+  if #names == 0 and d.seq and d.seq.spells then for _, n in ipairs(d.seq.spells) do names[#names + 1] = n end end
+  if #names == 0 then names[1] = d.label end
+  f.spells:SetText(kind .. ": " .. table.concat(names, " › "))
+  f.editSpells:SetShown(name:match("^WBX C%d$") ~= nil)
+  f.title:SetText("Macro editor – " .. f.label)
   f:Show()
-  A.refreshTargeting()
+  A.refreshEditor()
+  return true
 end
+A.openTargeting = A.openEditor -- 0.9.9 name
 function A.draft()
-  local f = A.tf
+  local f = A.ef
   local ov = { targets = f.targets }
   for k, v in pairs(f.opts) do ov[k] = v end
   return O().clean(ov)
 end
-function A.refreshTargeting()
-  local f = A.tf
+function A.refreshEditor()
+  local f = A.ef
   if not (f and f:IsShown()) then return end
+  -- available targets: everything this client can use (the leader's client gets every member and pet too)
+  local choices = O().choices(f.ctx, f.help)
+  for i, c in ipairs(choices) do
+    local t = tile(f, i)
+    t.target = c[2]
+    t.full = c[1]
+    t.name:SetText(c[1])
+    A.iconOf(t.icon, c[2], f.ctx)
+    local ok = O().unitFor(c[2], f.ctx) ~= nil
+    t.name:SetTextColor(ok and 1 or 0.55, ok and 1 or 0.55, ok and 1 or 0.55)
+    t:SetShown(i <= 16)
+  end
+  for i = #choices + 1, #f.tiles do f.tiles[i]:Hide() end
   for i, r in ipairs(f.rows) do
     local t = f.targets[i]
     r:SetShown(t ~= nil)
     if t then
-      local c = O().cond(t, f.ctx)
-      local u = O().unitFor(t, f.ctx)
-      r.name:SetText(O().label(t, f.ctx) .. (u and (" (" .. u .. ")") or " |cfff0b43c(not in party)|r"))
+      local text, here = A.rowText(t, f.ctx)
+      r.name:SetText(text)
+      local c = here and 1 or 0.55
+      r.name:SetTextColor(c, c, c)
+      A.iconOf(r.icon, t, f.ctx)
+      if r.icon.SetDesaturated then r.icon:SetDesaturated(not here) end
       W.setLabel(r.aim, t.help == true and "Friendly" or t.help == false and "Enemy" or "Either")
       r.dead:SetChecked(t.nodead and true or false)
       r.up:SetEnabled(i > 1); r.down:SetEnabled(f.targets[i + 1] ~= nil)
-      r.name:SetTextColor(c and 1 or 0.6, c and 1 or 0.6, c and 1 or 0.6)
     end
   end
-  f.add.Refresh(); f.mod.Refresh(); f.start.Refresh(); f.pet.Refresh(); f.reset.Refresh()
-  f.add:SetEnabled(#f.targets < O().MAX_TARGETS)
+  f.empty:SetShown(#f.targets == 0)
+  f.mod.Refresh(); f.start.Refresh(); f.pet.Refresh(); f.reset.Refresh()
   local ov = A.draft()
   local body, missing = f.base, {}
   if ov then body, missing = O().apply(f.base, ov, f.ctx) end
+  f.body = body
   f.preview:SetText(body)
   local ok, why = ns.Rules.validateMacro(f.name, body)
   local msg = #body .. "/255"
   if #body > 255 then msg = "|cffff8a80Too long (" .. #body .. "/255): remove a target or untick Skip if dead|r"
   elseif not ok then msg = "|cffff8a80" .. tostring(why) .. "|r"
-  elseif #missing > 0 then msg = msg .. " · |cfff0b43c" .. table.concat(missing, ", ") .. " not in your party: left out|r" end
+  elseif #missing > 0 then msg = msg .. " · |cfff0b43c" .. table.concat(missing, ", ") .. " skipped (not in your party)|r" end
   if #f.targets == 0 then msg = msg .. " · no targets: WoWBoxer's own targeting stays" end
   f.info:SetText(msg)
   f.save:SetEnabled(ok and #body <= 255)
   f.back:SetEnabled(Core().cdb.overrides[f.name] ~= nil)
 end
-function A.saveTargeting()
-  local f = A.tf
+A.refreshTargeting = A.refreshEditor
+function A.saveEditor()
+  local f = A.ef
   Core().setOverride(f.name, A.draft())
   f:Hide()
 end
+A.saveTargeting = A.saveEditor
 
 -- ------------------------------------------------------------------ Edit macro text (§3, the last resort)
 local function textFrame(parent)
@@ -299,23 +510,36 @@ function A.refreshText()
 end
 
 -- ------------------------------------------------------------------ the book: menu entries, marks (Advanced only)
---- Extra right-click entries for key cell c on book panel p.
+--- Right-click entries for book cell c on panel p – the same for the leader and every follower (no role check).
+--- Advanced: "Edit macro…" on every macro and every spell (a spell without a macro first becomes an own single-spell
+--- macro), "Also heal <pet>" on friendly macros. Standard: "Edit macro… (Advanced mode)" greyed with a tip.
 function A.menuItems(p, c)
   local items = {}
-  if not (c.name and c.item) then return items end
-  local ov = Core().cdb.overrides[c.name]
-  if A.on() then
-    items[#items + 1] = { "Targeting…", function() A.openTargeting(p, c.name, c.label) end, "Choose who this macro casts on, in order." }
-    if c.d and (c.d.engineBody or c.d.body or ""):find("help", 1, true) then
+  local isSpell = c.kind == "spell" and c.spell ~= nil
+  if not (c.name or isSpell) or c.kind == "new" or c.kind == "squadkey" then return items end
+  if not A.on() then
+    items[#items + 1] = { "Edit macro… (Advanced mode)", function() end, "Turn on Advanced in the window header to change who this macro casts on.", true }
+  else
+    items[#items + 1] = { "Edit macro…", function() A.editCell(p, c) end, "Spells, targeting (drag and drop), options and a live preview of this macro." }
+    local body = c.d and (c.d.engineBody or c.d.body) or ""
+    if c.name and body:find("help", 1, true) then
       for _, m in ipairs(O().squadPets(O().ctx())) do
         items[#items + 1] = { "Also heal " .. m.name .. "'s pet", function() Core().alsoHeal(c.name, m.name) end,
           "Adds " .. m.name .. "'s pet after the leader. Press Update macros afterwards." }
       end
     end
-    items[#items + 1] = { "Edit macro text…", function() A.openText(p, c.name, c.label) end, "The last resort: write the macro yourself. The macro is then frozen on level-ups." }
   end
-  if ov then items[#items + 1] = { "Back to WoWBoxer's version", function() Core().setOverride(c.name, nil) end, "Removes your targeting or text for this macro." } end
+  if c.name and Core().cdb.overrides[c.name] then
+    items[#items + 1] = { "Back to WoWBoxer's version", function() Core().setOverride(c.name, nil) end, "Removes your targeting or text for this macro." }
+  end
   return items
+end
+--- Edit macro… on a cell: its macro, or a spell without one becomes an own single-spell macro first.
+function A.editCell(p, c)
+  if c.name then return A.openEditor(p, c.name, c.label) end
+  local i, why = Core().newSingle(c.spell)
+  if not i then Core().print("|cffff8a80" .. tostring(why) .. "|r"); return false end
+  return A.openEditor(p, "WBX C" .. i, c.spell.name)
 end
 --- Tooltip lines for a key with an override.
 function A.tooltip(GT, c)

@@ -567,6 +567,7 @@ function Book.menuFor(p, c)
   if c.kind == "squadkey" then return { { "Make this macro", function() Book.setSquadKey(c.squadKey, true) end } } end
   if c.kind == "spell" and not c.name then
     items[#items + 1] = { c.pending and "Pick up (macro works once learned)" or "Pick up (make a macro)", function() pickupCell(c) end }
+    if ns.Advanced then for _, it in ipairs(ns.Advanced.menuItems(p, c)) do items[#items + 1] = it end end
     return items
   end
   items[#items + 1] = { "Pick up", function() pickupCell(c) end }

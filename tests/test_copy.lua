@@ -185,7 +185,7 @@ for _, sc in ipairs({
     local kc
     for _, b in ipairs(UI.panels.keys.cells) do if not kc and b:IsShown() and b.cell and b.cell.name then kc = b.cell end end
     if kc then
-      A.openTargeting(UI.panels.keys, kc.name, kc.label); add(copyProblems(W, A.tf, tag .. " targeting")); A.tf:Hide()
+      A.openTargeting(UI.panels.keys, kc.name, kc.label); add(copyProblems(W, A.ef, tag .. " targeting")); A.ef:Hide()
       A.openText(UI.panels.keys, kc.name, kc.label); add(copyProblems(W, A.xf, tag .. " macro text")); A.xf:Hide()
     end
     A.openReset(); add(copyProblems(W, A.rf, tag .. " reset 1")); A.rf.next:Click(); add(copyProblems(W, A.rf, tag .. " reset 2")); A.rf:Hide()

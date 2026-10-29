@@ -315,8 +315,8 @@ function O.choices(ctx, help)
       if m == ctx.me then add({ who = "mypet" }) else add({ who = "member", name = m.name, pet = true }) end
     end
   end
-  for _, u in ipairs(O.RAW_UNITS) do add({ who = "unit", unit = u }) end
   add({ who = "focus" }); add({ who = "targettarget" }); add({ who = "player" })
+  for _, u in ipairs(O.RAW_UNITS) do add({ who = "unit", unit = u }) end -- raw units last (for people who know them)
   return v
 end
 
