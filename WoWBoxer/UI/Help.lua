@@ -30,7 +30,7 @@ Help.PAGES = {
         { helper, "Follow, assist and pet keys" }, { p.det, "The selected key" } } end },
   spells = { tip = { "Every spell you know, then later ones.", "Drag one onto your bar to make it a key.", "Grey: trainer. Lock: a later level." },
     callouts = function() local p = UI.panels.spells
-      return { { p.strip, "Next step" }, { firstShown(p.cells), "Drag a spell to your bar" }, { p.hint, "Grey: trainer · Lock: later levels" }, { p.jump, "Jump to future spells" } } end },
+      return { { p.strip, "Next step" }, { firstShown(p.cells), "Drag a spell to your bar" }, { p.hint, "Grey: trainer · Lock: later levels" } } end },
   custom = { tip = { "Your own sequence keys, up to 8.", "Click a key to edit it.", "Right-click for copy and more." },
     callouts = function() local p = UI.panels.custom
       local new, own

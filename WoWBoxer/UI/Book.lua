@@ -175,7 +175,7 @@ function Book.cellFrame(name)
 end
 
 -- three looks for a spell: learned (normal), at your trainer now (greyed, gold note), a later level (greyed, dark,
--- a lock, a blue-grey note). Future spells sit on their own spreads after the learned ones.
+-- a lock, a blue-grey note). Future spells follow the learned ones under a "Future spells" rule, by unlock level.
 Book.TRAINER = { 0.9, 0.75, 0.4 }
 Book.FUTURE = { 0.62, 0.68, 0.86 }
 --- "At your trainer" / "Unlocks at 32" for M.pendingOf's value; nil when the spell is known.
@@ -272,7 +272,7 @@ function Book.spellSections(ctx)
     if ca ~= cb then return ca < cb end
     return a.i < b.i
   end)
-  for _, x in ipairs(later) do future.cells[#future.cells + 1] = cell(x.s, x.p) end
+  for _, x in ipairs(later) do local c = cell(x.s, x.p); c.future = true; future.cells[#future.cells + 1] = c end
   return { learned, future }
 end
 
@@ -743,14 +743,6 @@ local function build(p, mode)
     p.hint:SetPoint("TOPLEFT", 4, -8)
     p.hint:SetText(mode == "spells" and "Grey: at your trainer · Lock: later levels" or "Up to 8 own keys")
     p.hint.wbxCopy = "hint"
-    if mode == "spells" then
-      p.jump = W.button(p.right, "Future spells", 96, 20, function()
-        p.page = (p.futureFirst and p.page < p.futureFirst) and p.futureFirst or 1; UI.Refresh()
-      end, "Jumps between the spells you know and the ones you learn at later levels.")
-      p.jump:SetPoint("TOPRIGHT", 0, -6)
-      p.hint:SetPoint("RIGHT", p.jump, "LEFT", -6, 0)
-      if p.hint.SetMaxLines then p.hint:SetMaxLines(1) end
-    end
   end
   p.empty = W.text(p.left, "GameFontHighlight", nil, W.MUTED, "CENTER")
   p.empty:SetPoint("TOPLEFT", 10, -TOP_H - 30)
@@ -836,19 +828,12 @@ local function refresh(p, ctx)
   if p.role then p.role.Refresh(); p.playsAs.Refresh(); p.seq.Refresh() end
 
   local pages, spread
-  local futureFrom -- spells: the first page of the future spells (always the left page of a new spread)
   if p.mode == "keys" then
     spread = Book.spread(ctx)
     pages = Book.flow(spread.sections, p.listH, 2, PITCH)
   elseif p.mode == "spells" then
-    local secs = Book.spellSections(ctx)
-    pages = #secs[1].cells > 0 and Book.flow({ secs[1] }, p.listH, 2, PITCH) or {}
-    if #secs[2].cells > 0 then
-      if #pages % 2 == 1 then pages[#pages + 1] = {} end
-      futureFrom = #pages + 1
-      for _, pg in ipairs(Book.flow({ secs[2] }, p.listH, 2, PITCH)) do pages[#pages + 1] = pg end
-    end
-    if #pages == 0 then pages[1] = {} end
+    -- one flow: the known spells, then a "Future spells" rule (repeated on each page) and the later ones
+    pages = Book.flow(Book.spellSections(ctx), p.listH, 2, PITCH)
   else
     local list = Book.cells(p.mode, ctx)
     local per = math.floor(p.listH / PITCH) * 2
@@ -864,17 +849,13 @@ local function refresh(p, ctx)
   local spreads = math.max(1, math.ceil(#pages / perSpread))
   p.page = math.min(p.page or 1, spreads)
   local first = (p.page - 1) * perSpread
-  if futureFrom and first + 1 >= futureFrom then
-    -- the future spreads: the banner says what these are (it replaces the next step there)
+  local lead = pages[first + 1] and pages[first + 1][1]
+  if p.mode == "spells" and lead and (lead.rule or (lead.cell and lead.cell.future)) then
+    -- a spread of only future spells: the banner says what these are (it replaces the next step there)
     p.stepText:SetText("|cff9eaddbFuture spells – place them now|r")
     p.stepTip = "You learn these later: the level is under each spell. Drag one onto your bar now and set it up; the key does nothing until you learn the spell, then it just works."
     p.stepBtn:Hide(); p.stepFn = nil
     p.stepText:SetPoint("RIGHT", p.strip, "RIGHT", -6, 0)
-  end
-  p.futureFirst = futureFrom and math.floor((futureFrom - 1) / perSpread) + 1 or nil
-  if p.jump then
-    p.jump:SetShown(p.futureFirst ~= nil)
-    W.setLabel(p.jump, (p.futureFirst and p.page >= p.futureFirst) and "Known spells" or "Future spells")
   end
   local ci, ri = placePage(p, p.left, pages[first + 1], 1, 1)
   if perSpread == 2 then placePage(p, p.right, pages[first + 2], ci, ri) end

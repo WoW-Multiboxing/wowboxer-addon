@@ -703,12 +703,19 @@ do
   for _, c in ipairs(secs[1].cells) do if c.spell == trainer then tc = c end end
   H.ok(tc and tc.pending == "trainer" and tc.st.off and not tc.st.locked, "a trainer spell is grey, without a lock")
   H.eq(tc and tc.sub, "At your trainer", "trainer note")
-  -- the future spells start on the left page of a new spread, with their own banner
-  H.ok(p.futureFirst ~= nil and p.jump:IsShown(), "jump button to the future spells")
-  p.jump:Click()
-  H.eq(p.page, p.futureFirst, "jumped to the future spells")
-  H.ok(p.stepText:GetText():find("Future spells", 1, true) ~= nil, "banner on the future spread")
-  local r = row(ns, function(x) return x.kind == "spell" and type(x.pending) == "number" and not x.name end)
+  -- no switch: the future spells follow under a "Future spells" rule; paging on reaches them
+  local function ruleShown()
+    for _, rr in ipairs(p.rules) do if rr:IsShown() and rr.text:GetText() == "Future spells" then return true end end
+  end
+  local r, sawRule
+  for _ = 1, 20 do
+    sawRule = sawRule or ruleShown()
+    r = row(ns, function(x) return x.future and not x.name end)
+    if r then break end
+    p.next:Click()
+  end
+  H.ok(sawRule, "a Future spells rule divides the known spells from the later ones")
+  H.ok(r ~= nil and r.lock:IsShown(), "a locked future spell is on the page")
   H.ok(r ~= nil and r.lock:IsShown(), "a locked future spell is on the page")
   -- drag it: the key is made now, with the spell's picture instead of "?"
   local fs = r.cell.spell
