@@ -1,4 +1,4 @@
-/* WoW Forever Multibox Companion v8.4 — pure logic (no DOM). Shared by the app and the Node tests.
+/* WoW Forever Multibox Companion v8.5 — pure logic (no DOM). Shared by the app and the Node tests.
    Talent rules (Forever, build 1.60.1.70450/70532):
      - one talent point per level 10–60 (51 total); Legacy perk "Talented" rank r moves the first point to level 10-r
        (total stays 51, so it only lowers the level a build needs);
@@ -223,7 +223,7 @@
        - kind 'priority': several /cast lines, highest priority first. Used where every ability has a cooldown (Paladin);
          a /castsequence would stall on them. Lines that cannot be cast are skipped by the game and the next line is tried.
        - Steps whose spell is not learned yet are left out, so the macro grows with the character's level.
-     Tiers: simple (opener + filler), medium (+ DoT / cooldown), advanced (all DoTs / talents). Trio classes only for now. */
+     Tiers: simple (opener + filler), medium (+ DoT / cooldown), advanced (all DoTs / talents). All nine classes (v8.5). */
   const SEQ_TIERS = ['off', 'simple', 'medium', 'advanced'];
   const SEQ_MAX_FILL = 4;
   // step: string = spell name, array = first learned of the alternatives; k: 'dot' | 'cd' | 'nuke' (default nuke)
@@ -260,6 +260,94 @@
             simple: { steps: ['Holy Strike', 'Judgement'] },
             medium: { steps: ['Hammer of Wrath', 'Holy Strike', 'Judgement'] },
             advanced: { steps: ['Hammer of Wrath', 'Exorcism', 'Holy Strike', 'Judgement', { s: 'Consecration', self: true }] } } }] },
+    warrior: {
+      tank: [
+        { id: 'dps', label: 'Threat', kind: 'priority', aim: 'melee', tip: 'Sunder Armor',
+          tiers: {
+            simple: { steps: ['Revenge', 'Sunder Armor'] },
+            medium: { steps: ['Shield Slam', 'Revenge', 'Sunder Armor'] },
+            advanced: { steps: ['Shield Slam', 'Revenge', { s: 'Thunder Clap', self: true }, 'Sunder Armor'] } } }],
+      _all: [
+        { id: 'dps', label: 'Damage', kind: 'priority', aim: 'melee', tip: 'Mortal Strike',
+          tiers: {
+            simple: { steps: ['Execute', 'Overpower', ['Mortal Strike', 'Bloodthirst']] },
+            medium: { steps: ['Execute', 'Overpower', ['Mortal Strike', 'Bloodthirst'], 'Victory Rush'] },
+            advanced: { steps: ['Execute', 'Overpower', ['Mortal Strike', 'Bloodthirst'], { s: 'Whirlwind', self: true }, 'Victory Rush', 'Slam'] } } }] },
+    rogue: {
+      _all: [
+        { id: 'dps', label: 'Combo', kind: 'sequence', aim: 'harm', startattack: true, allowDup: true,
+          tiers: {
+            simple: { steps: [{ s: ['Hemorrhage', 'Sinister Strike'] }, { s: ['Hemorrhage', 'Sinister Strike'] }, { s: ['Hemorrhage', 'Sinister Strike'] }, { s: 'Eviscerate' }] },
+            medium: { steps: [{ s: ['Hemorrhage', 'Sinister Strike'] }, { s: ['Hemorrhage', 'Sinister Strike'] }, { s: 'Slice and Dice' }, { s: ['Hemorrhage', 'Sinister Strike'] }, { s: ['Hemorrhage', 'Sinister Strike'] }, { s: ['Hemorrhage', 'Sinister Strike'] }, { s: 'Eviscerate' }] },
+            advanced: { steps: [{ s: ['Hemorrhage', 'Sinister Strike'] }, { s: ['Hemorrhage', 'Sinister Strike'] }, { s: 'Slice and Dice' }, { s: ['Hemorrhage', 'Sinister Strike'] }, { s: ['Hemorrhage', 'Sinister Strike'] }, { s: ['Hemorrhage', 'Sinister Strike'] }, { s: ['Hemorrhage', 'Sinister Strike'] }, { s: 'Eviscerate' }] } } }] },
+    hunter: {
+      _all: [
+        { id: 'dps', label: 'Shots', kind: 'priority', aim: 'ranged', pet: true, autoshot: true, tip: 'Arcane Shot',
+          tiers: {
+            simple: { steps: ['Arcane Shot'] },
+            medium: { steps: ['Arcane Shot', 'Aimed Shot'] },
+            advanced: { steps: ['Aimed Shot', 'Arcane Shot', 'Multi-Shot'] } } }] },
+    mage: {
+      _all: [
+        { id: 'dps', label: 'Damage', kind: 'sequence', aim: 'harm',
+          tiers: {
+            simple: { steps: [{ s: 'Fire Blast', k: 'cd' }], filler: ['Frostfire Bolt', 'Frostbolt', 'Fireball'] },
+            medium: { steps: [{ s: 'Fire Blast', k: 'cd' }, { s: 'Arcane Wrath', k: 'cd' }], filler: ['Frostfire Bolt', 'Frostbolt', 'Fireball'] },
+            advanced: { steps: [{ s: 'Pyroblast' }, { s: 'Fire Blast', k: 'cd' }, { s: 'Arcane Wrath', k: 'cd' }], filler: ['Frostfire Bolt', 'Frostbolt', 'Fireball'] } } }] },
+    shaman: {
+      melee: [
+        { id: 'dps', label: 'Damage', kind: 'priority', aim: 'melee', tip: 'Stormstrike',
+          tiers: {
+            simple: { steps: ['Stormstrike', 'Earth Shock'] },
+            medium: { steps: ['Stormstrike', ['Flame Shock', 'Earth Shock']] },
+            advanced: { steps: ['Stormstrike', ['Flame Shock', 'Earth Shock'], { s: 'Fire Nova', self: true }] } } }],
+      healer: [
+        { id: 'heal', label: 'Heal', kind: 'sequence', aim: 'help', reset: 'combat/12', fixedFill: 2,
+          tiers: {
+            simple: { steps: [{ s: 'Riptide', k: 'hot' }], filler: ['Healing Wave'] },
+            medium: { steps: [{ s: 'Riptide', k: 'hot' }], filler: ['Healing Wave'] },
+            advanced: { steps: [{ s: 'Riptide', k: 'hot' }, { s: 'Chain Heal' }], filler: ['Healing Wave'] } } },
+        { id: 'dps', label: 'Damage', kind: 'sequence', aim: 'harm',
+          tiers: {
+            simple: { steps: [{ s: 'Flame Shock', k: 'dot' }], filler: ['Lightning Bolt'] },
+            medium: { steps: [{ s: 'Flame Shock', k: 'dot' }], filler: ['Lightning Bolt'] },
+            advanced: { steps: [{ s: 'Flame Shock', k: 'dot' }], filler: ['Lightning Bolt'] } } }],
+      _all: [
+        { id: 'dps', label: 'Damage', kind: 'sequence', aim: 'harm',
+          tiers: {
+            simple: { steps: [{ s: 'Flame Shock', k: 'dot' }], filler: ['Lightning Bolt'] },
+            medium: { steps: [{ s: 'Flame Shock', k: 'dot' }, { s: 'Lava Burst', k: 'cd' }], filler: ['Lightning Bolt'] },
+            advanced: { steps: [{ s: 'Flame Shock', k: 'dot' }, { s: 'Lava Burst', k: 'cd' }, { s: 'Chain Lightning', k: 'cd' }], filler: ['Lightning Bolt'] } } }] },
+    druid: {
+      tank: [
+        { id: 'dps', label: 'Threat', kind: 'priority', aim: 'melee', tip: 'Swipe',
+          tiers: {
+            simple: { steps: ['Primal Bite', 'Swipe'] },
+            medium: { steps: ['Primal Bite', ['Lacerate', 'Swipe']] },
+            advanced: { steps: ['Primal Bite', ['Lacerate', 'Swipe']] } } }],
+      melee: [
+        { id: 'dps', label: 'Combo', kind: 'sequence', aim: 'harm', startattack: true, allowDup: true,
+          tiers: {
+            simple: { steps: [{ s: 'Claw' }, { s: 'Claw' }, { s: 'Claw' }, { s: ['Ferocious Bite', 'Rip'] }] },
+            medium: { steps: [{ s: 'Rake', k: 'dot' }, { s: 'Claw' }, { s: 'Claw' }, { s: 'Claw' }, { s: ['Ferocious Bite', 'Rip'] }] },
+            advanced: { steps: [{ s: 'Rake', k: 'dot' }, { s: 'Claw' }, { s: 'Claw' }, { s: 'Claw' }, { s: 'Claw' }, { s: 'Rip' }, { s: 'Rake', k: 'dot' }, { s: 'Claw' }, { s: 'Claw' }, { s: 'Claw' }, { s: 'Claw' }, { s: ['Ferocious Bite', 'Rip'] }] } } }],
+      healer: [
+        { id: 'heal', label: 'Heal', kind: 'sequence', aim: 'help', reset: 'combat/12', fixedFill: 2,
+          tiers: {
+            simple: { steps: [{ s: 'Rejuvenation', k: 'hot' }], filler: ['Healing Touch'] },
+            medium: { steps: [{ s: 'Rejuvenation', k: 'hot' }, { s: 'Regrowth', k: 'hot' }], filler: ['Healing Touch'] },
+            advanced: { steps: [{ s: 'Rejuvenation', k: 'hot' }, { s: 'Wild Growth', k: 'cd' }, { s: 'Regrowth', k: 'hot' }], filler: ['Healing Touch'] } } },
+        { id: 'dps', label: 'Damage', kind: 'sequence', aim: 'harm',
+          tiers: {
+            simple: { steps: [{ s: 'Moonfire', k: 'dot' }], filler: ['Wrath'] },
+            medium: { steps: [{ s: 'Moonfire', k: 'dot' }], filler: ['Wrath'] },
+            advanced: { steps: [{ s: 'Moonfire', k: 'dot' }], filler: ['Wrath'] } } }],
+      _all: [
+        { id: 'dps', label: 'Damage', kind: 'sequence', aim: 'harm',
+          tiers: {
+            simple: { steps: [{ s: 'Moonfire', k: 'dot' }], filler: ['Wrath'] },
+            medium: { steps: [{ s: 'Moonfire', k: 'dot' }, { s: 'Insect Swarm', k: 'dot' }], filler: ['Wrath'] },
+            advanced: { steps: [{ s: 'Insect Swarm', k: 'dot' }, { s: 'Moonfire', k: 'dot' }], filler: ['Starfire', 'Wrath'] } } }] },
   };
   // Kept out on purpose: Conflagrate (fails without Immolate on the target, which would hold the sequence), Power Word: Shield
   // (Weakened Soul), channels, and cooldowns over 12 s. They stay on their own keys.
@@ -351,11 +439,19 @@
     const u = units(ctx.unit);
     const tipName = spells.some(s => s.name === def.tip) ? def.tip : (spells[0] ? spells[0].name : 'Attack');
     const make = (lvl, list) => {
-      const aim = ctx.leader ? '' : (lvl === 0 ? '[@' + u.mainTarget + ',harm,nodead][harm,nodead] ' : '[@' + u.mainTarget + ',harm,nodead] ');
-      const start = ctx.leader ? '/startattack [harm,nodead]' : '/startattack ' + aim.trim();
-      return '#showtooltip ' + tipName + '\n' + start + list.map(s => '\n/cast ' + (self.has(s) ? '[combat] ' : aim) + s.name).join('');
+      const aim = ctx.leader ? (def.aim === 'melee' ? '' : '[@mouseover,harm,nodead][harm,nodead] ') : (lvl === 0 ? '[@' + u.mainTarget + ',harm,nodead][harm,nodead] ' : '[@' + u.mainTarget + ',harm,nodead] ');
+      const cond = aim.trim() || '[harm,nodead]';
+      let head = '#showtooltip ' + tipName;
+      if (def.aim === 'melee') head += '\n/startattack ' + cond;
+      if (def.pet) head += '\n/petattack ' + cond;
+      return head + list.map(s => '\n/cast ' + (self.has(s) ? '[combat] ' : aim) + s.name).join('') + (def.autoshot ? '\n/cast ' + aim + '!Auto Shot' : '');
     };
-    if (!spells.length) return { id: def.id, label: def.label, base: 'priority', kind: 'engage', spells: [], macro: '#showtooltip Attack\n' + (ctx.leader ? '/startattack [harm,nodead]' : '/startattack [@' + u.mainTarget + ',harm,nodead][harm,nodead]'), compact: false, tooLong: false };
+    if (!spells.length) {
+      const c0 = ctx.leader ? '[harm,nodead]' : '[@' + u.mainTarget + ',harm,nodead][harm,nodead]';
+      if (def.autoshot) return { id: def.id, label: def.label, base: 'priority', kind: 'engage', spells: [], macro: '#showtooltip Auto Shot\n/petattack ' + c0 + '\n/cast ' + c0 + ' !Auto Shot', compact: false, tooLong: false };
+      if (def.aim !== 'melee') return null;
+      return { id: def.id, label: def.label, base: 'priority', kind: 'engage', spells: [], macro: '#showtooltip Attack\n/startattack ' + c0, compact: false, tooLong: false };
+    }
     let list = spells.slice(), level = 0, macro = make(0, list);
     if (macro.length > MACRO_LIMIT && !ctx.leader) { level = 1; macro = make(1, list); }
     while (macro.length > MACRO_LIMIT && list.length > 1) { list = list.slice(0, -1); macro = make(level, list); }

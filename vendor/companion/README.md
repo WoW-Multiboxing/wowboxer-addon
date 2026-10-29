@@ -6,5 +6,5 @@ Read-only copy of the WoW Forever Multibox Companion (workstream A) that the add
 - `engine.js` – the companion's pure macro/sequence/talent engine
 - `app.js` – the companion UI; `tools/export_vectors.js` extracts the kit functions (`coreList`, `seqOf`, `seqPlan`, …) from it verbatim
 
-Do not edit these files here. Refresh them with `tools/sync_companion.sh <path to companion source>` and re-run
-`node tools/build_data.js` and the tests. Source of truth: OneDrive `03_Output/source/` (not yet in Git).
+Do not edit these files here. Refresh them with `bash tools/sync_companion.sh [../wowboxer-site/companion]` and re-run
+`node tools/build_data.js` and the tests. Source of truth: `wowboxer-site/companion/` (Git; owned by workstream D, row A).

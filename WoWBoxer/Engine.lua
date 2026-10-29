@@ -309,6 +309,95 @@ local SEQ = {
           simple = { steps = { "Holy Strike", "Judgement" } },
           medium = { steps = { "Hammer of Wrath", "Holy Strike", "Judgement" } },
           advanced = { steps = { "Hammer of Wrath", "Exorcism", "Holy Strike", "Judgement", { s = "Consecration", self = true } } } } } } },
+  warrior = {
+    tank = {
+      { id = "dps", label = "Threat", kind = "priority", aim = "melee", tip = "Sunder Armor",
+        tiers = {
+          simple = { steps = { "Revenge", "Sunder Armor" } },
+          medium = { steps = { "Shield Slam", "Revenge", "Sunder Armor" } },
+          advanced = { steps = { "Shield Slam", "Revenge", { s = "Thunder Clap", self = true }, "Sunder Armor" } } } } },
+    _all = {
+      { id = "dps", label = "Damage", kind = "priority", aim = "melee", tip = "Mortal Strike",
+        tiers = {
+          simple = { steps = { "Execute", "Overpower", { "Mortal Strike", "Bloodthirst" } } },
+          medium = { steps = { "Execute", "Overpower", { "Mortal Strike", "Bloodthirst" }, "Victory Rush" } },
+          advanced = { steps = { "Execute", "Overpower", { "Mortal Strike", "Bloodthirst" }, { s = "Whirlwind", self = true }, "Victory Rush", "Slam" } } } } } },
+  rogue = {
+    _all = {
+      { id = "dps", label = "Combo", kind = "sequence", aim = "harm", startattack = true, allowDup = true,
+        tiers = {
+          simple = { steps = { { s = { "Hemorrhage", "Sinister Strike" } }, { s = { "Hemorrhage", "Sinister Strike" } }, { s = { "Hemorrhage", "Sinister Strike" } }, { s = "Eviscerate" } } },
+          medium = { steps = { { s = { "Hemorrhage", "Sinister Strike" } }, { s = { "Hemorrhage", "Sinister Strike" } }, { s = "Slice and Dice" }, { s = { "Hemorrhage", "Sinister Strike" } }, { s = { "Hemorrhage", "Sinister Strike" } }, { s = { "Hemorrhage", "Sinister Strike" } }, { s = "Eviscerate" } } },
+          advanced = { steps = { { s = { "Hemorrhage", "Sinister Strike" } }, { s = { "Hemorrhage", "Sinister Strike" } }, { s = "Slice and Dice" }, { s = { "Hemorrhage", "Sinister Strike" } }, { s = { "Hemorrhage", "Sinister Strike" } }, { s = { "Hemorrhage", "Sinister Strike" } }, { s = { "Hemorrhage", "Sinister Strike" } }, { s = "Eviscerate" } } } } } } },
+  hunter = {
+    _all = {
+      { id = "dps", label = "Shots", kind = "priority", aim = "ranged", pet = true, autoshot = true, tip = "Arcane Shot",
+        tiers = {
+          simple = { steps = { "Arcane Shot" } },
+          medium = { steps = { "Arcane Shot", "Aimed Shot" } },
+          advanced = { steps = { "Aimed Shot", "Arcane Shot", "Multi-Shot" } } } } } },
+  mage = {
+    _all = {
+      { id = "dps", label = "Damage", kind = "sequence", aim = "harm",
+        tiers = {
+          simple = { steps = { { s = "Fire Blast", k = "cd" } }, filler = { "Frostfire Bolt", "Frostbolt", "Fireball" } },
+          medium = { steps = { { s = "Fire Blast", k = "cd" }, { s = "Arcane Wrath", k = "cd" } }, filler = { "Frostfire Bolt", "Frostbolt", "Fireball" } },
+          advanced = { steps = { { s = "Pyroblast" }, { s = "Fire Blast", k = "cd" }, { s = "Arcane Wrath", k = "cd" } }, filler = { "Frostfire Bolt", "Frostbolt", "Fireball" } } } } } },
+  shaman = {
+    melee = {
+      { id = "dps", label = "Damage", kind = "priority", aim = "melee", tip = "Stormstrike",
+        tiers = {
+          simple = { steps = { "Stormstrike", "Earth Shock" } },
+          medium = { steps = { "Stormstrike", { "Flame Shock", "Earth Shock" } } },
+          advanced = { steps = { "Stormstrike", { "Flame Shock", "Earth Shock" }, { s = "Fire Nova", self = true } } } } } },
+    healer = {
+      { id = "heal", label = "Heal", kind = "sequence", aim = "help", reset = "combat/12", fixedFill = 2,
+        tiers = {
+          simple = { steps = { { s = "Riptide", k = "hot" } }, filler = { "Healing Wave" } },
+          medium = { steps = { { s = "Riptide", k = "hot" } }, filler = { "Healing Wave" } },
+          advanced = { steps = { { s = "Riptide", k = "hot" }, { s = "Chain Heal" } }, filler = { "Healing Wave" } } } },
+      { id = "dps", label = "Damage", kind = "sequence", aim = "harm",
+        tiers = {
+          simple = { steps = { { s = "Flame Shock", k = "dot" } }, filler = { "Lightning Bolt" } },
+          medium = { steps = { { s = "Flame Shock", k = "dot" } }, filler = { "Lightning Bolt" } },
+          advanced = { steps = { { s = "Flame Shock", k = "dot" } }, filler = { "Lightning Bolt" } } } } },
+    _all = {
+      { id = "dps", label = "Damage", kind = "sequence", aim = "harm",
+        tiers = {
+          simple = { steps = { { s = "Flame Shock", k = "dot" } }, filler = { "Lightning Bolt" } },
+          medium = { steps = { { s = "Flame Shock", k = "dot" }, { s = "Lava Burst", k = "cd" } }, filler = { "Lightning Bolt" } },
+          advanced = { steps = { { s = "Flame Shock", k = "dot" }, { s = "Lava Burst", k = "cd" }, { s = "Chain Lightning", k = "cd" } }, filler = { "Lightning Bolt" } } } } } },
+  druid = {
+    tank = {
+      { id = "dps", label = "Threat", kind = "priority", aim = "melee", tip = "Swipe",
+        tiers = {
+          simple = { steps = { "Primal Bite", "Swipe" } },
+          medium = { steps = { "Primal Bite", { "Lacerate", "Swipe" } } },
+          advanced = { steps = { "Primal Bite", { "Lacerate", "Swipe" } } } } } },
+    melee = {
+      { id = "dps", label = "Combo", kind = "sequence", aim = "harm", startattack = true, allowDup = true,
+        tiers = {
+          simple = { steps = { { s = "Claw" }, { s = "Claw" }, { s = "Claw" }, { s = { "Ferocious Bite", "Rip" } } } },
+          medium = { steps = { { s = "Rake", k = "dot" }, { s = "Claw" }, { s = "Claw" }, { s = "Claw" }, { s = { "Ferocious Bite", "Rip" } } } },
+          advanced = { steps = { { s = "Rake", k = "dot" }, { s = "Claw" }, { s = "Claw" }, { s = "Claw" }, { s = "Claw" }, { s = "Rip" }, { s = "Rake", k = "dot" },
+            { s = "Claw" }, { s = "Claw" }, { s = "Claw" }, { s = "Claw" }, { s = { "Ferocious Bite", "Rip" } } } } } } },
+    healer = {
+      { id = "heal", label = "Heal", kind = "sequence", aim = "help", reset = "combat/12", fixedFill = 2,
+        tiers = {
+          simple = { steps = { { s = "Rejuvenation", k = "hot" } }, filler = { "Healing Touch" } },
+          medium = { steps = { { s = "Rejuvenation", k = "hot" }, { s = "Regrowth", k = "hot" } }, filler = { "Healing Touch" } },
+          advanced = { steps = { { s = "Rejuvenation", k = "hot" }, { s = "Wild Growth", k = "cd" }, { s = "Regrowth", k = "hot" } }, filler = { "Healing Touch" } } } },
+      { id = "dps", label = "Damage", kind = "sequence", aim = "harm",
+        tiers = {
+          simple = { steps = { { s = "Moonfire", k = "dot" } }, filler = { "Wrath" } },
+          medium = { steps = { { s = "Moonfire", k = "dot" } }, filler = { "Wrath" } },
+          advanced = { steps = { { s = "Moonfire", k = "dot" } }, filler = { "Wrath" } } } } },
+    _all = {
+      { id = "dps", label = "Damage", kind = "sequence", aim = "harm",
+        tiers = {
+          simple = { steps = { { s = "Moonfire", k = "dot" } }, filler = { "Wrath" } },
+          medium = { steps = { { s = "Moonfire", k = "dot" }, { s = "Insect Swarm", k = "dot" } }, filler = { "Wrath" } },
+          advanced = { steps = { { s = "Insect Swarm", k = "dot" }, { s = "Moonfire", k = "dot" } }, filler = { "Starfire", "Wrath" } } } } } },
 }
 E.SEQ = SEQ
 function E.seqSupported(cls) return SEQ[cls] ~= nil end
@@ -416,16 +505,30 @@ local function buildPriority(def, t, ctx, has)
   local tipName
   for _, s in ipairs(spells) do if s.name == def.tip then tipName = def.tip break end end
   tipName = tipName or (spells[1] and spells[1].name or "Attack")
+  -- v8.5: /startattack only for melee keys, /petattack for pet keys, a final !Auto Shot for hunters; a ranged leader
+  -- aims at the mouseover first
   local function make(lvl, list)
-    local aim = ctx.leader and "" or (lvl == 0 and ("[@" .. u.mainTarget .. ",harm,nodead][harm,nodead] ") or ("[@" .. u.mainTarget .. ",harm,nodead] "))
-    local start = ctx.leader and "/startattack [harm,nodead]" or ("/startattack " .. smatch(aim, "^%s*(.-)%s*$"))
-    local parts = { "#showtooltip " .. tipName .. "\n" .. start }
+    local aim
+    if ctx.leader then aim = def.aim == "melee" and "" or "[@mouseover,harm,nodead][harm,nodead] "
+    else aim = lvl == 0 and ("[@" .. u.mainTarget .. ",harm,nodead][harm,nodead] ") or ("[@" .. u.mainTarget .. ",harm,nodead] ") end
+    local cond = smatch(aim, "^%s*(.-)%s*$")
+    if cond == "" then cond = "[harm,nodead]" end
+    local parts = { "#showtooltip " .. tipName }
+    if def.aim == "melee" then parts[#parts + 1] = "\n/startattack " .. cond end
+    if def.pet then parts[#parts + 1] = "\n/petattack " .. cond end
     for _, s in ipairs(list) do parts[#parts + 1] = "\n/cast " .. (self[s] and "[combat] " or aim) .. s.name end
+    if def.autoshot then parts[#parts + 1] = "\n/cast " .. aim .. "!Auto Shot" end
     return tconcat(parts)
   end
   if #spells == 0 then
+    local c0 = ctx.leader and "[harm,nodead]" or ("[@" .. u.mainTarget .. ",harm,nodead][harm,nodead]")
+    if def.autoshot then
+      return { id = def.id, label = def.label, base = "priority", kind = "engage", spells = {},
+        macro = "#showtooltip Auto Shot\n/petattack " .. c0 .. "\n/cast " .. c0 .. " !Auto Shot", compact = false, tooLong = false }
+    end
+    if def.aim ~= "melee" then return nil end
     return { id = def.id, label = def.label, base = "priority", kind = "engage", spells = {},
-      macro = "#showtooltip Attack\n" .. (ctx.leader and "/startattack [harm,nodead]" or ("/startattack [@" .. u.mainTarget .. ",harm,nodead][harm,nodead]")), compact = false, tooLong = false }
+      macro = "#showtooltip Attack\n/startattack " .. c0, compact = false, tooLong = false }
   end
   local list, level = slice(spells), 0
   local macro = make(0, list)
