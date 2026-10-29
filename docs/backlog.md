@@ -1,10 +1,10 @@
 # WoWBoxer addon – backlog
 
-## The owner: in-game check of 0.9.8 (one client, your druid)
-1. Restart WoW, log in the druid, `/wbx` → **Talents** → **Import**.
-2. Paste `https://www.wowhead.com/forever/talent-calc/druid/v2410222-4_t0/0abaaaDEF1aaaa`: preview says Druid · 11/4/0 · 15 points.
-3. **Save and use**: the Guide list shows "My build: Wowhead 11/4/0 (yours)" and Next shows its point; try **Wowhead link**.
-4. (Still open from 0.9.7: Combo key on a Rogue/Druid follower.) `/reload`, tell Claude "done".
+## The owner: in-game check of 0.9.9 (your healer in a party with a Hunter or Warlock)
+1. Restart WoW, `/wbx` → click **Advanced** at the top → tick "I understand" → **Turn on Advanced**.
+2. My keys: right-click a heal key → **Also heal <pet>** → **Update keys**; hover the key: "Your targeting: … <pet>".
+3. Heal the pet with it (mouse not over anyone); then right-click → **Back to WoWBoxer's version** → Update keys.
+4. Setup → **Reset to default…** → look at step 2, then Cancel. `/reload`, tell Claude "done".
 
 ## The owner: screenshots for the website (one client, any character, ~2 min)
 1. Log in, `/wbx`, then Print Screen on **My keys**, **All spells**, **Talents**, **Squad** and **Setup** (one each).
