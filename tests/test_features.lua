@@ -958,6 +958,11 @@ do
   pop.btns[1]:Click()
   H.eq(W.bindings["3"], "ACTIONBUTTON3", "Fix now: 3 presses button 3 again")
   W.bindings["3"] = "MACRO WBX K2"
+  Core.cdb.bindPrev["3"] = "MACRO WBX K1" -- a second bind on the broken key remembered a WBX macro as "before"
+  H.eq(#KB.lostButtons(), 1, "still counts as lost")
+  KB.restoreKey("3")
+  H.eq(W.bindings["3"], "ACTIONBUTTON3", "restore gives it to button 3, never to a WBX macro")
+  W.bindings["3"] = "MACRO WBX K2"
   W.combat = true
   step.button[3]()
   H.eq(W.bindings["3"], "MACRO WBX K2", "never in combat")

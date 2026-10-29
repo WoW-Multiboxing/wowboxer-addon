@@ -171,6 +171,7 @@ end
 local function restoreKey(key)
   local prev = prevStore()
   local cmd = prev[key]
+  if cmd and cmd:find("^MACRO WBX") then cmd = nil end -- "before" was itself a WBX macro (a second bind on a broken key)
   if cmd == nil and KB.DEFAULT_KEYS[key] then cmd = "ACTIONBUTTON" .. KB.DEFAULT_KEYS[key] end
   if cmd and cmd ~= "" and not cmd:find("^MACRO WBX") then KB.write(key, cmd, "restore") else KB.write(key, nil, "restore"); cmd = nil end
   prev[key] = nil
@@ -209,7 +210,9 @@ function KB.lostButtons()
   local out = {}
   for _, d in ipairs(KB.directWbx()) do
     local slot = KB.DEFAULT_KEYS[d.key]
-    if slot and (d.prev == nil or d.prev == "ACTIONBUTTON" .. slot) then out[#out + 1] = { key = d.key, slot = slot, macro = d.macro } end
+    if slot and (d.prev == nil or d.prev == "" or d.prev == "ACTIONBUTTON" .. slot or d.prev:find("^MACRO WBX")) then
+      out[#out + 1] = { key = d.key, slot = slot, macro = d.macro }
+    end
   end
   return out
 end
