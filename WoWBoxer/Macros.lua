@@ -243,6 +243,16 @@ function M.desired(m, L, opts)
     d.ok, d.why = R.validateMacro(d.name, d.body)
     if not d.ok and map and #d.body > R.MACRO_LIMIT then d.why = "too long with your client's spell names (" .. #d.body .. "/255)" end
   end
+  -- Advanced mode: the player's own targeting / text (Override.lua), checked by the same rules as every key
+  if opts.overrides and ns.Override then
+    ns.Override.applyAll(out, opts.overrides, opts.ovCtx or {})
+    for _, d in ipairs(out) do
+      if d.override then
+        d.ok, d.why = R.validateMacro(d.name, d.body)
+        if not d.ok and #d.body > R.MACRO_LIMIT then d.why = "Too long with your targeting (" .. #d.body .. "/255): remove a target or untick Skip if dead" end
+      end
+    end
+  end
   return out
 end
 

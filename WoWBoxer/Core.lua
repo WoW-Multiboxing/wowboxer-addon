@@ -95,7 +95,8 @@ function Core.computeFresh()
   local live = M.liveCheck()
   local L = C.playerLevel()
   local lineUnit = ns.Squad and ns.Squad.lineFor(s, m) or nil
-  local desired = M.desired(m, L, { live = live, extras = Core.cdb.extras, squad = s, squadKeys = Core.cdb.squadKeys, lineUnit = lineUnit })
+  local desired = M.desired(m, L, { live = live, extras = Core.cdb.extras, squad = s, squadKeys = Core.cdb.squadKeys, lineUnit = lineUnit,
+    overrides = Core.cdb.overrides, ovCtx = { squad = s, me = m } })
   for _, d in ipairs(desired) do d.keepOff = Core.keptOff(d.name, d.group) end
   local mplan = M.plan(desired, Core.cdb.skip)
   local bplan = B.plan(desired, Core.cdb, Core.cdb.skip)
@@ -437,6 +438,40 @@ function Core.exportString(squad)
   squad = squad or S.activeSquad(Core.db)
   if not squad then return nil end
   return Sh.export(squad, { game = C.game(), addons = Core.db.settings.addons })
+end
+
+-- ------------------------------------------------------------------ Advanced mode: own targeting per key (Override.lua)
+function Core.advanced() return Core.db and Core.db.settings.advanced == true end
+--- Set (or with nil: remove = "Back to WoWBoxer's version") the override of key `name`. WoWBoxer data only; the macro
+--- follows after the usual Update click, out of combat.
+function Core.setOverride(name, ov)
+  if not R.isOurs(name) then return false end
+  Core.cdb.overrides[name] = ov and ns.Override.clean(ov) or nil
+  Core.log("info", (Core.cdb.overrides[name] and "override " or "override removed ") .. name)
+  Core.changed()
+  return true
+end
+--- "Also heal Bo's pet": the key's current targets with Bo's pet after the leader (one click, heal keys).
+function Core.alsoHeal(name, owner)
+  local ctx, cur = ns.Override.ctx(), Core.cdb.overrides[name]
+  local base
+  if cur and cur.targets and #cur.targets > 0 then base = cur.targets
+  else
+    local c = Core.compute()
+    for _, d in ipairs(c and c.desired or {}) do if d.name == name then base = ns.Override.fromBody(d.engineBody or d.body, ctx) end end
+  end
+  local targets, put = {}, false
+  local pet = { who = "member", name = owner, pet = true, help = true, nodead = true }
+  for _, t in ipairs(base or {}) do
+    if t.who == "member" and t.pet and t.name == owner then return false end -- already there
+    if not put and t.who == "player" then targets[#targets + 1] = pet; put = true end
+    targets[#targets + 1] = t
+    if not put and t.who == "leader" then targets[#targets + 1] = pet; put = true end
+  end
+  if not put then targets[#targets + 1] = pet end
+  local ov = { targets = targets }
+  if cur then for _, k in ipairs({ "mod", "reset", "startattack", "petattack" }) do ov[k] = cur[k] end end
+  return Core.setOverride(name, ov)
 end
 
 -- ------------------------------------------------------------------ own talent builds (WoWBoxer's data only)
