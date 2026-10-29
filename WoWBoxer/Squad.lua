@@ -19,7 +19,7 @@ SQ.KEYS = { { "K1", "1" }, { "K2", "2" }, { "K3", "3" }, { "K4", "4" }, { "K5", 
 local function unitName(u) local n = C().unitName(u); return type(n) == "string" and n or nil end
 
 -- ------------------------------------------------------------------ the live party
---- {{name, cls, race, level, leader, unit}} – this character first, then party1–4. Secret/unknown values are left out.
+--- {{name, cls, race, level, leader, unit, realm}} – realm only when another realm; this character first, then party1–4. Secret/unknown values are left out.
 function SQ.partyInfo()
   local out = {}
   local function add(u)
@@ -33,8 +33,11 @@ function SQ.partyInfo()
     local race = okr and C().raceKey and C().raceKey(C().safe(rfile)) or nil
     local okl, lvl = pcall(G.UnitLevel, u)
     local okg, lead = pcall(G.UnitIsGroupLeader or function() return false end, u)
+    local okn, _, realm = pcall(G.UnitName, u)
+    realm = okn and C().safe(realm) or nil
+    realm = type(realm) == "string" and realm:gsub("%s", "") or nil
     out[#out + 1] = { name = name:match("^([^%-]+)") or name, cls = cls, race = race, level = okl and tonumber(C().safe(lvl)) or nil,
-      leader = okg and C().safe(lead) == true or false, unit = u }
+      leader = okg and C().safe(lead) == true or false, unit = u, realm = (realm and realm ~= "") and realm or nil }
   end
   add("player")
   for _, u in ipairs(SQ.PARTY) do add(u) end

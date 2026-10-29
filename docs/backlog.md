@@ -29,7 +29,7 @@ minimap button, much more drag & drop of macros onto the action bars.
 
 ## Squad v2 – simple (docs/squad-v2-simple.md, the owner 2026-10-29)
 - [x] 1. Templates removed; nothing switches the active squad as a side effect (Duplicate gone too).
-- [ ] 2. One-screen Squad page: empty state, rows (crown, role, [x], inline editor), Add character, Add my party,
+- [x] 2. One-screen Squad page: empty state, rows (crown, role, [x], inline editor), Add character, Add my party,
       party suggestion, "Saved", Send to my other characters, More menu, squad dropdown with New/Delete; 3-step guide.
 - [ ] 3. Squad keys: tick boxes on the Squad page + "Squad keys" in My keys; Invite squad by name (Name-Realm, split
       over 255, `/invite` whitelisted); Follow/Assist/Target/Focus/Pet stay on party units.

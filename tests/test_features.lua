@@ -202,63 +202,130 @@ do
   H.eq(#errors(ns), 0, "no errors (binds): " .. table.concat(errors(ns), " | "))
 end
 
--- ------------------------------------------------------------------ squad basics: edit (Edit squad page)
+-- ------------------------------------------------------------------ the one-screen Squad page (docs/squad-v2-simple.md §2)
 do
   local W, ns = boot({ name = "Dorin", class = "PALADIN", race = "Scourge", level = 10 })
-  local Core, UI = ns.Core, ns.UI
+  local Core, UI, SP = ns.Core, ns.UI, ns.SquadPages
   UI.Open("squad")
   local p = UI.panels.squad
-  ns.SquadPages.select(p, "edit")
-  local f = p.frames.edit
-  H.ok(f:IsShown(), "Edit squad page")
-  findButton(W, "Add character"):Click()
-  local s = Core.me()
-  H.eq(#s.members, 2, "added a row")
-  local added = s.members[2]
-  local r = f.pool.rows[2]
-  H.eq(r.m, added, "row 2 edits the new character")
-  r.name:SetText("Wowtwo"); r.name._scripts.OnEnterPressed(r.name)
-  H.eq(added.name, "Wowtwo", "renamed in the row")
-  r.plays.select("party2")
-  H.ok(not added.leader and added.unit == "party2", "follower via party2 from the dropdown")
-  H.ok(select(2, Core.me()).leader, "the solo character stays leader")
-  r.cls.select("warlock")
-  H.eq(added.cls, "warlock", "class changed")
-  H.eq(added.role, "ranged", "role corrected for the new class")
-  local raceOk = false
-  for _, x in ipairs(ns.State.racesFor("warlock")) do if x.k == added.race then raceOk = true end end
-  H.ok(raceOk, "race kept valid for the class")
-  r.seq.check:Click()
-  H.eq(added.seq, "simple", "sequence keys in the member editor")
-  -- make the new one leader
-  r.plays.select("leader")
-  local leaders = 0
-  for _, x in ipairs(s.members) do if x.leader then leaders = leaders + 1 end end
-  H.eq(leaders, 1, "exactly one leader")
-  H.ok(added.leader, "edited character leads")
-  -- drag to reorder: drop row 2 on row 1
-  local r1 = f.pool.rows[1]
-  local _, y1 = r1:GetCenter()
-  W.cursorPos = { 10, y1 * r1:GetEffectiveScale() }
-  r.grip._scripts.OnDragStart(r.grip)
-  r.grip._scripts.OnDragStop(r.grip)
-  H.eq(s.members[1], added, "dragged to slot 1")
-  H.eq(f.pool.rows[1].num:GetText(), 1, "slot numbers follow the order")
-  -- remove needs two clicks
-  local rr = f.pool.rows[1]
-  rr.remove:Click()
-  H.eq(#s.members, 2, "first click only arms")
-  rr.remove:Click()
-  H.eq(#s.members, 1, "removed")
-  H.ok(s.members[1].leader, "the remaining character leads again")
-  -- everyone's sequence keys; nothing here switches the active squad
+  local f = p.frames.main
   local active = Core.db.active
-  f.allSeq.select("medium")
-  H.eq(s.members[1].seq, "medium", "everyone's sequence keys (paladin)")
+  H.ok(f:IsShown() and f.empty:IsShown(), "solo: the empty state")
+  H.ok(not f.empty.party:IsShown() and f.empty.byName:IsShown(), "solo, no party: only Add by name")
+  H.ok(not p.more:IsShown() and not p.rename:IsShown(), "nothing else in the empty state")
+  findButton(W, "Add by name"):Click()
+  H.ok(f.list:IsShown() and f.add:IsShown(), "Add by name shows the list with the add line")
+  -- add by name: needs a class; then saves at once and says so
+  f.add.name:SetText("Wowtwo"); f.add.go:Click()
+  local s = Core.me()
+  H.eq(#s.members, 1, "no class picked: nothing added")
+  H.ok((f.add.note:GetText() or ""):find("class") ~= nil, "and it says why: " .. tostring(f.add.note:GetText()))
+  f.add.cls.select("priest"); f.add.go:Click()
+  H.eq(#s.members, 2, "added by name")
+  local added = s.members[2]
+  H.ok(added.name == "Wowtwo" and added.cls == "priest" and not added.leader, "a priest follower")
+  local raceOk = false
+  for _, x in ipairs(ns.State.racesFor("priest")) do if x.k == added.race then raceOk = true end end
+  H.ok(raceOk, "race: the first valid race")
+  H.ok(p.saved:IsShown() and p.saved:GetText():find("Saved", 1, true) ~= nil, "Saved flashes")
+  H.eq(f.pool.rows[2].follows:GetText(), "follows Dorin", "the row says whom it follows")
+  H.ok(f.pool.rows[1].me:IsShown() and not f.pool.rows[1].remove:IsShown(), "own row: This character, no remove")
+  f.add.name:SetText("wowtwo"); f.add.go:Click()
+  H.eq(#s.members, 2, "the same name twice is refused")
+  f.add.name:SetText("Kirra-Silvermoon"); f.add.cls.select("warlock"); f.add.go:Click()
+  local x = s.members[3]
+  H.ok(x.name == "Kirra" and x.realm == "Silvermoon", "Name-Realm: the realm is kept for invites")
+  -- role dropdown in the row, crown makes a leader
+  local r2 = f.pool.rows[2]
+  r2.role.select("healer")
+  H.eq(added.role, "healer", "role from the row")
+  r2.crown:Click()
+  H.ok(added.leader and not select(2, Core.me()).leader, "the crown makes Wowtwo the leader")
+  H.eq(f.pool.rows[1].follows:GetText(), "follows Wowtwo", "and Dorin follows Wowtwo")
+  f.pool.rows[1].crown:Click()
+  H.ok(select(2, Core.me()).leader, "crown back to Dorin")
+  -- inline editor
+  r2:Click()
+  H.ok(f.editor:IsShown(), "a click on a row opens the inline editor")
+  f.editor.name:SetText("Wowtwoo"); f.editor.name._scripts.OnEnterPressed(f.editor.name)
+  H.eq(added.name, "Wowtwoo", "renamed in the editor")
+  f.editor.cls.select("warlock")
+  H.ok(added.cls == "warlock" and added.role == "ranged", "class change keeps the role valid")
+  f.editor.plays.select("party2")
+  H.eq(added.unit, "party2", "follower unit from the editor")
+  f.editor.seq.check:Click()
+  H.eq(added.seq, "simple", "sequence keys in the editor")
+  f.pool.rows[2]:Click()
+  H.ok(not f.editor:IsShown(), "a second click closes it")
+  -- remove + undo
+  f.pool.rows[3].remove:Click()
+  H.eq(#s.members, 2, "removed with one click")
+  H.ok(p.undo:IsShown() and p.saved:GetText():find("Removed Kirra", 1, true), "Removed … Undo")
+  p.undo:Click()
+  H.eq(#s.members, 3, "Undo puts it back")
+  H.eq(s.members[3].name, "Kirra", "in the same place")
+  -- rename the squad
+  p.rename:Click()
+  H.ok(p.nameBox:IsShown(), "Rename shows a name box")
+  p.nameBox:SetText("Undead trio"); p.nameBox._scripts.OnEnterPressed(p.nameBox)
+  H.eq(s.name, "Undead trio", "renamed")
+  -- More: presets page, everyone's sequence keys
+  p.more.select("presets")
+  H.ok(p.frames.presets:IsShown() and p.back:IsShown(), "More → Leader presets, with Back")
+  p.frames.presets.allSeq.select("medium")
+  local on = 0
+  for _, m in ipairs(s.members) do if m.seq == "medium" then on = on + 1 end end
+  H.eq(on, 3, "everyone's sequence keys (paladin + two warlocks)")
+  p.back:Click()
+  H.ok(p.frames.main:IsShown(), "Back to the squad")
   H.eq(Core.db.active, active, "no squad switch as a side effect")
   H.eq(ns.State.TEMPLATES, nil, "templates are gone")
+  -- only the squad dropdown switches: New squad… / Delete squad…
+  p.squadPick.select("new")
+  local s2 = ns.State.activeSquad(Core.db)
+  H.ok(s2 ~= s and #s2.members == 1 and s2.members[1].name == "Dorin" and s2.members[1].leader, "New squad starts with this character")
+  H.eq(select(1, Core.me()), s2, "and this character uses it")
+  p.squadPick.select("del")
+  H.ok(p.confirm:IsShown(), "Delete asks first")
+  p.confirm.no:Click()
+  H.eq(#Core.db.squads, 2, "Cancel keeps it")
+  p.squadPick.select("del"); p.confirm.yes:Click()
+  H.eq(#Core.db.squads, 1, "deleted")
+  H.eq(ns.State.activeSquad(Core.db), s, "the other squad is active again")
   H.eq(W.calls.CreateMacro, nil, "squad edits write nothing to the game")
   H.eq(#errors(ns), 0, "no errors (squad): " .. table.concat(errors(ns), " | "))
+end
+
+-- ------------------------------------------------------------------ Use my party, the party suggestion, race/level from the party
+do
+  local W, ns = boot({ name = "Dorin", class = "PALADIN", race = "Scourge", level = 10, party = { party1 = "Wowtwo", party2 = "Kirra" },
+    partyInfo = { party1 = { class = "PRIEST", race = "Scourge", level = 11 }, party2 = { class = "WARLOCK", race = "Scourge", level = 9, realm = "Silvermoon" } } })
+  local Core, UI, SP = ns.Core, ns.UI, ns.SquadPages
+  UI.Open("squad")
+  local p = UI.panels.squad
+  local f = p.frames.main
+  local active = Core.db.active
+  H.ok(f.empty.party:IsShown() and f.empty.party:GetText() == "Use my party (2)", "empty state: Use my party (2)")
+  -- add one by name first (race unknown), then the party fills it in
+  findButton(W, "Add by name"):Click()
+  f.add.name:SetText("Wowtwo"); f.add.cls.select("priest"); f.add.go:Click()
+  local s = Core.me()
+  H.eq(s.members[2].race, "undead", "a party member added by name gets its race from the game")
+  H.ok(f.party:IsShown() and f.party:GetText() == "Add my party (1)", "Add my party (1)")
+  -- Kirra runs WoWBoxer (team status) but is not in the squad: the suggestion
+  ns.Team.peers["kirra"] = { level = 9, at = 0 }
+  local origPeer = ns.Team.peer
+  ns.Team.peer = function(n) return n:lower() == "kirra" and { level = 9 } or nil end
+  UI.Refresh()
+  H.ok(f.sugg:IsShown() and f.sugg:GetText():find("Kirra (Warlock) is in your party", 1, true), "suggestion: " .. tostring(f.sugg:GetText()))
+  f.suggAdd:Click()
+  H.eq(#s.members, 3, "the suggestion adds Kirra")
+  H.eq(s.members[3].realm, "Silvermoon", "with the realm from the game")
+  H.ok(not f.party:IsShown() and not f.sugg:IsShown(), "everyone is in: no party button, no suggestion")
+  ns.Team.peer = origPeer
+  H.ok(f.send:IsEnabled(), "Send to my other characters enabled in a party")
+  H.eq(Core.db.active, active, "no squad switch")
+  H.eq(#errors(ns), 0, "no errors (party page): " .. table.concat(errors(ns), " | "))
 end
 
 -- ------------------------------------------------------------------ bars for stance classes, warnings, plays as

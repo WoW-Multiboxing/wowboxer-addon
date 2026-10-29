@@ -3,7 +3,7 @@
   page; click = a help overlay that dims the page and puts 3–5 numbered gold callouts on the real controls (Blizzard's
   HelpPlate when the client has it, else our own overlay with the same idea). Click anywhere or Esc closes it. The
   first time a page is opened, the "?" pulses once (no auto-popup).
-  The squad guide (5 steps) opens from the Squad help, the minimap menu, and is offered once when a second
+  The squad guide (3 steps) opens from the Squad help, the minimap menu, and is offered once when a second
   character joins the party. Display and navigation only: nothing here writes to the game by itself – the step
   buttons are the same buttons as on the pages (a click each). ]]
 local _, ns = ...
@@ -47,14 +47,17 @@ Help.PAGES = {
     callouts = function() local p = UI.panels.setup
       return { { p.bar1, "Where your keys go" }, { p.replace, "May replace other buttons" }, { p.checkSf, "Multibox checklist" },
         { p.applyCv, "Apply recommended settings" }, { p.restore, "Undo game settings" } } end },
-  ["squad:home"] = { tip = { "Everyone in the squad at a glance.", "Display only: it never acts for you." },
-    callouts = function() local f = sq("home")
-      return { { f.sf, "Everyone at a glance" }, { f.preset, "Who leads, saved as presets" }, { f.edit, "Change the squad" }, { f.send, "Share with your party" } } end },
-  ["squad:edit"] = { tip = { "Who plays what, in which order.", "Drag a row by its grip to reorder." },
-    callouts = function() local f = sq("edit")
+  ["squad:main"] = { tip = { "Who plays together, who leads.", "Changes save at once.", "Send it, then Place all on each client." },
+    callouts = function() local f, p = sq("main"), UI.panels.squad
       local r = firstRow(f.pool)
-      return { { f.party, "Add everyone in your party" }, { r and r.grip, "Drag to reorder" }, { r and r.role, "Role per character" },
-        { r and r.plays, "Leader or follower" } } end },
+      if not f.list:IsShown() then
+        return { { f.empty.text, "Start your squad here" }, { vis(f.empty.party), "Everyone in your party" }, { f.empty.byName, "Characters not in your party" } }
+      end
+      return { { r and r.crown, "Click a crown: the leader" }, { r and r.role, "Role per character" }, { f.add, "Add someone not in your party" },
+        { f.send, "Send to your other clients" }, { p.more, "Readiness, key map, plan, presets" } } end },
+  ["squad:presets"] = { tip = { "Who leads, saved to switch back.", "Notes and everyone's sequence keys." },
+    callouts = function() local f = sq("presets")
+      return { { f.preset, "Switch who leads" }, { f.savePreset, "Save who leads now" }, { f.allSeq, "Everyone's sequence keys" } } end },
   ["squad:ready"] = { tip = { "Is everyone set up?", "Fix your own line here; the others on their clients." },
     callouts = function() local f = sq("ready")
       local r = firstRow(f.pool)
@@ -75,7 +78,7 @@ Help.PAGES = {
 function Help.pageKey()
   local key = UI.current
   if ns.KeyEditor.IsOpen() and (key == "custom" or key == "keys") then return "editor" end
-  if key == "squad" and UI.panels.squad then return "squad:" .. (UI.panels.squad.page or "home") end
+  if key == "squad" and UI.panels.squad then return "squad:" .. (UI.panels.squad.page or "main") end
   return key
 end
 --- The visible callouts of a page: {{frame, text}} (3–5).
@@ -189,7 +192,7 @@ local function overlayFrame()
   o.legend.close.wbxCopy = "hint"
   o.legend.lines = {}
   o.guideBtn = W.button(o.legend, "Squad guide", 100, 22, function() Help.Hide(); Help.ShowSquadGuide() end,
-    "Five steps to set up a squad on all your clients.")
+    "Three steps to set up a squad on all your clients.")
   o.guideBtn:SetPoint("BOTTOMRIGHT", -8, 8)
   if o.EnableKeyboard then
     o:SetScript("OnKeyDown", function(self, key)
@@ -332,26 +335,25 @@ end
 function Help.IsShown() return (Help.overlay and Help.overlay:IsShown()) or Help.plate ~= nil end
 function Help.Toggle() if Help.IsShown() then Help.Hide() else Help.Show() end end
 
--- ------------------------------------------------------------------ the squad guide (5 steps)
+-- ------------------------------------------------------------------ the squad guide (3 steps)
 local SP = function() return ns.SquadPages end
 Help.SQUAD_STEPS = {
-  { "Make the squad", "Add your party or characters by name, then pick the leader.", function()
-      if ns.Compat.inParty() then return { "Add party", "Adds everyone in your party who is not in the squad yet.", function() SP().addParty() end } end
-      return { "Edit squad", "Opens Edit squad: add characters by name.", function() SP().select(UI.panels.squad, "edit") end }
+  { "Add your characters", "Your party, or characters by name.", function()
+      local SPm = SP()
+      if #SPm.partyMissing(ns.State.activeSquad(Core().db)) > 0 then
+        return { "Add party", "Adds everyone in your party who is not in the squad yet.", function() SPm.addParty() end }
+      end
+      return { "Add name", "Shows the Add character line: type a name, pick a class, Add.", function()
+        local f = UI.panels.squad.frames.main
+        f.forceList = true; SPm.select(UI.panels.squad, "main"); Help.HideSquadGuide(); f.add.name:SetFocus() end }
     end },
-  { "Roles", "Pick a role and sequence keys for every character.", function()
-      return { "Edit squad", "Opens Edit squad with a role and sequence dropdown per character.", function() SP().select(UI.panels.squad, "edit") end }
+  { "Pick the leader", "Click the crown next to the leader.", function()
+      return { "I lead", "Makes this character the leader. Or close the guide and click another character's crown.", function()
+        local _, me = Core().me(); SP().makeLeader(me) end }
     end },
-  { "Share", "Send the squad; on each other client: Review, then Import.", function()
+  { "Send to your other characters", "Each one: Review, Import, then Place all.", function()
       return { "Send squad", "Offers this squad to your party. Nothing changes there until you click Review and Import on that client.",
         function() if ns.Sync then ns.Sync.sendSquad(ns.State.activeSquad(Core().db)) end end }
-    end },
-  { "Keys everywhere", "On each character: My keys, then Place all.", function()
-      return { "Place all", "Creates this character's WoWBoxer macros and puts them on your bars. Do the same on every client.",
-        function() Core().sync({ replace = Core().cdb.replace }) end }
-    end },
-  { "Check", "Readiness all green, then play with Follow and Assist.", function()
-      return { "Readiness", "Opens the Readiness page: one line per character.", function() SP().select(UI.panels.squad, "ready") end }
     end },
 }
 
@@ -380,7 +382,7 @@ local function guideFrame()
   end
   g.step = W.text(g, "GameFontNormal", nil, W.GOLD)
   g.step:SetPoint("TOPLEFT", 20, -70)
-  g.step.wbxCopy = "label"
+  g.step.wbxCopy = "hint"
   g.text = W.text(g, "GameFontHighlight", nil, W.TEXT)
   g.text:SetPoint("TOPLEFT", 20, -94)
   g.text:SetPoint("TOPRIGHT", -20, -94)

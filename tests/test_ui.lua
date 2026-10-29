@@ -101,13 +101,12 @@ for _, scenario in ipairs({
   -- squad tab: add a character
   UI.Select("squad")
   local panel = UI.panels.squad
-  H.ok(panel.frames.home:IsShown(), tag .. "squad home first")
-  ns.SquadPages.select(panel, "edit")
-  findButton(W, "Add character"):Click()
+  H.ok(panel.frames.main:IsShown(), tag .. "the squad page first")
+  local main = panel.frames.main
+  if main.empty:IsShown() then main.empty.byName:Click() end
+  main.add.name:SetText("Kirra"); main.add.cls.select("warlock"); main.add.go:Click()
   local s = Core.me()
-  local row = panel.frames.edit.pool.rows[#s.members]
-  row.name:SetText("Kirra"); row.name._scripts.OnEnterPressed(row.name)
-  H.eq(s.members[#s.members].name, "Kirra", tag .. "character added")
+  H.eq(s.members[#s.members].name, "Kirra", tag .. "character added by name")
   -- every squad page: plain words, a tooltip on every button
   for _, def in ipairs(ns.SquadPages.pages) do
     ns.SquadPages.select(panel, def.key)
@@ -117,7 +116,7 @@ for _, scenario in ipairs({
     end
     H.eq(table.concat(noTip, ", "), "", tag .. "squad " .. def.key .. ": every button has a tooltip")
   end
-  ns.SquadPages.select(panel, "home")
+  ns.SquadPages.select(panel, "main")
   -- share: export then import back
   UI.Select("share")
   local share = UI.panels.share
@@ -195,11 +194,19 @@ local function layoutPass(screen, opts)
   end
   UI.Select("squad")
   for _, def in ipairs(ns.SquadPages.pages) do ns.SquadPages.select(UI.panels.squad, def.key); check("squad " .. def.key) end
+  -- the main page's states: the inline editor, Removed … Undo, the add line's reason, the delete confirm
+  local SPm, sq = ns.SquadPages, UI.panels.squad
+  SPm.select(sq, "main")
+  sq.frames.main.pool.rows[2]:Click(); check("squad: inline editor")
+  sq.frames.main.add.name:SetText("Kirrathedestroyer"); sq.frames.main.add.go:Click(); check("squad: add line refused")
+  sq.frames.main.pool.rows[3].remove:Click(); check("squad: removed, undo"); sq.undo:Click()
+  sq.squadPick.select("del"); check("squad: delete confirm"); sq.confirm.no:Click()
+  sq.frames.main.pool.rows[2]:Click()
   ns.SquadPages.select(UI.panels.squad, "keymap")
   ns.SquadPages.showCheatSheet(UI.panels.squad.frames.keymap)
   check("cheat sheet")
   UI.panels.squad.frames.keymap.sheet:Hide()
-  ns.SquadPages.select(UI.panels.squad, "home")
+  ns.SquadPages.select(UI.panels.squad, "main")
   UI.Select("keys")
   local p = UI.panels.keys
   p.cells[3]:Click("LeftButton")
@@ -251,7 +258,9 @@ local function layoutPass(screen, opts)
     ns.SquadPages.select(UI.panels.squad, def.key); UI.helpBtn:Click(); check("help overlay squad " .. def.key); ns.Help.Hide()
   end
   ns.Help.ShowSquadGuide()
-  for i = 1, 5 do check("squad guide " .. i); ns.Help.guide.next:Click() end
+  for i = 1, 3 do check("squad guide " .. i); ns.Help.guide.next:Click() end
+  -- the empty state of a new squad (one character), with a party to use
+  ns.SquadPages.newSquad(); check("squad: empty state")
   return problems
 end
 local total, shown = 0, 0

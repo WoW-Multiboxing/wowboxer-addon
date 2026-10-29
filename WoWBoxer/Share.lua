@@ -86,7 +86,7 @@ function Sh.export(squad, extra)
     end
     members[#members + 1] = { id = m.id, name = m.name, cls = m.cls, race = m.race, role = m.role, level = m.level, leader = m.leader, unit = m.unit,
       talented = m.talented, build = Json.array(E_copy(m.build)), guide = m.guide, seq = m.seq, seqTarget = m.seqTarget, customSeq = custom,
-      pins = Json.array(E_copy(m.pins)), tags = Json.array(E_copy(m.tags)), seqTier = m.seqTier }
+      pins = Json.array(E_copy(m.pins)), tags = Json.array(E_copy(m.tags)), seqTier = m.seqTier, realm = m.realm }
   end
   local payload = { f = Sh.FORMAT, game = extra.game or "any",
     squad = { id = squad.id, name = squad.name, faction = squad.faction, linkLevels = squad.linkLevels, members = members } }

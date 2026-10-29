@@ -79,7 +79,7 @@ local before = { calls(A), calls(B), calls(C) }
 
 -- ------------------------------------------------------------------ Send squad to my party = an offer
 A.ns.UI.Select("squad")
-local home = A.ns.UI.panels.squad.frames.home
+local home = A.ns.UI.panels.squad.frames.main
 H.ok(home.send:IsEnabled(), "A: Send squad to my party enabled when grouped")
 home.send:Click()
 H.ok(#A.W.timers > 0 or #A.W.sent > 0, "A: chunks queued")
@@ -141,8 +141,8 @@ H.eq(rowB.version, "0.0.9", "A: sees Wowtwo's version")
 A.ns.SquadPages.select(A.ns.UI.panels.squad, "ready")
 local note = A.ns.UI.panels.squad.frames.ready.note:GetText()
 H.ok(note:find("Wowtwo runs WoWBoxer 0.0.9", 1, true) ~= nil, "A: version check on Readiness")
-A.ns.SquadPages.select(A.ns.UI.panels.squad, "home")
-H.ok(home.hints:GetText():find("Wowtwo runs WoWBoxer 0.0.9", 1, true) ~= nil, "A: version check on Home")
+A.ns.SquadPages.select(A.ns.UI.panels.squad, "main")
+H.ok(home.status:GetText():find("Wowtwo runs WoWBoxer 0.0.9", 1, true) ~= nil, "A: version check on the Squad page")
 local text = A.ns.Sync.sessionText()
 H.ok(text and text:find("2/3 online", 1, true) ~= nil, "A: session card counts who reports (C has no squad): " .. tostring(text))
 H.ok(text:find("Wowtwo", 1, true) ~= nil and text:find("Update keys", 1, true) ~= nil, "A: session card names who needs an update: " .. text)

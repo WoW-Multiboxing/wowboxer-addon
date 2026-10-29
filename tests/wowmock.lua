@@ -95,7 +95,8 @@ function Mock.new(H, opts)
   env.UnitName = function(u)
     if u == "player" then return W.player.name end
     if u == "focus" then return W.focus end
-    return W.party[u]
+    local pi = W.partyInfo and W.partyInfo[u]
+    return W.party[u], pi and pi.realm or nil
   end
   env.UnitExists = function(u) if u == "target" then return W.targetGUID ~= nil end return env.UnitName(u) ~= nil end
   -- other party members: W.partyInfo[unit] = {class, race, level, leader}

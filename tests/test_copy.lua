@@ -1,5 +1,5 @@
 -- Copy rules (docs/ui-spec-v3-book.md): walk every visible text in every tab and state and check the word budgets
--- (labels ≤ 3 words, buttons ≤ 2, status ≤ 2, hints ≤ 8 per line, sentences only in tooltips/guides), no truncated
+-- (labels ≤ 3 words, buttons ≤ 2 (a page's big action ≤ 5), status ≤ 2, hints ≤ 8 per line, sentences only in tooltips/guides), no truncated
 -- spell or helper names, no section header in a grid cell, nothing across the book's spine, a 255-character macro
 -- fully visible in the key editor, and a "?" with a tooltip and 3–5 callouts on every page.
 local dir = (arg[0]:match("^(.*)/[^/]+$") or ".")
@@ -40,7 +40,9 @@ local function copyProblems(W, root, what)
       local text = plain(W, f._text)
       if text ~= "" then
         if f._kind == "Button" then
-          if words(text) > 2 then out[#out + 1] = what .. ": button over 2 words: \"" .. text .. "\"" end
+          -- the one big action of a page (b.wbxBig: "Send to my other characters", docs/squad-v2-simple.md) may use 5
+          local max = rawget(f, "wbxBig") and 5 or 2
+          if words(text) > max then out[#out + 1] = what .. ": button over " .. max .. " words: \"" .. text .. "\"" end
         elseif f._kind == "FontString" and not isDropdownLabel(f) then
           local cls = rawget(f, "wbxCopy") or "hint"
           local max = BUDGET[cls]
@@ -165,7 +167,7 @@ for _, sc in ipairs({
         ns.SquadPages.select(UI.panels.squad, def.key)
         add(copyProblems(W, UI.frame, tag .. " squad " .. def.key))
       end
-      ns.SquadPages.select(UI.panels.squad, "home")
+      ns.SquadPages.select(UI.panels.squad, "main")
     end
   end
   -- the key editor
@@ -274,20 +276,20 @@ do
   local n = #W.playing
   UI.Select("share")
   H.eq(#W.playing, n, "no second pulse on a page already seen")
-  -- the squad guide: 5 steps, a button each, progress dots
+  -- the squad guide: 3 steps, a button each, progress dots
   W.env.SlashCmdList.WOWBOXER("show")
   Help.ShowSquadGuide()
   local g = Help.guide
   H.ok(g:IsVisible(), "squad guide open")
   local titles = {}
-  for i = 1, 5 do
+  for i = 1, 3 do
     titles[#titles + 1] = g.step:GetText()
     H.ok(g.act:IsVisible() and words(g.act:GetText()) <= 2, "step " .. i .. " has its button: " .. tostring(g.act:GetText()))
     add(copyProblems(W, g, "squad guide " .. i))
     for _, m in ipairs(Layout.check(W, { UI.frame })) do problems[#problems + 1] = "squad guide " .. i .. ": " .. m end
     g.next:Click()
   end
-  H.eq(table.concat(titles, "|"), "1. Make the squad|2. Roles|3. Share|4. Keys everywhere|5. Check", "the five steps")
+  H.eq(table.concat(titles, "|"), "1. Add your characters|2. Pick the leader|3. Send to your other characters", "the three steps")
   H.ok(not g:IsVisible(), "Done closes the guide")
   -- offered once when a second character joins the party
   Core.db.settings.squadGuideOffered = nil

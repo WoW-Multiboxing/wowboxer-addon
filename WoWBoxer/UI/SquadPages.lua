@@ -55,7 +55,7 @@ function SP.myFix(row)
   return nil
 end
 
-SP.register({ key = "ready", label = "Readiness", tip = "Is everyone set up? One line per character; fix your own line here.",
+SP.register({ key = "ready", more = true, label = "Readiness", tip = "Is everyone set up? One line per character; fix your own line here.",
   build = function(f)
     header(f, RCOLS)
     local sf, content = W.scroll(f, LIST_W, 10 * 26)
@@ -139,7 +139,7 @@ SP.register({ key = "ready", label = "Readiness", tip = "Is everyone set up? One
 
 -- ------------------------------------------------------------------ Key map: same key, same job
 local KX, KW = 136, 40
-SP.register({ key = "keymap", label = "Key map", tip = "Same key, same job: which spell each character has on each key.",
+SP.register({ key = "keymap", more = true, label = "Key map", tip = "Same key, same job: which spell each character has on each key.",
   build = function(f)
     local h = W.line(f, "GameFontNormalSmall", nil, W.GOLD)
     h:SetPoint("TOPLEFT", 4, 0)
@@ -247,7 +247,7 @@ end
 
 -- ------------------------------------------------------------------ Plan: levelling together
 local PCOLS = { { "Character", 4, "LEFT", 128 }, { "Level", 136, "CENTER", 44 }, { "Next trainer visit", 188, "LEFT", 220 }, { "Next talent", 416, "LEFT", 228 } }
-SP.register({ key = "plan", label = "Plan", tip = "Levelling together: levels, the next trainer visit and the next talent of everyone.",
+SP.register({ key = "plan", more = true, label = "Plan", tip = "Levelling together: levels, the next trainer visit and the next talent of everyone.",
   build = function(f)
     header(f, PCOLS)
     local sf, content = W.scroll(f, LIST_W, 10 * 26)

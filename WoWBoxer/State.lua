@@ -106,7 +106,14 @@ function S.newMember(o)
     unit = E.contains(E.UNITS, o.unit) and o.unit or "party1", talented = clampT(o.talented), build = S.sanitizeOrder(cls, o.build or {}),
     guide = guide, seq = E.contains(E.SEQ_TIERS, o.seq) and o.seq or "off", seqTarget = not not o.seqTarget,
     seqTier = (E.contains(E.SEQ_TIERS, o.seqTier) and o.seqTier ~= "off") and o.seqTier or nil, customSeq = S.cleanCustom(o.customSeq), pins = pins,
-    tags = tags }
+    tags = tags, realm = S.cleanRealm(o.realm) }
+end
+--- A realm for "Name-Realm" (another realm than this character's): letters, digits and ' only, no spaces; else nil.
+function S.cleanRealm(v)
+  if type(v) ~= "string" then return nil end
+  v = v:gsub("%s", "")
+  if #v < 2 or #v > 32 or v:find("[^%w']") then return nil end
+  return v
 end
 
 function S.fixLeader(s)
