@@ -21,6 +21,12 @@ After the tag is pushed and the release is live on CurseForge, wowboxer.com/addo
 5. Check that the Vercel deployment for that commit is READY and that https://wowboxer.com/addon/ shows the version.
 6. Mention it in the `[WS-E]` block in LOG.md.
 
+If `%USERPROFILE%\wowboxer-site` has local commits from another session (`git status` says "ahead") or the pull hits
+conflicts: `git rebase --abort`, never resolve someone else's work. Make the change in a throw-away worktree instead:
+`git worktree add --detach ../wowboxer-site-version origin/main`, edit + build + commit there, `git push origin
+HEAD:main`, then `git worktree remove --force ../wowboxer-site-version`. (Locally the build's output check reports the
+canonical URLs with `\` on Windows only; Vercel's build on Linux is the gate.)
+
 ## One-time CurseForge setup (the owner, in the browser)
 1. https://authors.curseforge.com → **Create project** → World of Warcraft → Addon. Name `WoWBoxer`, summary and
    description below, licence MIT, categories **Action Bars** and **Miscellaneous**, logo: any square image.
