@@ -55,16 +55,16 @@ so the player chooses them and sees them:
 | Key | Who gets it | Macro (built from the squad, rebuilt when the squad changes) |
 |---|---|---|
 | **Invite squad** | leader (any character can tick it) | `/invite Wow2` + `/invite Kirra` … one line per other member (≤255 chars; split into "Invite 2" if needed) |
-| **Follow** | followers | `/follow Dorin` (leader's **name**, so the party slot does not matter) |
-| **Assist** | followers | `/assist Dorin` |
-| **Target leader** | followers (off by default) | `/target Dorin` |
-| **Focus leader** | followers using focus | `/focus Dorin` |
+| **Follow** | followers | `/follow party1` (the member's unit, as today) |
+| **Assist** | followers | `/assist party1` |
+| **Target leader** | followers (off by default) | `/target party1` |
+| **Focus leader** | followers using focus | `/focus [@target,help,nodead]` (as today) |
 | Pet attack / Pet back | pet classes | as today |
-- Names: use `Name-Realm` when the member is on another realm (store realm when known from the party).
-- `/invite` and `/target` must be added to `Rules.SLASH_WHITELIST` (`/invite` is a normal chat command; one press sends
+- **Decision (the owner, 19:51): only Invite uses names.** Follow, Assist, Target and all spell keys stay on party units
+  (party1–4 / focus), exactly as today. Invite uses `Name-Realm` when the member is on another realm.
+- `/invite` must be added to `Rules.SLASH_WHITELIST` (`/target` is already there) (`/invite` is a normal chat command; one press sends
   the invites, the other characters still accept by hand – **never auto-accept**).
 - Spell keys keep the unit-based conditions (`[@party1target…]`) – the companion's rules and parity tests stay.
-  [AFKLAR: `[@Name]` in macro conditions for party members – if confirmed in game, offer "assist by name" for spells later.]
 - Default ticks: leader → Invite squad on; followers → Follow + Assist on. Unticked squad keys are not created.
 
 ## 4. Login / level-up reminders that respect the player
@@ -81,7 +81,7 @@ so the player chooses them and sees them:
 - Squad: add by name, add my party, remove, leader change, rename – all saved without a confirm; no action switches the
   active squad as a side effect; templates gone.
 - Squad keys: invite macro lists the other members (realm suffix when needed), rebuilds after add/remove/rename, stays
-  ≤255 (split), passes the whitelist; follow/assist use the leader's name.
+  ≤255 (split), passes the whitelist; follow/assist/target keep the member's party unit.
 - Reminders: "Don't show again" survives a simulated reload; a new level-up shows again; "Keep off my bars" keys never
   trigger the reminder; login with nothing new writes no chat line.
 - Copy budgets and the resolution/overlap matrix stay green.
