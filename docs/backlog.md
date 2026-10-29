@@ -1,10 +1,10 @@
 # WoWBoxer addon – backlog
 
-## The owner: in-game check of the new book (one Classic Era client is enough)
-1. Restart WoW, log in the warlock, `/wbx`: spells left, helpers + "Selected" right, nothing across the middle.
-2. Hover a key with an orange dot, then press **Update keys** in the banner; the dot goes away.
-3. Custom keys → New key → **Paste…** your warlock macro: it wraps inside the box, no scrolling.
-4. Click the **?** on My keys, Squad and Setup (PrtScn each), then `/reload` and tell Claude "done".
+## The owner: in-game check of Squad v2 (0.9.3, 2–3 Classic Era clients in one party, Dorin leads)
+1. Restart WoW. On Dorin: `/wbx` → **Squad** → **Use my party (2)**; click a crown, change a role, add one character by name.
+2. **Send to my other characters**; on each other client: card → **Review** → **Import**, then My keys → **Place all**.
+3. On Dorin press the **Invite squad** key (others accept by hand); on a follower press **Follow** and **Assist**.
+4. `/reload` everywhere: no reminder for what you already saw. PrtScn the Squad page, then tell Claude "done".
 
 Shared work list. **Claude Code (PC) owns the code** and ticks items off here (`[x]` + commit hash). The cloud session
 only adds research and items here and in `docs/research/`; it never edits code. Read this file at the start of every
@@ -35,7 +35,7 @@ minimap button, much more drag & drop of macros onto the action bars.
       over 255, `/invite` whitelisted); Follow/Assist/Target/Focus/Pet stay on party units.
 - [x] 4. Reminders: only real changes; Keep off my bars; Don't show again per character; Level-up reminders On/Off;
       at most one chat line at login.
-- [ ] 5. Copy budgets + resolution/overlap matrix green; help "?" for the new Squad page.
+- [x] 5. Copy budgets + resolution/overlap matrix green; help "?" for the new Squad page.
 
 ## Needs the owner in game
 Built behind probes and tested in the simulator; only the real client can confirm these. (Claude Code keeps this list.)
