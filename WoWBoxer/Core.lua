@@ -94,7 +94,8 @@ function Core.computeFresh()
   if not m then return nil, "This character is not in a squad yet." end
   local live = M.liveCheck()
   local L = C.playerLevel()
-  local desired = M.desired(m, L, { live = live, extras = Core.cdb.extras, squad = s, squadKeys = Core.cdb.squadKeys })
+  local lineUnit = ns.Squad and ns.Squad.lineFor(s, m) or nil
+  local desired = M.desired(m, L, { live = live, extras = Core.cdb.extras, squad = s, squadKeys = Core.cdb.squadKeys, lineUnit = lineUnit })
   for _, d in ipairs(desired) do d.keepOff = Core.keptOff(d.name, d.group) end
   local mplan = M.plan(desired, Core.cdb.skip)
   local bplan = B.plan(desired, Core.cdb, Core.cdb.skip)
@@ -119,6 +120,24 @@ function Core.setKeptOff(name, off)
   Core.changed()
 end
 
+--- Save the line unit seen now (only after a click: Update / Place / the checklist Fix).
+function Core.saveLineUnit(u)
+  local s, m = Core.me()
+  if not m or m.leader then return nil end
+  if not u then
+    local how
+    u, _, how = ns.Squad.lineFor(s, m)
+    if how ~= "party" and how ~= "leader" then return nil end
+  end
+  if u and u ~= "focus" and m.lineUnit ~= u then m.lineUnit = u; Core.log("info", "follow line: " .. u) end
+  return u
+end
+--- The checklist / banner Fix "Use partyN": WoWBoxer data only; the macro follows after Update keys.
+function Core.setLineUnit(u)
+  Core.saveLineUnit(u)
+  Core.changed()
+end
+
 --- Key groups per book page: "Place spells" (left page) and "Place squad keys" (right page).
 Core.PAGE_GROUPS = { spells = { kit = true, extra = true, sequence = true }, squad = { helper = true } }
 --- Only the items of ctx's plan whose key is in one of `groups` (all when groups is nil).
@@ -137,6 +156,7 @@ function Core.sync(opts)
   opts = opts or {}
   local groups = opts.page and Core.PAGE_GROUPS[opts.page] or nil
   return Core.whenSafe(opts.page == "squad" and "Place squad keys" or opts.page == "spells" and "Place spells" or "Update WoWBoxer keys", function()
+    Core.saveLineUnit()
     local ctx, why = Core.compute()
     if not ctx then chat(why); return end
     local mres = { created = 0, updated = 0, failed = {} }

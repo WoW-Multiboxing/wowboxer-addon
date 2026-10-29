@@ -175,6 +175,22 @@ function SP.fillFromParty(s)
   return n
 end
 
+--- Move member m one place up (-1) or down (+1): the order of the squad and of the follow line.
+function SP.move(m, d)
+  local s = squad()
+  local i = S().slotOf(s, m)
+  if not (i and S().moveMember(s, i, i + d)) then return false end
+  Core().log("info", "moved " .. m.name .. " to " .. (i + d))
+  changed()
+  return true
+end
+--- "Line: Dorin → Anna → Bo" (the leader first, then the followers in squad order).
+function SP.lineText(s)
+  local names = {}
+  for _, m in ipairs(S().line(s)) do names[#names + 1] = W.hex(W.classColor(m.cls)) .. m.name .. "|r" end
+  return #names > 1 and ("Line: " .. table.concat(names, " → ")) or ""
+end
+
 function SP.makeLeader(m)
   local s = squad()
   if not (s and m) or m.leader then return false end
@@ -335,6 +351,11 @@ local function buildEditor(f, parent)
   local rl = lbl("Race")
   rl:SetPoint("LEFT", e.cls, "RIGHT", 14, 0)
   e.race:SetPoint("LEFT", rl, "RIGHT", 6, 0)
+  -- order = the follow line (docs/follow-line.md)
+  e.down = W.button(e, "Down", 54, 20, function() SP.move(m(), 1) end, "Moves this character one place down: later in the follow line. Your keys show what to update.")
+  e.down:SetPoint("TOPRIGHT", -4, -5)
+  e.up = W.button(e, "Up", 40, 20, function() SP.move(m(), -1) end, "Moves this character one place up: earlier in the follow line. Your keys show what to update.")
+  e.up:SetPoint("RIGHT", e.down, "LEFT", -4, 0)
   -- line 2
   e.plays = dd(150, function() return ns.Book.playsAsValues() end, function(x) return x.leader and "leader" or x.unit end,
     function(x, v) return S().setPlaysAs(squad(), x, v) end, "Plays as", "Leader: plays normally. Follower: its keys use the leader's target through the unit (party1–4 or focus).")
@@ -350,6 +371,8 @@ local function buildEditor(f, parent)
     if not e.name:HasFocus() then e.name:SetText(x.name) end
     e.cls.Refresh(); e.race.Refresh(); e.plays.Refresh(); e.seq.Refresh()
     e.isMe:SetShown(x ~= me)
+    local i = S().slotOf(squad(), x) or 1
+    e.up:SetEnabled(i > 1); e.down:SetEnabled(i < #squad().members)
   end
   return e
 end
@@ -450,6 +473,13 @@ SP.register({ key = "main", label = "Squad", tip = "Who plays together, who lead
     f.keys.update = W.button(f.keys, "Update keys", 100, 22, function() Core().sync({ replace = Core().cdb.replace }) end,
       "Creates or updates your squad keys (and any other changed keys) and puts new ones on your bars.")
     f.keys.update:SetPoint("TOPRIGHT", -20, -22)
+    f.lineText = W.line(f.list, "GameFontHighlightSmall", nil, W.TEXT)
+    f.lineText:SetPoint("TOPLEFT", 0, y - 34 - 52)
+    f.lineText:SetWidth(LIST_W)
+    f.lineText.wbxCopy = "data"
+    local lineHit = CreateFrame("Frame", nil, f.list)
+    lineHit:SetAllPoints(f.lineText)
+    W.tip(lineHit, "Follow line", "Follow (line) on each character follows the one before it. Change the order with Up / Down in a row; your keys update.")
     f.status = W.line(f.list, "GameFontHighlightSmall", nil, W.MUTED)
     f.status:SetPoint("BOTTOMLEFT", 0, 4)
     f.status:SetWidth(LIST_W - 80)
@@ -524,6 +554,7 @@ SP.register({ key = "main", label = "Squad", tip = "Who plays together, who lead
     if sg then f.sugg:SetText(sg.name .. " (" .. D().classes[sg.cls].n .. ") is in your party") end
     f.send:SetEnabled(s ~= nil and ns.Compat.inParty() and n > 1)
     SP.refreshKeys(f)
+    f.lineText:SetText(SP.lineText(s))
     -- status line: readiness, composition, unit hint, versions
     local hints = {}
     local rows = ns.Squad.readiness()

@@ -37,7 +37,7 @@ function Book.kindName(it)
   return k
 end
 --- Short helper names (the spec: no truncated names).
-Book.HELPER_NAME = { Follow = "Follow", Assist = "Assist", Focus = "Focus", Pet = "Pet attack", PetBack = "Pet back", Invite = "Invite squad",
+Book.HELPER_NAME = { Follow = "Follow (line)", FollowLead = "Follow leader", Assist = "Assist", Focus = "Focus", Pet = "Pet attack", PetBack = "Pet back", Invite = "Invite squad",
   Invite2 = "Invite squad 2", Target = "Target leader" }
 function Book.shortLabel(it)
   if it.group == "helper" then return Book.HELPER_NAME[it.key] or it.label end
@@ -95,7 +95,10 @@ function Book.helperShort(key, mem)
   local _, me = Core().me()
   mem = mem or me
   local L = leaderName(mem)
-  local T = { Follow = "Follows " .. L .. ".", Assist = "Takes " .. L .. "'s target.", Focus = "Sets your target as focus.",
+  local s = Core().me()
+  local _, ahead = ns.Squad.lineFor(s, mem)
+  local T = { Follow = "Follows " .. ((ahead and ahead.name) or L) .. ", the one ahead of you in the line.", FollowLead = "Follows " .. L .. ".",
+    Assist = "Takes " .. L .. "'s target.", Focus = "Sets your target as focus.",
     Pet = "Sends your pet at " .. ((mem and mem.leader) and "your target." or (L .. "'s target.")), PetBack = "Calls your pet back, passive.",
     Invite = "Invites the others in your squad.", Invite2 = "Invites the rest of your squad.", Target = "Targets " .. L .. "." }
   return T[key] or "A helper key."
@@ -397,6 +400,11 @@ function Book.nextStep(ctx, mode)
   if hu then
     return { text = "|cfff0b43c" .. L.name .. " is " .. hu .. " here|r", tip = "Your keys follow " .. ctx.member.unit .. ". Use " .. hu .. " instead?",
       button = { "Use " .. hu, "Your keys will use " .. L.name .. " through " .. hu .. " (WoWBoxer's setting; then Update keys).", function() Core().setPlaysAs(hu) end } }
+  end
+  local lu, ahead = ns.Squad.lineHint()
+  if lu then
+    return { text = "|cfff0b43c" .. ahead.name .. " is " .. lu .. " here|r", tip = "Follow (line) follows " .. ahead.name .. ". Use " .. lu .. ", then update your keys.",
+      button = { "Use " .. lu, "Follow (line) will follow " .. ahead.name .. " through " .. lu .. " (WoWBoxer's setting; then Update keys).", function() Core().setLineUnit(lu) end } }
   end
   local m = ctx.macros
   if m.counts.noslot > 0 then

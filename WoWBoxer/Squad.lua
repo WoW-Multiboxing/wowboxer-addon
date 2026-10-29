@@ -66,6 +66,27 @@ function SQ.unitHint()
   return nil
 end
 
+--- Follow (line) for this character: unit, ahead, how (docs/follow-line.md). how = "leader" (first follower: the
+--- leader's unit), "party" (the member ahead found in the party here), "saved" (not found: the last saved slot) or
+--- "fallback" (nothing saved: follows the leader). Only reads the game; nothing is saved here.
+function SQ.lineFor(s, m)
+  if not (s and m) or m.leader then return nil end
+  local ahead = S().aheadOf(s, m)
+  if not ahead then return nil end
+  if ahead.leader then return m.unit, ahead, "leader" end
+  local u = C().inParty() and SQ.unitOf(ahead.name) or nil
+  if u then return u, ahead, "party" end
+  if m.lineUnit then return m.lineUnit, ahead, "saved" end
+  return m.unit, ahead, "fallback"
+end
+--- The member ahead is in another party slot than the saved one: the slot to use, the member ahead (or nil).
+function SQ.lineHint()
+  local s, m = Core().me()
+  local u, ahead, how = SQ.lineFor(s, m)
+  if how == "party" and m.lineUnit and u ~= m.lineUnit then return u, ahead end -- a reshuffle after a saved slot
+  return nil
+end
+
 -- ------------------------------------------------------------------ readiness of this character (sent to the others)
 --- {keys = keys to create/update/place, unit = 1 ok / 0 wrong / 2 unknown, helpers = 1 when Follow/Assist are on a bar
 --- (or not needed), cvars = game settings still to change}

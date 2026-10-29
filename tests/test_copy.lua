@@ -146,7 +146,7 @@ for _, sc in ipairs({
   local helpers = {}
   for _, b in ipairs(p.helperPool or {}) do if b:IsVisible() then helpers[#helpers + 1] = b.name:GetText() end end
   if sc.follower then
-    H.ok(table.concat(helpers, ","):find("Follow,Assist", 1, true) ~= nil, tag .. ": follower helpers: " .. table.concat(helpers, ","))
+    H.ok(table.concat(helpers, ","):find("Follow (line),Follow leader,Assist", 1, true) ~= nil, tag .. ": follower helpers: " .. table.concat(helpers, ","))
   end
   if sc.class == "HUNTER" then
     local title

@@ -106,7 +106,10 @@ function S.newMember(o)
     unit = E.contains(E.UNITS, o.unit) and o.unit or "party1", talented = clampT(o.talented), build = S.sanitizeOrder(cls, o.build or {}),
     guide = guide, seq = E.contains(E.SEQ_TIERS, o.seq) and o.seq or "off", seqTarget = not not o.seqTarget,
     seqTier = (E.contains(E.SEQ_TIERS, o.seqTier) and o.seqTier ~= "off") and o.seqTier or nil, customSeq = S.cleanCustom(o.customSeq), pins = pins,
-    tags = tags, realm = S.cleanRealm(o.realm) }
+    tags = tags, realm = S.cleanRealm(o.realm),
+    -- Follow (line): the party unit of the member ahead as seen on THIS client (docs/follow-line.md); per client,
+    -- never in the share string or Sync
+    lineUnit = (o.lineUnit and E.contains(E.UNITS, o.lineUnit) and o.lineUnit ~= "focus") and o.lineUnit or nil }
 end
 --- A realm for "Name-Realm" (another realm than this character's): letters, digits and ' only, no spaces; else nil.
 function S.cleanRealm(v)
@@ -124,6 +127,19 @@ function S.fixLeader(s)
   for _, m in ipairs(s.members) do if m.leader then if seen then m.leader = false end seen = true end end
 end
 function S.leaderOf(s) for _, m in ipairs(s and s.members or {}) do if m.leader then return m end end return nil end
+--- The follow line: the leader first, then the followers in squad order.
+function S.line(s)
+  local L = S.leaderOf(s)
+  local out = { L }
+  for _, m in ipairs(s and s.members or {}) do if m ~= L then out[#out + 1] = m end end
+  return L and out or {}
+end
+--- The member ahead of m in the line (the leader for the first follower), or nil for the leader.
+function S.aheadOf(s, m)
+  local line = S.line(s)
+  for i, x in ipairs(line) do if x == m then return line[i - 1] end end
+  return nil
+end
 function S.applyLink(s)
   local L = S.leaderOf(s)
   if s and s.linkLevels and L then for _, m in ipairs(s.members) do m.level = L.level end end

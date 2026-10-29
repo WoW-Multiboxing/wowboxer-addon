@@ -57,7 +57,7 @@ for _, fileIds in ipairs({ false, true }) do
     if b:IsShown() and b.cell and b.cell.name == "WBX Follow" then helperCell = b end
   end
   H.ok(table.concat(heads, ","):find("Spells", 1, true) and table.concat(heads, ","):find("Squad keys", 1, true), tag .. "sections: " .. table.concat(heads, ","))
-  H.eq(helperCell and helperCell.name:GetText(), "Follow", tag .. "short helper name")
+  H.eq(helperCell and helperCell.name:GetText(), "Follow (line)", tag .. "short helper name")
   H.ok(helperCell and helperCell.small, tag .. "helpers are the small buttons")
   H.ok(helperCell ~= nil, tag .. "Follow is in the book")
   local lines = {}

@@ -47,7 +47,8 @@ Help.PAGES = {
     callouts = function() local p = UI.panels.setup
       return { { p.bar1, "Where your keys go" }, { p.replace, "May replace other buttons" }, { p.checkSf, "Multibox checklist" },
         { p.applyCv, "Apply recommended settings" }, { p.restore, "Undo game settings" } } end },
-  ["squad:main"] = { tip = { "Who plays together, who leads.", "Changes save at once.", "Send it, then Place all on each client." },
+  ["squad:main"] = { tip = { "Who plays together, who leads; changes save at once.", "Follow (line): each follows the one before – easier on narrow paths.",
+    "Follow leader: everyone stays close to the leader." },
     callouts = function() local f, p = sq("main"), UI.panels.squad
       local r = firstRow(f.pool)
       if not f.list:IsShown() then

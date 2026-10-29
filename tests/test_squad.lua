@@ -207,7 +207,7 @@ do
   local list = ns.Macros.squadKeyList(me, Core.cdb.squadKeys, Core.me())
   local names = {}
   for _, k in ipairs(list) do names[#names + 1] = k.key .. (k.on and "+" or "-") end
-  H.eq(table.concat(names, ","), "Invite+,Follow-,Assist+,Target+", "the follower's ticks")
+  H.eq(table.concat(names, ","), "Invite+,Follow-,FollowLead+,Assist+,Target+", "the follower's ticks")
   H.eq(errors(ns), "", "no errors (squad keys)")
 end
 

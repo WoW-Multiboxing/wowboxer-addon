@@ -31,6 +31,12 @@ minimap button, much more drag & drop of macros onto the action bars.
    the bar after **Update keys**. Custom keys → New own key → **Paste…** your macro → read the warnings → **Copy…**.
 7. On Dorin: Squad → Home, Readiness, Key map and Plan – PrtScn each. Then `/reload` on every client and tell Claude "done".
 
+## Follow in a line (docs/follow-line.md, the owner 2026-10-29)
+- [x] Follow (line) = WBX Follow on the party unit of the member ahead (this client, `m.lineUnit` saved after a click),
+      Follow leader = WBX FollowLead (old body); ticks; Line text + Up/Down on the Squad page; checklist + top-line Fix
+      "Use partyN"; help "?"; never in the share string (tests/test_followline.lua).
+- [ ] Help "?" button restyled (the owner: looks like it goes over the borders; quest-like but clearly help).
+
 ## Feedback 2026-10-29 evening (docs/feedback-2026-10-29-evening.md)
 - [x] 1. Settings: Clear target on click = On; enemy/friendly/personal nameplates; cast-bar CVars probed (diagnose
       `cvarProbe`), only existing ones offered; Setup hides settings the client does not have.
