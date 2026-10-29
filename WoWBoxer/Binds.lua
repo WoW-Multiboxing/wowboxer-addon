@@ -114,7 +114,13 @@ local function save()
   if G.SaveBindings then G.SaveBindings(set) end
 end
 
+local function prevStore() local c = ns.Core and ns.Core.cdb; if c then c.bindPrev = c.bindPrev or {} return c.bindPrev end return {} end
+--- The game's standard keys of action buttons 1–12 (bar 1): "1"–"9", "0", "-", "=".
+KB.DEFAULT_KEYS = { ["1"] = 1, ["2"] = 2, ["3"] = 3, ["4"] = 4, ["5"] = 5, ["6"] = 6, ["7"] = 7, ["8"] = 8, ["9"] = 9, ["0"] = 10, ["-"] = 11, ["="] = 12 }
+
 --- Bind `key` to macro `name` for this character. Must run out of combat (Core.bindKey wraps it).
+--- A key that belongs to an action button is NEVER rebound (the macro goes on that button instead: Core.placeOn).
+--- The key's previous command is remembered in cdb.bindPrev, so Remove keybind / Reset to default can put it back.
 --- Returns true, previousAction or false, reason.
 function KB.bind(name, key)
   if not ns.Rules.isOurs(name) then return false, "only WBX macros can be bound" end
@@ -122,17 +128,77 @@ function KB.bind(name, key)
   if ns.Compat.inCombat() then return false, "in combat" end
   if not G.SetBindingMacro then return false, "SetBindingMacro is not available" end
   local before = KB.actionOf(key)
+  if KB.slotForCommand(before) then return false, key .. " is the keybind of " .. KB.buttonName(KB.slotForCommand(before)) .. " – put the macro on that button instead" end
   local ok = G.SetBindingMacro(key, name)
   if not ok then return false, "the game refused the key" end
+  local prev = prevStore()
+  if prev[key] == nil and before ~= "MACRO " .. name then prev[key] = before or "" end -- "" = it did nothing before
   save()
   return true, before
 end
 
---- Remove the direct macro bindings of `name` (action-button keys are left alone). Returns the number removed.
+--- Put back what `key` did before WoWBoxer bound it (bindPrev), else the standard action-button key for 1–=,
+--- else nothing. Returns the command it now has (or nil).
+local function restoreKey(key)
+  local prev = prevStore()
+  local cmd = prev[key]
+  if cmd == nil and KB.DEFAULT_KEYS[key] then cmd = "ACTIONBUTTON" .. KB.DEFAULT_KEYS[key] end
+  if cmd and cmd ~= "" and not cmd:find("^MACRO WBX") then G.SetBinding(key, cmd) else G.SetBinding(key); cmd = nil end
+  prev[key] = nil
+  return cmd
+end
+KB.restoreKey = restoreKey
+
+--- Remove keybind: the direct macro bindings of `name` go back to what the key did before. Returns the number removed.
 function KB.unbind(name)
   if not ns.Rules.isOurs(name) or ns.Compat.inCombat() or not G.SetBinding then return 0 end
   local n = 0
-  for _, k in ipairs(keysOf("MACRO " .. name)) do if G.SetBinding(k) then n = n + 1 end end
+  for _, k in ipairs(keysOf("MACRO " .. name)) do restoreKey(k); n = n + 1 end
+  if n > 0 then save() end
+  return n
+end
+
+--- Every key that presses a WBX macro directly: {{key, macro, prev}} (read-only, for the diagnose and the repair).
+function KB.directWbx()
+  local out, seen = {}, {}
+  local names = {}
+  for _, x in ipairs(ns.Compat.characterMacros()) do if ns.Rules.isOurs(x.name) then names[#names + 1] = x.name end end
+  for _, n in ipairs(names) do
+    for _, k in ipairs(keysOf("MACRO " .. n)) do if not seen[k] then seen[k] = true; out[#out + 1] = { key = k, macro = n, prev = prevStore()[k] } end end
+  end
+  for k in pairs(KB.DEFAULT_KEYS) do
+    local a = KB.actionOf(k)
+    local m = a and a:match("^MACRO (WBX.*)$")
+    if m and not seen[k] then seen[k] = true; out[#out + 1] = { key = k, macro = m, prev = prevStore()[k] } end
+  end
+  table.sort(out, function(a, b) return a.key < b.key end)
+  return out
+end
+--- Keys 1–= that press a WBX macro directly although they belong to bar 1's buttons (the 0.9.4 bind bug):
+--- {{key, slot, macro}}. A key the player bound on purpose from something else (bindPrev not a button) is left alone.
+function KB.lostButtons()
+  local out = {}
+  for _, d in ipairs(KB.directWbx()) do
+    local slot = KB.DEFAULT_KEYS[d.key]
+    if slot and (d.prev == nil or d.prev == "ACTIONBUTTON" .. slot) then out[#out + 1] = { key = d.key, slot = slot, macro = d.macro } end
+  end
+  return out
+end
+--- Give `key` back to its action button (after a click, out of combat).
+function KB.giveBack(key)
+  if ns.Compat.inCombat() or not G.SetBinding then return false end
+  local slot = KB.DEFAULT_KEYS[key]
+  if not slot then return false end
+  G.SetBinding(key, "ACTIONBUTTON" .. slot)
+  prevStore()[key] = nil
+  save()
+  return true
+end
+--- Reset to default: every key WoWBoxer bound goes back to what it did before (and 1–= to their buttons).
+function KB.restoreAll()
+  if ns.Compat.inCombat() or not G.SetBinding then return 0 end
+  local n = 0
+  for _, d in ipairs(KB.directWbx()) do restoreKey(d.key); n = n + 1 end
   if n > 0 then save() end
   return n
 end

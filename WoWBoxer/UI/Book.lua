@@ -402,6 +402,12 @@ function Book.nextStep(ctx, mode)
     return { text = "|cfff0b43c" .. L.name .. " is " .. hu .. " here|r", tip = "Your keys follow " .. ctx.member.unit .. ". Use " .. hu .. " instead?",
       button = { "Use " .. hu, "Your keys will use " .. L.name .. " through " .. hu .. " (WoWBoxer's setting; then Update keys).", function() Core().setPlaysAs(hu) end } }
   end
+  local lost = ns.Binds.lostButtons()[1]
+  if lost then
+    return { text = "|cfff0b43cYour " .. lost.key .. " presses " .. lost.macro .. " directly|r", tip = "So action button " .. lost.slot .. " has no keybind. Give " ..
+      lost.key .. " back to button " .. lost.slot .. "; the macro stays on your bars.",
+      button = { "Give " .. lost.key .. " back", "Keybind " .. lost.key .. " presses action button " .. lost.slot .. " again (out of combat).", function() Core().giveBack(lost.key) end } }
+  end
   local lu, ahead = ns.Squad.lineHint()
   if lu then
     return { text = "|cfff0b43c" .. ahead.name .. " is " .. lu .. " here|r", tip = "Follow (line) follows " .. ahead.name .. ". Use " .. lu .. ", then update your keys.",

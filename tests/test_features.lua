@@ -180,7 +180,7 @@ do
   for _, it in ipairs(ns.Book.menuFor(UI.panels.keys, row(ns, function(x) return x.name == "WBX K2" end).cell)) do if it[1] == "Unbind" then un = it[2] end end
   H.ok(un ~= nil, "Unbind in the right-click menu")
   un()
-  H.eq(W.bindings.F, nil, "unbind removes F")
+  H.eq(W.bindings.F, "ASSISTTARGET", "Remove keybind puts back what F did before (Assist Target)")
   H.eq(W.bindings["SHIFT-G"], nil, "and SHIFT-G")
   H.eq(W.bindings["2"], "ACTIONBUTTON2", "the button key stays")
   -- escape cancels, combat queues
@@ -923,6 +923,60 @@ do
   W.combat = false; W.fire("PLAYER_REGEN_ENABLED")
   H.eq(W.slotMacroName(6), "WBX K1", "placed after combat")
   H.eq(#errors(ns), 0, "no errors (bind key)")
+end
+
+-- keybinds (docs/feedback-2026-10-29-late.md §1): bindPrev, Remove keybind restores, the 0.9.4 "3 → MACRO WBX K2" repair
+do
+  local W, ns = boot({ name = "Boxtester", class = "WARLOCK", race = "Scourge", level = 20,
+    bindings = { ["1"] = "ACTIONBUTTON1", ["2"] = "ACTIONBUTTON2", ["3"] = "MACRO WBX K2", ["4"] = "ACTIONBUTTON4", ["J"] = "TOGGLEBAG1" } })
+  local Core, UI, KB = ns.Core, ns.UI, ns.Binds
+  Core.cdb.guide = "done"
+  UI.Open("keys")
+  Core.sync({})
+  -- The owner's Classic Era character: bindings-cache.wtf has "bind 3 MACRO WBX K2" (bound with 0.9.4)
+  local lost = KB.lostButtons()
+  H.ok(#lost == 1 and lost[1].key == "3" and lost[1].slot == 3 and lost[1].macro == "WBX K2", "detected: 3 presses WBX K2 directly")
+  local step = ns.Book.nextStep(Core.compute(), "keys")
+  H.ok(step.text:find("Your 3 presses WBX K2 directly", 1, true) and step.button[1] == "Give 3 back", "top line: " .. step.text)
+  local fix
+  for _, it in ipairs(ns.Checklist.items()) do if it.fix and it.fix.label == "Give back" then fix = it end end
+  H.ok(fix and fix.hint:find("action button 3 has no keybind", 1, true), "checklist line + Give back")
+  local d = Core.selftest(true)
+  H.ok(d.binds and d.binds.direct[1] and d.binds.direct[1].key == "3" and d.binds.direct[1].macro == "WBX K2", "diagnose lists the direct WBX keybind")
+  W.combat = true
+  step.button[3]()
+  H.eq(W.bindings["3"], "MACRO WBX K2", "never in combat")
+  W.combat = false; W.fire("PLAYER_REGEN_ENABLED")
+  H.eq(W.bindings["3"], "ACTIONBUTTON3", "Give 3 back to button 3")
+  H.eq(W.bindingSet, 2, "saved in the character set")
+  H.eq(#KB.lostButtons(), 0, "nothing lost any more")
+  -- bindPrev is stored on every bind, and Remove keybind puts it back
+  Core.bindKey("WBX K1", "J")
+  H.eq(W.bindings.J, "MACRO WBX K1", "J bound")
+  H.eq(Core.cdb.bindPrev.J, "TOGGLEBAG1", "bindPrev remembers what J did")
+  Core.unbindKey("WBX K1")
+  H.eq(W.bindings.J, "TOGGLEBAG1", "Remove keybind: J opens the bag again")
+  H.eq(Core.cdb.bindPrev.J, nil, "and forgets it")
+  Core.bindKey("WBX K1", "K")
+  H.eq(Core.cdb.bindPrev.K, "", "an unbound key remembers nothing")
+  -- regression: a key of an action button is never rebound with SetBindingMacro
+  local ok, why = KB.bind("WBX K1", "4")
+  H.ok(not ok and why:find("action button 4", 1, true), "bind refuses a key of an action button: " .. tostring(why))
+  H.eq(W.bindings["4"], "ACTIONBUTTON4", "4 still presses button 4")
+  local cap = UI.panels.keys.capture
+  W.actions[4] = { kind = "spell", id = 686 }
+  local calls = W.calls.SetBindingMacro or 0
+  cap:Start("WBX K1", "Key 1")
+  cap._scripts.OnKeyDown(cap, "4")
+  H.ok(cap.yes:IsShown(), "pressing 4 on an occupied button asks")
+  cap.yes:Click()
+  H.eq(W.slotMacroName(4), "WBX K1", "Yes puts the macro on button 4 (placeOn)")
+  H.eq(W.bindings["4"], "ACTIONBUTTON4", "and the keybind stays ACTIONBUTTON4")
+  H.eq(W.calls.SetBindingMacro or 0, calls, "no SetBindingMacro for an action-button key")
+  -- Reset to default puts every WoWBoxer keybind back
+  Core.resetToDefault({ char = true })
+  H.eq(W.bindings.K, nil, "Reset to default: K back to nothing")
+  H.eq(#errors(ns), 0, "no errors (keybinds)")
 end
 
 os.exit(H.report("features") and 0 or 1)

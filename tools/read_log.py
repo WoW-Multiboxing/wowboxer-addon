@@ -94,6 +94,9 @@ def main():
                 print(f"   fly {d.get('fly')}")
             if d.get("talents"):
                 print(f"   talents {d.get('talents')}")
+            for k in ("binds", "seqCheck", "cvarProbe"):
+                if d.get(k):
+                    print(f"   {k} {d.get(k)}")
             lay = d.get("layout")
             if lay:
                 print(f"   layout audit: {lay.get('count')} finding(s), scale {lay.get('scale')}, {lay.get('game')}")
@@ -120,6 +123,12 @@ def main():
             for x in wbx:
                 icon = f" [{x['icon']}]" if x.get("icon") else ""
                 print(f"   {x['name']}{icon}: " + " | ".join(x["body"]))
+    # keys that press a WBX macro directly (the game's own binding file per character)
+    for bc in sorted(glob.glob(os.path.join(wtf, "*", "*", "*", "bindings-cache.wtf"))):
+        with open(bc, encoding="utf-8", errors="replace") as fh:
+            hits = [l.strip() for l in fh if "MACRO WBX" in l]
+        if hits:
+            print(f"=== direct WBX keybinds in {os.path.relpath(bc, wtf)}: " + "; ".join(hits))
     return 0
 
 

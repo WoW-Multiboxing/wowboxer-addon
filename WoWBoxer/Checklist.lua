@@ -31,6 +31,11 @@ function CL.items()
       add(nil, "Leader's slot unknown", "Names can be hidden in this client; check that " .. leader.name .. " is " .. m.unit .. " yourself.")
     end
   end
+  -- keys 1–= that press a WBX macro directly (the 0.9.4 bind bug): offer to give them back to their buttons
+  for _, l in ipairs(ns.Binds.lostButtons()) do
+    add(false, "Your " .. l.key .. " presses " .. l.macro .. " directly", "So action button " .. l.slot .. " has no keybind. Give " .. l.key .. " back to button " .. l.slot ..
+      " (the macro stays on your bars).", { label = "Give back", fn = function() Core.giveBack(l.key) end })
+  end
   local ctx = Core.compute()
   if ctx then
     local c = ctx.macros.counts

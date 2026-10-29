@@ -363,6 +363,16 @@ function Core.placeOn(name, slot, key)
     Core.changed()
   end)
 end
+--- "Give 3 back to button 3": the key presses action button 3 again (the macro stays where it is on the bars).
+function Core.giveBack(key)
+  return Core.whenSafe("Give " .. key .. " back", function()
+    if ns.Binds.giveBack(key) then
+      chat("Keybind " .. key .. " is back on " .. ns.Binds.buttonName(ns.Binds.DEFAULT_KEYS[key]) .. ".")
+      Core.log("info", "give back key " .. key)
+    end
+    Core.changed()
+  end)
+end
 function Core.unbindKey(name)
   return Core.whenSafe("Unbind " .. name, function()
     local n = ns.Binds.unbind(name)
@@ -506,6 +516,10 @@ end
 function Core.resetToDefault(ch)
   if C.inCombat() then return "Not in combat." end
   local summary = Core.resetSummary(ch)
+  if ch.char then
+    local nb = ns.Binds.restoreAll() -- keys WoWBoxer bound go back to what they did before (needs bindPrev: first)
+    if nb > 0 then Core.log("info", "reset: " .. nb .. " keybinds restored") end
+  end
   if ch.cvars then
     local n = 0
     for name, v in pairs(Core.cdb.cvarBackup) do if R.CVAR_BY_NAME[name] and C.setCVar(name, v) then n = n + 1 end end
@@ -704,6 +718,9 @@ function Core.selftest(quiet)
   end
   if ctx then sq.mine = { cls = ctx.member.cls, role = ctx.member.role, seq = ctx.member.seq, leader = ctx.member.leader } end
   r.seqCheck = sq
+  -- keybinds that press a WBX macro directly, with what they did before (read_log shows them)
+  local okB, direct = pcall(ns.Binds.directWbx)
+  r.binds = { direct = okB and direct or { error = tostring(direct) }, prev = Core.cdb.bindPrev, lost = okB and ns.Binds.lostButtons() or nil }
   r.ui = { dropdown = (ns.Widgets and ns.Widgets.hasBlizzardDropdown and ns.Widgets.hasBlizzardDropdown()) and "blizzard" or "own" }
   r.ui.helpPlate = (ns.Help and ns.Help.blizzard and ns.Help.blizzard()) and "blizzard" or "own"
   r.ui.helpUsed = ns.Help and ns.Help.diag or nil
