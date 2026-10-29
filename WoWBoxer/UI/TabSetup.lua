@@ -50,6 +50,9 @@ function tab.build(p)
   p.macrosOnly = W.button(p, "Macros only", 100, 22, function() Core().sync({ macrosOnly = true }) end,
     "Creates or updates your WoWBoxer macros without touching your action bars (drag them yourself from the book).")
   p.macrosOnly:SetPoint("LEFT", p.guideBtn, "RIGHT", 6, 0)
+  p.autoBtn = W.button(p, "Automation…", 96, 22, function() ns.AutomationPage.Open() end,
+    "Squad automation: accept invites, quests, resurrections and summons, follow the leader's dialogs, sell junk, repair – each one a tick.")
+  p.autoBtn:SetPoint("LEFT", p.macrosOnly, "RIGHT", 6, 0)
   -- Reset to default (docs/advanced-mode.md §5): a red text button at the bottom; opens a two-step window
   p.resetAll = CreateFrame("Button", nil, p)
   p.resetAll:SetSize(110, 18)

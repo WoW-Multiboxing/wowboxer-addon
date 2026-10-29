@@ -18,14 +18,19 @@ and import/export of setups as a string shared with the website/companion.
   (it is the only one that can install into WoW and read SavedVariables). Fetch before every push.
 
 ## Hard rules (non-negotiable)
-1. One key press = one action on one character. No input broadcasting, no gameplay automation, no
-   auto-follow/accept/taxi, no secure-action tricks, nothing that casts/targets/moves on its own.
+1. **No input broadcasting**: nothing outside WoW sends keys or clicks to the game. Every cast, target, move,
+   follow and NPC interaction comes from the player's own key press on that character (one press = one action),
+   and the addon never tries to get around protected actions or hardware-event checks. **Addon automation through
+   WoW's normal API is allowed** (accept, share, sync, sell, repair, loot, trade) as a named option in Setup →
+   Automation with a short line about what it does, and it only reacts to **squad members** (the WoWBoxer squad,
+   matched by name, in the party). (the owner, 29 Oct 2026; `docs/automation-policy.md`)
 2. Imported data is data only: never `loadstring`/`RunScript`/`load` on anything from outside.
 3. Macros ≤ 255 chars, names ≤ 16 chars with the `WBX` prefix, slash-command whitelist (reject `/run /script
    /console /click`). The addon builds macro bodies itself; share strings carry no macro text.
 4. Every write (macros, action bars, CVars, bindings) happens only after a player click/command and only out of combat
    (`Core.whenSafe` queues it until `PLAYER_REGEN_ENABLED`).
-5. Cross-client addon messages (later): display only, never trigger actions.
+5. Cross-client addon messages may trigger the automations in rule 1, but only from squad members in the party, and
+   each one only when its option is on. Messages are data only (rule 2).
 6. Same macro rules per squad role as the companion. Data licences: Zephras CC BY 4.0 credit; Blizzard owns
    names/icons/texts. Free, no ads, no in-game donation requests, never obfuscated (UI Add-On Policy).
 7. Forever facts get re-verified on the launch client; unknowns are marked `[AFKLAR: …]`, never guessed.

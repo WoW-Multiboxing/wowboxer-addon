@@ -43,7 +43,7 @@ Help.PAGES = {
   talents = { tip = { "The talent order of your guide.", "Take the point shown under Next." },
     callouts = function() local p = UI.panels.talents
       return { { p.guide, "Pick a talent guide" }, { p.nb, "Your next talent" }, { p.sf, "The whole point order" }, { p.readback, "Points spent in game" } } end },
-  setup = { tip = { "Where your macros go and game settings.", "Fix buttons change WoWBoxer only." },
+  setup = { tip = { "Where your macros go and game settings.", "Fix buttons change WoWBoxer only.", "Automation…: invites, quests, dialogs, vendor – for your squad." },
     callouts = function() local p = UI.panels.setup
       return { { p.bar1, "Where your macros go" }, { p.replace, "May replace other buttons" }, { p.checkSf, "Multibox checklist" },
         { p.applyCv, "Apply recommended settings" }, { p.restore, "Undo game settings" } } end },

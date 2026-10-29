@@ -61,8 +61,7 @@ when you level. Made for manual multiboxing in **WoW: Forever** and **Classic Er
 - **Share** your squad with your other characters as a string.
 - A **?** on every page and a 3-step squad guide.
 
-**One key press = one action on one character.** WoWBoxer never sends input, never broadcasts keys, never follows,
-casts or targets on its own. It only writes macros, bars and settings after you click, and never in combat.
+**No input broadcasting: one key press is one action on one character. WoWBoxer automates the boring parts (invites, quests, dialogs, vendor, loot) with WoW's own addon API.** It only writes macros, bars and settings after you click, and never in combat.
 
 `/wbx` opens the book. Talent data: Zephras (zephras.com, CC BY 4.0) and The Forever Era. World of Warcraft names and
 icons © Blizzard Entertainment. Free and open source (MIT).

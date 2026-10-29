@@ -1,10 +1,10 @@
 # WoWBoxer addon – backlog
 
-## The owner: in-game check of 0.10.0
-1. Classic Era, log in **Boxtester**, `/wbx`: the top line says "Your 3 presses WBX K2 directly" → **Give 3 back**; press 3 in the world.
-2. Paladin leader (Advanced on): All spells → right-click **Holy Light** → **Edit macro…** → drag **Bo's pet** into the list → Save.
-3. My macros → **Update macros**; hover the Holy Light macro: "Your targeting: … Bo's pet"; heal the pet with it.
-4. My own macros → **New macro** → Single spell → Myself → Save; `/reload`, tell Claude "done".
+## The owner: in-game check of 0.11.0 (2–3 Classic Era clients, Dorin leads)
+1. On every client: `/wbx` → Setup → **Automation…** → **Levelling squad**.
+2. Dorin accepts a quest: the others get the share and accept it; turn it in on all (each opens the NPC himself).
+3. Dorin picks a gossip line / flight with the others' same window open: they pick the same. Visit a vendor: junk sold.
+4. Hold **Shift** at a vendor: nothing happens. `/reload` everywhere, tell Claude "done" (also from 0.10.0: Give 3 back).
 
 ## The owner: screenshots for the website (one client, any character, ~2 min)
 1. Log in, `/wbx`, then Print Screen on **My keys**, **All spells**, **Talents**, **Squad** and **Setup** (one each).
@@ -30,6 +30,15 @@ minimap button, much more drag & drop of macros onto the action bars.
 6. On the warlock: My keys – check the **Helpers** section (hover Follow) and that Follow/Assist/Pet show real icons on
    the bar after **Update keys**. Custom keys → New own key → **Paste…** your macro → read the warnings → **Copy…**.
 7. On Dorin: Squad → Home, Readiness, Key map and Plan – PrtScn each. Then `/reload` on every client and tell Claude "done".
+
+## Automation policy (docs/automation-policy.md, the owner 2026-10-29 23:41)
+- [x] CLAUDE.md hard rules 1 + 5 replaced (no input broadcasting; addon automation via WoW's API as squad-only options);
+      lint51 allows the automation API only in Auto.lua.
+- [x] Player texts: README, features.md, release.md (CurseForge text), Setup help – the new line.
+- [x] P1 1–5 in Auto.lua: invites (accept + leader auto-invite), quests (accept leader's/any, share, turn in, rewards, abandon),
+      dialog/quest/flight sync, resurrection/summons/role check, merchant (junk, repair floor, restock); Setup → Automation
+      (ticks, All on/off, Levelling squad); Shift skips; one log line each; diagnose `auto` probe; tests/test_auto.lua.
+- [ ] In game [AFKLAR]: InviteUnit / TakeTaxiNode / AcceptQuest without a key press on Forever; P1 6 (alerts) and P2 later.
 
 ## Feedback 29 Oct late (docs/feedback-2026-10-29-late.md)
 - [x] Keybinds: bindPrev, Remove keybind / Reset restore it, "Give 3 back" for keys 1–= (Boxtester's bind 3 MACRO WBX K2 detected), never

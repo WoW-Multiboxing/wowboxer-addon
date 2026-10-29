@@ -21,6 +21,11 @@ FORBIDDEN = [
     'SendChatMessage', 'SetRaidTarget', 'LearnTalent', 'PetAttack', 'PetFollow',
     'SecureActionButtonTemplate', 'SecureHandlerBaseTemplate', 'SecureHandlerWrapScript', 'SetOverrideBinding', 'SetOverrideBindingClick',
 ]
+# Automation through WoW's normal addon API (CLAUDE.md hard rule 1, the owner 29 Oct 2026): allowed ONLY in WoWBoxer/Auto.lua,
+# where every call sits behind a Setup → Automation option and a squad-member check. Casting, targeting, moving,
+# following and NPC interaction stay forbidden everywhere.
+AUTOMATION = {'AcceptQuest', 'CompleteQuest', 'GetQuestReward', 'AcceptGroup', 'TakeTaxiNode', 'RepairAllItems', 'UseContainerItem'}
+AUTOMATION_FILES = {'Auto.lua'}
 FORBIDDEN_RE = re.compile(r'(?<![\w.:])(' + '|'.join(map(re.escape, FORBIDDEN)) + r')(?!\w)')
 
 
@@ -93,7 +98,8 @@ def check(path):
                     k += 2
                 else:
                     k += 1
-        if kind == 'name' and FORBIDDEN_RE.fullmatch(text) and not (prev and prev[0] == 'op' and prev[1] in ('.', ':')):
+        automation_ok = text in AUTOMATION and os.path.basename(path) in AUTOMATION_FILES
+        if kind == 'name' and FORBIDDEN_RE.fullmatch(text) and not (prev and prev[0] == 'op' and prev[1] in ('.', ':')) and not automation_ok:
             errs.append((line, 'forbidden call/name: %s' % text))
         prev = (kind, text)
     return errs

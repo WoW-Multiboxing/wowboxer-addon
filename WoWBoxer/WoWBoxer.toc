@@ -41,6 +41,7 @@ Team.lua
 Squad.lua
 Override.lua
 Sync.lua
+Auto.lua
 UI\Widgets.lua
 UI\Dropdown.lua
 UI\Main.lua
@@ -54,6 +55,7 @@ UI\Audit.lua
 UI\Book.lua
 UI\TabTalents.lua
 UI\TabSetup.lua
+UI\Automation.lua
 UI\TabSquad.lua
 UI\SquadPages.lua
 UI\TabShare.lua

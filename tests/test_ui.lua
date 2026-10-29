@@ -283,6 +283,7 @@ local function layoutPass(screen, opts)
     check("targeting window"); A.ef:Hide()
     A.openText(kp, kc.name, kc.label); check("macro text window"); A.xf:Hide()
   end
+  ns.AutomationPage.Open(); check("setup automation"); ns.AutomationPage.frame:Hide()
   A.openReset(); check("reset step 1")
   A.rf.next:Click(); check("reset step 2")
   A.rf:Hide()

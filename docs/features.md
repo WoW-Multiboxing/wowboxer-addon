@@ -24,11 +24,14 @@ WoWBoxer runs in **WoW: Forever** and **Classic Era**. Free, no ads, open source
 
 ## What it never does
 - **One key press = one action on one character.** No input broadcasting, no key cloning between windows.
-- Nothing plays for you: it never casts, targets, moves, follows, accepts invites or takes a taxi by itself.
+- No input broadcasting: one key press is one action on one character. WoWBoxer automates the boring parts (invites, quests, dialogs, vendor, loot) with WoW's own addon API.
+- Casting, targeting, moving, following and talking to NPCs stay your own key press. Each automation (accept invites,
+  quests, resurrections and summons; follow the leader's dialogs and flights; sell junk, repair, restock) is a tick in
+  Setup → Automation and only reacts to the characters of your squad.
 - It only changes the game when you click (Place all, Update macros, Apply settings) and never in combat.
 - It only touches macros whose name starts with **WBX** – never your own macros.
 - Imported text is data only: no code is ever run from a string.
-- Messages between your clients only show things; they never make another client do anything.
+- Messages between your clients are data only; they only trigger an automation you ticked, and only from your squad.
 
 ## Credits
 Talent data: Zephras (zephras.com), CC BY 4.0, changed by WoWBoxer; The Forever Era. World of Warcraft names and

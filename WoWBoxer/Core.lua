@@ -743,6 +743,13 @@ function Core.selftest(quiet)
   if ctx then sq.mine = { cls = ctx.member.cls, role = ctx.member.role, seq = ctx.member.seq, leader = ctx.member.leader } end
   r.seqCheck = sq
   -- keybinds that press a WBX macro directly, with what they did before (read_log shows them)
+  -- squad automation: which APIs this client has, and which options are on ([AFKLAR] until the launch test)
+  if ns.Auto then
+    local okA, aprobe = pcall(ns.Auto.probe)
+    local on = {}
+    for _, o in ipairs(ns.Auto.OPTIONS) do on[o[1]] = ns.Auto.on(o[1]) end
+    r.auto = { api = okA and aprobe or { error = tostring(aprobe) }, on = on, last = ns.Auto.last }
+  end
   local okB, direct = pcall(ns.Binds.directWbx)
   r.binds = { direct = okB and direct or { error = tostring(direct) }, prev = Core.cdb.bindPrev, lost = okB and ns.Binds.lostButtons() or nil }
   r.ui = { dropdown = (ns.Widgets and ns.Widgets.hasBlizzardDropdown and ns.Widgets.hasBlizzardDropdown()) and "blizzard" or "own" }
@@ -861,6 +868,7 @@ function Core.onEvent(event, ...)
     if ns.Team and ns.Team.Init then ns.Team.Init() end
     if ns.SeqStrip and ns.SeqStrip.Init then ns.SeqStrip.Init() end
     if ns.Sync and ns.Sync.Init then ns.Sync.Init() end
+    if ns.Auto and ns.Auto.Init then ns.Auto.Init() end
     if C_Timer and C_Timer.After then C_Timer.After(3, function() Core.checkOffer("login") end) end
     -- read-only diagnose a few seconds after login, so a /reload is enough to see how the addon behaves in this client
     if C_Timer and C_Timer.After then

@@ -28,9 +28,11 @@ always one action on one character.
 - Minimap button (left-click open, right-click menu, drag to move) and an Addon Compartment entry on Forever.
 
 ## What it never does
-No input broadcasting, no automation: it never casts, targets, follows, moves or accepts anything. It never touches a
-macro that does not start with `WBX`, never runs code from an imported string, and writes macros, bars, bindings and
-settings only after you click, and only out of combat. Messages between your clients are only displayed.
+No input broadcasting: one key press is one action on one character. WoWBoxer automates the boring parts (invites, quests, dialogs, vendor, loot) with WoW's own addon API.
+Casting, targeting, moving, following and talking to NPCs always stay your own key press on that character. Every
+automation is a tick in Setup → Automation and only reacts to the characters of your squad. WoWBoxer never touches a
+macro that does not start with `WBX`, never runs code from an imported string, and writes macros, bars, keybinds and
+settings only after you click, and only out of combat.
 
 ## Install
 Unzip `WoWBoxer` into `World of Warcraft\_forever_\Interface\AddOns` (or `_classic_era_`), restart the game, and type
