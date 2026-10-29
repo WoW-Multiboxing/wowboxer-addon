@@ -94,7 +94,7 @@ function Core.computeFresh()
   if not m then return nil, "This character is not in a squad yet." end
   local live = M.liveCheck()
   local L = C.playerLevel()
-  local desired = M.desired(m, L, { live = live, extras = Core.cdb.extras })
+  local desired = M.desired(m, L, { live = live, extras = Core.cdb.extras, squad = s, squadKeys = Core.cdb.squadKeys })
   local mplan = M.plan(desired, Core.cdb.skip)
   local bplan = B.plan(desired, Core.cdb, Core.cdb.skip)
   local ctx = { squad = s, member = m, level = L, live = live, desired = desired, macros = mplan, bars = bplan,

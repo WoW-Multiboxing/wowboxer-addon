@@ -126,4 +126,89 @@ do
   H.eq(errors(ns), "", "no errors (party)")
 end
 
+-- ------------------------------------------------------------------ squad keys (docs/squad-v2-simple.md §3)
+do
+  local W, ns = boot({ name = "Dorin", class = "PALADIN", race = "Scourge", level = 20, party = { party1 = "Wowtwo", party2 = "Kirra" },
+    partyInfo = { party1 = { class = "PRIEST", race = "Scourge", level = 20 }, party2 = { class = "WARLOCK", race = "Scourge", level = 20, realm = "Silver Moon" } } })
+  local Core, UI, M, R = ns.Core, ns.UI, ns.Macros, ns.Rules
+  UI.Open("squad")
+  ns.SquadPages.addParty()
+  local s, me = Core.me()
+  local function key(name) for _, d in ipairs(Core.compute().desired) do if d.name == name then return d end end end
+  -- the leader: Invite squad ticked by default, by name, realm suffix when needed, no spaces in the realm
+  H.ok(me.leader, "Dorin leads")
+  local inv = key("WBX Invite")
+  H.ok(inv ~= nil, "leader: Invite squad by default")
+  H.eq(inv.body, "/invite Wowtwo\n/invite Kirra-SilverMoon", "one /invite per other member, Name-Realm on another realm")
+  H.ok(inv.ok, "passes the whitelist: " .. tostring(inv.why))
+  H.ok(R.validateMacro("WBX Invite", "/invite Someone"), "/invite is whitelisted")
+  H.ok(not R.validateMacro("WBX Invite", "/run InviteUnit('x')"), "/run still blocked")
+  H.eq(key("WBX Follow"), nil, "the leader has no Follow key")
+  H.eq(key("WBX Target"), nil, "nor Target")
+  -- rebuilt when the squad changes (add / rename / remove)
+  ns.SquadPages.addByName("Fourth", "mage")
+  H.ok(key("WBX Invite").body:find("/invite Fourth", 1, true), "add: Fourth is invited")
+  for _, m in ipairs(s.members) do if m.name == "Fourth" then m.name = "Fourthy" end end
+  H.ok(key("WBX Invite").body:find("/invite Fourthy", 1, true), "rename: the new name")
+  for _, m in ipairs(s.members) do if m.name == "Fourthy" then ns.SquadPages.remove(m) end end
+  H.ok(not key("WBX Invite").body:find("Fourth", 1, true), "remove: gone from the invite")
+  -- untick: not created; tick again
+  ns.Book.setSquadKey("Invite", false)
+  H.eq(key("WBX Invite"), nil, "unticked: no Invite key")
+  Core.cdb.squadKeys.Invite = nil
+  -- a big squad: split into a second key, every body at most 255 characters
+  for i = 1, 7 do ns.SquadPages.addByName("Longcharname" .. string.char(96 + i) .. "-Argentdawnrealm", "mage") end
+  local a, b = key("WBX Invite"), key("WBX Invite2")
+  H.ok(a and b, "over 255 characters: split into Invite squad and Invite squad 2")
+  H.ok(#a.body <= 255 and #b.body <= 255 and a.ok and b.ok, "both at most 255 characters and valid (" .. #a.body .. ", " .. #b.body .. ")")
+  local n = 0
+  for _ in (a.body .. "\n" .. b.body):gmatch("/invite ") do n = n + 1 end
+  H.eq(n, #s.members - 1, "everyone else is invited exactly once")
+  -- the book shows them under Squad keys with ticks; the Squad page has the same ticks
+  UI.Select("keys")
+  local sp = ns.Book.spread(Core.compute())
+  H.eq(sp.helpers.title, "Squad keys", "My keys: a Squad keys section")
+  H.eq(sp.helpers.cells[1].squadKey, "Invite", "Invite first, with its tick")
+  UI.Select("squad")
+  local f = UI.panels.squad.frames.main
+  H.eq(f.keys.ticks[1].label:GetText(), "Invite squad", "Squad page: Invite squad tick")
+  H.ok(f.keys.ticks[1]:GetChecked(), "ticked")
+  H.ok(f.keys.update:IsShown(), "keys to make: Update keys on the Squad page")
+  H.eq(W.calls.CreateMacro, nil, "ticks and squad changes write nothing to the game by themselves")
+  f.keys.update:Click()
+  H.ok(M.findIndex("WBX Invite") ~= nil, "Update keys creates the Invite macro (a click)")
+  H.ok(f.keys.state:IsShown() and f.keys.state:GetText() == "On your bars", "then: On your bars")
+end
+
+-- a follower: Follow + Assist ticked, Target off by default; all on the leader's party unit, never by name
+do
+  local W, ns = boot({ name = "Wowtwo", class = "PRIEST", race = "Scourge", level = 20, party = { party1 = "Kirra", party2 = "Dorin" },
+    partyInfo = { party1 = { class = "WARLOCK", race = "Scourge", level = 20 }, party2 = { class = "PALADIN", race = "Scourge", level = 20, leader = true } } })
+  local Core, UI = ns.Core, ns.UI
+  UI.Open("squad")
+  ns.SquadPages.addParty()
+  local _, me = Core.me()
+  Core.setPlaysAs("party2")
+  local function key(name) for _, d in ipairs(Core.compute().desired) do if d.name == name then return d end end end
+  H.ok(not me.leader, "Wowtwo follows")
+  H.eq(key("WBX Invite"), nil, "a follower: Invite off by default")
+  H.eq(key("WBX Follow").body, "/follow party2", "Follow on the party unit")
+  H.eq(key("WBX Assist").body, "/assist party2", "Assist on the party unit")
+  H.eq(key("WBX Target"), nil, "Target leader off by default")
+  ns.Book.setSquadKey("Target", true)
+  H.eq(key("WBX Target").body, "/target party2", "ticked: Target leader on the party unit")
+  ns.Book.setSquadKey("Follow", false)
+  H.eq(key("WBX Follow"), nil, "Follow unticked: not created")
+  ns.Book.setSquadKey("Invite", true)
+  H.eq(key("WBX Invite").body, "/invite Kirra\n/invite Dorin", "any character can tick Invite squad")
+  for _, d in ipairs(Core.compute().desired) do
+    if d.body:find("Dorin", 1, true) then H.eq(d.key, "Invite", "only Invite uses names (" .. d.name .. ")") end
+  end
+  local list = ns.Macros.squadKeyList(me, Core.cdb.squadKeys, Core.me())
+  local names = {}
+  for _, k in ipairs(list) do names[#names + 1] = k.key .. (k.on and "+" or "-") end
+  H.eq(table.concat(names, ","), "Invite+,Follow-,Assist+,Target+", "the follower's ticks")
+  H.eq(errors(ns), "", "no errors (squad keys)")
+end
+
 os.exit(H.report("squad") and 0 or 1)

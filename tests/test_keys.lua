@@ -56,7 +56,7 @@ for _, fileIds in ipairs({ false, true }) do
   for _, b in ipairs(UI.panels.keys.cells) do
     if b:IsShown() and b.cell and b.cell.name == "WBX Follow" then helperCell = b end
   end
-  H.ok(table.concat(heads, ","):find("Spells", 1, true) and table.concat(heads, ","):find("Party helpers", 1, true), tag .. "sections: " .. table.concat(heads, ","))
+  H.ok(table.concat(heads, ","):find("Spells", 1, true) and table.concat(heads, ","):find("Squad keys", 1, true), tag .. "sections: " .. table.concat(heads, ","))
   H.eq(helperCell and helperCell.name:GetText(), "Follow", tag .. "short helper name")
   H.ok(helperCell and helperCell.small, tag .. "helpers are the small buttons")
   H.ok(helperCell ~= nil, tag .. "Follow is in the book")
@@ -64,7 +64,7 @@ for _, fileIds in ipairs({ false, true }) do
   W.env.GameTooltip.AddLine = function(_, t) lines[#lines + 1] = t end
   helperCell._scripts.OnEnter(helperCell)
   local all = table.concat(lines, "\n")
-  H.ok(all:find("Follows", 1, true) and all:find("One press, one action", 1, true) and all:find("because this character follows", 1, true),
+  H.ok(all:find("Follows", 1, true) and all:find("One press, one action", 1, true) and all:find("untick it under Squad keys", 1, true),
     tag .. "hover explains what Follow does and why it is there")
   H.ok(all:find("/follow party1", 1, true) ~= nil, tag .. "and shows the macro text")
   -- a header is a rule, never a key button

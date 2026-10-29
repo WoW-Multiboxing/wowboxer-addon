@@ -37,7 +37,8 @@ function Book.kindName(it)
   return k
 end
 --- Short helper names (the spec: no truncated names).
-Book.HELPER_NAME = { Follow = "Follow", Assist = "Assist", Focus = "Focus", Pet = "Pet attack", PetBack = "Pet back" }
+Book.HELPER_NAME = { Follow = "Follow", Assist = "Assist", Focus = "Focus", Pet = "Pet attack", PetBack = "Pet back", Invite = "Invite squad",
+  Invite2 = "Invite squad 2", Target = "Target leader" }
 function Book.shortLabel(it)
   if it.group == "helper" then return Book.HELPER_NAME[it.key] or it.label end
   return it.label
@@ -87,7 +88,8 @@ function Book.helperShort(key, mem)
   mem = mem or me
   local L = leaderName(mem)
   local T = { Follow = "Follows " .. L .. ".", Assist = "Takes " .. L .. "'s target.", Focus = "Sets your target as focus.",
-    Pet = "Sends your pet at " .. ((mem and mem.leader) and "your target." or (L .. "'s target.")), PetBack = "Calls your pet back, passive." }
+    Pet = "Sends your pet at " .. ((mem and mem.leader) and "your target." or (L .. "'s target.")), PetBack = "Calls your pet back, passive.",
+    Invite = "Invites the others in your squad.", Invite2 = "Invites the rest of your squad.", Target = "Targets " .. L .. "." }
   return T[key] or "A helper key."
 end
 --- The longer helper text for tooltips: what it does and why WoWBoxer made it.
@@ -95,8 +97,9 @@ function Book.helperText(key, mem)
   local _, me = Core().me()
   mem = mem or me
   local u = mem and mem.unit or "party1"
-  local why = (key == "Pet" or key == "PetBack") and "Added because this character has a pet."
-    or ("Added because this character follows " .. leaderName(mem) .. " (" .. u .. ").")
+  local why = (key == "Invite" or key == "Invite2") and "Built from your squad's names; it changes when the squad does. They still accept by hand."
+    or (key == "Pet" or key == "PetBack") and "You have a pet; untick it under Squad keys if you don't want it."
+    or ("Uses " .. leaderName(mem) .. " through " .. u .. "; untick it under Squad keys if you don't want it.")
   return Book.helperShort(key, mem) .. " One press, one action, this character only. " .. why
 end
 
@@ -211,23 +214,44 @@ end
 
 --- My keys: {sections = {{title, cells}}, helpers = {title, cells}} – the left page's sections and the right page's helpers.
 function Book.spread(ctx)
-  local out = { sections = { { title = "Spells", cells = {} }, { title = "Sequences", cells = {} } }, helpers = { title = "Party helpers", cells = {} } }
+  local out = { sections = { { title = "Spells", cells = {} }, { title = "Sequences", cells = {} } }, helpers = { title = "Squad keys", cells = {} } }
   if not ctx then return out end
   local desiredBy, barOf = {}, {}
   for _, d in ipairs(ctx.desired) do desiredBy[d.name] = d end
   for _, b in ipairs(ctx.bars.items) do barOf[b.name] = b end
-  local pet = false
+  local helperCell = {}
   for _, it in ipairs(ctx.macros.items) do
     local c = keyCell(ctx, it, desiredBy[it.name], barOf[it.name])
     if it.group == "kit" or it.group == "extra" then table.insert(out.sections[1].cells, c)
     elseif it.group == "sequence" then table.insert(out.sections[2].cells, c)
-    elseif it.group == "helper" then
-      table.insert(out.helpers.cells, c)
-      if it.key == "Pet" or it.key == "PetBack" then pet = true end
+    elseif it.group == "helper" then helperCell[it.key] = c end
+  end
+  -- squad keys in a fixed order, each with its tick; unticked ones are shown off (nothing is created for them)
+  for _, k in ipairs(Book.squadKeyList(ctx)) do
+    local c = helperCell[k.key]
+    if c then c.squadKey, c.on = k.key, true; out.helpers.cells[#out.helpers.cells + 1] = c
+    elseif not k.on then
+      out.helpers.cells[#out.helpers.cells + 1] = { kind = "squadkey", squadKey = k.key, on = false, label = k.label, name = false, group = "helper",
+        icon = ns.Macros.HELPER_ICON[k.key], st = { off = true, word = "Off – tick it to make the key", color = W.MUTED } }
+    end
+    if k.key == "Invite" and helperCell.Invite2 then
+      local c2 = helperCell.Invite2
+      c2.squadKey, c2.on = "Invite", true
+      out.helpers.cells[#out.helpers.cells + 1] = c2
     end
   end
-  if ctx.member and ctx.member.leader and pet then out.helpers.title = "Pet" end
   return out
+end
+
+--- This character's squad keys with their ticks: {{key, label, on}}.
+function Book.squadKeyList(ctx)
+  return ns.Macros.squadKeyList(ctx.member, Core().cdb.squadKeys, ctx.squad)
+end
+--- Tick or untick a squad key for this character (WoWBoxer's own setting; the macro follows on Update keys).
+function Book.setSquadKey(key, on)
+  Core().cdb.squadKeys[key] = on and true or false
+  Core().log("info", "squad key " .. key .. (on and " on" or " off"))
+  Core().changed()
 end
 
 --- All spells as two sections: {learned (incl. at your trainer), future = later levels, by unlock level}.
@@ -420,6 +444,7 @@ function Book.menuFor(p, c)
   local items = {}
   if ns.Compat.inCombat() then return { { "Not in combat – try again after the fight", function() end } } end
   if c.kind == "new" then return { { "New own key", function() ns.KeyEditor.Open(p, nil) end } } end
+  if c.kind == "squadkey" then return { { "Make this key", function() Book.setSquadKey(c.squadKey, true) end } } end
   if c.kind == "spell" and not c.name then
     items[#items + 1] = { c.pending and "Pick up (key works once learned)" or "Pick up (make a key)", function() pickupCell(c) end }
     return items
@@ -448,6 +473,7 @@ local function cellTooltip(GT, c)
   GT:AddLine(c.label, 1, 0.82, 0)
   if c.st and c.st.word then GT:AddLine(c.st.word, c.st.color[1], c.st.color[2], c.st.color[3]) end
   if c.kind == "new" then GT:AddLine("Click to build your own key: a sequence of your spells, one spell per press.", 1, 1, 1, true); return end
+  if c.kind == "squadkey" then GT:AddLine(Book.helperShort(c.squadKey) .. " Tick the box to make this key.", 1, 1, 1, true); return end
   local d = c.d
   if c.kind == "spell" and not d then
     d = { group = "extra", label = c.spell.name, body = ns.Engine.makeMacro(c.spell, ns.Kit.memberCtx(ns.Core.compute().member)) }
@@ -529,7 +555,13 @@ local function makeCell(p, parent, small)
   if small then
     b.name = W.text(b, "GameFontHighlight", 11, { 0.8, 0.8, 0.8 })
     b.name:SetPoint("LEFT", b.slotBg, "RIGHT", 6, 0)
-    b.name:SetPoint("RIGHT", b, "RIGHT", -2, 0)
+    b.name:SetPoint("RIGHT", b, "RIGHT", -24, 0)
+    -- squad keys: the player ticks which ones this character gets
+    b.tick = W.frame("CheckButton", b, "UICheckButtonTemplate")
+    b.tick:SetSize(20, 20)
+    b.tick:SetPoint("RIGHT", -2, 0)
+    b.tick:SetScript("OnClick", function(self) if b.cell and b.cell.squadKey then Book.setSquadKey(b.cell.squadKey, self:GetChecked() and true or false) end end)
+    W.tip(b.tick, "Squad key", function() return (b.cell and b.cell.on) and "Ticked: WoWBoxer makes this key. Untick to leave it out." or "Tick to make this key." end)
     if b.name.SetMaxLines then b.name:SetMaxLines(1) end
   else
     b.name = W.text(b, "GameFontNormal", nil, W.GOLD)
@@ -594,6 +626,9 @@ local function paintCell(p, b, c)
     b.name:SetTextColor(nc[1], nc[2], nc[3])
   else
     b.icon.border:SetAlpha(st.dim and 0.35 or 1)
+    b.tick:SetShown(c.squadKey ~= nil)
+    b.tick:SetChecked(c.on and true or false)
+    b.tick:SetEnabled(not ns.Compat.inCombat())
   end
   b.dot:SetShown(st.dot ~= nil)
   if st.dot then b.dot:SetVertexColor(st.dot[1], st.dot[2], st.dot[3]) end

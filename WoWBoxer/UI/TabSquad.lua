@@ -428,7 +428,28 @@ SP.register({ key = "main", label = "Squad", tip = "Who plays together, who lead
       { "Send to my other characters", "Offers this squad to your other clients in the party. Nothing changes there until you click Review and Import on that client. Then press Place all there." })
     f.send.wbxBig = true
     f.send:SetPoint("TOPRIGHT", f.list, "TOPRIGHT", 0, y)
-    f.keysY = y - 34
+    -- squad keys: the player ticks them; built from the squad (Invite by name, the rest through party units)
+    f.keys = CreateFrame("Frame", nil, f.list)
+    f.keys:SetPoint("TOPLEFT", 0, y - 34)
+    f.keys:SetSize(LIST_W + 20, 48)
+    f.keys.label = W.text(f.keys, "GameFontNormalSmall", nil, W.GOLD)
+    f.keys.label:SetPoint("TOPLEFT", 0, -5)
+    f.keys.label:SetText("Squad keys")
+    f.keys.label.wbxCopy = "label"
+    f.keys.ticks = {}
+    for i = 1, #ns.Macros.SQUAD_KEYS do
+      local c = W.check(f.keys, "Key", function(self, v) if self.key then ns.Book.setSquadKey(self.key, v); SP.saved() end end)
+      c:SetPoint("TOPLEFT", 76 + ((i - 1) % 4) * 132, -((math.floor((i - 1) / 4)) * 22))
+      W.tip(c, function() return c.label:GetText() end, function() return c.key and ns.Book.helperShort(c.key) .. " Ticked: WoWBoxer makes this key for this character." or "" end)
+      f.keys.ticks[i] = c
+    end
+    f.keys.state = W.line(f.keys, "GameFontHighlightSmall", nil, W.GREEN, "RIGHT")
+    f.keys.state:SetPoint("TOPRIGHT", -20, -27)
+    f.keys.state:SetWidth(110)
+    f.keys.state.wbxCopy = "hint"
+    f.keys.update = W.button(f.keys, "Update keys", 100, 22, function() Core().sync({ replace = Core().cdb.replace }) end,
+      "Creates or updates your squad keys (and any other changed keys) and puts new ones on your bars.")
+    f.keys.update:SetPoint("TOPRIGHT", -20, -22)
     f.status = W.line(f.list, "GameFontHighlightSmall", nil, W.MUTED)
     f.status:SetPoint("BOTTOMLEFT", 0, 4)
     f.status:SetWidth(LIST_W - 80)
@@ -502,6 +523,7 @@ SP.register({ key = "main", label = "Squad", tip = "Who plays together, who lead
     if #missing > 0 then f.sugg:SetPoint("LEFT", f.party, "RIGHT", 10, 0) else f.sugg:SetPoint("TOPLEFT", 0, -LIST_H - 13) end
     if sg then f.sugg:SetText(sg.name .. " (" .. D().classes[sg.cls].n .. ") is in your party") end
     f.send:SetEnabled(s ~= nil and ns.Compat.inParty() and n > 1)
+    SP.refreshKeys(f)
     -- status line: readiness, composition, unit hint, versions
     local hints = {}
     local rows = ns.Squad.readiness()
@@ -518,6 +540,34 @@ SP.register({ key = "main", label = "Squad", tip = "Who plays together, who lead
     f.status:SetText(table.concat(hints, " · "))
     f.readyBtn:SetShown(n > 1)
   end })
+
+--- The squad keys block: one tick per key this character can have, and whether they are on the bars.
+function SP.refreshKeys(f)
+  local ctx = Core().compute()
+  local list = ctx and ns.Book.squadKeyList(ctx) or {}
+  for i, c in ipairs(f.keys.ticks) do
+    local k = list[i]
+    c:SetShown(k ~= nil); c.key = k and k.key or nil
+    if k then c.label:SetText(k.label); c:SetChecked(k.on); c:SetEnabled(not ns.Compat.inCombat()) end
+  end
+  local todo, any = 0, false
+  if ctx then
+    local placed = {}
+    for _, b in ipairs(ctx.bars.items) do placed[b.name] = b.status == "placed" end
+    for _, it in ipairs(ctx.macros.items) do
+      if it.group == "helper" then
+        any = true
+        if it.status == "create" or it.status == "update" or not placed[it.name] then todo = todo + 1 end
+      end
+    end
+  end
+  f.keys:SetShown(#list > 0)
+  f.keys.update:SetShown(todo > 0)
+  f.keys.update:SetEnabled(not ns.Compat.inCombat())
+  f.keys.state:SetShown(todo == 0)
+  f.keys.state:SetText(any and "On your bars" or "")
+  return todo
+end
 
 -- ------------------------------------------------------------------ Leader presets, notes, everyone's sequence keys (under More)
 SP.register({ key = "presets", label = "Leader presets", more = true, tip = "Who leads for what you do, saved to switch back; notes; everyone's sequence keys.",

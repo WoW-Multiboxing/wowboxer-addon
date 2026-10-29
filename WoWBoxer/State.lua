@@ -316,6 +316,7 @@ function S.initDB(db, cdb)
   cdb.slots = type(cdb.slots) == "table" and cdb.slots or {}
   cdb.skip = type(cdb.skip) == "table" and cdb.skip or {}
   cdb.extras = type(cdb.extras) == "table" and cdb.extras or {}
+  cdb.squadKeys = type(cdb.squadKeys) == "table" and cdb.squadKeys or {}
   cdb.cvarBackup = type(cdb.cvarBackup) == "table" and cdb.cvarBackup or {}
   return db, cdb
 end

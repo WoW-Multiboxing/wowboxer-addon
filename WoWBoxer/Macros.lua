@@ -11,11 +11,74 @@ local E, K, R, C = ns.Engine, ns.Kit, ns.Rules, ns.Compat
 
 M.ICON = 134400 -- the "?" icon: #showtooltip then shows the spell
 M.ORDER = { "K1", "K2", "K3", "K4", "K5", "K6", "K7", "K8", "S1", "S2", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8",
-  "Follow", "Assist", "Focus", "Pet", "PetBack" }
+  "Invite", "Invite2", "Follow", "Assist", "Target", "Focus", "Pet", "PetBack" }
 local SEQ_KEY = { dps = "S1", heal = "S2" }
 --- Helper keys run no spell, so #showtooltip cannot pick an icon: each gets a picture that says what it does.
 M.HELPER_ICON = { Follow = "Ability_Tracking", Assist = "Ability_Hunter_SniperShot", Focus = "Spell_Holy_MindVision",
-  Pet = "Ability_GhoulFrenzy", PetBack = "Ability_Seal" }
+  Pet = "Ability_GhoulFrenzy", PetBack = "Ability_Seal", Invite = "INV_Letter_01", Invite2 = "INV_Letter_01", Target = "Ability_TownWatch" }
+
+-- ------------------------------------------------------------------ squad keys (docs/squad-v2-simple.md §3)
+-- The player ticks which ones this character gets (cdb.squadKeys, per character); unticked ones are not created.
+-- Only Invite uses names; Follow, Assist, Target and Focus use the leader's party unit, exactly like the spell keys.
+local function follower(m) return not m.leader end
+local function petClass(m) return m.cls == "warlock" or m.cls == "hunter" end
+M.SQUAD_KEYS = {
+  { key = "Invite", label = "Invite squad", applies = function(m, s) return s ~= nil and #s.members > 1 end, default = function(m) return m.leader end },
+  { key = "Follow", label = "Follow", applies = follower, default = function() return true end },
+  { key = "Assist", label = "Assist", applies = follower, default = function() return true end },
+  { key = "Target", label = "Target leader", applies = follower, default = function() return false end },
+  { key = "Focus", label = "Focus leader", applies = function(m) return follower(m) and m.unit == "focus" end, default = function() return true end },
+  { key = "Pet", label = "Pet attack", applies = petClass, default = function() return true end },
+  { key = "PetBack", label = "Pet back", applies = petClass, default = function() return true end },
+}
+--- Is squad key `key` ticked for member m? choices = cdb.squadKeys ({[key] = true/false}); nil = the default.
+function M.squadKeyOn(m, key, choices)
+  local v = choices and choices[key]
+  if v ~= nil then return v and true or false end
+  for _, d in ipairs(M.SQUAD_KEYS) do if d.key == key then return d.default(m) end end
+  return true
+end
+--- The squad keys this member can have: {{key, label, on}} (in the order of M.SQUAD_KEYS).
+function M.squadKeyList(m, choices, s)
+  local out = {}
+  for _, d in ipairs(M.SQUAD_KEYS) do
+    if d.applies(m, s) then out[#out + 1] = { key = d.key, label = d.label, on = M.squadKeyOn(m, d.key, choices) } end
+  end
+  return out
+end
+--- "Name" or "Name-Realm" for /invite.
+function M.inviteName(m) return m.realm and (m.name .. "-" .. m.realm) or m.name end
+--- /invite lines for every other member, split into bodies of at most 255 characters.
+function M.inviteBodies(s, me)
+  local bodies, cur = {}, ""
+  for _, x in ipairs(s and s.members or {}) do
+    if x ~= me then
+      local line = "/invite " .. M.inviteName(x)
+      if cur ~= "" and #cur + 1 + #line > R.MACRO_LIMIT then bodies[#bodies + 1] = cur; cur = "" end
+      cur = cur == "" and line or (cur .. "\n" .. line)
+    end
+  end
+  if cur ~= "" then bodies[#bodies + 1] = cur end
+  return bodies
+end
+--- The squad keys member m gets: {{key, label, body}} – K.helpers filtered by the ticks, plus Target and Invite.
+function M.squadKeys(m, opts)
+  local choices, s = opts.squadKeys, opts.squad
+  local out = {}
+  if s and M.squadKeyOn(m, "Invite", choices) then
+    for i, body in ipairs(M.inviteBodies(s, m)) do
+      if i <= 2 then out[#out + 1] = { key = i == 1 and "Invite" or "Invite2", label = i == 1 and "Invite squad" or "Invite squad 2", body = body } end
+    end
+  end
+  local u = E.units(m.unit)
+  for _, h in ipairs(K.helpers(m)) do
+    if M.squadKeyOn(m, h.key, choices) then out[#out + 1] = h end
+    if h.key == "Assist" and M.squadKeyOn(m, "Target", choices) then
+      out[#out + 1] = { key = "Target", label = "Target the leader", body = "/target " .. u.main }
+    end
+  end
+  return out
+end
 --- The icon argument for CreateMacro/EditMacro: the file ID when the client can look it up, else the icon name.
 function M.namedIcon(slug)
   local f = _G.GetFileIDFromPath
@@ -102,7 +165,7 @@ function M.pendingOf(m, s, L, live)
   return false
 end
 
---- The macros member m should have at level L. opts: {live=fn|nil, extras={spellIds}}
+--- The macros member m should have at level L. opts: {live=fn|nil, extras={spellIds}, squad=s, squadKeys=ticks}
 --- Each item: {name, key, group, label, body, spell?, icon}
 function M.desired(m, L, opts)
   opts = opts or {}
@@ -124,7 +187,7 @@ function M.desired(m, L, opts)
       out[#out + 1] = { key = key, name = R.PREFIX .. " " .. key, group = x.custom and "custom" or "sequence", label = x.label, body = x.macro, seq = x }
     end
   end
-  for _, h in ipairs(K.helpers(m)) do
+  for _, h in ipairs(M.squadKeys(m, opts)) do
     out[#out + 1] = { key = h.key, name = R.PREFIX .. " " .. h.key, group = "helper", label = h.label, body = h.body }
   end
   -- extra single-spell keys the player added from the spell list

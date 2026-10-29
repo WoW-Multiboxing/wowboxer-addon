@@ -31,7 +31,7 @@ minimap button, much more drag & drop of macros onto the action bars.
 - [x] 1. Templates removed; nothing switches the active squad as a side effect (Duplicate gone too).
 - [x] 2. One-screen Squad page: empty state, rows (crown, role, [x], inline editor), Add character, Add my party,
       party suggestion, "Saved", Send to my other characters, More menu, squad dropdown with New/Delete; 3-step guide.
-- [ ] 3. Squad keys: tick boxes on the Squad page + "Squad keys" in My keys; Invite squad by name (Name-Realm, split
+- [x] 3. Squad keys: tick boxes on the Squad page + "Squad keys" in My keys; Invite squad by name (Name-Realm, split
       over 255, `/invite` whitelisted); Follow/Assist/Target/Focus/Pet stay on party units.
 - [ ] 4. Reminders: only real changes; Keep off my bars; Don't show again per character; Level-up reminders On/Off;
       at most one chat line at login.

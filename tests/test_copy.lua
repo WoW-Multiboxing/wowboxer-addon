@@ -151,7 +151,7 @@ for _, sc in ipairs({
   if sc.class == "HUNTER" then
     local title
     for _, r in ipairs(p.rules) do if r:IsVisible() and r._parent == p.right then title = r.text:GetText() end end
-    H.eq(title, "Pet", tag .. ": a leader with a pet sees the Pet section")
+    H.eq(title, "Squad keys", tag .. ": a leader with a pet sees the Squad keys section")
   end
   if sc.class == "PALADIN" and sc.name == "Dorin" then
     local seq

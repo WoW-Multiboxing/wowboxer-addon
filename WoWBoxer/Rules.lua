@@ -20,6 +20,8 @@ R.SLASH_WHITELIST = {
   ["/petattack"] = true, ["/petfollow"] = true, ["/petpassive"] = true, ["/petstay"] = true, ["/petdefensive"] = true, ["/petaggressive"] = true,
   ["/target"] = true, ["/assist"] = true, ["/focus"] = true, ["/clearfocus"] = true, ["/cleartarget"] = true,
   ["/follow"] = true, ["/cancelaura"] = true, ["/cancelform"] = true, ["/stopmacro"] = true,
+  -- Invite squad (docs/squad-v2-simple.md §3): a normal chat command; the others still accept by hand
+  ["/invite"] = true,
 }
 R.SLASH_BLOCKED = { ["/run"] = true, ["/script"] = true, ["/console"] = true, ["/click"] = true, ["/dump"] = true }
 
