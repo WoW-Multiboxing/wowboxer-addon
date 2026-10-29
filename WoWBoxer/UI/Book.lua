@@ -50,6 +50,14 @@ Book.STATUS = {
 }
 --- How a key looks: {glow, dot = colour?, dim (not on a bar), off (left out), word, color}.
 function Book.statusOf(it, b)
+  local st = Book.barStatus(it, b)
+  if b and b.status == "off" then -- "Keep off my bars": not dimmed, not counted
+    st.dim = nil
+    if st.word == "Not on a bar" then st.word, st.color = "Kept off your bars", W.MUTED end
+  end
+  return st
+end
+function Book.barStatus(it, b)
   local placed = b and b.status == "placed"
   local st = Book.STATUS[it.status]
   if it.status == "skipped" then return { off = true, word = st[1], color = st[2] } end
@@ -453,6 +461,13 @@ function Book.menuFor(p, c)
   items[#items + 1] = { "Bind key…", function() p.capture:Start(c.name, c.label) end }
   if c.item and c.item.status == "skipped" then items[#items + 1] = { "Use again", function() setSkip(c.name, false) end }
   elseif c.item then items[#items + 1] = { "Leave out", function() setSkip(c.name, true) end } end
+  if c.item and c.item.status ~= "skipped" then
+    if c.bar and c.bar.status == "off" then
+      items[#items + 1] = { "Allow on my bars", function() Core().setKeptOff(c.name, false) end, "Place all puts this key on your bars again, and WoWBoxer reminds you when it is not on a bar." }
+    elseif not (c.bar and c.bar.status == "placed") then
+      items[#items + 1] = { "Keep off my bars", function() Core().setKeptOff(c.name, true) end, "Place all leaves this key off your bars and WoWBoxer never reminds you about it. You can still drag it." }
+    end
+  end
   local i = c.name and tonumber(c.name:match("^WBX C(%d)$"))
   if i then items[#items + 1] = { "Edit", function() ns.KeyEditor.Open(p, i) end } end
   if c.d and c.d.body then items[#items + 1] = { "Copy…", function() Book.copyKey(c) end } end

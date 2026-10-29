@@ -95,12 +95,28 @@ function Core.computeFresh()
   local live = M.liveCheck()
   local L = C.playerLevel()
   local desired = M.desired(m, L, { live = live, extras = Core.cdb.extras, squad = s, squadKeys = Core.cdb.squadKeys })
+  for _, d in ipairs(desired) do d.keepOff = Core.keptOff(d.name, d.group) end
   local mplan = M.plan(desired, Core.cdb.skip)
   local bplan = B.plan(desired, Core.cdb, Core.cdb.skip)
   local ctx = { squad = s, member = m, level = L, live = live, desired = desired, macros = mplan, bars = bplan,
     missing = M.missingFromBook(m, L, live) }
   Core.ctxGen, Core.lastCtx = (Core.ctxGen or 0) + 1, ctx -- the strip on the action bars reuses it
   return ctx
+end
+
+--- "Keep off my bars" (docs/squad-v2-simple.md §4): such a key is never placed by Place all and never counted as
+--- "not on a bar" or reminded about. Own keys and extra keys are kept off until the player has placed them once.
+function Core.keptOff(name, group)
+  local cdb = Core.cdb
+  local v = cdb.offBars[name]
+  if v ~= nil then return v and true or false end
+  if group == "custom" or group == "extra" then return not cdb.placedOnce[name] end
+  return false
+end
+function Core.setKeptOff(name, off)
+  Core.cdb.offBars[name] = off and true or false
+  Core.log("info", (off and "keep off bars: " or "allow on bars: ") .. name)
+  Core.changed()
 end
 
 --- Create/update the macros, then place them on the bars. opts: {replace=bool, barsOnly=bool, macrosOnly=bool}
@@ -264,6 +280,7 @@ function Core.scanBars()
     if a and a.kind == "macro" and a.name == name then found[name] = slot end -- keep the remembered one if still there
   end
   cdb.slots = found
+  for name in pairs(found) do cdb.placedOnce[name] = true end
 end
 
 -- ------------------------------------------------------------------ key bindings
@@ -374,24 +391,45 @@ function Core.exportString(squad)
 end
 
 -- ------------------------------------------------------------------ level-up offers
+--- What a reminder is about (docs/squad-v2-simple.md §4): only real changes – a new key or a key whose macro text
+--- changed – and never a key the player keeps off the bars. Returns signature, count, items.
+function Core.pending(ctx)
+  local items, parts = {}, { tostring(ctx.level) }
+  local keep = {}
+  for _, d in ipairs(ctx.desired) do keep[d.name] = d.keepOff end
+  for _, it in ipairs(ctx.macros.items) do
+    if (it.status == "create" or it.status == "update") and not keep[it.name] then
+      items[#items + 1] = it
+      parts[#parts + 1] = it.name .. "=" .. it.body
+    end
+  end
+  return table.concat(parts, "|"), #items, items
+end
+--- Level-up reminders on (default) or off (Setup). Off: no toast and no chat line; the book still shows the dots.
+function Core.remindersOn() return Core.cdb.reminders ~= false end
 --- Compare what the character should have with what it has; offer an update (never applied without a click).
+--- At most one chat line, and only for something new: the same pending state is not shown again after a reload
+--- (cdb.offerShown), and never after "Don't show again" (cdb.offerSeen). A new change shows again.
 function Core.checkOffer(reason)
   local ctx = Core.compute()
   if not ctx then return end
-  local n = ctx.macros.changes
-  if n > 0 then
-    local sig = ctx.level .. ":" .. n
-    for _, it in ipairs(ctx.macros.items) do if it.status == "create" or it.status == "update" then sig = sig .. "|" .. it.name .. "=" .. it.body end end
-    if Core.lastOffer ~= sig then
-      Core.lastOffer = sig
-      Core.log("info", "offer (" .. reason .. "): " .. n .. " key(s) changed at level " .. ctx.level)
-      if Core.cdb.lastSync then -- only nag players who already use WoWBoxer keys
-        chat(string.format("%s changed at level %d. Open |cffffd100/wbx|r (or type |cffffd100/wbx sync|r) to update them.", plural(n, "key", "keys"), ctx.level))
-        if ns.UI and ns.UI.ShowOffer then ns.UI.ShowOffer(ctx) end
-        if ns.Minimap and ns.Minimap.SetAttention then ns.Minimap.SetAttention(true) end
-      end
-    end
-  end
+  local sig, n = Core.pending(ctx)
+  if n == 0 or Core.lastOffer == sig then return end
+  Core.lastOffer = sig
+  Core.log("info", "offer (" .. reason .. "): " .. n .. " key(s) changed at level " .. ctx.level)
+  local cdb = Core.cdb
+  if not cdb.lastSync then return end -- only players who already use WoWBoxer keys
+  if cdb.offerShown == sig or cdb.offerSeen == sig then return end
+  cdb.offerShown = sig
+  if ns.Minimap and ns.Minimap.SetAttention then ns.Minimap.SetAttention(true) end
+  if not Core.remindersOn() then return end
+  chat(string.format("%s changed at level %d. Open |cffffd100/wbx|r (or type |cffffd100/wbx sync|r) to update them.", plural(n, "key", "keys"), ctx.level))
+  if ns.UI and ns.UI.ShowOffer then ns.UI.ShowOffer(ctx, sig) end
+end
+--- "Don't show again" on the toast: this pending state never shows again on this character (a new change does).
+function Core.dontShowAgain(sig)
+  Core.cdb.offerSeen = sig
+  Core.log("info", "reminder: don't show again")
 end
 
 -- ------------------------------------------------------------------ change notification for the UI

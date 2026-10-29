@@ -49,19 +49,20 @@ function B.layout(desired, cdb)
   return out
 end
 
---- Placement plan: {items={{name, slot, status, current}}, counts}. status: placed | empty | ours | occupied | missing
+--- Placement plan: {items={{name, slot, status, current}}, counts}. status: placed | empty | ours | occupied | missing | off
 function B.plan(desired, cdb, skip)
   skip = skip or {}
   local layout = B.layout(desired, cdb)
-  local items, counts = {}, { placed = 0, empty = 0, ours = 0, occupied = 0, missing = 0 }
+  local items, counts = {}, { placed = 0, empty = 0, ours = 0, occupied = 0, missing = 0, off = 0 }
   for _, d in ipairs(desired) do
     local slot = layout[d.name]
     if slot and not skip[d.name] then
       local cur = C.actionInfo(slot)
       local it = { name = d.name, label = d.label, slot = slot, current = cur }
-      if not M.findIndex(d.name) then it.status = "missing"
+      if cur and cur.kind == "macro" and cur.name == d.name then it.status = "placed"
+      elseif d.keepOff then it.status = "off" -- "Keep off my bars": never placed by Place all, never counted
+      elseif not M.findIndex(d.name) then it.status = "missing"
       elseif not cur then it.status = "empty"
-      elseif cur.kind == "macro" and cur.name == d.name then it.status = "placed"
       elseif cur.kind == "macro" and R.isOurs(cur.name) then it.status = "ours"
       else it.status = "occupied" end
       counts[it.status] = counts[it.status] + 1
@@ -81,7 +82,7 @@ function B.apply(plan, cdb, replace)
       local idx = M.findIndex(it.name)
       if idx then
         local ok, err = pcall(function() PickupMacro(idx); PlaceAction(it.slot); ClearCursor() end)
-        if ok then res.placed = res.placed + 1; cdb.slots[it.name] = it.slot; res.list[#res.list + 1] = it.name
+        if ok then res.placed = res.placed + 1; cdb.slots[it.name] = it.slot; if cdb.placedOnce then cdb.placedOnce[it.name] = true end; res.list[#res.list + 1] = it.name
         else res.failed[#res.failed + 1] = { name = it.name, err = tostring(err) }; pcall(ClearCursor) end
       end
     elseif it.status == "placed" then cdb.slots[it.name] = it.slot

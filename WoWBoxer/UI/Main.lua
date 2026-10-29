@@ -246,8 +246,9 @@ function UI.Open(tab)
 end
 
 -- ------------------------------------------------------------------ level-up toast
--- One sentence + Update keys / Later. Width from the text (300–480), height from the wrapped text, under the top centre.
-function UI.ShowOffer(ctx)
+-- One sentence + Update keys / Later + "Don't show again" (this pending state, this character; a new change shows
+-- again). Width from the text (300–480), height from the wrapped text, under the top centre.
+function UI.ShowOffer(ctx, sig)
   if not UI.offer then
     local o = W.box(UIParent, 0.1, 0.13, 0.06, 0.95)
     o:SetFrameStrata("DIALOG")
@@ -261,6 +262,10 @@ function UI.ShowOffer(ctx)
     o.go:SetPoint("BOTTOMRIGHT", -10, 8)
     o.later = W.button(o, "Later", 60, 22, function() o:Hide() end, "Closes this. Open WoWBoxer (/wbx or the minimap button) whenever you like.")
     o.later:SetPoint("RIGHT", o.go, "LEFT", -6, 0)
+    o.never = W.check(o, "Don't show again", function(_, v) if v then ns.Core.dontShowAgain(o.sig); o:Hide() end end)
+    o.never:SetPoint("BOTTOMLEFT", 8, 8)
+    o.never.label.wbxCopy = "label"
+    W.tip(o.never, "Don't show again", "This reminder does not come back on this character, also after /reload. A new change (level-up, new spell) shows again. Turn reminders off in Setup.")
     o.text.wbxCopy = "hint"
     local hit = CreateFrame("Frame", nil, o)
     hit:SetAllPoints(o.text)
@@ -268,6 +273,8 @@ function UI.ShowOffer(ctx)
     UI.offer = o
   end
   local o = UI.offer
+  o.sig = sig or ns.Core.pending(ctx)
+  o.never:SetChecked(false)
   local names = {}
   for _, it in ipairs(ctx.macros.items) do if it.status == "create" or it.status == "update" then names[#names + 1] = ns.Book.shortLabel(it) end end
   local n = ctx.macros.changes
@@ -276,7 +283,7 @@ function UI.ShowOffer(ctx)
   o.text:SetText(text)
   local maxW = math.min(480, (UIParent:GetWidth() or 800) * 0.9)
   local want = W.measure(text, "GameFontHighlightSmall") + 24
-  local btns = o.go:GetWidth() + o.later:GetWidth() + 26
+  local btns = o.go:GetWidth() + o.later:GetWidth() + 26 + 22 + W.measure("Don't show again", "GameFontHighlightSmall") + 16
   local w = math.max(300, btns, math.min(maxW, want))
   o:SetWidth(w)
   o.text:SetWidth(w - 24)
