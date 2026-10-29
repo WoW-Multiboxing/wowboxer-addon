@@ -50,6 +50,16 @@ function tab.build(p)
   p.macrosOnly = W.button(p, "Macros only", 100, 22, function() Core().sync({ macrosOnly = true }) end,
     "Creates or updates your WoWBoxer macros without touching your action bars (drag them yourself from the book).")
   p.macrosOnly:SetPoint("LEFT", p.guideBtn, "RIGHT", 6, 0)
+  -- Reset to default (docs/advanced-mode.md §5): a red text button at the bottom; opens a two-step window
+  p.resetAll = CreateFrame("Button", nil, p)
+  p.resetAll:SetSize(110, 18)
+  p.resetAll:SetPoint("BOTTOMRIGHT", p, "BOTTOMRIGHT", -2, 2)
+  p.resetAll.text = W.text(p.resetAll, "GameFontHighlightSmall", nil, { 1, 0.4, 0.35 }, "RIGHT")
+  p.resetAll.text:SetPoint("RIGHT", 0, 0)
+  p.resetAll.text:SetText("Reset to default…")
+  p.resetAll.text.wbxCopy = "label"
+  p.resetAll:SetScript("OnClick", function() ns.Advanced.openReset() end)
+  W.tip(p.resetAll, "Reset to default", "Choose what to reset: this character, all squads and builds, WBX macros, game settings. Asks twice; nothing happens in combat.")
 
   -- checklist
   local h1 = W.text(p, "GameFontNormal", nil, W.GOLD)
@@ -125,6 +135,8 @@ function tab.refresh(p)
   p.strip:SetChecked(Core().db.settings.seqStrip ~= false)
   p.remind:SetChecked(Core().remindersOn())
   p.macrosOnly:SetEnabled(not C.inCombat())
+  p.resetAll:SetEnabled(not C.inCombat())
+  if ns.Advanced then ns.Advanced.refreshReset() end
   -- checklist
   p.checkPool:reset()
   local y = 0

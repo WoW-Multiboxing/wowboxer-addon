@@ -474,6 +474,72 @@ function Core.alsoHeal(name, owner)
   return Core.setOverride(name, ov)
 end
 
+-- ------------------------------------------------------------------ Reset to default (docs/advanced-mode.md §5)
+local function wbxMacros()
+  local out = {}
+  for _, x in ipairs(C.characterMacros()) do if R.isOurs(x.name) then out[#out + 1] = x end end
+  return out
+end
+--- Plain summary of what a reset with choices ch {char, account, macros, cvars} removes.
+function Core.resetSummary(ch)
+  local parts = {}
+  if ch.char then
+    local n = 0
+    for _ in pairs(Core.cdb.overrides or {}) do n = n + 1 end
+    parts[#parts + 1] = "this character's settings" .. (n > 0 and (", " .. plural(n, "key override", "key overrides")) or "")
+  end
+  if ch.account then
+    local b = 0
+    for _, l in pairs(Core.db.builds or {}) do b = b + #l end
+    parts[#parts + 1] = "all " .. plural(#Core.db.squads, "squad", "squads") .. " and " .. plural(b, "saved build", "saved builds")
+  end
+  if ch.macros then parts[#parts + 1] = plural(#wbxMacros(), "WBX macro", "WBX macros") end
+  if ch.cvars then
+    local n = 0
+    for _ in pairs(Core.cdb.cvarBackup or {}) do n = n + 1 end
+    parts[#parts + 1] = plural(n, "game setting", "game settings") .. " put back"
+  end
+  return #parts > 0 and table.concat(parts, ", ") or "nothing"
+end
+--- Do the reset (out of combat, after the player typed RESET). Only WoWBoxer's own data, WBX macros and the CVars it
+--- changed (restored first, then the backup is forgotten). Returns the summary line.
+function Core.resetToDefault(ch)
+  if C.inCombat() then return "Not in combat." end
+  local summary = Core.resetSummary(ch)
+  if ch.cvars then
+    local n = 0
+    for name, v in pairs(Core.cdb.cvarBackup) do if R.CVAR_BY_NAME[name] and C.setCVar(name, v) then n = n + 1 end end
+    Core.cdb.cvarBackup = {}
+    Core.log("info", "reset: " .. n .. " cvars restored")
+  end
+  if ch.macros then
+    local list = wbxMacros()
+    table.sort(list, function(a, b) return a.index > b.index end) -- highest first: indices move when one is deleted
+    local n = 0
+    for _, x in ipairs(list) do if R.isOurs(x.name) and pcall(DeleteMacro, x.index) then n = n + 1 end end
+    Core.log("info", "reset: " .. n .. " WBX macros deleted")
+  end
+  if ch.account then
+    Core.db.squads, Core.db.active, Core.db.builds = {}, nil, {}
+    K.setBuilds(Core.db.builds)
+    Core.cdb.squadId, Core.cdb.memberId = nil, nil
+  end
+  if ch.char then
+    local keep = Core.cdb.cvarBackup -- only the CVars tick forgets the backup (Restore needs it)
+    for k in pairs(Core.cdb) do Core.cdb[k] = nil end
+    S.initDB(Core.db, Core.cdb)
+    Core.cdb.cvarBackup, Core.cdb.welcomed = keep or {}, true
+    Core.defaultBars()
+    Core.db.settings.advanced = nil -- a full reset goes back to Standard mode
+  end
+  Core.lastOffer = nil
+  Core.ensureMe()
+  chat("Reset to default: removed " .. summary .. ".")
+  Core.log("info", "reset to default: " .. summary)
+  Core.changed()
+  return "Removed " .. summary .. "."
+end
+
 -- ------------------------------------------------------------------ own talent builds (WoWBoxer's data only)
 --- Save an imported build (WH.import result) as `name`; use = pick it for this character (same class only).
 --- Never touches the game's talents (no LearnTalent): the player spends points in the game's talent window.
@@ -655,7 +721,7 @@ local HELP = {
   "/wbx bars – list where each key is and which key presses it",
   "/wbx keys – open the game's key bindings (Quick Keybind mode where available)",
   "/wbx team on|off – team status panel (display only: follow, target, mana of your other clients)",
-  "/wbx scale 0.9 – window size (0.7–1.3); /wbx reset – window back to the middle",
+  "/wbx scale 0.9 – window size (0.7–1.3); /wbx reset – window back to the middle; /wbx reset all – Reset to default…",
   "/wbx show – list your keys and what would change",
   "/wbx cvars | /wbx cvars restore – apply recommended settings / put the old ones back",
   "/wbx selftest – write a diagnostic report to the saved variables",
@@ -679,6 +745,8 @@ function Core.slash(msg)
     local res = ns.Audit and ns.Audit.run()
     chat("Layout audit: " .. (res and #res or 0) .. " finding(s), saved for the next /reload.")
   elseif cmd == "keys" then Core.openKeyBindings()
+  elseif cmd == "reset" and rest == "all" then
+    if ns.Advanced then ns.Advanced.openReset() end -- the same two-step window; never resets directly
   elseif cmd == "reset" then
     Core.db.settings.window, Core.db.settings.scale = nil, nil
     if Core.cdb then Core.cdb.window = nil end

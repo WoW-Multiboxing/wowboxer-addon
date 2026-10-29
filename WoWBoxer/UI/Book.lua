@@ -442,6 +442,14 @@ function Book.nextStep(ctx, mode)
       tip = (nt and ("Your guide takes " .. nt.name .. " next. ") or "") .. "Spend it in the game's talent window (N).",
       button = { "Talents", "Opens WoWBoxer's Talents page: your guide's next points.", function() UI.Select("talents") end } }
   end
+  -- Standard mode with own targeting still active: say so (Advanced mode never changes a key by itself)
+  local nOv = ns.Advanced and ns.Advanced.count() or 0
+  if nOv > 0 and not Core().advanced() and mode == "keys" then
+    return { text = nOv .. (nOv == 1 and " key uses" or " keys use") .. " your own targeting", tip = "You changed them in Advanced mode; they stay active. Right-click a key → Back to WoWBoxer's version.",
+      button = { "Show", "Selects the first key with your own targeting.", function()
+        for name in pairs(Core().cdb.overrides) do UI.panels.keys.selected = name; break end
+        UI.Refresh() end } }
+  end
   if mode == "spells" then return { text = "Drag a spell to your bar", tip = "Any spell you drag becomes a WoWBoxer key for this character." } end
   if mode == "custom" then return { text = "Build your own keys", tip = "A sequence of your spells. One press is still one spell." } end
   -- the trainer to-do: the next level that brings something new (display only)
@@ -568,6 +576,7 @@ function Book.menuFor(p, c)
   end
   local i = c.name and tonumber(c.name:match("^WBX C(%d)$"))
   if i then items[#items + 1] = { "Edit", function() ns.KeyEditor.Open(p, i) end } end
+  if ns.Advanced then for _, it in ipairs(ns.Advanced.menuItems(p, c)) do items[#items + 1] = it end end
   if c.d and c.d.body then items[#items + 1] = { "Copy…", function() Book.copyKey(c) end } end
   if directBound(c) then items[#items + 1] = { "Unbind", function() Core().unbindKey(c.name) end } end
   return items
@@ -605,6 +614,7 @@ local function cellTooltip(GT, c)
   if sp then local rl = Book.rankLine(sp, ns.Compat.playerLevel()); if rl then GT:AddLine(rl, 0.8, 0.8, 0.8, true) end end
   if d and d.body then for line in (d.body .. "\n"):gmatch("([^\n]*)\n") do if line ~= "" then GT:AddLine(line, 0.56, 0.85, 0.45) end end end
   if c.item and c.item.why then GT:AddLine(c.item.why, 1, 0.54, 0.5, true) end
+  if ns.Advanced then ns.Advanced.tooltip(GT, c) end
   local pending = c.pending or (c.d and c.d.pending)
   if pending then
     GT:AddLine((type(pending) == "number" and ("You learn this at level " .. pending .. ".") or "Learn it at your trainer.") ..
@@ -659,6 +669,12 @@ local function makeCell(p, parent, small)
   if b.glow.SetBlendMode then b.glow:SetBlendMode("ADD") end
   b.glow:SetVertexColor(1, 0.9, 0.5, 0.95)
   -- a later-level spell: a padlock on the icon and a cool tint behind the button
+  -- "edited": the player's own targeting or text (Advanced mode); bottom-right of the icon, the lock wins there
+  b.edited = b:CreateTexture(nil, "OVERLAY")
+  b.edited:SetSize(small and 12 or 14, small and 12 or 14)
+  b.edited:SetPoint("BOTTOMRIGHT", b.slotBg, "BOTTOMRIGHT", 2, -2)
+  b.edited:SetTexture("Interface\\Buttons\\UI-GuildButton-PublicNote-Up")
+  b.edited:Hide()
   b.lock = b:CreateTexture(nil, "OVERLAY")
   b.lock:SetSize(small and 14 or 18, small and 14 or 18)
   b.lock:SetPoint("BOTTOMRIGHT", b.slotBg, "BOTTOMRIGHT", 3, -3)
@@ -730,6 +746,7 @@ local function paintCell(p, b, c)
   if not c.icons then b.icon:SetAlpha(a) end
   b.multi:SetAlpha(a)
   b.lock:SetShown(st.locked and true or false)
+  b.edited:SetShown((c.d and c.d.override and not st.locked) and true or false)
   b.tint:SetShown(st.locked and true or false)
   if not b.small then
     if c.badge then b.frame:SetVertexColor(0.72, 0.55, 1) else b.frame:SetVertexColor(1, 1, 1) end

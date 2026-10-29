@@ -88,9 +88,10 @@ function UI.Build()
   -- character line between the title and the help/close buttons: "Name · Warlock 4 · Follower" + a small client tag;
   -- squad, leader and client in the tooltip
   local whoHit = CreateFrame("Frame", nil, f)
-  whoHit:SetPoint("TOPLEFT", 134, -14)
+  whoHit:SetPoint("TOPLEFT", 292, -14)
   whoHit:SetPoint("TOPRIGHT", -100, -14)
   whoHit:SetHeight(18)
+  UI.whoHit = whoHit
   UI.who = W.line(whoHit, "GameFontHighlightSmall", nil, W.TEXT)
   UI.who:SetPoint("LEFT", 0, 0)
   UI.who:SetPoint("RIGHT", 0, 0)
@@ -141,6 +142,7 @@ function UI.Build()
     tab.build(p)
   end
   if ns.Help then ns.Help.attach(f) end
+  if ns.Advanced then ns.Advanced.attachSwitch(f) end
   UI.ApplyWindowSettings()
   UI.Select(UI.current)
   return f
@@ -173,6 +175,7 @@ function UI.Refresh()
 end
 function UI.RefreshNow()
   local Core = ns.Core
+  if ns.Advanced then ns.Advanced.refreshSwitch() end
   local ctx = Core.compute()
   local _, m = Core.me()
   local info = Core.playerInfo()

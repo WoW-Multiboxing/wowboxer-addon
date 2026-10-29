@@ -58,3 +58,4 @@ UI\TabSquad.lua
 UI\SquadPages.lua
 UI\TabShare.lua
 UI\Help.lua
+UI\Advanced.lua

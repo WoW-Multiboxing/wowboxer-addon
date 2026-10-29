@@ -270,6 +270,23 @@ local function layoutPass(screen, opts)
   imp.link:SetText("https://www.wowhead.com/forever/talent-calc/druid/v2410222-4_t3"); imp.link._scripts.OnTextChanged(imp.link)
   check("talent import window")
   imp:Hide()
+  -- Advanced mode: the confirm, the Targeting and text windows, Reset to default (every step)
+  local A = ns.Advanced
+  UI.Select("keys")
+  A.confirm(); check("advanced confirm"); A.confirmFrame.tick:Click(); A.confirmFrame.go:Click()
+  local kp = UI.panels.keys
+  local kc
+  for _, b in ipairs(kp.cells) do if not kc and b:IsShown() and b.cell and b.cell.name then kc = b.cell end end
+  if kc then
+    A.openTargeting(kp, kc.name, kc.label)
+    for i = 1, 4 do A.tf.add.select(i) end
+    check("targeting window"); A.tf:Hide()
+    A.openText(kp, kc.name, kc.label); check("macro text window"); A.xf:Hide()
+  end
+  A.openReset(); check("reset step 1")
+  A.rf.next:Click(); check("reset step 2")
+  A.rf:Hide()
+  A.setMode(false)
   -- help overlays and the squad guide stay inside the window
   for _, key in ipairs({ "keys", "setup", "share" }) do
     UI.Select(key); UI.helpBtn:Click(); check("help overlay " .. key); ns.Help.Hide()

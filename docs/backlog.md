@@ -31,6 +31,13 @@ minimap button, much more drag & drop of macros onto the action bars.
    the bar after **Update keys**. Custom keys → New own key → **Paste…** your macro → read the warnings → **Copy…**.
 7. On Dorin: Squad → Home, Readiness, Key map and Plan – PrtScn each. Then `/reload` on every client and tell Claude "done".
 
+## Advanced mode + Reset to default (docs/advanced-mode.md)
+- [x] Standard | Advanced switch in the header (db.settings.advanced) with the "I understand" confirm; Standard hides it all.
+- [x] Override.lua: targeting per key stored by meaning, remapped to this client's units; engine unchanged (parity 0).
+- [x] Targeting… window (hover = conditional + meaning, preview + length), "Also heal <pet>", Back to WoWBoxer's version, edited mark.
+- [x] KeyEditor (Advanced): Targeting… + Macro text… with live checks; text keys frozen on level-up.
+- [x] Setup: Reset to default (ticks → summary → type RESET), /wbx reset all; tests/test_override.lua + test_advanced.lua.
+
 ## Talents: import a Wowhead link (docs/talent-import.md)
 - [x] vendor/wowhead/forever-trees.json → Data/WowheadOrder.lua (build_data, --check).
 - [x] Lua decoder/encoder (string parsing only) + tests/test_wowhead.lua (round trip, example, bad links, clamp, >51, newer format, UI).
