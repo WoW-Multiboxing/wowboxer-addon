@@ -248,7 +248,7 @@ function Core.pickupSpell(spellId)
   if not ctx then return false, why end
   for _, d in ipairs(ctx.desired) do if d.key == "X:" .. spellId then return Core.pickup(d.name) end end
   if not have then table.remove(extras) end
-  return false, "That spell has no key (passive, not learned yet, or not in your spellbook)."
+  return false, "That spell has no key (passive, or not for this character and plan)."
 end
 --- Remember where the player put each WBX macro (any action slot), so Place all keeps it there.
 function Core.scanBars()

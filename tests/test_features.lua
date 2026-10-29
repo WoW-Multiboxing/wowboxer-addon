@@ -681,4 +681,59 @@ do
   H.eq(#errors(ns), 0, "no errors (fly): " .. table.concat(errors(ns), " | "))
 end
 
+-- ------------------------------------------------------------------ future spells: listed after the known ones, locked, placeable
+do
+  local W, ns = boot({ name = "Futuretester", class = "PRIEST", race = "Scourge", level = 20 })
+  local Core, UI = ns.Core, ns.UI
+  UI.Open("spells")
+  local p = UI.panels.spells
+  local secs = ns.Book.spellSections(Core.compute())
+  H.ok(#secs[2].cells > 0, "future spells listed")
+  for _, c in ipairs(secs[2].cells) do
+    H.ok(type(c.pending) == "number" and c.pending > 20, "future spell unlocks above 20: " .. c.label)
+    H.ok(c.st.locked, "future spell is locked: " .. c.label)
+  end
+  for i = 2, #secs[2].cells do H.ok(secs[2].cells[i].pending >= secs[2].cells[i - 1].pending, "sorted by unlock level") end
+  -- a spell of level <= 20 not in the spellbook: at your trainer, greyed but not locked
+  local trainer
+  for _, s in ipairs(ns.Data.spells.priest) do if s.level <= 20 and s.gate == "trainer" and s.action ~= "passive" then trainer = s end end
+  W.known[trainer.name] = nil; W.fire("SPELLS_CHANGED"); W.flush()
+  secs = ns.Book.spellSections(Core.compute())
+  local tc
+  for _, c in ipairs(secs[1].cells) do if c.spell == trainer then tc = c end end
+  H.ok(tc and tc.pending == "trainer" and tc.st.off and not tc.st.locked, "a trainer spell is grey, without a lock")
+  H.eq(tc and tc.sub, "At your trainer", "trainer note")
+  -- the future spells start on the left page of a new spread, with their own banner
+  H.ok(p.futureFirst ~= nil and p.jump:IsShown(), "jump button to the future spells")
+  p.jump:Click()
+  H.eq(p.page, p.futureFirst, "jumped to the future spells")
+  H.ok(p.stepText:GetText():find("Future spells", 1, true) ~= nil, "banner on the future spread")
+  local r = row(ns, function(x) return x.kind == "spell" and type(x.pending) == "number" and not x.name end)
+  H.ok(r ~= nil and r.lock:IsShown(), "a locked future spell is on the page")
+  -- drag it: the key is made now, with the spell's picture instead of "?"
+  local fs = r.cell.spell
+  r._scripts.OnDragStart(r)
+  H.ok(W.cursor and W.cursor.kind == "macro", "future spell picked up as a WBX macro")
+  local d
+  for _, x in ipairs(Core.compute().desired) do if x.spell == fs then d = x end end
+  H.ok(d and d.pending == r.cell.pending, "the extra key is pending")
+  H.ok(d and d.icon ~= ns.Macros.ICON, "pending key has the spell's picture")
+  H.ok(d and d.body:find(fs.name, 1, true), "the macro casts the spell")
+  W.env.PlaceAction(30); W.fire("ACTIONBAR_SLOT_CHANGED", 30); W.flush()
+  -- it shows on My keys as locked too
+  UI.Open("keys")
+  local kr
+  for _, c in ipairs(ns.Book.cells("keys", Core.compute())) do if c.name == d.name then kr = c end end
+  H.ok(kr and kr.st.locked and kr.sub:find("Unlocks at", 1, true), "locked on My keys: " .. tostring(kr and kr.sub))
+  -- level up and learn it: same macro, nothing to update
+  W.player.level = 60
+  W.known[fs.name] = true
+  W.fire("PLAYER_LEVEL_UP", 60); W.fire("SPELLS_CHANGED"); W.flush()
+  local it
+  for _, x in ipairs(Core.compute().macros.items) do if x.name == d.name then it = x end end
+  H.eq(it and it.status, "same", "learned: the placed key needs no update")
+  H.eq(W.slotMacroName(30), d.name, "still on the button it was dropped on")
+  H.eq(#errors(ns), 0, "no errors (future spells): " .. table.concat(errors(ns), " | "))
+end
+
 os.exit(H.report("features") and 0 or 1)

@@ -89,6 +89,19 @@ function M.localize(body, map)
   return table.concat(out, "\n")
 end
 
+M.CAP = 60 -- the highest level any spell in the data unlocks at
+
+--- Whether spell s is usable by member m at level L: nil = known now, "trainer" = learnable now but not in the
+--- spellbook, a number = the level it unlocks at, false = never (a talent outside the plan, or past the cap).
+function M.pendingOf(m, s, L, live)
+  local known = live and live(s.name, s)
+  if known then return nil end
+  if K.learned(m, s, L) then return live and "trainer" or nil end
+  if s.gate ~= "talent" then return s.level <= M.CAP and s.level or false end
+  for lv = math.max(L + 1, s.level), M.CAP do if K.learned(m, s, lv) then return lv end end -- when the plan takes the talent
+  return false
+end
+
 --- The macros member m should have at level L. opts: {live=fn|nil, extras={spellIds}}
 --- Each item: {name, key, group, label, body, spell?, icon}
 function M.desired(m, L, opts)
@@ -128,14 +141,18 @@ function M.desired(m, L, opts)
     end
     return nil
   end
+  -- A spell not learned yet (trainer, or a later level) still gets its macro: /cast does nothing until the spell is
+  -- learned, then the same macro just works. pending = "trainer" or the unlock level.
   for _, id in ipairs(opts.extras or {}) do
     for _, s in ipairs(all) do
       if s.id == id and s.action ~= "passive" then
         local name = unique(shortName(s.name)) -- reserved even when not learned yet, so it never moves
         if name then
           taken[name] = true
-          if K.learned(m, s, L) and (not live or live(s.name, s)) then
-            out[#out + 1] = { key = "X:" .. s.id, name = name, group = "extra", label = s.name, body = E.makeMacro(s, ctx), spell = s }
+          local pending = M.pendingOf(m, s, L, live)
+          if pending ~= false then
+            out[#out + 1] = { key = "X:" .. s.id, name = name, group = "extra", label = s.name, body = E.makeMacro(s, ctx), spell = s,
+              pending = pending }
           end
         end
       end
@@ -147,6 +164,8 @@ function M.desired(m, L, opts)
   for _, d in ipairs(out) do
     if map then d.body = M.localize(d.body, map) end
     d.icon = M.ICON
+    -- a "?" macro of an unknown spell stays a "?" on the bar: give it the spell's own picture
+    if d.pending and d.spell.icon then d.icon = M.namedIcon(d.spell.icon) end
     if d.seq then M.seqIcon(d, byName) end
     if d.group == "helper" and M.HELPER_ICON[d.key] then d.iconName = M.HELPER_ICON[d.key]; d.icon = M.namedIcon(d.iconName) end
     d.ok, d.why = R.validateMacro(d.name, d.body)

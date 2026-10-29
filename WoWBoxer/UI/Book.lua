@@ -174,15 +174,35 @@ function Book.cellFrame(name)
   for _, b in ipairs(p.cells) do if b:IsShown() and b.cell and b.cell.name == name then return b end end
 end
 
+-- three looks for a spell: learned (normal), at your trainer now (greyed, gold note), a later level (greyed, dark,
+-- a lock, a blue-grey note). Future spells sit on their own spreads after the learned ones.
+Book.TRAINER = { 0.9, 0.75, 0.4 }
+Book.FUTURE = { 0.62, 0.68, 0.86 }
+--- "At your trainer" / "Unlocks at 32" for M.pendingOf's value; nil when the spell is known.
+function Book.unlockText(pending)
+  if pending == "trainer" then return "At your trainer" end
+  if type(pending) == "number" then return "Unlocks at " .. pending end
+  return nil
+end
+local function pendingSt(pending, base)
+  local future = type(pending) == "number"
+  local st = { off = true, locked = future or nil, subColor = future and Book.FUTURE or Book.TRAINER,
+    word = future and ("Unlocks at level " .. pending) or "Learn it at your trainer", color = future and Book.FUTURE or Book.TRAINER }
+  if base then st.dot, st.dim = base.dot, base.dim end
+  return st
+end
+
 --- One key cell: {kind="key", name, label, sub, hot, icon, icons, badge, item, d, st, group}
 local function keyCell(ctx, it, d, b)
   local st = Book.statusOf(it, b)
+  if d and d.pending and it.status ~= "skipped" then st = pendingSt(d.pending, st) end
   local placed = b and b.status == "placed"
   local keys = ns.Binds.keysFor(it.name, placed and b.slot or nil)
   local direct = {}
   for _, k in ipairs(keys) do if k.via == "macro" then direct[#direct + 1] = ns.Binds.short(k.key) end end
   local sub = ""
   if d and d.steps and #d.steps > 1 then sub = Book.stepsShort(d.steps)
+  elseif d and d.pending then sub = Book.unlockText(d.pending)
   elseif placed and it.group ~= "helper" then sub = ns.Bars.slotLabel(b.slot) .. (direct[1] and (" · " .. direct[1]) or "") end
   local hot = keys[1] and ns.Binds.short(keys[1].key) or nil
   return { kind = "key", name = it.name, label = Book.shortLabel(it), sub = sub, hot = hot, icon = iconFor(d, it), item = it, d = d, st = st,
@@ -210,6 +230,52 @@ function Book.spread(ctx)
   return out
 end
 
+--- All spells as two sections: {learned (incl. at your trainer), future = later levels, by unlock level}.
+function Book.spellSections(ctx)
+  local learned, future = { cells = {} }, { title = "Future spells", cells = {}, future = true }
+  if not ctx then return { learned, future } end
+  local keyOf = {}
+  for _, d in ipairs(ctx.desired) do if d.spell then keyOf[d.spell.id] = d end end
+  local m, M = ctx.member, ns.Macros
+  local function cell(s, pending)
+    local d = keyOf[s.id]
+    local key = d and d.name
+    local sub, col, word
+    if pending ~= nil then
+      local st = pendingSt(pending)
+      if key then st.word = st.word .. " · already a key" end
+      return { kind = "spell", label = s.name, sub = Book.unlockText(pending), icon = s.icon, spell = s, name = key or false, d = d, st = st, pending = pending }
+    end
+    if key then
+      local it
+      for _, x in ipairs(ctx.macros.items) do if x.name == key then it = x end end
+      sub, col, word = Book.kindName(it or { key = "" }), W.GREEN, "Already a key"
+    else sub, col, word = "", W.BLUE, "Drag to your bar" end
+    return { kind = "spell", label = s.name, sub = sub, color = col, icon = s.icon, spell = s, name = key or false, st = { word = word, color = col } }
+  end
+  local lists = ns.Kit.kitLists(m)
+  local shown = {}
+  for _, l in ipairs({ lists.primary, lists.others }) do
+    for _, s in ipairs(l) do shown[s] = true; learned.cells[#learned.cells + 1] = cell(s, M.pendingOf(m, s, ctx.level, ctx.live)) end
+  end
+  local later = {}
+  for i, s in ipairs(ns.Kit.spellsOf(m)) do
+    if not shown[s] and s.action ~= "passive" then
+      local p = M.pendingOf(m, s, ctx.level, ctx.live)
+      if p == nil then learned.cells[#learned.cells + 1] = cell(s, nil) -- known already (the data says later)
+      elseif type(p) == "number" then later[#later + 1] = { s = s, p = p, i = i } end
+    end
+  end
+  table.sort(later, function(a, b)
+    if a.p ~= b.p then return a.p < b.p end
+    local ca, cb = ns.Kit.catOrder(a.s), ns.Kit.catOrder(b.s)
+    if ca ~= cb then return ca < cb end
+    return a.i < b.i
+  end)
+  for _, x in ipairs(later) do future.cells[#future.cells + 1] = cell(x.s, x.p) end
+  return { learned, future }
+end
+
 --- Cells for a mode (flat): keys = every key on My keys; spells = every spell; custom = own keys + "New key".
 function Book.cells(mode, ctx)
   local out = {}
@@ -224,25 +290,7 @@ function Book.cells(mode, ctx)
   for _, d in ipairs(ctx.desired) do desiredBy[d.name] = d end
   for _, b in ipairs(ctx.bars.items) do barOf[b.name] = b end
   if mode == "spells" then
-    local keyOf = {}
-    for name, d in pairs(desiredBy) do if d.spell then keyOf[d.spell.id] = name end end
-    local lists = ns.Kit.kitLists(ctx.member)
-    local all = {}
-    for _, s in ipairs(lists.primary) do all[#all + 1] = s end
-    for _, s in ipairs(lists.others) do all[#all + 1] = s end
-    for _, s in ipairs(all) do
-      local key = keyOf[s.id]
-      local inBook = not ctx.live or ctx.live(s.name, s)
-      local sub, col, word
-      if key then
-        local it
-        for _, x in ipairs(ctx.macros.items) do if x.name == key then it = x end end
-        sub, col, word = Book.kindName(it or { key = "" }), W.GREEN, "Already a key"
-      elseif inBook then sub, col, word = "", W.BLUE, "Drag to your bar"
-      else sub, col, word = "Level " .. s.level, W.MUTED, "Learn at your trainer" end
-      out[#out + 1] = { kind = "spell", label = s.name, sub = sub, color = col, icon = s.icon, spell = s, name = key or false,
-        st = { word = word, color = col, off = not inBook and not key } }
-    end
+    for _, sec in ipairs(Book.spellSections(ctx)) do for _, c in ipairs(sec.cells) do out[#out + 1] = c end end
     return out
   end
   for _, it in ipairs(ctx.macros.items) do
@@ -373,7 +421,7 @@ function Book.menuFor(p, c)
   if ns.Compat.inCombat() then return { { "Not in combat – try again after the fight", function() end } } end
   if c.kind == "new" then return { { "New own key", function() ns.KeyEditor.Open(p, nil) end } } end
   if c.kind == "spell" and not c.name then
-    if not (c.st and c.st.off) then items[#items + 1] = { "Pick up (make a key)", function() pickupCell(c) end } end
+    items[#items + 1] = { c.pending and "Pick up (key works once learned)" or "Pick up (make a key)", function() pickupCell(c) end }
     return items
   end
   items[#items + 1] = { "Pick up", function() pickupCell(c) end }
@@ -409,7 +457,12 @@ local function cellTooltip(GT, c)
   if d and d.steps and #d.steps > 1 then GT:AddLine(W.stepsText(d.steps), 0.85, 0.72, 1, true) end
   if d and d.body then for line in (d.body .. "\n"):gmatch("([^\n]*)\n") do if line ~= "" then GT:AddLine(line, 0.56, 0.85, 0.45) end end end
   if c.item and c.item.why then GT:AddLine(c.item.why, 1, 0.54, 0.5, true) end
-  if not (c.st and c.st.off and c.kind == "spell") then GT:AddLine("Drag to your bar · Right-click: more", 0.66, 0.6, 0.49) end
+  local pending = c.pending or (c.d and c.d.pending)
+  if pending then
+    GT:AddLine((type(pending) == "number" and ("You learn this at level " .. pending .. ".") or "Learn it at your trainer.") ..
+      " Place it now: the key does nothing until you know the spell, then it just works.", Book.FUTURE[1], Book.FUTURE[2], Book.FUTURE[3], true)
+  end
+  GT:AddLine("Drag to your bar · Right-click: more", 0.66, 0.6, 0.49)
 end
 
 -- ------------------------------------------------------------------ build
@@ -457,6 +510,16 @@ local function makeCell(p, parent, small)
   b.glow:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
   if b.glow.SetBlendMode then b.glow:SetBlendMode("ADD") end
   b.glow:SetVertexColor(1, 0.9, 0.5, 0.95)
+  -- a later-level spell: a padlock on the icon and a cool tint behind the button
+  b.lock = b:CreateTexture(nil, "OVERLAY")
+  b.lock:SetSize(small and 14 or 18, small and 14 or 18)
+  b.lock:SetPoint("BOTTOMRIGHT", b.slotBg, "BOTTOMRIGHT", 3, -3)
+  b.lock:SetTexture("Interface\\Buttons\\LockButton-Locked-Up")
+  b.lock:Hide()
+  b.tint = b:CreateTexture(nil, "BACKGROUND")
+  b.tint:SetAllPoints()
+  b.tint:SetColorTexture(0.3, 0.36, 0.55, 0.16)
+  b.tint:Hide()
   b.sel = b:CreateTexture(nil, "BACKGROUND")
   b.sel:SetAllPoints()
   b.sel:SetColorTexture(1, 0.82, 0, 0.13)
@@ -509,9 +572,11 @@ local function paintCell(p, b, c)
   local grey = b.small or st.off
   if b.icon.SetDesaturated then b.icon:SetDesaturated(grey and true or false) end
   b.multi:SetDesaturated(grey and true or false)
-  local a = st.off and 0.5 or 1
+  local a = st.locked and 0.4 or st.off and 0.6 or 1
   if not c.icons then b.icon:SetAlpha(a) end
   b.multi:SetAlpha(a)
+  b.lock:SetShown(st.locked and true or false)
+  b.tint:SetShown(st.locked and true or false)
   if not b.small then
     if c.badge then b.frame:SetVertexColor(0.72, 0.55, 1) else b.frame:SetVertexColor(1, 1, 1) end
     b.frame:SetAlpha(st.dim and 0.35 or 1)
@@ -520,11 +585,13 @@ local function paintCell(p, b, c)
     local showSub = not two and (c.sub or "") ~= ""
     b.sub:SetText(showSub and c.sub or "")
     b.sub:SetShown(showSub)
-    if c.badge then b.sub:SetTextColor(0.85, 0.72, 1) else b.sub:SetTextColor(W.MUTED[1], W.MUTED[2], W.MUTED[3]) end
+    local sc = c.badge and { 0.85, 0.72, 1 } or st.subColor or W.MUTED
+    b.sub:SetTextColor(sc[1], sc[2], sc[3])
     b.name:ClearAllPoints()
     if showSub then b.name:SetPoint("TOPLEFT", b.slotBg, "TOPRIGHT", 7, -2)
     else b.name:SetPoint("LEFT", b.slotBg, "RIGHT", 7, 0) end
-    b.name:SetTextColor(st.off and W.MUTED[1] or W.GOLD[1], st.off and W.MUTED[2] or W.GOLD[2], st.off and W.MUTED[3] or W.GOLD[3])
+    local nc = st.locked and { 0.55, 0.56, 0.6 } or st.off and W.MUTED or W.GOLD
+    b.name:SetTextColor(nc[1], nc[2], nc[3])
   else
     b.icon.border:SetAlpha(st.dim and 0.35 or 1)
   end
@@ -674,8 +741,16 @@ local function build(p, mode)
   else
     p.hint = W.text(p.right, "GameFontHighlightSmall", nil, W.MUTED)
     p.hint:SetPoint("TOPLEFT", 4, -8)
-    p.hint:SetText(mode == "spells" and "Greyed spells: learn at your trainer" or "Up to 8 own keys")
+    p.hint:SetText(mode == "spells" and "Grey: at your trainer · Lock: later levels" or "Up to 8 own keys")
     p.hint.wbxCopy = "hint"
+    if mode == "spells" then
+      p.jump = W.button(p.right, "Future spells", 96, 20, function()
+        p.page = (p.futureFirst and p.page < p.futureFirst) and p.futureFirst or 1; UI.Refresh()
+      end, "Jumps between the spells you know and the ones you learn at later levels.")
+      p.jump:SetPoint("TOPRIGHT", 0, -6)
+      p.hint:SetPoint("RIGHT", p.jump, "LEFT", -6, 0)
+      if p.hint.SetMaxLines then p.hint:SetMaxLines(1) end
+    end
   end
   p.empty = W.text(p.left, "GameFontHighlight", nil, W.MUTED, "CENTER")
   p.empty:SetPoint("TOPLEFT", 10, -TOP_H - 30)
@@ -761,9 +836,19 @@ local function refresh(p, ctx)
   if p.role then p.role.Refresh(); p.playsAs.Refresh(); p.seq.Refresh() end
 
   local pages, spread
+  local futureFrom -- spells: the first page of the future spells (always the left page of a new spread)
   if p.mode == "keys" then
     spread = Book.spread(ctx)
     pages = Book.flow(spread.sections, p.listH, 2, PITCH)
+  elseif p.mode == "spells" then
+    local secs = Book.spellSections(ctx)
+    pages = #secs[1].cells > 0 and Book.flow({ secs[1] }, p.listH, 2, PITCH) or {}
+    if #secs[2].cells > 0 then
+      if #pages % 2 == 1 then pages[#pages + 1] = {} end
+      futureFrom = #pages + 1
+      for _, pg in ipairs(Book.flow({ secs[2] }, p.listH, 2, PITCH)) do pages[#pages + 1] = pg end
+    end
+    if #pages == 0 then pages[1] = {} end
   else
     local list = Book.cells(p.mode, ctx)
     local per = math.floor(p.listH / PITCH) * 2
@@ -779,6 +864,18 @@ local function refresh(p, ctx)
   local spreads = math.max(1, math.ceil(#pages / perSpread))
   p.page = math.min(p.page or 1, spreads)
   local first = (p.page - 1) * perSpread
+  if futureFrom and first + 1 >= futureFrom then
+    -- the future spreads: the banner says what these are (it replaces the next step there)
+    p.stepText:SetText("|cff9eaddbFuture spells – place them now|r")
+    p.stepTip = "You learn these later: the level is under each spell. Drag one onto your bar now and set it up; the key does nothing until you learn the spell, then it just works."
+    p.stepBtn:Hide(); p.stepFn = nil
+    p.stepText:SetPoint("RIGHT", p.strip, "RIGHT", -6, 0)
+  end
+  p.futureFirst = futureFrom and math.floor((futureFrom - 1) / perSpread) + 1 or nil
+  if p.jump then
+    p.jump:SetShown(p.futureFirst ~= nil)
+    W.setLabel(p.jump, (p.futureFirst and p.page >= p.futureFirst) and "Known spells" or "Future spells")
+  end
   local ci, ri = placePage(p, p.left, pages[first + 1], 1, 1)
   if perSpread == 2 then placePage(p, p.right, pages[first + 2], ci, ri) end
   local count = 0
@@ -989,7 +1086,7 @@ end
 -- ------------------------------------------------------------------ register the three book tabs
 for _, def in ipairs({
   { key = "keys", label = "My keys", icon = "INV_Misc_Book_09", tip = "Your recommended keys for this level. Drag them onto your action bars." },
-  { key = "spells", label = "All spells", icon = "INV_Misc_Book_11", tip = "Every spell you know. Drag one onto a bar to make it a key." },
+  { key = "spells", label = "All spells", icon = "INV_Misc_Book_11", tip = "Every spell you know, then the ones you learn later. Drag one onto a bar to make it a key." },
   { key = "custom", label = "Custom keys", icon = "Spell_ChargePositive", tip = "Your own sequence keys (up to 8)." },
 }) do
   UI.RegisterTab({ key = def.key, label = def.label, icon = def.icon, tip = def.tip, book = true,
