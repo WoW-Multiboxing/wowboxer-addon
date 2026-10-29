@@ -20,7 +20,7 @@ CurseForge knows both (checked 2026-10-28: 1.60.1 = id 17053, 1.15.9 = id 16630)
 
 ## Project page text
 
-**Summary** (≤ 100 characters): Multiboxing companion: the right keys for every character, role and level.
+**Summary** (≤ 100 characters): Multiboxing in the game: the right keys for every character, role and level.
 
 **Description**
 
@@ -34,8 +34,8 @@ when you level. Made for manual multiboxing in **WoW: Forever** and **Classic Er
 - **Squad:** your characters, their roles and who leads. Send the squad to your other clients; they review it and
   import it with a click.
 - **Setup:** recommended settings with backup and restore, and an addon check.
-- **Share** a setup as a string with the WoWBoxer website.
-- A **?** on every page and a 5-step squad guide.
+- **Share** your squad with your other characters as a string.
+- A **?** on every page and a 3-step squad guide.
 
 **One key press = one action on one character.** WoWBoxer never sends input, never broadcasts keys, never follows,
 casts or targets on its own. It only writes macros, bars and settings after you click, and never in combat.

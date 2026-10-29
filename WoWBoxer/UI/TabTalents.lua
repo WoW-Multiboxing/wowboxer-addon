@@ -6,8 +6,8 @@ local tab = { key = "talents", label = "Talents", icon = "Ability_Marksmanship",
 local ROW_H = 20
 local LEFT_W, LIST_W = 300, 322
 
-local KIND = { ["exact-order"] = "Exact point order from the guide", ["final-derived"] = "Guide's final build; order derived by the companion",
-  priorities = "Priorities only (no point order)", adaptation = "Companion adaptation of a guide" }
+local KIND = { ["exact-order"] = "Exact point order from the guide", ["final-derived"] = "Guide's final build; order by WoWBoxer",
+  priorities = "Priorities only (no point order)", adaptation = "WoWBoxer adaptation of a guide" }
 
 function tab.build(p)
   local lg = W.text(p, "GameFontHighlightSmall", nil, W.MUTED)
@@ -56,6 +56,7 @@ function tab.build(p)
   p.source = W.text(p, "GameFontHighlightSmall", nil, W.MUTED)
   p.source:SetPoint("TOPLEFT", p.readback, "BOTTOMLEFT", 0, -8)
   p.source:SetWidth(LEFT_W)
+  p.source.wbxCopy = "data" -- guide source + the licence credit (exact wording required)
   p.prio = W.text(p, "GameFontHighlightSmall", nil, W.TEXT)
   p.prio:SetPoint("TOPLEFT", p.source, "BOTTOMLEFT", 0, -8)
   p.prio:SetWidth(LEFT_W)
@@ -129,8 +130,8 @@ function tab.refresh(p)
   if g and kind == "guide" then
     local src = g.source or {}
     p.source:SetText("Source: " .. (src.site or "?") .. (src.author and (", " .. src.author) or "") .. (src.updated and (" (" .. src.updated .. ")") or "") ..
-      "\nTalent data: Zephras (CC BY 4.0) + The Forever Era")
-  else p.source:SetText("Talent data: Zephras (CC BY 4.0) + The Forever Era") end
+      "\nTalent data: Zephras (zephras.com), CC BY 4.0, changed by WoWBoxer; The Forever Era")
+  else p.source:SetText("Talent data: Zephras (zephras.com), CC BY 4.0, changed by WoWBoxer; The Forever Era") end
   p.prio:SetText(g and g.kind == "priorities" and g.priorities and g.priorities:sub(1, 600) or "")
   p.readback:SetText(tab.readbackText(m, level))
   -- list

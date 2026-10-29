@@ -1,6 +1,6 @@
 # WoWBoxer (in-game addon)
 
-The WoWBoxer companion inside World of Warcraft: **Forever** (interface 16001) and **Classic Era** (11509).
+WoWBoxer, the multiboxing tool inside World of Warcraft: **Forever** (interface 16001) and **Classic Era** (11509).
 It gives each of your characters the recommended keys for its class, role and level, builds them as WBX macros and
 puts them on your action bars, and keeps them up to date when you level. Made for manual multiboxing: one key press is
 always one action on one character.
@@ -22,7 +22,7 @@ always one action on one character.
   and a strip of small step icons on the action button that frames the next spell.
 - **Talents** – the guide's point order for your level; on Forever also what you have actually spent.
 - **Setup** – which bars your keys go on, window size, animations, multibox checklist, recommended settings (with backup/restore) and recommended addons.
-- **Share** – copy your squad as a `!WBX:1!` string to your other characters, the website or the companion.
+- **Share** – copy your squad as a `!WBX:1!` string to your other characters.
 - **Team status** (optional, display only) – a small panel showing which of your clients lost follow, has another
   target than the leader, or is low on mana.
 - Minimap button (left-click open, right-click menu, drag to move) and an Addon Compartment entry on Forever.
@@ -42,7 +42,7 @@ Unzip `WoWBoxer` into `World of Warcraft\_forever_\Interface\AddOns` (or `_class
 `/wbx scale 0.9` · `/wbx reset` · `/wbx selftest` · `/wbx log` · `/wbx debug` · `/wbx help`
 
 ## Credits and licence
-MIT licence. Talent data: Zephras (zephras.com), CC BY 4.0, changed by the WoWBoxer companion; The Forever Era.
+MIT licence. Talent data: Zephras (zephras.com), CC BY 4.0, changed by WoWBoxer; The Forever Era.
 World of Warcraft and its names and icons are © Blizzard Entertainment. WoWBoxer is a free fan project and is not
 affiliated with or endorsed by Blizzard.
 

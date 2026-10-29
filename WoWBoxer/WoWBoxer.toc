@@ -1,6 +1,6 @@
 ## Interface: 16001, 11509
 ## Title: WoWBoxer
-## Notes: Multiboxing companion: squad setup, talents, recommended macros and sequence keys per level, action bars, settings and addon checks. One key press = one action on one character.
+## Notes: Multiboxing in the game: squad setup, talents, recommended macros and sequence keys per level, action bars, settings and addon checks. One key press = one action on one character.
 ## Author: WoWBoxer (WoW-Multiboxing)
 ## Version: @project-version@
 ## SavedVariables: WoWBoxerDB

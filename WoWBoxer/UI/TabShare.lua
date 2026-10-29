@@ -1,7 +1,7 @@
 --[[ WoWBoxer – Share tab: import a squad string (validated preview, then a click) and export yours. ]]
 local _, ns = ...
 local UI, W = ns.UI, ns.Widgets
-local tab = { key = "share", label = "Share", icon = "INV_Letter_15", tip = "Copy your squad as a text string, or import one from the website or another client." }
+local tab = { key = "share", label = "Share", icon = "INV_Letter_15", tip = "Copy your squad to your other characters as a text string, or import one from another client." }
 
 local function preview(p)
   local txt = p.importBox:GetText() or ""
@@ -36,7 +36,7 @@ function tab.build(p)
   local n1 = W.text(p, "GameFontHighlightSmall", nil, W.MUTED)
   n1:SetPoint("TOPLEFT", 0, -22)
   n1:SetWidth(316)
-  n1:SetText("From the website, companion or another client")
+  n1:SetText("From another character or client")
   local isf
   p.importBox, isf = W.editBox(p, 306, 80)
   isf:SetPoint("TOPLEFT", 4, -50)

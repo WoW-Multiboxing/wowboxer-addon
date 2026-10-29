@@ -1,6 +1,6 @@
 --[[ WoWBoxer – custom key editor (the companion's "own keys", in game).
   A custom key is plain data {name, kind, aim, steps, filler, fills, reset}; the companion engine builds the macro
-  (E.buildCustom) with the same targeting, pet, 255-character and warning rules as on the website. Spells are added
+  (E.buildCustom) with the same targeting, pet, 255-character and warning rules as the rest of WoWBoxer. Spells are added
   from a list of learned spells or by dropping a spell from the spellbook onto the steps strip (GetCursorInfo: data
   only, nothing is cast). Saving only changes SavedVariables; the macro WBX C<n> is written by Place all
   or by dragging the key, like every other key. ]]
