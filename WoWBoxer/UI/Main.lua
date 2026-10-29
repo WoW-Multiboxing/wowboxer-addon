@@ -261,7 +261,7 @@ function UI.ShowOffer(ctx, sig)
     o.text:SetPoint("TOPLEFT", 12, -10)
     o.text:SetPoint("TOPRIGHT", -12, -10)
     o.go = W.button(o, "Update", 80, 22, function() o:Hide(); ns.Core.sync({ replace = ns.Core.cdb.replace }) end,
-      "Updates the changed WoWBoxer macros. They stay on the same action buttons and keys.")
+      "Updates the changed WoWBoxer macros. They keep their action buttons and keybinds.")
     o.go:SetPoint("BOTTOMRIGHT", -10, 8)
     o.later = W.button(o, "Later", 60, 22, function() o:Hide() end, "Closes this. Open WoWBoxer (/wbx or the minimap button) whenever you like.")
     o.later:SetPoint("RIGHT", o.go, "LEFT", -6, 0)
@@ -281,7 +281,7 @@ function UI.ShowOffer(ctx, sig)
   local names = {}
   for _, it in ipairs(ctx.macros.items) do if it.status == "create" or it.status == "update" then names[#names + 1] = ns.Book.shortLabel(it) end end
   local n = ctx.macros.changes
-  local text = "|cffffd100Level " .. ctx.level .. ":|r " .. n .. (n == 1 and " key changed" or " keys changed")
+  local text = "|cffffd100Level " .. ctx.level .. ":|r " .. n .. (n == 1 and " macro changed" or " macros changed")
   o.tip = table.concat(names, ", ") .. ". Same buttons, new spells."
   o.text:SetText(text)
   local maxW = math.min(480, (UIParent:GetWidth() or 800) * 0.9)

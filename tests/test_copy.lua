@@ -135,7 +135,7 @@ for _, sc in ipairs({
     W.fire("PLAYER_LEVEL_UP", W.player.level); W.fire("SPELLS_CHANGED"); W.flush()
     H.ok(UI.offer and UI.offer:IsShown(), tag .. ": level-up toast")
     if UI.offer and UI.offer:IsShown() then add(copyProblems(W, UI.offer, tag .. " toast")) end
-    H.ok((p.stepText:GetText() or ""):find("keys? changed") ~= nil, tag .. ": banner \"N keys changed\": " .. tostring(p.stepText:GetText()))
+    H.ok((p.stepText:GetText() or ""):find("macros? changed") ~= nil, tag .. ": banner \"N keys changed\": " .. tostring(p.stepText:GetText()))
   end
   UI.Refresh()
   -- header and footer
@@ -151,7 +151,7 @@ for _, sc in ipairs({
   if sc.class == "HUNTER" then
     local title
     for _, r in ipairs(p.rules) do if r:IsVisible() and r._parent == p.right then title = r.text:GetText() end end
-    H.eq(title, "Squad keys", tag .. ": a leader with a pet sees the Squad keys section")
+    H.eq(title, "Squad macros", tag .. ": a leader with a pet sees the Squad macros section")
   end
   if sc.class == "PALADIN" and sc.name == "Dorin" then
     local seq

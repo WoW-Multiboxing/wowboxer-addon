@@ -134,7 +134,7 @@ function SY.show()
     go, goTip = "Review", "Opens the import preview on the Share page. Nothing changes until you press Import squad there."
   elseif x.kind == "preset" then
     text = "|cffffd100" .. x.from .. "|r: |cffffd100\"" .. x.name .. "\"|r, " .. x.leader .. " leads"
-    go, goTip = "Apply", "Makes " .. x.leader .. " the leader in WoWBoxer on this client. Your keys change after you press Update keys."
+    go, goTip = "Apply", "Makes " .. x.leader .. " the leader in WoWBoxer on this client. Your macros change after you press Update macros."
   elseif x.kind == "guide" then
     text, go, goTip = x.text, "Open guide", "Opens the 5-step squad guide on the Squad page."
   else
@@ -178,7 +178,7 @@ function SY.accept()
     local s = ns.State.squad(Core().db, x.squadId)
     if s and ns.State.applyPreset(s, x.presetId) then
       Core().log("info", "applied preset " .. x.name .. " from " .. x.from)
-      Core().print("Preset \"" .. x.name .. "\" applied. Press Update keys to change your keys.")
+      Core().print("Preset \"" .. x.name .. "\" applied. Press Update macros to change your macros.")
       Core().changed()
     end
   elseif x.kind == "guide" then
@@ -189,7 +189,7 @@ function SY.accept()
 end
 
 -- ------------------------------------------------------------------ session card + version check (display only)
---- "Squad Undead trio · 3/3 online · keys OK on 2/3 · Wowtwo needs Update", or nil when solo.
+--- "Squad Undead trio · 3/3 online · macros OK on 2/3 · Wowtwo needs Update", or nil when solo.
 function SY.sessionText()
   local s = Core().me()
   if not (s and #s.members > 1 and ns.Compat.inParty()) then return nil end
@@ -201,8 +201,8 @@ function SY.sessionText()
     if r.ready and r.ready.keys == 0 then ok = ok + 1 elseif r.ready then need[#need + 1] = r.m.name end
     if r.version and r.version ~= myVer and not r.me then other[#other + 1] = r.m.name end
   end
-  local text = "Squad |cffffd100" .. s.name .. "|r · " .. online .. "/" .. #rows .. " online · keys OK on " .. ok .. "/" .. #rows
-  if #need > 0 then text = text .. " · " .. table.concat(need, ", ") .. (#need == 1 and " needs" or " need") .. " Update keys" end
+  local text = "Squad |cffffd100" .. s.name .. "|r · " .. online .. "/" .. #rows .. " online · macros OK on " .. ok .. "/" .. #rows
+  if #need > 0 then text = text .. " · " .. table.concat(need, ", ") .. (#need == 1 and " needs" or " need") .. " Update macros" end
   if #other > 0 then text = text .. " · |cfff0b43c" .. table.concat(other, ", ") .. " run another WoWBoxer version|r" end
   return text
 end

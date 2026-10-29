@@ -43,7 +43,7 @@ function SP.presetValues(s)
   local v = {}
   for _, p in ipairs(s and s.presets or {}) do
     local L = S().member(s, p.leader)
-    v[#v + 1] = { p.id, p.name, (L and (L.name .. " leads") or "") .. ". Choosing it changes who leads (and the roles saved with it) in WoWBoxer; every client then updates its own keys." }
+    v[#v + 1] = { p.id, p.name, (L and (L.name .. " leads") or "") .. ". Choosing it changes who leads (and the roles saved with it) in WoWBoxer; every client then updates its own macros." }
   end
   return v
 end
@@ -277,7 +277,7 @@ local function buildRow(f, parent)
   hl:SetAllPoints()
   hl:SetColorTexture(1, 1, 1, 0.05)
   r:SetScript("OnClick", function() if r.m then SP.editing = (SP.editing ~= r.m.id) and r.m.id or nil; UI.Refresh() end end)
-  W.tip(r, function() return r.m and r.m.name or "" end, "Click to edit name, class, race, how it follows and sequence keys.")
+  W.tip(r, function() return r.m and r.m.name or "" end, "Click to edit name, class, race, how it follows and sequence macros.")
   r.crown = CreateFrame("Button", nil, r)
   r.crown:SetSize(20, 20)
   r.crown:SetPoint("LEFT", 4, 0)
@@ -300,7 +300,7 @@ local function buildRow(f, parent)
   r.role = W.dropdown(r, { width = 104, values = function() return r.m and SP.roleValues(r.m) or {} end,
     get = function() return r.m and r.m.role end, set = function(v) if r.m and S().setRole(r.m, v) then changed() end end })
   r.role:SetPoint("LEFT", 210, 0)
-  W.ddTip(r.role, "Role", "Picks the recommended keys and talent guide of this character.")
+  W.ddTip(r.role, "Role", "Picks the recommended macros and talent guide of this character.")
   r.follows = W.line(r, "GameFontHighlightSmall", nil, W.TEXT)
   r.follows:SetPoint("LEFT", 322, 0)
   r.follows:SetWidth(150)
@@ -350,7 +350,7 @@ local function buildEditor(f, parent)
     return d
   end
   e.cls = dd(96, function() return SP.classValues() end, function(x) return x.cls end, function(x, v) return S().setClass(squad(), x, v) end,
-    "Class", "Changing the class starts the talent plan and own keys of this character over.")
+    "Class", "Changing the class starts the talent plan and own macros of this character over.")
   local cl = lbl("Class")
   cl:SetPoint("LEFT", e.name, "RIGHT", 14, 0)
   e.cls:SetPoint("LEFT", cl, "RIGHT", 6, 0)
@@ -359,20 +359,20 @@ local function buildEditor(f, parent)
   rl:SetPoint("LEFT", e.cls, "RIGHT", 14, 0)
   e.race:SetPoint("LEFT", rl, "RIGHT", 6, 0)
   -- order = the follow line (docs/follow-line.md)
-  e.down = W.button(e, "Down", 54, 20, function() SP.move(m(), 1) end, "Moves this character one place down: later in the follow line. Your keys show what to update.")
+  e.down = W.button(e, "Down", 54, 20, function() SP.move(m(), 1) end, "Moves this character one place down: later in the follow line. Your macros show what to update.")
   e.down:SetPoint("TOPRIGHT", -4, -5)
-  e.up = W.button(e, "Up", 40, 20, function() SP.move(m(), -1) end, "Moves this character one place up: earlier in the follow line. Your keys show what to update.")
+  e.up = W.button(e, "Up", 40, 20, function() SP.move(m(), -1) end, "Moves this character one place up: earlier in the follow line. Your macros show what to update.")
   e.up:SetPoint("RIGHT", e.down, "LEFT", -4, 0)
   -- line 2
   e.plays = dd(150, function() return ns.Book.playsAsValues() end, function(x) return x.leader and "leader" or x.unit end,
-    function(x, v) return S().setPlaysAs(squad(), x, v) end, "Plays as", "Leader: plays normally. Follower: where the leader is in this character's party (party1–4 or focus); its keys use the leader's target through it. The place in the follow line is the squad order: Up / Down.")
+    function(x, v) return S().setPlaysAs(squad(), x, v) end, "Plays as", "Leader: plays normally. Follower: where the leader is in this character's party (party1–4 or focus); its macros use the leader's target through it. The place in the follow line is the squad order: Up / Down.")
   local pl = lbl("Plays as")
   pl:SetPoint("TOPLEFT", 30, -35)
   e.plays:SetPoint("LEFT", pl, "RIGHT", 6, 0)
   e.seq = W.seqControl(e, { member = m, width = 96, set = function(x, tier) x.seq = tier; changed() end })
   e.seq:SetPoint("LEFT", e.plays, "RIGHT", 12, 0)
   e.isMe = W.button(e, "That's me", 80, 22, function() local x = m(); if x then Core().setMe(squad().id, x.id); SP.saved() end end,
-    "Tells WoWBoxer that the character you are logged in on is this one (its keys and role are used here).")
+    "Tells WoWBoxer that the character you are logged in on is this one (its macros and role are used here).")
   e.isMe:SetPoint("BOTTOMRIGHT", -4, 4)
   function e.Refresh(x, me)
     if not e.name:HasFocus() then e.name:SetText(x.name) end
@@ -464,21 +464,21 @@ SP.register({ key = "main", label = "Squad", tip = "Who plays together, who lead
     f.keys:SetSize(LIST_W + 20, 48)
     f.keys.label = W.text(f.keys, "GameFontNormalSmall", nil, W.GOLD)
     f.keys.label:SetPoint("TOPLEFT", 0, -5)
-    f.keys.label:SetText("Squad keys")
+    f.keys.label:SetText("Squad macros")
     f.keys.label.wbxCopy = "label"
     f.keys.ticks = {}
     for i = 1, #ns.Macros.SQUAD_KEYS do
-      local c = W.check(f.keys, "Key", function(self, v) if self.key then ns.Book.setSquadKey(self.key, v); SP.saved() end end)
+      local c = W.check(f.keys, "Macro", function(self, v) if self.key then ns.Book.setSquadKey(self.key, v); SP.saved() end end)
       c:SetPoint("TOPLEFT", 76 + ((i - 1) % 4) * 132, -((math.floor((i - 1) / 4)) * 22))
-      W.tip(c, function() return c.label:GetText() end, function() return c.key and ns.Book.helperShort(c.key) .. " Ticked: WoWBoxer makes this key for this character." or "" end)
+      W.tip(c, function() return c.label:GetText() end, function() return c.key and ns.Book.helperShort(c.key) .. " Ticked: WoWBoxer makes this macro for this character." or "" end)
       f.keys.ticks[i] = c
     end
     f.keys.state = W.line(f.keys, "GameFontHighlightSmall", nil, W.GREEN, "RIGHT")
     f.keys.state:SetPoint("TOPRIGHT", -20, -27)
     f.keys.state:SetWidth(110)
     f.keys.state.wbxCopy = "hint"
-    f.keys.update = W.button(f.keys, "Update keys", 100, 22, function() Core().sync({ replace = Core().cdb.replace }) end,
-      "Creates or updates your squad keys (and any other changed keys) and puts new ones on your bars.")
+    f.keys.update = W.button(f.keys, "Update macros", 100, 22, function() Core().sync({ replace = Core().cdb.replace }) end,
+      "Creates or updates your squad macros (and any other changed macros) and puts new ones on your bars.")
     f.keys.update:SetPoint("TOPRIGHT", -20, -22)
     f.lineText = W.line(f.list, "GameFontHighlightSmall", nil, W.TEXT)
     f.lineText:SetPoint("TOPLEFT", 0, y - 34 - 52)
@@ -486,12 +486,12 @@ SP.register({ key = "main", label = "Squad", tip = "Who plays together, who lead
     f.lineText.wbxCopy = "data"
     local lineHit = CreateFrame("Frame", nil, f.list)
     lineHit:SetAllPoints(f.lineText)
-    W.tip(lineHit, "Follow line", "Follow (line) on each character follows the one before it. Change the order with Up / Down in a row; your keys update.")
+    W.tip(lineHit, "Follow line", "Follow (line) on each character follows the one before it. Change the order with Up / Down in a row; your macros update.")
     f.status = W.line(f.list, "GameFontHighlightSmall", nil, W.MUTED)
     f.status:SetPoint("BOTTOMLEFT", 0, 4)
     f.status:SetWidth(LIST_W - 80)
     f.status.wbxCopy = "hint"
-    f.readyBtn = W.button(f.list, "Readiness", 80, 20, function() SP.select(p, "ready") end, "One line per character: party, unit, keys, Follow/Assist, settings.")
+    f.readyBtn = W.button(f.list, "Readiness", 80, 20, function() SP.select(p, "ready") end, "One line per character: party, unit, macros, Follow/Assist, settings.")
     f.readyBtn:SetPoint("BOTTOMRIGHT", 0, 2)
   end,
   refresh = function(f, p)
@@ -608,7 +608,7 @@ function SP.refreshKeys(f)
 end
 
 -- ------------------------------------------------------------------ Leader presets, notes, everyone's sequence keys (under More)
-SP.register({ key = "presets", label = "Leader presets", more = true, tip = "Who leads for what you do, saved to switch back; notes; everyone's sequence keys.",
+SP.register({ key = "presets", label = "Leader presets", more = true, tip = "Who leads for what you do, saved to switch back; notes; everyone's sequence macros.",
   build = function(f)
     f.preset = W.dropdown(f, { width = 190, placeholder = "No preset saved",
       values = function() return SP.presetValues(squad()) end,
@@ -636,7 +636,7 @@ SP.register({ key = "presets", label = "Leader presets", more = true, tip = "Who
       end })
     local al = W.labelled(f, "All sequences", f.allSeq)
     al:SetPoint("TOPLEFT", 0, -40)
-    W.ddTip(f.allSeq, "Everyone's sequence keys", "Sets sequence keys for every character whose class has them. Each client then updates its own keys.")
+    W.ddTip(f.allSeq, "Everyone's sequence macros", "Sets sequence macros for every character whose class has them. Each client then updates its own macros.")
     local nl = W.text(f, "GameFontNormalSmall", nil, W.GOLD)
     nl:SetPoint("TOPLEFT", 0, -78)
     nl:SetText("Notes")

@@ -118,16 +118,16 @@ end
 --- A pasted key string -> clean key {name, kind, aim, steps, filler, fills, reset}, cls  or nil, error.
 function Sh.decodeKey(str)
   str = (type(str) == "string" and str or ""):gsub("^%s+", ""):gsub("%s+$", "")
-  if #str > 4000 then return nil, "Too long for one key." end
+  if #str > 4000 then return nil, "Too long for one macro." end
   local b64, crc = str:match("^!WBXK:1!([^!]+)!(%x%x%x%x%x%x%x%x)$")
-  if not b64 then return nil, "Not a WoWBoxer key." end
+  if not b64 then return nil, "Not a WoWBoxer macro." end
   local json, err = Json.b64decode(b64)
-  if not json then return nil, "The key is damaged: " .. err .. "." end
-  if Json.crc32hex(json) ~= crc:lower() then return nil, "The key is damaged (checksum). Copy it again." end
+  if not json then return nil, "The macro is damaged: " .. err .. "." end
+  if Json.crc32hex(json) ~= crc:lower() then return nil, "The macro is damaged (checksum). Copy it again." end
   local v = Json.decode(json, { maxDepth = 6, maxItems = 200, maxString = 200 })
-  if type(v) ~= "table" or v.f ~= Sh.KEY_FORMAT or type(v.key) ~= "table" then return nil, "Unknown key format." end
+  if type(v) ~= "table" or v.f ~= Sh.KEY_FORMAT or type(v.key) ~= "table" then return nil, "Unknown macro format." end
   local c = S.cleanCustom({ v.key })[1]
-  if not c then return nil, "The key is empty." end
+  if not c then return nil, "The macro is empty." end
   return c, (type(v.cls) == "string" and v.cls or nil)
 end
 
@@ -162,7 +162,7 @@ function Sh.parseMacro(text)
       if r2 then casts[#casts + 1] = r2 end
     end
   end
-  local out = { name = "Pasted key", kind = "sequence", aim = "harm", steps = {}, filler = "", fills = 1, reset = "combat" }
+  local out = { name = "Pasted macro", kind = "sequence", aim = "harm", steps = {}, filler = "", fills = 1, reset = "combat" }
   if seqLine then
     local c, tail = conds(seqLine)
     help = c:find("help", 1, true) ~= nil and not c:find("harm", 1, true)
@@ -196,7 +196,7 @@ function Sh.parseMacro(text)
     end
     if #out.steps == 0 then return nil, "No spells found after /cast." end
   else
-    return nil, "Paste a WoWBoxer key (!WBXK:1!…) or a macro with /castsequence or /cast lines."
+    return nil, "Paste a WoWBoxer macro (!WBXK:1!…) or a macro with /castsequence or /cast lines."
   end
   out.aim = help and "help" or "harm"
   while #out.steps > 12 do table.remove(out.steps) end

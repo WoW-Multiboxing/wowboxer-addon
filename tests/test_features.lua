@@ -129,7 +129,7 @@ do
   H.ok(m and m:IsShown(), "right-click opens the menu")
   local labels = {}
   for _, b in ipairs(m.rows) do if b:IsShown() then labels[#labels + 1] = b.label._text end end
-  H.eq(table.concat(labels, ", "), "Pick up, Bind key…, Leave out, Copy…", "menu entries")
+  H.eq(table.concat(labels, ", "), "Pick up, Set keybind…, Leave out, Copy…", "menu entries")
   m.rows[3]:Click()
   H.ok(Core.cdb.skip["WBX K3"], "Leave out from the menu")
   H.ok(row(ns, function(x) return x.name == "WBX K3" end).cell.st.off, "shown as left out (greyed)")
@@ -155,7 +155,7 @@ do
   local r = row(ns, function(x) return x.name == "WBX K2" end)
   r:Click("LeftButton")
   H.eq(UI.panels.keys.selected, "WBX K2", "click selects")
-  findButton(W, "Bind key"):Click()
+  findButton(W, "Set keybind"):Click()
   local cap = UI.panels.keys.capture
   H.ok(cap:IsShown(), "key capture open")
   cap._scripts.OnKeyDown(cap, "F")
@@ -166,7 +166,7 @@ do
   H.eq(W.bindingSet, 2, "saved as character bindings")
   H.ok(not cap:IsShown(), "capture closed")
   W.mods.shift = true
-  findButton(W, "Bind key"):Click()
+  findButton(W, "Set keybind"):Click()
   cap._scripts.OnKeyDown(cap, "LSHIFT")
   H.ok(cap:IsShown(), "shift alone keeps waiting")
   cap._scripts.OnKeyDown(cap, "G")
@@ -177,14 +177,14 @@ do
   UI.Refresh()
   H.ok((UI.panels.keys.detSub._text or ""):find("sG") ~= nil, "keys shown for the selected macro")
   local un
-  for _, it in ipairs(ns.Book.menuFor(UI.panels.keys, row(ns, function(x) return x.name == "WBX K2" end).cell)) do if it[1] == "Unbind" then un = it[2] end end
+  for _, it in ipairs(ns.Book.menuFor(UI.panels.keys, row(ns, function(x) return x.name == "WBX K2" end).cell)) do if it[1] == "Remove keybind" then un = it[2] end end
   H.ok(un ~= nil, "Unbind in the right-click menu")
   un()
   H.eq(W.bindings.F, "ASSISTTARGET", "Remove keybind puts back what F did before (Assist Target)")
   H.eq(W.bindings["SHIFT-G"], nil, "and SHIFT-G")
   H.eq(W.bindings["2"], "ACTIONBUTTON2", "the button key stays")
   -- escape cancels, combat queues
-  findButton(W, "Bind key"):Click()
+  findButton(W, "Set keybind"):Click()
   cap._scripts.OnKeyDown(cap, "ESCAPE")
   H.ok(not cap:IsShown(), "escape cancels")
   W.combat = true
@@ -345,7 +345,7 @@ do
   W.env.GetBonusBarOffset = function() return 1 end
   UI.Refresh()
   H.ok(step():find("stance") ~= nil, "stance page on bar 1 explained")
-  findButton(W, "Move keys"):Click()
+  findButton(W, "Move macros"):Click()
   H.eq(Core.cdb.primaryBar, 61, "one click moves the keys to Bottom Left")
   W.env.GetBonusBarOffset = function() return 0 end
   UI.Refresh()
@@ -498,7 +498,7 @@ do
   pick("Conflagrate")
   if f.draft.steps[3] == "Conflagrate" then H.ok((f.warnFull or ""):find("Immolate") ~= nil, "Conflagrate warning shown") ; f.stepBtns[3]:Click() end
   f.name:SetText("Dots"); f.name._scripts.OnTextChanged(f.name, true)
-  findButton(W, "Save key"):Click()
+  findButton(W, "Save macro"):Click()
   local _, m = Core.me()
   H.eq(#m.customSeq, 1, "saved")
   H.eq(m.customSeq[1].name, "Dots", "named")
@@ -517,7 +517,7 @@ do
   H.eq(f.index, 1, "editing C1")
   f.draft.kind = "priority"; KE.Refresh()
   H.ok(not f.reset:IsShown(), "no reset option for a priority list")
-  findButton(W, "Save key"):Click()
+  findButton(W, "Save macro"):Click()
   H.eq(m.customSeq[1].kind, "priority", "kind changed")
   -- limits and delete
   for i = 2, 8 do KE.save(m, { name = "K" .. i, kind = "sequence", aim = "harm", steps = { "Immolate" }, filler = "Shadow Bolt", fills = 1, reset = "combat" }) end
@@ -525,7 +525,7 @@ do
   H.ok(row(ns, function(c) return c.kind == "new" end) == nil, "no New own key button at 8 keys")
   H.eq(select(1, KE.save(m, { name = "x", kind = "sequence", aim = "harm", steps = { "Immolate" }, filler = "", fills = 1, reset = "combat" })), nil, "9th key refused")
   row(ns, function(c) return c.name == "WBX C1" end):Click("LeftButton")
-  findButton(W, "Delete key"):Click()
+  findButton(W, "Delete macro"):Click()
   findButton(W, "Sure?"):Click()
   H.eq(#m.customSeq, 7, "deleted with two clicks")
   H.eq(#errors(ns), 0, "no errors (editor): " .. table.concat(errors(ns), " | "))
@@ -893,7 +893,7 @@ do
   cap._scripts.OnKeyDown(cap, "5")
   H.ok(cap:IsShown() and cap.text:GetText():find("is action button 5 (Shadow Bolt)", 1, true), "holds something else: " .. texts())
   H.eq(cap.yes:GetText(), "Put it there", "button: Put it there")
-  H.eq(cap.no:GetText(), "Another key", "or Another key")
+  H.eq(cap.no:GetText(), "Another keybind", "or Another keybind")
   noRaw("button question")
   cap.no:Click()
   H.ok(cap:IsShown() and not cap.yes:IsShown(), "Another key: waits again")

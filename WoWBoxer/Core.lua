@@ -156,7 +156,7 @@ Core.onlyGroups = only
 function Core.sync(opts)
   opts = opts or {}
   local groups = opts.page and Core.PAGE_GROUPS[opts.page] or nil
-  return Core.whenSafe(opts.page == "squad" and "Place squad keys" or opts.page == "spells" and "Place spells" or "Update WoWBoxer keys", function()
+  return Core.whenSafe(opts.page == "squad" and "Place squad macros" or opts.page == "spells" and "Place spells" or "Update WoWBoxer macros", function()
     Core.saveLineUnit()
     local ctx, why = Core.compute()
     if not ctx then chat(why); return end
@@ -168,7 +168,7 @@ function Core.sync(opts)
       bres = B.apply({ items = only(again.bars.items, again.desired, groups) }, Core.cdb, opts.replace)
     end
     Core.cdb.lastSync = { level = ctx.level, at = time and time() or 0 }
-    local msg = string.format("%d keys created, %d updated, %d placed on your bars", mres.created, mres.updated, bres.placed)
+    local msg = string.format("%d macros created, %d updated, %d placed on your bars", mres.created, mres.updated, bres.placed)
     if ctx.macros.counts.noslot > 0 then msg = msg .. string.format(", %d without a free macro slot", ctx.macros.counts.noslot) end
     if bres.skipped > 0 then msg = msg .. string.format(", %d left where they were (the button holds something else)", bres.skipped) end
     chat(msg .. ".")
@@ -272,7 +272,7 @@ function Core.pickup(name)
   if not ctx then return false, why end
   local item
   for _, it in ipairs(ctx.macros.items) do if it.name == name then item = it end end
-  if not item then return false, "Unknown key " .. tostring(name) end
+  if not item then return false, "Unknown macro " .. tostring(name) end
   if item.status == "noslot" then return false, "No free character macro slot. Delete a macro first." end
   if item.status == "invalid" then return false, item.why or "invalid macro" end
   if item.status == "create" or item.status == "update" or item.status == "skipped" then
@@ -299,7 +299,7 @@ function Core.pickupSpell(spellId)
   if not ctx then return false, why end
   for _, d in ipairs(ctx.desired) do if d.key == "X:" .. spellId then return Core.pickup(d.name) end end
   if not have then table.remove(extras) end
-  return false, "That spell has no key (passive, or not for this character and plan)."
+  return false, "That spell has no macro (passive, or not for this character and plan)."
 end
 --- Remember where the player put each WBX macro (any action slot), so Place all keeps it there.
 function Core.scanBars()
@@ -342,7 +342,7 @@ function Core.bindKey(name, key)
   return Core.whenSafe("Bind " .. name, function()
     local ok, info = ns.Binds.bind(name, key)
     if ok then
-      chat(Core.keyLabel(name) .. " is now on " .. key .. (info and info ~= ("MACRO " .. name) and (" (was: " .. info .. ")") or "") .. " for this character.")
+      chat(Core.keyLabel(name) .. " now has keybind " .. key .. (info and info ~= ("MACRO " .. name) and (" (was: " .. ns.Binds.bindingText(info) .. ")") or "") .. " on this character.")
       Core.log("info", "bind " .. key .. " -> " .. name .. " (was " .. tostring(info) .. ")")
     else chat("|cffff6060Could not bind:|r " .. tostring(info)); Core.log("warn", "bind failed " .. name .. ": " .. tostring(info)) end
     Core.changed()
@@ -358,8 +358,8 @@ function Core.placeOn(name, slot, key)
     if C.cursorBusy() then ClearCursor() end
     Core.cdb.slots[name] = slot
     Core.cdb.placedOnce[name] = true
-    chat(Core.keyLabel(name) .. " is now on " .. ns.Binds.buttonName(slot) .. (key and (" (key " .. key .. ")") or "") .. ".")
-    Core.log("info", "place " .. name .. " on slot " .. slot .. " for key " .. tostring(key))
+    chat(Core.keyLabel(name) .. " is now on " .. ns.Binds.buttonName(slot) .. (key and (" (keybind " .. key .. ")") or "") .. ".")
+    Core.log("info", "place " .. name .. " on slot " .. slot .. " for keybind " .. tostring(key))
     Core.changed()
   end)
 end
@@ -368,7 +368,7 @@ function Core.giveBack(key)
   return Core.whenSafe("Give " .. key .. " back", function()
     if ns.Binds.giveBack(key) then
       chat("Keybind " .. key .. " is back on " .. ns.Binds.buttonName(ns.Binds.DEFAULT_KEYS[key]) .. ".")
-      Core.log("info", "give back key " .. key)
+      Core.log("info", "give back keybind " .. key)
     end
     Core.changed()
   end)
@@ -376,7 +376,7 @@ end
 function Core.unbindKey(name)
   return Core.whenSafe("Unbind " .. name, function()
     local n = ns.Binds.unbind(name)
-    chat(plural(n, "key", "keys") .. " removed from " .. Core.keyLabel(name) .. ".")
+    chat(plural(n, "keybind", "keybinds") .. " removed from " .. Core.keyLabel(name) .. ".")
     Core.log("info", "unbind " .. name .. ": " .. n)
     Core.changed()
   end)
@@ -496,7 +496,7 @@ function Core.resetSummary(ch)
   if ch.char then
     local n = 0
     for _ in pairs(Core.cdb.overrides or {}) do n = n + 1 end
-    parts[#parts + 1] = "this character's settings" .. (n > 0 and (", " .. plural(n, "key override", "key overrides")) or "")
+    parts[#parts + 1] = "this character's settings" .. (n > 0 and (", " .. plural(n, "macro override", "macro overrides")) or "")
   end
   if ch.account then
     local b = 0
@@ -633,14 +633,14 @@ function Core.checkOffer(reason)
   local sig, n = Core.pending(ctx)
   if n == 0 or Core.lastOffer == sig then return end
   Core.lastOffer = sig
-  Core.log("info", "offer (" .. reason .. "): " .. n .. " key(s) changed at level " .. ctx.level)
+  Core.log("info", "offer (" .. reason .. "): " .. n .. " macro(s) changed at level " .. ctx.level)
   local cdb = Core.cdb
   if not cdb.lastSync then return end -- only players who already use WoWBoxer keys
   if cdb.offerShown == sig or cdb.offerSeen == sig then return end
   cdb.offerShown = sig
   if ns.Minimap and ns.Minimap.SetAttention then ns.Minimap.SetAttention(true) end
   if not Core.remindersOn() then return end
-  chat(string.format("%s changed at level %d. Open |cffffd100/wbx|r (or type |cffffd100/wbx sync|r) to update them.", plural(n, "key", "keys"), ctx.level))
+  chat(string.format("%s changed at level %d. Open |cffffd100/wbx|r (or type |cffffd100/wbx sync|r) to update them.", plural(n, "macro", "macros"), ctx.level))
   if ns.UI and ns.UI.ShowOffer then ns.UI.ShowOffer(ctx, sig) end
 end
 --- "Don't show again" on the toast: this pending state never shows again on this character (a new change does).
@@ -733,13 +733,13 @@ end
 -- ------------------------------------------------------------------ slash commands
 local HELP = {
   "/wbx – open or close the window",
-  "/wbx sync – create/update your keys and place new ones on your bars (same as Place all)",
+  "/wbx sync – create/update your macros and place new ones on your bars (same as Place all)",
   "/wbx minimap – show or hide the minimap button",
-  "/wbx bars – list where each key is and which key presses it",
+  "/wbx bars – list where each macro is and its keybind",
   "/wbx keys – open the game's key bindings (Quick Keybind mode where available)",
   "/wbx team on|off – team status panel (display only: follow, target, mana of your other clients)",
   "/wbx scale 0.9 – window size (0.7–1.3); /wbx reset – window back to the middle; /wbx reset all – Reset to default…",
-  "/wbx show – list your keys and what would change",
+  "/wbx show – list your macros and what would change",
   "/wbx cvars | /wbx cvars restore – apply recommended settings / put the old ones back",
   "/wbx selftest – write a diagnostic report to the saved variables",
   "/wbx log [n] – show the last n log lines; /wbx debug – toggle debug messages",
@@ -782,7 +782,7 @@ function Core.slash(msg)
       local keys = {}
       for _, k in ipairs(ns.Binds.keysFor(it.name, it.status == "placed" and it.slot or nil)) do keys[#keys + 1] = k.key end
       chat(string.format("  %s – %s: %s%s", it.name, it.label or "", it.status == "placed" and B.slotLabel(it.slot) or ("not placed (" .. it.status .. ")"),
-        #keys > 0 and (" · key " .. table.concat(keys, ", ")) or ""))
+        #keys > 0 and (" · keybind " .. table.concat(keys, ", ")) or ""))
     end
   elseif cmd == "minimap" then if ns.Minimap then ns.Minimap.SetHidden(not Core.db.settings.minimapHidden) end
   elseif cmd == "show" then
@@ -820,7 +820,7 @@ function Core.onEvent(event, ...)
     Core.writeBridge("login")
     if not Core.cdb.welcomed then
       Core.cdb.welcomed = true
-      chat("loaded. Type |cffffd100/wbx|r or click the minimap button to set up this character's keys.")
+      chat("loaded. Type |cffffd100/wbx|r or click the minimap button to set up this character's macros.")
     end
     safeRegister("PLAYER_LOGOUT")
     Core.log("info", "login " .. Core.charKey .. " " .. C.buildString() .. " (" .. C.game() .. ", toc " .. C.interface() .. ")")

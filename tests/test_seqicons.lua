@@ -45,13 +45,13 @@ do
   H.eq(s1.steps[#s1.steps], s1.main, "the filler comes last")
   local k1 = byKey(ctx, "K1")
   H.eq(k1.icon, ns.Macros.ICON, "single-spell keys keep #showtooltip with the ? icon")
-  -- an old WBX S1 with the ? icon and the same text: Update keys changes only the icon
+  -- an old WBX S1 with the ? icon and the same text: Update macros changes only the icon
   W.addMacro("WBX S1", s1.body, true)
   local it
   for _, x in ipairs(Core.computeFresh().macros.items) do if x.name == "WBX S1" then it = x end end
   H.eq(it.status, "update", "an old ? icon counts as a change")
   Core.sync({})
-  H.eq(macro(W, "WBX S1").icon, s1.icon, "after Update keys the macro has the real icon")
+  H.eq(macro(W, "WBX S1").icon, s1.icon, "after Update macros the macro has the real icon")
   for _, x in ipairs(Core.computeFresh().macros.items) do if x.name == "WBX S1" then it = x end end
   H.eq(it.status, "same", "and then nothing more to change")
   H.ok(not ns.Macros.iconChanged("Interface\\Icons\\INV_Misc_QuestionMark", nil), "no wanted icon = no change")

@@ -43,8 +43,8 @@ local function tooltip(GT)
   GT:AddLine("WoWBoxer", 1, 0.82, 0)
   local ok, ctx = pcall(ns.Core.compute)
   if ok and ctx then
-    if ctx.macros.changes > 0 then GT:AddLine(ctx.macros.changes .. (ctx.macros.changes == 1 and " key" or " keys") .. " to create or update", 0.94, 0.71, 0.24)
-    else GT:AddLine("Keys up to date for level " .. ctx.level, 0.56, 0.75, 0.42) end
+    if ctx.macros.changes > 0 then GT:AddLine(ctx.macros.changes .. (ctx.macros.changes == 1 and " macro" or " macros") .. " to create or update", 0.94, 0.71, 0.24)
+    else GT:AddLine("Macros up to date for level " .. ctx.level, 0.56, 0.75, 0.42) end
   end
   GT:AddLine("Left-click: open / close", 0.85, 0.85, 0.85)
   GT:AddLine("Right-click: menu", 0.85, 0.85, 0.85)
@@ -54,7 +54,7 @@ end
 -- ------------------------------------------------------------------ right-click menu
 local ITEMS = {
   { "Open WoWBoxer", function() ns.UI.Open("keys") end },
-  { "Place all keys", function() ns.Core.sync({ replace = ns.Core.cdb.replace }) end },
+  { "Place all macros", function() ns.Core.sync({ replace = ns.Core.cdb.replace }) end },
   { "First-run guide", function() ns.Book.ShowGuide() end },
   { "Squad guide", function() ns.Help.ShowSquadGuide() end },
   { "Setup", function() ns.UI.Open("setup") end },

@@ -22,30 +22,30 @@ local function sq(key) return UI.panels.squad.frames[key] end
 
 --- page key -> {title, tip = {lines}, callouts = fn() -> {{frame, text}}}
 Help.PAGES = {
-  keys = { tip = { "Drag a key onto your action bar.", "Glow = new, orange dot = changed, dim = not on a bar.", "The banner shows the one thing to do now." },
+  keys = { tip = { "Drag a macro onto your action bar.", "Glow = new, orange dot = changed, dim = not on a bar.", "The banner shows the one thing to do now." },
     callouts = function() local p = UI.panels.keys
       local helper
       for _, b in ipairs(p.helperPool or {}) do if b:IsShown() then helper = helper or b end end
-      return { { p.strip, "Next step: one click" }, { firstShown(p.cells), "Drag a key to your bar" }, { p.role, "Role and leader or follower" },
-        { helper, "Follow, assist and pet keys" }, { p.det, "The selected key" } } end },
-  spells = { tip = { "Every spell you know, then later ones.", "Drag one onto your bar to make it a key.", "Grey: trainer. Lock: a later level." },
+      return { { p.strip, "Next step: one click" }, { firstShown(p.cells), "Drag a macro to your bar" }, { p.role, "Role and leader or follower" },
+        { helper, "Follow, assist and pet macros" }, { p.det, "The selected macro" } } end },
+  spells = { tip = { "Every spell you know, then later ones.", "Drag one onto your bar to make it a macro.", "Grey: trainer. Lock: a later level." },
     callouts = function() local p = UI.panels.spells
       return { { p.strip, "Next step" }, { firstShown(p.cells), "Drag a spell to your bar" }, { p.hint, "Grey: trainer · Lock: later levels" } } end },
-  custom = { tip = { "Your own sequence keys, up to 8.", "Click a key to edit it.", "Right-click for copy and more." },
+  custom = { tip = { "Your own sequence macros, up to 8.", "Click a macro to edit it.", "Right-click for copy and more." },
     callouts = function() local p = UI.panels.custom
       local new, own
       for _, b in ipairs(p.cells) do if b:IsShown() and b.cell then if b.cell.kind == "new" then new = b else own = own or b end end end
-      return { { p.strip, "Next step" }, { own, "Click a key to edit it" }, { new, "Build a new key" }, { p.hint, "Up to 8 own keys" } } end },
-  editor = { tip = { "Build a key from your spells.", "Add spells as steps; pick a filler.", "Save, then place it like any key." },
+      return { { p.strip, "Next step" }, { own, "Click a macro to edit it" }, { new, "Build a new macro" }, { p.hint, "Up to 8 own macros" } } end },
+  editor = { tip = { "Build a macro from your spells.", "Add spells as steps; pick a filler.", "Save, then place it like any macro." },
     callouts = function() local f = ns.KeyEditor.frame
       return { { f.kind, "Sequence or priority list" }, { f.strip, "Steps: click one to remove" }, { f.pickSf, "Add spells or pick a filler" },
-        { f.macroSf, "The macro WoW will run" }, { f.save, "Save the key" } } end },
+        { f.macroSf, "The macro WoW will run" }, { f.save, "Save the macro" } } end },
   talents = { tip = { "The talent order of your guide.", "Take the point shown under Next." },
     callouts = function() local p = UI.panels.talents
       return { { p.guide, "Pick a talent guide" }, { p.nb, "Your next talent" }, { p.sf, "The whole point order" }, { p.readback, "Points spent in game" } } end },
-  setup = { tip = { "Where your keys go and game settings.", "Fix buttons change WoWBoxer only." },
+  setup = { tip = { "Where your macros go and game settings.", "Fix buttons change WoWBoxer only." },
     callouts = function() local p = UI.panels.setup
-      return { { p.bar1, "Where your keys go" }, { p.replace, "May replace other buttons" }, { p.checkSf, "Multibox checklist" },
+      return { { p.bar1, "Where your macros go" }, { p.replace, "May replace other buttons" }, { p.checkSf, "Multibox checklist" },
         { p.applyCv, "Apply recommended settings" }, { p.restore, "Undo game settings" } } end },
   ["squad:main"] = { tip = { "Who plays together, who leads; changes save at once.", "Follow (line): each follows the one before – easier on narrow paths.",
     "Follow leader: everyone stays close to the leader." },
@@ -56,9 +56,9 @@ Help.PAGES = {
       end
       return { { r and r.crown, "Click a crown: the leader" }, { r and r.role, "Role per character" }, { f.add, "Add someone not in your party" },
         { f.send, "Send to your other clients" }, { p.more, "Readiness, key map, plan, presets" } } end },
-  ["squad:presets"] = { tip = { "Who leads, saved to switch back.", "Notes and everyone's sequence keys." },
+  ["squad:presets"] = { tip = { "Who leads, saved to switch back.", "Notes and everyone's sequence macros." },
     callouts = function() local f = sq("presets")
-      return { { f.preset, "Switch who leads" }, { f.savePreset, "Save who leads now" }, { f.allSeq, "Everyone's sequence keys" } } end },
+      return { { f.preset, "Switch who leads" }, { f.savePreset, "Save who leads now" }, { f.allSeq, "Everyone's sequence macros" } } end },
   ["squad:ready"] = { tip = { "Is everyone set up?", "Fix your own line here; the others on their clients." },
     callouts = function() local f = sq("ready")
       local r = firstRow(f.pool)

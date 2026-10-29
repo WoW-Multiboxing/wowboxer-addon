@@ -45,7 +45,7 @@ local function frame()
   f.close = W.button(f, "Close", 80, 22, function() f:Hide() end, "Closes this box. Nothing changes.")
   f.close:SetPoint("BOTTOMRIGHT", -10, 10)
   f.use = W.button(f, "Use it", 80, 22, function() if f.parsed and f.onUse then local d = f.parsed; f:Hide(); f.onUse(d) end end,
-    "Puts the spells into the key editor. Nothing is saved until you press Save key.")
+    "Puts the spells into the macro editor. Nothing is saved until you press Save macro.")
   f.use:SetPoint("RIGHT", f.close, "LEFT", -6, 0)
   -- copy mode: the text cannot be changed by typing
   local function keep(self, user) if user and f.mode == "copy" and self.fixed then self:SetText(self.fixed); self:HighlightText() end end
@@ -68,7 +68,7 @@ function CB.ShowCopy(title, macroText, keyString)
   f.e1:SetText(f.e1.fixed)
   local hasKey = keyString ~= nil
   f.l2:SetShown(hasKey); f.s2:SetShown(hasKey); f.sel2:SetShown(hasKey)
-  f.l2:SetText("WoWBoxer key – on another character: Custom keys → New own key → Paste:")
+  f.l2:SetText("WoWBoxer macro – on another character: My own macros → New macro → Paste:")
   f.e2.fixed = keyString or ""
   f.e2:SetText(f.e2.fixed)
   f.result:SetText("Select the text, then Ctrl+C. Nothing in the game changes.")
@@ -82,8 +82,8 @@ end
 function CB.ShowPaste(onUse)
   local f = frame()
   f.mode, f.onUse, f.parsed = "paste", onUse, nil
-  f.title:SetText("Paste a key")
-  f.l1:SetText("Paste a WoWBoxer key (!WBXK:1!…) or a macro with /castsequence or /cast lines (Ctrl+V):")
+  f.title:SetText("Paste a macro")
+  f.l1:SetText("Paste a WoWBoxer macro (!WBXK:1!…) or a macro with /castsequence or /cast lines (Ctrl+V):")
   f.e1.fixed = nil
   f.e1:SetText("")
   f.l2:Hide(); f.s2:Hide(); f.sel2:Hide(); f.sel1:Hide()

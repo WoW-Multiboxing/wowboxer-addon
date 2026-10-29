@@ -68,7 +68,7 @@ do
     H.eq(W.calls[api], nil, "no " .. api .. " without a click")
   end
   H.eq(W.cvars.autoLootDefault, "0", "no CVar changed without a click")
-  H.ok(W.chatHas("keys? changed"), "but the level-up offer was shown")
+  H.ok(W.chatHas("macros? changed"), "but the level-up offer was shown")
 end
 
 -- v8.5 sequences: the diagnose holds the [AFKLAR] spell-name check; a Rogue follower gets a combo key + the Assist tip
@@ -91,7 +91,7 @@ do
   H.ok(r.seqCheck and r.seqCheck.names["Hemorrhage"] and r.seqCheck.names["Hemorrhage"].id, "diagnose: v8.5 spell names checked by spell ID")
   H.eq(#r.seqCheck.open, 3, "diagnose: the three in-game checks are listed")
   H.eq(r.seqCheck.mine.seq, "medium", "diagnose: this character's sequence tier")
-  H.ok(ns.Widgets.SEQ_KINDS:find("Sequence key", 1, true) and ns.Widgets.SEQ_KINDS:find("Priority key", 1, true), "help: one sentence each on sequence vs priority keys")
+  H.ok(ns.Widgets.SEQ_KINDS:find("Sequence macro", 1, true) and ns.Widgets.SEQ_KINDS:find("Priority macro", 1, true), "help: one sentence each on sequence vs priority keys")
   H.eq(W.calls.CreateMacro, nil, "nothing written")
 end
 

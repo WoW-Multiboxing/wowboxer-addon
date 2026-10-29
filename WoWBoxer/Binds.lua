@@ -124,13 +124,13 @@ KB.DEFAULT_KEYS = { ["1"] = 1, ["2"] = 2, ["3"] = 3, ["4"] = 4, ["5"] = 5, ["6"]
 --- Returns true, previousAction or false, reason.
 function KB.bind(name, key)
   if not ns.Rules.isOurs(name) then return false, "only WBX macros can be bound" end
-  if not key or key == "" then return false, "no key" end
+  if not key or key == "" then return false, "no keybind" end
   if ns.Compat.inCombat() then return false, "in combat" end
   if not G.SetBindingMacro then return false, "SetBindingMacro is not available" end
   local before = KB.actionOf(key)
   if KB.slotForCommand(before) then return false, key .. " is the keybind of " .. KB.buttonName(KB.slotForCommand(before)) .. " – put the macro on that button instead" end
   local ok = G.SetBindingMacro(key, name)
-  if not ok then return false, "the game refused the key" end
+  if not ok then return false, "the game refused the macro" end
   local prev = prevStore()
   if prev[key] == nil and before ~= "MACRO " .. name then prev[key] = before or "" end -- "" = it did nothing before
   save()

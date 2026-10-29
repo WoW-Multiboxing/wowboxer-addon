@@ -44,7 +44,7 @@ for _, fileIds in ipairs({ false, true }) do
   local upd = {}
   for _, it in ipairs(again.items) do if it.status ~= "same" then upd[#upd + 1] = it.name .. "=" .. it.status end end
   H.eq(table.concat(upd, ","), "", tag .. "no endless updates after the icon is set")
-  -- an old ? helper gets the icon with the next Update keys
+  -- an old ? helper gets the icon with the next Update macros
   fm.icon = 134400
   local st
   for _, it in ipairs(Core.computeFresh().macros.items) do if it.name == "WBX Follow" then st = it.status end end
@@ -56,7 +56,7 @@ for _, fileIds in ipairs({ false, true }) do
   for _, b in ipairs(UI.panels.keys.cells) do
     if b:IsShown() and b.cell and b.cell.name == "WBX Follow" then helperCell = b end
   end
-  H.ok(table.concat(heads, ","):find("Spells", 1, true) and table.concat(heads, ","):find("Squad keys", 1, true), tag .. "sections: " .. table.concat(heads, ","))
+  H.ok(table.concat(heads, ","):find("Spells", 1, true) and table.concat(heads, ","):find("Squad macros", 1, true), tag .. "sections: " .. table.concat(heads, ","))
   H.eq(helperCell and helperCell.name:GetText(), "Follow (line)", tag .. "short helper name")
   H.ok(helperCell and helperCell.small, tag .. "helpers are the small buttons")
   H.ok(helperCell ~= nil, tag .. "Follow is in the book")
@@ -64,7 +64,7 @@ for _, fileIds in ipairs({ false, true }) do
   W.env.GameTooltip.AddLine = function(_, t) lines[#lines + 1] = t end
   helperCell._scripts.OnEnter(helperCell)
   local all = table.concat(lines, "\n")
-  H.ok(all:find("Follows", 1, true) and all:find("One press, one action", 1, true) and all:find("untick it under Squad keys", 1, true),
+  H.ok(all:find("Follows", 1, true) and all:find("One press, one action", 1, true) and all:find("untick it under Squad macros", 1, true),
     tag .. "hover explains what Follow does and why it is there")
   H.ok(all:find("/follow party1", 1, true) ~= nil, tag .. "and shows the macro text")
   -- a header is a rule, never a key button
@@ -127,7 +127,7 @@ do
   H.eq(table.concat(f.draft.steps, ","), "Demon Skin,Summon Imp,Immolate", "the editor got the steps")
   H.eq(f.draft.filler, "Shadow Bolt", "and the filler")
   local warn = f.warnFull
-  H.ok((f.warn:GetText() or ""):find("buffs – put them on their own key", 1, true) ~= nil, "short warning line: " .. tostring(f.warn:GetText()))
+  H.ok((f.warn:GetText() or ""):find("buffs – put them on their own macro", 1, true) ~= nil, "short warning line: " .. tostring(f.warn:GetText()))
   H.ok(warn:find("Demon Skin, Summon Imp are buffs or summons", 1, true) ~= nil, "warns about buffs and summons in an enemy key: " .. warn)
   H.ok(warn:find("Summon Imp (10 s)", 1, true) ~= nil, "warns about the 10 s summon")
   H.eq(W.calls.CreateMacro, nil, "pasting writes nothing to the game")

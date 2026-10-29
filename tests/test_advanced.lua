@@ -119,7 +119,7 @@ rf.ticks[1]:Click() -- untick: nothing chosen
 H.ok(not rf.next:IsEnabled(), "nothing ticked: Next disabled")
 rf.ticks[1]:Click(); rf.ticks[3]:Click(); rf.ticks[4]:Click()
 rf.next:Click()
-H.ok(rf.step == 2 and rf.summary:GetText():find("key override", 1, true) and rf.summary:GetText():find("WBX macro", 1, true), "step 2 summary: " .. rf.summary:GetText())
+H.ok(rf.step == 2 and rf.summary:GetText():find("macro override", 1, true) and rf.summary:GetText():find("WBX macro", 1, true), "step 2 summary: " .. rf.summary:GetText())
 H.ok(not rf.go:IsEnabled(), "Reset disabled until RESET is typed")
 rf.typed:SetText("reset"); rf.typed._scripts.OnTextChanged(rf.typed)
 H.ok(not rf.go:IsEnabled(), "lower case does not count")

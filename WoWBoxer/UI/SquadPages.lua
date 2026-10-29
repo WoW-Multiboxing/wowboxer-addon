@@ -25,7 +25,7 @@ local function header(f, cols, y)
 end
 
 -- ------------------------------------------------------------------ Readiness
-local RCOLS = { { "Character", 4, "LEFT", 128 }, { "In party", 140, "CENTER", 56 }, { "Unit", 200, "CENTER", 56 }, { "Keys", 260, "CENTER", 56 },
+local RCOLS = { { "Character", 4, "LEFT", 128 }, { "In party", 140, "CENTER", 56 }, { "Unit", 200, "CENTER", 56 }, { "Macros", 260, "CENTER", 56 },
   { "Follow/Assist", 320, "CENTER", 84 }, { "Settings", 408, "CENTER", 60 }, { "Signal", 472, "CENTER", 48 } }
 local CHECKS = { "party", "unit", "keys", "helpers", "cvars", "signal" }
 --- {party, unit, keys, helpers, cvars, signal} = true / false / nil (unknown) for one readiness row.
@@ -45,9 +45,9 @@ function SP.myFix(row)
   local rd = row.ready
   if not rd then return nil end
   local hu = ns.Squad.unitHint()
-  if hu then return { "Use " .. hu, "Your keys follow the leader through " .. hu .. " here (WoWBoxer's setting only; then Update keys).", function() Core().setPlaysAs(hu) end } end
+  if hu then return { "Use " .. hu, "Your macros follow the leader through " .. hu .. " here (WoWBoxer's setting only; then Update macros).", function() Core().setPlaysAs(hu) end } end
   if rd.keys > 0 or rd.helpers == 0 then
-    return { "Update keys", "Creates or updates your WoWBoxer macros and puts missing keys on your bars.", function() Core().sync({ replace = Core().cdb.replace }) end }
+    return { "Update macros", "Creates or updates your WoWBoxer macros and puts missing macros on your bars.", function() Core().sync({ replace = Core().cdb.replace }) end }
   end
   if rd.cvars > 0 then
     return { "Apply settings", "Changes the recommended game settings on this client (the old values are kept for Restore).", function() Core().applyCVars(Core().cdb.importCVars) end }
@@ -111,8 +111,8 @@ SP.register({ key = "ready", more = true, label = "Readiness", tip = "Is everyon
       r.title = row.m.name
       r.lines = {
         "In party: " .. (c.party and "yes" or "no"),
-        "Unit: " .. (c.unit == true and "the leader is where the keys expect him" or c.unit == false and "the keys point at another party member" or "unknown"),
-        "Keys: " .. (rd and (rd.keys == 0 and "up to date" or (rd.keys .. " to create, update or place")) or "unknown"),
+        "Unit: " .. (c.unit == true and "the leader is where the macros expect him" or c.unit == false and "the macros point at another party member" or "unknown"),
+        "Macros: " .. (rd and (rd.keys == 0 and "up to date" or (rd.keys .. " to create, update or place")) or "unknown"),
         "Follow/Assist on a bar: " .. (rd and (rd.helpers == 1 and "yes" or "no") or "unknown"),
         "Game settings: " .. (rd and (rd.cvars == 0 and "applied" or (rd.cvars .. " to change")) or "unknown"),
         "Signal: " .. (row.signal and ("WoWBoxer " .. (row.version or "?")) or "none – is WoWBoxer running there and in your party?"),
@@ -139,7 +139,7 @@ SP.register({ key = "ready", more = true, label = "Readiness", tip = "Is everyon
 
 -- ------------------------------------------------------------------ Key map: same key, same job
 local KX, KW = 136, 40
-SP.register({ key = "keymap", more = true, label = "Key map", tip = "Same key, same job: which spell each character has on each key.",
+SP.register({ key = "keymap", more = true, label = "Key map", tip = "Same key, same job: which spell each character has on each macro.",
   build = function(f)
     local h = W.line(f, "GameFontNormalSmall", nil, W.GOLD)
     h:SetPoint("TOPLEFT", 4, 0)
@@ -182,7 +182,7 @@ SP.register({ key = "keymap", more = true, label = "Key map", tip = "Same key, s
     f.note:SetJustifyV("TOP")
     if f.note.SetMaxLines then f.note:SetMaxLines(4) end
     f.copy = W.button(f, "Cheat sheet", 100, 22, function() SP.showCheatSheet(f) end,
-      "Shows the key map as text: Select all, Ctrl+C, and paste it wherever you keep notes.")
+      "Shows the macro map as text: Select all, Ctrl+C, and paste it wherever you keep notes.")
     f.copy:SetPoint("TOPRIGHT", 0, -18 - 9 * 30 - 4)
     -- the cheat sheet box
     local box = W.box(f, 0.09, 0.07, 0.045, 0.99)
@@ -229,7 +229,7 @@ SP.register({ key = "keymap", more = true, label = "Key map", tip = "Same key, s
           c.icon:Hide()
           local gap = someone and k[1]:match("^K") ~= nil
           c.bg:SetColorTexture(gap and 0.45 or 0, 0, 0, gap and 0.35 or 0.15)
-          c.title, c.text = row.m.name, gap and "No spell on this key yet (level or class) – the others have one here." or "Not used by this character."
+          c.title, c.text = row.m.name, gap and "No spell on this macro yet (level or class) – the others have one here." or "Not used by this character."
         end
       end
     end

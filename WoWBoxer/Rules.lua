@@ -65,14 +65,14 @@ end
 -- Every entry is checked on the running client first (missing CVars are skipped).
 R.CVARS = {
   { name = "autoLootDefault", leader = "1", follower = "1", label = "Auto loot", why = "Loot with one click on every character." },
-  { name = "deselectOnClick", leader = "1", follower = "1", label = "Clear target on click", why = "On (the game's normal): clicking empty ground clears your target. WoWBoxer's keys use mouseover and the leader's target, so sticky targeting is not needed." },
+  { name = "deselectOnClick", leader = "1", follower = "1", label = "Clear target on click", why = "On (the game's normal): clicking empty ground clears your target. WoWBoxer's macros use mouseover and the leader's target, so sticky targeting is not needed." },
   { name = "autoSelfCast", leader = "1", follower = "1", label = "Auto self cast", why = "Friendly spells fall back to yourself when nothing friendly is targeted." },
   { name = "maxfpsbk", leader = "30", follower = "30", label = "Background FPS cap", why = "Windows in the background draw at most 30 frames per second, so several clients run smoothly." },
   { name = "Sound_EnableSoundWhenGameIsInBG", leader = "1", follower = "0", label = "Sound in background", why = "Only the leader plays sound when its window is in the background." },
   { name = "Sound_EnableErrorSpeech", leader = "1", follower = "0", label = "Error speech", why = "Followers do not say \"Not enough mana\" and similar out loud." },
   { name = "showTargetOfTarget", leader = "1", follower = "1", label = "Target of target", why = "See who your target is attacking." },
-  { name = "ActionButtonUseKeyDown", leader = "1", follower = "1", label = "Cast on key down", why = "Actions fire when the key goes down (the game's default)." },
-  { name = "AutoPushSpellToActionBar", leader = "0", follower = "0", label = "No auto-placed spells", why = "New spells are not dropped onto your bars, so WoWBoxer keys stay where you put them." },
+  { name = "ActionButtonUseKeyDown", leader = "1", follower = "1", label = "Cast on key down", why = "Actions fire when the macro goes down (the game's default)." },
+  { name = "AutoPushSpellToActionBar", leader = "0", follower = "0", label = "No auto-placed spells", why = "New spells are not dropped onto your bars, so WoWBoxer macros stay where you put them." },
   { name = "autoClearAFK", leader = "1", follower = "1", label = "Clear AFK automatically", why = "Moving or acting clears AFK." },
   { name = "nameplateShowEnemies", leader = "1", follower = "1", label = "Enemy nameplates", why = "Health bars over enemies: see what the squad is fighting." },
   { name = "nameplateShowFriends", leader = "1", follower = "1", label = "Friendly nameplates", why = "Health bars over your squad and other friends: easier healing and mouseover." },
@@ -104,7 +104,7 @@ end
 R.ADDONS = {
   { name = "Questie", why = "Quest objectives on the map; every character sees the same quests." },
   { name = "Leatrix_Plus", why = "Quality of life (faster loot, automation off by default)." },
-  { name = "WhatsTraining", why = "Shows what your trainer has for you; WoWBoxer's keys update when you learn new spells." },
+  { name = "WhatsTraining", why = "Shows what your trainer has for you; WoWBoxer's macros update when you learn new spells." },
   { name = "TomTom", why = "Waypoints for the leader." },
 }
 function R.cleanAddonName(v)

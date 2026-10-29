@@ -164,19 +164,19 @@ do
   local n = 0
   for _ in (a.body .. "\n" .. b.body):gmatch("/invite ") do n = n + 1 end
   H.eq(n, #s.members - 1, "everyone else is invited exactly once")
-  -- the book shows them under Squad keys with ticks; the Squad page has the same ticks
+  -- the book shows them under Squad macros with ticks; the Squad page has the same ticks
   UI.Select("keys")
   local sp = ns.Book.spread(Core.compute())
-  H.eq(sp.helpers.title, "Squad keys", "My keys: a Squad keys section")
+  H.eq(sp.helpers.title, "Squad macros", "My keys: a Squad macros section")
   H.eq(sp.helpers.cells[1].squadKey, "Invite", "Invite first, with its tick")
   UI.Select("squad")
   local f = UI.panels.squad.frames.main
   H.eq(f.keys.ticks[1].label:GetText(), "Invite squad", "Squad page: Invite squad tick")
   H.ok(f.keys.ticks[1]:GetChecked(), "ticked")
-  H.ok(f.keys.update:IsShown(), "keys to make: Update keys on the Squad page")
+  H.ok(f.keys.update:IsShown(), "keys to make: Update macros on the Squad page")
   H.eq(W.calls.CreateMacro, nil, "ticks and squad changes write nothing to the game by themselves")
   f.keys.update:Click()
-  H.ok(M.findIndex("WBX Invite") ~= nil, "Update keys creates the Invite macro (a click)")
+  H.ok(M.findIndex("WBX Invite") ~= nil, "Update macros creates the Invite macro (a click)")
   H.ok(f.keys.state:IsShown() and f.keys.state:GetText() == "On your bars", "then: On your bars")
 end
 

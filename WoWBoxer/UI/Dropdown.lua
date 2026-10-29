@@ -4,7 +4,7 @@
     frame with radio rows; it closes on a choice, Esc or a click outside. Mouse only, no keyboard focus.
   Never UIDropDownMenu (deprecated in the modern UI and taint-prone).
   W.dropdown(parent, {width, values=fn -> {{value, label, tip?}}, get=fn, set=fn(value)}) returns a frame with
-  Refresh(), select(value), step(±1), open() and isBlizzard. W.seqControl is the "Use sequence keys" box + tier. ]]
+  Refresh(), select(value), step(±1), open() and isBlizzard. W.seqControl is the "Use sequence macros" box + tier. ]]
 local _, ns = ...
 local W = ns.Widgets
 
@@ -217,18 +217,18 @@ W.SEQ_TIERS = {
   { "medium", "Medium", "The usual rotation for your level." },
   { "advanced", "Advanced", "More spells and dots – for experienced players." },
 }
-W.SEQ_CLASSES = "Every class has built-in sequence keys – make your own under Custom keys."
+W.SEQ_CLASSES = "Every class has built-in sequence macros – make your own under My own macros."
 --- One sentence each: sequence keys vs priority keys (docs/sequences-all-classes.md §4).
-W.SEQ_KINDS = "Sequence key: each press casts the next spell of a fixed order (DoTs first, then the filler). " ..
-  "Priority key: each press casts the first spell in the list that is ready (Execute, Revenge, Stormstrike …)."
-local SEQ_LABEL = "Use sequence keys"
+W.SEQ_KINDS = "Sequence macro: each press casts the next spell of a fixed order (DoTs first, then the filler). " ..
+  "Priority macro: each press casts the first spell in the list that is ready (Execute, Revenge, Stormstrike …)."
+local SEQ_LABEL = "Use sequence macros"
 --- opts: {member=fn -> m, set=fn(m, tier)? (default: m.seq = tier + Core.changed()), width (dropdown, default 100)}.
 --- A frame (check + tier dropdown, or a note for classes without sequences) with Refresh() and its own width.
 function W.seqControl(parent, opts)
   local ddW = opts.width or 100
   local f = CreateFrame("Frame", nil, parent)
   local function set(m, tier)
-    if opts.set then opts.set(m, tier) else m.seq = tier; ns.Core.log("info", "sequence keys " .. tier); ns.Core.changed() end
+    if opts.set then opts.set(m, tier) else m.seq = tier; ns.Core.log("info", "sequence macros " .. tier); ns.Core.changed() end
   end
   f.check = W.check(f, SEQ_LABEL, function(_, v)
     local m = opts.member()
@@ -243,14 +243,14 @@ function W.seqControl(parent, opts)
   W.tip(f.check, SEQ_LABEL, function()
     local m = opts.member()
     if m and not ns.Engine.seqSupported(m.cls) then return W.SEQ_CLASSES end
-    return "Adds a key that casts your rotation. " .. W.SEQ_KINDS .. " One press is still one spell on one character."
+    return "Adds a macro that casts your rotation. " .. W.SEQ_KINDS .. " One press is still one spell on one character."
   end)
   f.tier = W.dropdown(f, { width = ddW,
     values = function() return W.SEQ_TIERS end,
     get = function() local m = opts.member(); if not m then return nil end; return m.seq ~= "off" and m.seq or m.seqTier or "simple" end,
     set = function(v) local m = opts.member(); if m then m.seqTier = v; set(m, v) end end })
   f.tier:SetPoint("LEFT", f.check.label, "RIGHT", 6, 0)
-  W.ddTip(f.tier, "Sequence keys", "Simple: few spells. Medium: the usual rotation. Advanced: more spells and dots. Untick the box to turn sequence keys off.")
+  W.ddTip(f.tier, "Sequence macros", "Simple: few spells. Medium: the usual rotation. Advanced: more spells and dots. Untick the box to turn sequence macros off.")
   f.note = W.line(f, "GameFontHighlightSmall", nil, W.MUTED)
   f.note:SetPoint("LEFT", f.check.label, "RIGHT", 6, 0)
   f.note:SetWidth(ddW)

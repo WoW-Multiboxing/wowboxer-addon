@@ -53,7 +53,7 @@ for _, scenario in ipairs({
   H.ok(anyText(W, "^Step 1 of 3") ~= nil, tag .. "guide step 1")
   findButton(W, "Next"):Click()
   H.ok(anyText(W, "^Step 2 of 3") ~= nil, tag .. "guide step 2")
-  H.ok(anyText(W, "Place all puts your %d+ keys on Action Bar 1") ~= nil, tag .. "step 2 says where the keys go")
+  H.ok(anyText(W, "Place all puts your %d+ macros on Action Bar 1") ~= nil, tag .. "step 2 says where the keys go")
   H.eq(W.calls.CreateMacro, nil, tag .. "the guide writes nothing before the click")
   findButton(W, "Place all"):Click()
   H.eq(Core.compute().macros.changes, 0, tag .. "Place all creates everything")
@@ -63,7 +63,7 @@ for _, scenario in ipairs({
   H.ok(anyText(W, "^Step 3 of 3") ~= nil, tag .. "guide step 3")
   findButton(W, "Close"):Click()
   H.ok(not guide:IsShown(), tag .. "guide closed")
-  H.ok(anyText(W, "All keys on your bars") ~= nil or anyText(W, "All set") ~= nil, tag .. "next step: all done")
+  H.ok(anyText(W, "All macros on your bars") ~= nil or anyText(W, "All set") ~= nil, tag .. "next step: all done")
   local tl = ns.Squad.nextTrainer(select(2, Core.me()))
   if tl and tl <= scenario.level + 4 then
     H.ok(anyText(W, "trainer at " .. tl .. ": ") ~= nil, tag .. "the trainer to-do on the top line (level " .. tl .. ")")
@@ -157,7 +157,7 @@ for _, scenario in ipairs({
   UI.Select("keys")
   H.ok(anyText(W, "In combat") ~= nil, tag .. "combat explained in the next step")
   UI.panels.keys.cells[1]:Click("LeftButton")
-  H.ok(not findButton(W, "Bind key"):IsEnabled(), tag .. "Bind key disabled in combat")
+  H.ok(not findButton(W, "Set keybind"):IsEnabled(), tag .. "Bind key disabled in combat")
   W.combat = false
   -- the "?" is a quest-style badge that stays inside its box and inside the window border
   do
@@ -258,7 +258,7 @@ local function layoutPass(screen, opts)
   ns.Sync.offer({ kind = "preset", from = "Wowtwo", name = "Dungeon – Wowtwo heals", leader = "Dorinverylongname", squadId = "x", presetId = "y" })
   check("preset offer card", { ns.Sync.frame })
   ns.Sync.dismiss()
-  ns.Sync.offer({ kind = "session", from = "", text = "Squad The undead trio of doom · 3/3 online · keys OK on 1/3 · Wowtwo, Kirrathedestroyer need Update keys" })
+  ns.Sync.offer({ kind = "session", from = "", text = "Squad The undead trio of doom · 3/3 online · keys OK on 1/3 · Wowtwo, Kirrathedestroyer need Update macros" })
   check("session card", { ns.Sync.frame })
   ns.Sync.dismiss()
   UI.Select("keys")

@@ -29,11 +29,11 @@ local KIND = { S1 = "Damage sequence", S2 = "Heal sequence" }
 --- "Key 3", "Own key 2", "Damage sequence", "Helper", "Extra key"
 function Book.kindName(it)
   local k = it.key or ""
-  if k:match("^K%d$") then return "Key " .. k:sub(2) end
-  if k:match("^C%d$") then return "Own key " .. k:sub(2) end
+  if k:match("^K%d$") then return "Macro " .. k:sub(2) end
+  if k:match("^C%d$") then return "Own macro " .. k:sub(2) end
   if KIND[k] then return KIND[k] end
   if it.group == "helper" then return "Helper" end
-  if it.group == "extra" then return "Extra key" end
+  if it.group == "extra" then return "Extra macro" end
   return k
 end
 --- Short helper names (the spec: no truncated names).
@@ -45,7 +45,7 @@ function Book.shortLabel(it)
 end
 --- Status words (tooltips only; the page shows colours).
 Book.STATUS = {
-  create = { "New key", W.BLUE }, update = { "Changed", W.ORANGE }, noslot = { "No macro slot", W.RED },
+  create = { "New macro", W.BLUE }, update = { "Changed", W.ORANGE }, noslot = { "No macro slot", W.RED },
   invalid = { "Blocked", W.RED }, skipped = { "Left out", W.MUTED },
 }
 --- How a key looks: {glow, dot = colour?, dim (not on a bar), off (left out), word, color}.
@@ -101,7 +101,7 @@ function Book.helperShort(key, mem)
     Assist = "Takes " .. L .. "'s target.", Focus = "Sets your target as focus.",
     Pet = "Sends your pet at " .. ((mem and mem.leader) and "your target." or (L .. "'s target.")), PetBack = "Calls your pet back, passive.",
     Invite = "Invites the others in your squad.", Invite2 = "Invites the rest of your squad.", Target = "Targets " .. L .. "." }
-  return T[key] or "A helper key."
+  return T[key] or "A squad macro."
 end
 --- The longer helper text for tooltips: what it does and why WoWBoxer made it.
 function Book.helperText(key, mem)
@@ -109,8 +109,8 @@ function Book.helperText(key, mem)
   mem = mem or me
   local u = mem and mem.unit or "party1"
   local why = (key == "Invite" or key == "Invite2") and "Built from your squad's names; it changes when the squad does. They still accept by hand."
-    or (key == "Pet" or key == "PetBack") and "You have a pet; untick it under Squad keys if you don't want it."
-    or ("Uses " .. leaderName(mem) .. " through " .. u .. "; untick it under Squad keys if you don't want it.")
+    or (key == "Pet" or key == "PetBack") and "You have a pet; untick it under Squad macros if you don't want it."
+    or ("Uses " .. leaderName(mem) .. " through " .. u .. "; untick it under Squad macros if you don't want it.")
   return Book.helperShort(key, mem) .. " One press, one action, this character only. " .. why
 end
 
@@ -121,10 +121,10 @@ function Book.roleValues(mem)
   return v
 end
 function Book.playsAsValues()
-  local v = { { "leader", "Leader", "This character leads: its keys use its own target." } }
+  local v = { { "leader", "Leader", "This character leads: its macros use its own target." } }
   for _, u in ipairs(ns.Engine.UNITS) do
     -- the unit is where THIS client sees the leader – not the place in the follow line (that is the squad order)
-    v[#v + 1] = { u, "Follower – leader is " .. u, "The leader is " .. u .. " on this character's client: Assist, Follow leader and the spell keys use it. The place in the follow line is the squad order (Up / Down on the Squad page)." }
+    v[#v + 1] = { u, "Follower – leader is " .. u, "The leader is " .. u .. " on this character's client: Assist, Follow leader and the spell macros use it. The place in the follow line is the squad order (Up / Down on the Squad page)." }
   end
   return v
 end
@@ -226,7 +226,7 @@ end
 
 --- My keys: {sections = {{title, cells}}, helpers = {title, cells}} – the left page's sections and the right page's helpers.
 function Book.spread(ctx)
-  local out = { sections = { { title = "Spells", cells = {} }, { title = "Sequences", cells = {} } }, helpers = { title = "Squad keys", cells = {} } }
+  local out = { sections = { { title = "Spells", cells = {} }, { title = "Sequences", cells = {} } }, helpers = { title = "Squad macros", cells = {} } }
   if not ctx then return out end
   local desiredBy, barOf = {}, {}
   for _, d in ipairs(ctx.desired) do desiredBy[d.name] = d end
@@ -244,7 +244,7 @@ function Book.spread(ctx)
     if c then c.squadKey, c.on = k.key, true; out.helpers.cells[#out.helpers.cells + 1] = c
     elseif not k.on then
       out.helpers.cells[#out.helpers.cells + 1] = { kind = "squadkey", squadKey = k.key, on = false, label = k.label, name = false, group = "helper",
-        icon = ns.Macros.HELPER_ICON[k.key], st = { off = true, word = "Off – tick it to make the key", color = W.MUTED } }
+        icon = ns.Macros.HELPER_ICON[k.key], st = { off = true, word = "Off – tick it to make the macro", color = W.MUTED } }
     end
     if k.key == "Invite" and helperCell.Invite2 then
       local c2 = helperCell.Invite2
@@ -262,7 +262,7 @@ end
 --- Tick or untick a squad key for this character (WoWBoxer's own setting; the macro follows on Update keys).
 function Book.setSquadKey(key, on)
   Core().cdb.squadKeys[key] = on and true or false
-  Core().log("info", "squad key " .. key .. (on and " on" or " off"))
+  Core().log("info", "squad macro " .. key .. (on and " on" or " off"))
   Core().changed()
 end
 
@@ -300,13 +300,13 @@ function Book.spellSections(ctx, q)
     local sub, col, word
     if pending ~= nil then
       local st = pendingSt(pending)
-      if key then st.word = st.word .. " · already a key" end
+      if key then st.word = st.word .. " · already a macro" end
       return { kind = "spell", label = s.name, sub = Book.unlockText(pending), icon = s.icon, spell = s, name = key or false, d = d, st = st, pending = pending }
     end
     if key then
       local it
       for _, x in ipairs(ctx.macros.items) do if x.name == key then it = x end end
-      sub, col, word = Book.kindName(it or { key = "" }), W.GREEN, "Already a key"
+      sub, col, word = Book.kindName(it or { key = "" }), W.GREEN, "Already a macro"
     else sub, col, word = "", W.BLUE, "Drag to your bar" end
     if Book.newAt(s, ctx.level) then
       sub = "|cffb7f07aNew at " .. ctx.level .. "|r" .. (sub ~= "" and (" · " .. sub) or "")
@@ -358,7 +358,7 @@ function Book.cells(mode, ctx)
     if it.group == "custom" then out[#out + 1] = keyCell(ctx, it, desiredBy[it.name], barOf[it.name]) end
   end
   if #(ctx.member.customSeq or {}) < ns.State.CUSTOM_MAX then
-    out[#out + 1] = { kind = "new", label = "New key", sub = "", icon = "Spell_ChargePositive", name = false, st = { word = "Build your own key", color = W.BLUE } }
+    out[#out + 1] = { kind = "new", label = "New macro", sub = "", icon = "Spell_ChargePositive", name = false, st = { word = "Build your own macro", color = W.BLUE } }
   end
   return out
 end
@@ -393,14 +393,14 @@ function Book.nextStep(ctx, mode)
     end
   end
   if (cdb.primaryBar or 1) == 1 and C.bonusBarOffset() > 0 then
-    return { text = "|cfff0b43cBar 1 shows your stance|r", tip = "Bar 1 is showing your stance or form page, so keys on Bar 1 are hidden there.",
-      button = { "Move keys", "Moves your main keys to the Bottom Left Bar (placed there when you press Place all).", function()
+    return { text = "|cfff0b43cBar 1 shows your stance|r", tip = "Bar 1 is showing your stance or form page, so macros on Bar 1 are hidden there.",
+      button = { "Move macros", "Moves your main macros to the Bottom Left Bar (placed there when you press Place all).", function()
         cdb.primaryBar, cdb.secondaryBar, cdb.slots = 61, 49, {}; Core().changed() end } }
   end
   local hu, L = ns.Squad.unitHint()
   if hu then
-    return { text = "|cfff0b43c" .. L.name .. " is " .. hu .. " here|r", tip = "Your keys follow " .. ctx.member.unit .. ". Use " .. hu .. " instead?",
-      button = { "Use " .. hu, "Your keys will use " .. L.name .. " through " .. hu .. " (WoWBoxer's setting; then Update keys).", function() Core().setPlaysAs(hu) end } }
+    return { text = "|cfff0b43c" .. L.name .. " is " .. hu .. " here|r", tip = "Your macros follow " .. ctx.member.unit .. ". Use " .. hu .. " instead?",
+      button = { "Use " .. hu, "Your macros will use " .. L.name .. " through " .. hu .. " (WoWBoxer's setting; then Update macros).", function() Core().setPlaysAs(hu) end } }
   end
   local lost = ns.Binds.lostButtons()[1]
   if lost then
@@ -410,35 +410,35 @@ function Book.nextStep(ctx, mode)
   end
   local lu, ahead = ns.Squad.lineHint()
   if lu then
-    return { text = "|cfff0b43c" .. ahead.name .. " is " .. lu .. " here|r", tip = "Follow (line) follows " .. ahead.name .. ". Use " .. lu .. ", then update your keys.",
-      button = { "Use " .. lu, "Follow (line) will follow " .. ahead.name .. " through " .. lu .. " (WoWBoxer's setting; then Update keys).", function() Core().setLineUnit(lu) end } }
+    return { text = "|cfff0b43c" .. ahead.name .. " is " .. lu .. " here|r", tip = "Follow (line) follows " .. ahead.name .. ". Use " .. lu .. ", then update your macros.",
+      button = { "Use " .. lu, "Follow (line) will follow " .. ahead.name .. " through " .. lu .. " (WoWBoxer's setting; then Update macros).", function() Core().setLineUnit(lu) end } }
   end
   local m = ctx.macros
   if m.counts.noslot > 0 then
-    return { text = "|cffff8a80No free macro slot|r", tip = m.counts.noslot .. (m.counts.noslot == 1 and " key needs" or " keys need") ..
+    return { text = "|cffff8a80No free macro slot|r", tip = m.counts.noslot .. (m.counts.noslot == 1 and " macro needs" or " macros need") ..
       " a macro slot. Delete a macro you don't need in the game's macro window (/macro)." }
   end
   local n = m.changes
   if n > 0 then
     if not cdb.lastSync then
-      return { text = n .. (n == 1 and " key ready" or " keys ready"), tip = "Drag your keys onto your action bar, or press Place all and WoWBoxer puts them there.",
+      return { text = n .. (n == 1 and " macro ready" or " macros ready"), tip = "Drag your macros onto your action bar, or press Place all and WoWBoxer puts them there.",
         button = { "Place all", "Creates your " .. n .. " WoWBoxer macros and puts them on your action bars. Buttons that hold something else are kept (see Setup).", function() Core().sync({ replace = cdb.replace }) end } }
     end
     local names = {}
     for _, it in ipairs(m.items) do if it.status == "create" or it.status == "update" then names[#names + 1] = Book.shortLabel(it) end end
     local lvl = (cdb.lastSync.level or 0) < ctx.level and ("|cffb7f07aLevel " .. ctx.level .. ":|r ") or ""
-    return { text = lvl .. n .. (n == 1 and " key changed" or " keys changed"), tip = table.concat(names, ", ") .. ". They stay on the same buttons and keys.",
-      button = { "Update keys", "Updates the changed macros. They stay on the same action buttons and keys.", function() Core().sync({ replace = cdb.replace }) end } }
+    return { text = lvl .. n .. (n == 1 and " macro changed" or " macros changed"), tip = table.concat(names, ", ") .. ". They keep their buttons and keybinds.",
+      button = { "Update macros", "Updates the changed macros. They keep their action buttons and keybinds.", function() Core().sync({ replace = cdb.replace }) end } }
   end
   if ctx.bars.changes > 0 then
     local k = ctx.bars.changes
-    return { text = k .. (k == 1 and " key not on a bar" or " keys not on a bar"), tip = "Drag them from the book, or press Place all.",
-      button = { "Place all", "Puts the keys that are not on a bar onto your action bars. Buttons that hold something else are kept.", function() Core().sync({ replace = cdb.replace }) end } }
+    return { text = k .. (k == 1 and " macro not on a bar" or " macros not on a bar"), tip = "Drag them from the book, or press Place all.",
+      button = { "Place all", "Puts the macros that are not on a bar onto your action bars. Buttons that hold something else are kept.", function() Core().sync({ replace = cdb.replace }) end } }
   end
   if #ctx.missing > 0 then
     local names = {}
     for _, s in ipairs(ctx.missing) do names[#names + 1] = s.name end
-    return { text = "Visit your trainer", tip = table.concat(names, ", ") .. ". They join your keys when you have learned them." }
+    return { text = "Visit your trainer", tip = table.concat(names, ", ") .. ". They join your macros when you have learned them." }
   end
   -- talent points to spend (display only: the player spends them in the game's talent window)
   local free = C.unspentTalentPoints(ctx.member, ctx.level)
@@ -451,21 +451,21 @@ function Book.nextStep(ctx, mode)
   -- Standard mode with own targeting still active: say so (Advanced mode never changes a key by itself)
   local nOv = ns.Advanced and ns.Advanced.count() or 0
   if nOv > 0 and not Core().advanced() and mode == "keys" then
-    return { text = nOv .. (nOv == 1 and " key uses" or " keys use") .. " your own targeting", tip = "You changed them in Advanced mode; they stay active. Right-click a key → Back to WoWBoxer's version.",
-      button = { "Show", "Selects the first key with your own targeting.", function()
+    return { text = nOv .. (nOv == 1 and " macro uses" or " macros use") .. " your own targeting", tip = "You changed them in Advanced mode; they stay active. Right-click a macro → Back to WoWBoxer's version.",
+      button = { "Show", "Selects the first macro with your own targeting.", function()
         UI.panels.keys.selected = next(Core().cdb.overrides)
         UI.Refresh() end } }
   end
-  if mode == "spells" then return { text = "Drag a spell to your bar", tip = "Any spell you drag becomes a WoWBoxer key for this character." } end
-  if mode == "custom" then return { text = "Build your own keys", tip = "A sequence of your spells. One press is still one spell." } end
+  if mode == "spells" then return { text = "Drag a spell to your bar", tip = "Any spell you drag becomes a WoWBoxer macro for this character." } end
+  if mode == "custom" then return { text = "Build your own macros", tip = "A sequence of your spells. One press is still one spell." } end
   -- the trainer to-do: the next level that brings something new (display only)
   local tl, names = ns.Squad.nextTrainer(ctx.member)
   if tl and tl <= ctx.level + 4 then
     return { text = "|cff8fbf6aAll set|r · trainer at " .. tl .. ": " .. names[1] .. (#names > 1 and (" +" .. (#names - 1)) or ""),
-      tip = "At level " .. tl .. " your trainer has " .. table.concat(names, ", ") .. ". Your keys update after you learn them.",
+      tip = "At level " .. tl .. " your trainer has " .. table.concat(names, ", ") .. ". Your macros update after you learn them.",
       button = { "Key bindings", "Opens the game's key bindings, so you can choose which keys press your action buttons.", function() Core().openKeyBindings() end } }
   end
-  return { text = "|cff8fbf6aAll keys on your bars|r", tip = "Hover a key to see what it does; drag it to move it.",
+  return { text = "|cff8fbf6aAll macros on your bars|r", tip = "Hover a macro to see what it does; drag it to move it.",
     button = { "Key bindings", "Opens the game's key bindings, so you can choose which keys press your action buttons.", function() Core().openKeyBindings() end } }
 end
 
@@ -481,7 +481,7 @@ local function buildCapture(p)
   c.text:SetPoint("TOPLEFT", 12, -14)
   c.text:SetPoint("TOPRIGHT", -12, -14)
   c.text.wbxCopy = "guide"
-  c.cancel = W.button(c, "Cancel", 80, 22, function() c:Stop() end, "Stops waiting for a key. Nothing changes.")
+  c.cancel = W.button(c, "Cancel", 80, 22, function() c:Stop() end, "Stops waiting for a macro. Nothing changes.")
   c.cancel:SetPoint("BOTTOM", 0, 10)
   -- a question: Yes (do it) / No (wait for another key)
   c.yes = W.button(c, "Yes", 90, 22, function() if c.onYes then local f = c.onYes; c:Stop(); f() end end, "Does what the question says.")
@@ -538,7 +538,7 @@ function Book.onBindKey(c, full)
   end
   if k.kind == "button" then
     if k.empty then c:Stop(); Core().placeOn(name, k.slot, full); return end
-    c:Ask("|cffffd100" .. full .. "|r is " .. KB.buttonName(k.slot) .. " (" .. k.what .. ").\nPut this key there?", "Put it there", "Another key",
+    c:Ask("|cffffd100" .. full .. "|r is " .. KB.buttonName(k.slot) .. " (" .. k.what .. ").\nPut this macro there?", "Put it there", "Another keybind",
       function() Core().placeOn(name, k.slot, full) end, full)
     return
   end
@@ -563,28 +563,28 @@ end
 function Book.menuFor(p, c)
   local items = {}
   if ns.Compat.inCombat() then return { { "Not in combat – try again after the fight", function() end } } end
-  if c.kind == "new" then return { { "New own key", function() ns.KeyEditor.Open(p, nil) end } } end
-  if c.kind == "squadkey" then return { { "Make this key", function() Book.setSquadKey(c.squadKey, true) end } } end
+  if c.kind == "new" then return { { "New macro", function() ns.KeyEditor.Open(p, nil) end } } end
+  if c.kind == "squadkey" then return { { "Make this macro", function() Book.setSquadKey(c.squadKey, true) end } } end
   if c.kind == "spell" and not c.name then
-    items[#items + 1] = { c.pending and "Pick up (key works once learned)" or "Pick up (make a key)", function() pickupCell(c) end }
+    items[#items + 1] = { c.pending and "Pick up (macro works once learned)" or "Pick up (make a macro)", function() pickupCell(c) end }
     return items
   end
   items[#items + 1] = { "Pick up", function() pickupCell(c) end }
-  items[#items + 1] = { "Bind key…", function() p.capture:Start(c.name, c.label) end }
+  items[#items + 1] = { "Set keybind…", function() p.capture:Start(c.name, c.label) end }
   if c.item and c.item.status == "skipped" then items[#items + 1] = { "Use again", function() setSkip(c.name, false) end }
   elseif c.item then items[#items + 1] = { "Leave out", function() setSkip(c.name, true) end } end
   if c.item and c.item.status ~= "skipped" then
     if c.bar and c.bar.status == "off" then
-      items[#items + 1] = { "Allow on my bars", function() Core().setKeptOff(c.name, false) end, "Place all puts this key on your bars again, and WoWBoxer reminds you when it is not on a bar." }
+      items[#items + 1] = { "Allow on my bars", function() Core().setKeptOff(c.name, false) end, "Place all puts this macro on your bars again, and WoWBoxer reminds you when it is not on a bar." }
     elseif not (c.bar and c.bar.status == "placed") then
-      items[#items + 1] = { "Keep off my bars", function() Core().setKeptOff(c.name, true) end, "Place all leaves this key off your bars and WoWBoxer never reminds you about it. You can still drag it." }
+      items[#items + 1] = { "Keep off my bars", function() Core().setKeptOff(c.name, true) end, "Place all leaves this macro off your bars and WoWBoxer never reminds you about it. You can still drag it." }
     end
   end
   local i = c.name and tonumber(c.name:match("^WBX C(%d)$"))
   if i then items[#items + 1] = { "Edit", function() ns.KeyEditor.Open(p, i) end } end
   if ns.Advanced then for _, it in ipairs(ns.Advanced.menuItems(p, c)) do items[#items + 1] = it end end
   if c.d and c.d.body then items[#items + 1] = { "Copy…", function() Book.copyKey(c) end } end
-  if directBound(c) then items[#items + 1] = { "Unbind", function() Core().unbindKey(c.name) end } end
+  if directBound(c) then items[#items + 1] = { "Remove keybind", function() Core().unbindKey(c.name) end } end
   return items
 end
 
@@ -600,8 +600,8 @@ end
 local function cellTooltip(GT, c)
   GT:AddLine(c.label, 1, 0.82, 0)
   if c.st and c.st.word then GT:AddLine(c.st.word, c.st.color[1], c.st.color[2], c.st.color[3]) end
-  if c.kind == "new" then GT:AddLine("Click to build your own key: a sequence of your spells, one spell per press.", 1, 1, 1, true); return end
-  if c.kind == "squadkey" then GT:AddLine(Book.helperShort(c.squadKey) .. " Tick the box to make this key.", 1, 1, 1, true); return end
+  if c.kind == "new" then GT:AddLine("Click to build your own macro: a sequence of your spells, one spell per press.", 1, 1, 1, true); return end
+  if c.kind == "squadkey" then GT:AddLine(Book.helperShort(c.squadKey) .. " Tick the box to make this macro.", 1, 1, 1, true); return end
   local d = c.d
   if c.kind == "spell" and not d then
     d = { group = "extra", label = c.spell.name, body = ns.Engine.makeMacro(c.spell, ns.Kit.memberCtx(ns.Core.compute().member)) }
@@ -620,11 +620,19 @@ local function cellTooltip(GT, c)
   if sp then local rl = Book.rankLine(sp, ns.Compat.playerLevel()); if rl then GT:AddLine(rl, 0.8, 0.8, 0.8, true) end end
   if d and d.body then for line in (d.body .. "\n"):gmatch("([^\n]*)\n") do if line ~= "" then GT:AddLine(line, 0.56, 0.85, 0.45) end end end
   if c.item and c.item.why then GT:AddLine(c.item.why, 1, 0.54, 0.5, true) end
+  if c.kind == "key" then
+    -- the keybind: the key on its action button, or a direct one (docs/feedback-2026-10-29-late.md §2)
+    local k = c.keys and c.keys[1]
+    if k then
+      local where = k.via == "button" and c.bar and c.bar.slot and ns.Binds.buttonName(c.bar.slot) or "set for this macro"
+      GT:AddLine("Keybind: " .. ns.Binds.short(k.key) .. " (" .. where .. ")", 1, 0.82, 0)
+    else GT:AddLine("No keybind – drag it to a bar or Set keybind…", 0.66, 0.6, 0.49, true) end
+  end
   if ns.Advanced then ns.Advanced.tooltip(GT, c) end
   local pending = c.pending or (c.d and c.d.pending)
   if pending then
     GT:AddLine((type(pending) == "number" and ("You learn this at level " .. pending .. ".") or "Learn it at your trainer.") ..
-      " Place it now: the key does nothing until you know the spell, then it just works.", Book.FUTURE[1], Book.FUTURE[2], Book.FUTURE[3], true)
+      " Place it now: the macro does nothing until you know the spell, then it just works.", Book.FUTURE[1], Book.FUTURE[2], Book.FUTURE[3], true)
   end
   GT:AddLine("Drag to your bar · Right-click: more", 0.66, 0.6, 0.49)
 end
@@ -705,7 +713,7 @@ local function makeCell(p, parent, small)
     b.tick:SetSize(20, 20)
     b.tick:SetPoint("RIGHT", -2, 0)
     b.tick:SetScript("OnClick", function(self) if b.cell and b.cell.squadKey then Book.setSquadKey(b.cell.squadKey, self:GetChecked() and true or false) end end)
-    W.tip(b.tick, "Squad key", function() return (b.cell and b.cell.on) and "Ticked: WoWBoxer makes this key. Untick to leave it out." or "Tick to make this key." end)
+    W.tip(b.tick, "Squad macro", function() return (b.cell and b.cell.on) and "Ticked: WoWBoxer makes this macro. Untick to leave it out." or "Tick to make this macro." end)
     if b.name.SetMaxLines then b.name:SetMaxLines(1) end
   else
     b.name = W.text(b, "GameFontNormal", nil, W.GOLD)
@@ -866,12 +874,12 @@ local function build(p, mode)
       set = function(v) Book.setRole(me(), v) end })
     local rl = W.labelled(p.right, "Role", p.role)
     rl:SetPoint("TOPLEFT", 0, -5)
-    W.ddTip(p.role, "Role", "Picks the recommended keys and talent guide for this character. Nothing changes in the game until you place or update keys.")
+    W.ddTip(p.role, "Role", "Picks the recommended macros and talent guide for this character. Nothing changes in the game until you place or update macros.")
     p.playsAs = W.dropdown(p.right, { width = 150, values = function() return Book.playsAsValues(me()) end,
       get = function() local mem = me(); return mem and (mem.leader and "leader" or mem.unit) end,
       set = function(v) Core().setPlaysAs(v) end })
     p.playsAs:SetPoint("LEFT", p.role, "RIGHT", 8, 0)
-    W.ddTip(p.playsAs, "Plays as", "Leader: your keys use your own target. Follower: where the leader is in your party here (party1–4 or focus) – your keys use the leader's target through it. Your place in the follow line is the squad order. One key press is still one action on this character.")
+    W.ddTip(p.playsAs, "Plays as", "Leader: your macros use your own target. Follower: where the leader is in your party here (party1–4 or focus) – your macros use the leader's target through it. Your place in the follow line is the squad order. One key press is still one action on this character.")
     p.seq = W.seqControl(p.right, { member = me, width = 96 })
     p.seq:SetPoint("TOPLEFT", 0, -30)
     p.helperPool = {}
@@ -908,16 +916,16 @@ local function build(p, mode)
     p.detMacro:SetJustifyV("TOP")
     if p.detMacro.SetNonSpaceWrap then p.detMacro:SetNonSpaceWrap(true) end
     p.detMacro.wbxCopy = "data"
-    p.bind = W.button(p.det, "Bind key", 76, 22, function() if p.selected then p.capture:Start(p.selected, p.selLabel) end end,
-      "Press a key to run this macro directly, also when it is not on a bar. Saved for this character only. Right-click a key for more.")
+    p.bind = W.button(p.det, "Set keybind", 76, 22, function() if p.selected then p.capture:Start(p.selected, p.selLabel) end end,
+      "Press a key to run this macro directly, also when it is not on a bar. Saved for this character only. Right-click a macro for more.")
     p.bind:SetPoint("BOTTOMLEFT", 0, 0)
     -- one Place button per page: the left page's spells, the right page's squad keys (same rules as Place all)
     p.placeLeft = W.button(p.left, "Place spells", 100, 22, function() Core().sync({ replace = Core().cdb.replace, page = "spells" }) end,
-      "Creates or updates your spell and sequence keys and puts them on empty or WoWBoxer buttons (others only with Replace buttons in Setup). Keys you keep off your bars stay off.")
+      "Creates or updates your spell and sequence macros and puts them on empty or WoWBoxer buttons (others only with Replace buttons in Setup). Macros you keep off your bars stay off.")
     p.placeLeft:SetPoint("BOTTOMLEFT", 32, 2)
     p.placeLeft.wbxBig = true
-    p.placeRight = W.button(p.right, "Place squad keys", 120, 20, function() Core().sync({ replace = Core().cdb.replace, page = "squad" }) end,
-      "Creates or updates your squad keys (Invite, Follow, Assist, pet keys …) and puts them on empty or WoWBoxer buttons. Keys you keep off your bars stay off.")
+    p.placeRight = W.button(p.right, "Place squad macros", 120, 20, function() Core().sync({ replace = Core().cdb.replace, page = "squad" }) end,
+      "Creates or updates your squad macros (Invite, Follow, Assist, pet macros …) and puts them on empty or WoWBoxer buttons. Macros you keep off your bars stay off.")
     p.placeRight.wbxBig = true -- the right page's one action (the owner's wording)
     -- footer
     p.slots = W.text(p.right, "GameFontHighlightSmall", nil, W.MUTED, "RIGHT")
@@ -929,7 +937,7 @@ local function build(p, mode)
   else
     p.hint = W.text(p.right, "GameFontHighlightSmall", nil, W.MUTED)
     p.hint:SetPoint("TOPLEFT", 4, -8)
-    p.hint:SetText(mode == "spells" and "Grey: at your trainer · Lock: later levels" or "Up to 8 own keys")
+    p.hint:SetText(mode == "spells" and "Grey: at your trainer · Lock: later levels" or "Up to 8 own macros")
     p.hint.wbxCopy = "hint"
     if mode == "spells" then
       -- search: name or category
@@ -1055,7 +1063,7 @@ local function refresh(p, ctx)
   if p.mode == "spells" and lead and (lead.rule or (lead.cell and lead.cell.future)) then
     -- a spread of only future spells: the banner says what these are (it replaces the next step there)
     p.stepText:SetText("|cff9eaddbFuture spells – place them now|r")
-    p.stepTip = "You learn these later: the level is under each spell. Drag one onto your bar now and set it up; the key does nothing until you learn the spell, then it just works."
+    p.stepTip = "You learn these later: the level is under each spell. Drag one onto your bar now and set it up; the macro does nothing until you learn the spell, then it just works."
     p.stepBtn:Hide(); p.stepFn = nil
     p.stepText:SetPoint("RIGHT", p.strip, "RIGHT", -6, 0)
   end
@@ -1063,7 +1071,7 @@ local function refresh(p, ctx)
   if perSpread == 2 then placePage(p, p.right, pages[first + 2], ci, ri) end
   local count = 0
   for _, pg in ipairs(pages) do for _, e in ipairs(pg) do if e.cell then count = count + 1 end end end
-  p.empty:SetText(count == 0 and (p.mode == "custom" and "No own keys yet" or (p.query and p.query ~= "" and "No spell matches") or "No keys yet – visit your trainer") or "")
+  p.empty:SetText(count == 0 and (p.mode == "custom" and "No own macros yet" or (p.query and p.query ~= "" and "No spell matches") or "No macros yet – visit your trainer") or "")
   p.pageText:SetText(spreads > 1 and (p.page .. " / " .. spreads) or "")
   p.prev:SetShown(spreads > 1); p.next:SetShown(spreads > 1)
   p.prev:SetEnabled(p.page > 1); p.next:SetEnabled(p.page < spreads)
@@ -1125,7 +1133,7 @@ local function refresh(p, ctx)
 end
 
 -- ------------------------------------------------------------------ first-run guide (3 steps)
-local ROLE_TIP = "Picks the recommended keys and talent guide."
+local ROLE_TIP = "Picks the recommended macros and talent guide."
 function Book.buildGuide(p)
   local g = W.box(p, 0.11, 0.085, 0.05, 0.99)
   g:SetPoint("TOPLEFT", 0, 0)
@@ -1165,15 +1173,15 @@ function Book.buildGuide(p)
   g.playLabel:SetText("This character")
   g.playLabel.wbxCopy = "label"
   g.lead = W.button(g, "Leader", 100, 28, function() Core().setPlaysAs("leader") end,
-    "This character leads: its keys use its own target.")
+    "This character leads: its macros use its own target.")
   g.lead:SetPoint("TOPLEFT", 24, -216)
   g.follow = W.button(g, "Follower", 100, 28, function()
     local _, mem = Core().me()
     Core().setPlaysAs((mem and not mem.leader and mem.unit) or "party1")
   end, { "Follower", function()
     local _, mem = Core().me()
-    return "This character follows " .. leaderName(mem) .. ": its keys use the leader's target through " .. ((mem and not mem.leader and mem.unit) or "party1") ..
-      " (change the unit on the My keys page)."
+    return "This character follows " .. leaderName(mem) .. ": its macros use the leader's target through " .. ((mem and not mem.leader and mem.unit) or "party1") ..
+      " (change the unit on the My macros page)."
   end })
   g.follow:SetPoint("LEFT", g.lead, "RIGHT", 8, 0)
   g.seq = W.seqControl(g, { member = function() local _, mem = Core().me(); return mem end, width = 110 })
@@ -1182,7 +1190,7 @@ function Book.buildGuide(p)
   g.replace = W.check(g, "Replace buttons", function(_, v) Core().cdb.replace = v; Core().changed() end)
   g.replace:SetPoint("TOPLEFT", 20, -186)
   W.tip(g.replace, "Replace buttons", function()
-    return "Off: buttons that already hold a spell or item are kept and that key waits for you to drag it. On: WoWBoxer puts its key there." ..
+    return "Off: buttons that already hold a spell or item are kept and that macro waits for you to drag it. On: WoWBoxer puts its macro there." ..
       (g.occupied and g.occupied > 0 and (" " .. g.occupied .. (g.occupied == 1 and " of those buttons holds" or " of those buttons hold") .. " something else now.") or "")
   end)
   -- navigation
@@ -1194,11 +1202,11 @@ function Book.buildGuide(p)
   end, "Creates your WoWBoxer macros and puts them on the action buttons shown above.")
   g.place:SetPoint("BOTTOMRIGHT", -16, 16)
   g.drag = W.button(g, "Drag myself", 110, 26, function() g.step = 3; Core().cdb.guideStep = 3; UI.Refresh() end,
-    "Closes this step. Drag each key from the book onto any action button.")
+    "Closes this step. Drag each macro from the book onto any action button.")
   g.drag:SetPoint("RIGHT", g.place, "LEFT", -8, 0)
   g.back = W.button(g, "Back", 70, 26, function() g.step = math.max(1, g.step - 1); Core().cdb.guideStep = g.step; UI.Refresh() end, "Goes back one step.")
   g.back:SetPoint("BOTTOMLEFT", 16, 16)
-  g.done = W.button(g, "Close", 90, 26, function() Book.closeGuide(p) end, "Closes the guide and shows your keys.")
+  g.done = W.button(g, "Close", 90, 26, function() Book.closeGuide(p) end, "Closes the guide and shows your macros.")
   g.done:SetPoint("BOTTOMRIGHT", -16, 16)
   g:Hide()
 end
@@ -1245,7 +1253,7 @@ function Book.refreshGuide(p, ctx)
   g.back:SetShown(g.step > 1 and g.step < 3)
   if g.step == 1 then
     g.title:SetText("Step 1 of 3 – Who is " .. (info.name or "this") .. "?")
-    g.text:SetText("Pick a role, leader or follower, and sequence keys.")
+    g.text:SetText("Pick a role, leader or follower, and sequence macros.")
     g.roleLabel:Show(); g.playLabel:Show(); g.lead:Show(); g.follow:Show(); g.next:Show()
     g.seq:Show(); g.seq.Refresh()
     for i, r in ipairs(cls and cls.roles or {}) do
@@ -1261,22 +1269,22 @@ function Book.refreshGuide(p, ctx)
   elseif g.step == 2 then
     g.title:SetText("Step 2 of 3 – Your action bar")
     g.occupied = ctx.bars.counts.occupied or 0
-    g.text:SetText("Place all puts your " .. #ctx.desired .. " keys on " .. Book.whereText(ctx) .. ".")
+    g.text:SetText("Place all puts your " .. #ctx.desired .. " macros on " .. Book.whereText(ctx) .. ".")
     g.replace:Show(); g.replace:SetChecked(cdb.replace and true or false)
     g.place:Show(); g.drag:Show()
     g.place:SetEnabled(not ns.Compat.inCombat())
   else
     g.title:SetText("Step 3 of 3 – Done")
-    g.text:SetText("WoWBoxer tells you when a level-up changes a key.")
+    g.text:SetText("WoWBoxer tells you when a level-up changes a macro.")
     g.done:Show()
   end
 end
 
 -- ------------------------------------------------------------------ register the three book tabs
 for _, def in ipairs({
-  { key = "keys", label = "My keys", icon = "INV_Misc_Book_09", tip = "Your recommended keys for this level. Drag them onto your action bars." },
-  { key = "spells", label = "All spells", icon = "INV_Misc_Book_11", tip = "Every spell you know, then the ones you learn later. Drag one onto a bar to make it a key." },
-  { key = "custom", label = "Custom keys", icon = "Spell_ChargePositive", tip = "Your own sequence keys (up to 8)." },
+  { key = "keys", label = "My macros", icon = "INV_Misc_Book_09", tip = "Your recommended macros for this level. Drag them onto your action bars." },
+  { key = "spells", label = "All spells", icon = "INV_Misc_Book_11", tip = "Every spell you know, then the ones you learn later. Drag one onto a bar to make it a macro." },
+  { key = "custom", label = "My own macros", icon = "Spell_ChargePositive", tip = "Your own sequence macros (up to 8)." },
 }) do
   UI.RegisterTab({ key = def.key, label = def.label, icon = def.icon, tip = def.tip, book = true,
     build = function(p) build(p, def.key) end, refresh = refresh })

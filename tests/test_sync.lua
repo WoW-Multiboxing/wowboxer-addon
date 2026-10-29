@@ -126,7 +126,7 @@ H.ok(not C.ns.Sync.frame:IsShown(), "C: no offer (does not have that squad)")
 B.ns.Sync.accept()
 H.eq(B.ns.State.leaderOf(sB).name, "Wowtwo", "B: Apply switches the leader")
 H.ok(select(2, B.ns.Core.me()).leader, "B: this character leads now")
-H.ok(B.ns.Core.compute().macros.changes > 0, "B: keys wait for Update keys (not changed by the message)")
+H.ok(B.ns.Core.compute().macros.changes > 0, "B: keys wait for Update macros (not changed by the message)")
 
 -- ------------------------------------------------------------------ team status: readiness + version, session card
 B.ns.Core.VERSION = "0.0.9"
@@ -145,7 +145,7 @@ A.ns.SquadPages.select(A.ns.UI.panels.squad, "main")
 H.ok(home.status:GetText():find("Wowtwo runs WoWBoxer 0.0.9", 1, true) ~= nil, "A: version check on the Squad page")
 local text = A.ns.Sync.sessionText()
 H.ok(text and text:find("2/3 online", 1, true) ~= nil, "A: session card counts who reports (C has no squad): " .. tostring(text))
-H.ok(text:find("Wowtwo", 1, true) ~= nil and text:find("Update keys", 1, true) ~= nil, "A: session card names who needs an update: " .. text)
+H.ok(text:find("Wowtwo", 1, true) ~= nil and text:find("Update macros", 1, true) ~= nil, "A: session card names who needs an update: " .. text)
 H.ok(A.ns.Sync.sessionCard(), "A: session card shown")
 H.ok(A.ns.Sync.frame:IsShown(), "A: card visible")
 A.ns.Sync.accept()

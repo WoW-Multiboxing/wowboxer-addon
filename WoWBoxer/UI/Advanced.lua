@@ -24,9 +24,9 @@ local function modal(parent, w, h)
 end
 
 function A.attachSwitch(f)
-  local std = W.button(f, "Standard", 72, 18, function() A.setMode(false) end, "Standard mode: WoWBoxer's keys as they are. Your own changes stay active.")
+  local std = W.button(f, "Standard", 72, 18, function() A.setMode(false) end, "Standard mode: WoWBoxer's macros as they are. Your own changes stay active.")
   local adv = W.button(f, "Advanced", 72, 18, function() if not A.on() then A.confirm() end end,
-    "Advanced mode: change who each key casts on and edit macro text. Asks first.")
+    "Advanced mode: change who each macro casts on and edit macro text. Asks first.")
   std:SetPoint("TOPLEFT", 134, -12)
   adv:SetPoint("LEFT", std, "RIGHT", 2, 0)
   UI.modeStd, UI.modeAdv = std, adv
@@ -40,14 +40,14 @@ function A.attachSwitch(f)
   c.text = W.text(c, "GameFontHighlightSmall", nil, W.TEXT)
   c.text:SetPoint("TOPLEFT", 16, -40)
   c.text:SetPoint("TOPRIGHT", -16, -40)
-  c.text:SetText("Advanced mode lets you change who each key casts on and edit your keys' macro text.\n" ..
-    "It is meant for experienced multiboxers: a wrong target can make a key do nothing, or heal or hit the wrong unit.\n" ..
-    "You can undo any change with \"Back to WoWBoxer's version\" on each key, or Reset to default in Setup.")
+  c.text:SetText("Advanced mode lets you change who each macro casts on and edit your macros' macro text.\n" ..
+    "It is meant for experienced multiboxers: a wrong target can make a macro do nothing, or heal or hit the wrong unit.\n" ..
+    "You can undo any change with \"Back to WoWBoxer's version\" on each macro, or Reset to default in Setup.")
   c.text.wbxCopy = "guide"
   c.tick = W.check(c, "I understand", function() A.refreshConfirm() end)
   c.tick:SetPoint("BOTTOMLEFT", 12, 44)
   c.go = W.button(c, "Turn on Advanced", 130, 24, function() if c.tick:GetChecked() then c:Hide(); A.setMode(true) end end,
-    "Shows the advanced controls. Nothing changes in your keys until you change one.")
+    "Shows the advanced controls. Nothing changes in your macros until you change one.")
   c.go:SetPoint("BOTTOMRIGHT", -12, 12)
   c.go.wbxBig = true
   c.cancel = W.button(c, "Cancel", 70, 24, function() c:Hide() end, "Stays in Standard mode.")
@@ -125,7 +125,7 @@ local function targetingFrame(parent)
     r.up:SetPoint("LEFT", 404, 0)
     r.down = W.button(r, "Down", 50, 20, function() local t = f.targets; if t[i + 1] then t[i], t[i + 1] = t[i + 1], t[i]; A.refreshTargeting() end end, "Tries this one later.")
     r.down:SetPoint("LEFT", r.up, "RIGHT", 2, 0)
-    r.remove = W.button(r, "x", 24, 20, function() table.remove(f.targets, i); A.refreshTargeting() end, { "Remove", "Takes this target out of the key." })
+    r.remove = W.button(r, "x", 24, 20, function() table.remove(f.targets, i); A.refreshTargeting() end, { "Remove", "Takes this target out of the macro." })
     r.remove:SetPoint("RIGHT", -2, 0)
     f.rows[i] = r
   end
@@ -140,7 +140,7 @@ local function targetingFrame(parent)
     values = function() return { { "none", "No modifier" }, { "shift", "Shift = myself" }, { "ctrl", "Ctrl = myself" }, { "alt", "Alt = myself" } } end,
     get = function() return f.opts.mod or "none" end, set = function(v) f.opts.mod = v ~= "none" and v or nil; A.refreshTargeting() end })
   f.mod:SetPoint("LEFT", f.add, "RIGHT", 10, 0)
-  W.ddTip(f.mod, "Modifier", "Hold Shift (Ctrl, Alt) while you press the key to cast it on yourself.")
+  W.ddTip(f.mod, "Modifier", "Hold Shift (Ctrl, Alt) while you press the macro to cast it on yourself.")
   local function tri(width, key, labels)
     return W.dropdown(f, { width = width, values = function() return { { "keep", labels[1] }, { "on", labels[2] }, { "off", labels[3] } } end,
       get = function() local v = f.opts[key]; return v == true and "on" or v == false and "off" or "keep" end,
@@ -151,15 +151,15 @@ local function targetingFrame(parent)
   end
   f.start = tri(130, "startattack", { "Attack: as built", "Auto attack on", "Auto attack off" })
   f.start:SetPoint("LEFT", f.mod, "RIGHT", 10, 0)
-  W.ddTip(f.start, "Auto attack", "Adds or removes /startattack (enemy keys).")
+  W.ddTip(f.start, "Auto attack", "Adds or removes /startattack (enemy macros).")
   f.pet = tri(130, "petattack", { "Pet: as built", "Pet attacks", "No pet line" })
   f.pet:SetPoint("TOPLEFT", 14, y - 28)
-  W.ddTip(f.pet, "Pet", "Adds or removes /petattack (enemy keys).")
+  W.ddTip(f.pet, "Pet", "Adds or removes /petattack (enemy macros).")
   f.reset = W.dropdown(f, { width = 160,
     values = function() local v = { { "keep", "Reset: as built" } }; for _, r in ipairs(O().RESETS) do v[#v + 1] = { r, "reset=" .. r } end return v end,
     get = function() return f.opts.reset or "keep" end, set = function(v) f.opts.reset = v ~= "keep" and v or nil; A.refreshTargeting() end })
   f.reset:SetPoint("LEFT", f.pet, "RIGHT", 10, 0)
-  W.ddTip(f.reset, "Reset", "When a sequence key starts over: after combat, on a new target, after some seconds.")
+  W.ddTip(f.reset, "Reset", "When a sequence macro starts over: after combat, on a new target, after some seconds.")
   f.preview = W.text(f, "GameFontHighlightSmall", 9, { 0.6, 0.66, 0.52 })
   f.preview:SetPoint("TOPLEFT", 14, y - 56)
   f.preview:SetPoint("TOPRIGHT", -14, y - 56)
@@ -169,12 +169,12 @@ local function targetingFrame(parent)
   f.info:SetPoint("BOTTOMLEFT", 14, 40)
   f.info:SetPoint("BOTTOMRIGHT", -14, 40)
   f.info.wbxCopy = "data"
-  f.save = W.button(f, "Save", 70, 24, function() A.saveTargeting() end, "Saves your targeting for this key. Press Update keys afterwards to write the macro.")
+  f.save = W.button(f, "Save", 70, 24, function() A.saveTargeting() end, "Saves your targeting for this macro. Press Update macros afterwards to write the macro.")
   f.save:SetPoint("BOTTOMRIGHT", -12, 10)
   f.cancel = W.button(f, "Cancel", 70, 24, function() f:Hide() end, "Closes this. Nothing changes.")
   f.cancel:SetPoint("RIGHT", f.save, "LEFT", -6, 0)
   f.back = W.button(f, "WoWBoxer's version", 140, 24, function() Core().setOverride(f.name, nil); f:Hide() end,
-    "Back to WoWBoxer's version: removes your targeting (and text) for this key.")
+    "Back to WoWBoxer's version: removes your targeting (and text) for this macro.")
   f.back:SetPoint("BOTTOMLEFT", 12, 10)
   A.tf = f
   return f
@@ -263,17 +263,17 @@ local function textFrame(parent)
   f.info.wbxCopy = "data"
   f.note = W.text(f, "GameFontHighlightSmall", nil, W.ORANGE)
   f.note:SetPoint("BOTTOMLEFT", 14, 44)
-  f.note:SetText("A key with your own text is frozen: level-ups no longer update it.")
+  f.note:SetText("A macro with your own text is frozen: level-ups no longer update it.")
   f.note.wbxCopy = "sentence"
   f.save = W.button(f, "Save", 70, 24, function()
     local ok = O().checkText(f.name, f.edit:GetText())
     if ok then Core().setOverride(f.name, { text = f.edit:GetText() }); f:Hide() end
-  end, "Saves this text as the key's macro. Press Update keys afterwards to write it.")
+  end, "Saves this text as the macro's macro. Press Update macros afterwards to write it.")
   f.save:SetPoint("BOTTOMRIGHT", -12, 10)
   f.cancel = W.button(f, "Cancel", 70, 24, function() f:Hide() end, "Closes this. Nothing changes.")
   f.cancel:SetPoint("RIGHT", f.save, "LEFT", -6, 0)
   f.back = W.button(f, "WoWBoxer's version", 140, 24, function() Core().setOverride(f.name, nil); f:Hide() end,
-    "Back to WoWBoxer's version: removes your text and unfreezes the key.")
+    "Back to WoWBoxer's version: removes your text and unfreezes the macro.")
   f.back:SetPoint("BOTTOMLEFT", 12, 10)
   A.xf = f
   return f
@@ -305,16 +305,16 @@ function A.menuItems(p, c)
   if not (c.name and c.item) then return items end
   local ov = Core().cdb.overrides[c.name]
   if A.on() then
-    items[#items + 1] = { "Targeting…", function() A.openTargeting(p, c.name, c.label) end, "Choose who this key casts on, in order." }
+    items[#items + 1] = { "Targeting…", function() A.openTargeting(p, c.name, c.label) end, "Choose who this macro casts on, in order." }
     if c.d and (c.d.engineBody or c.d.body or ""):find("help", 1, true) then
       for _, m in ipairs(O().squadPets(O().ctx())) do
         items[#items + 1] = { "Also heal " .. m.name .. "'s pet", function() Core().alsoHeal(c.name, m.name) end,
-          "Adds " .. m.name .. "'s pet after the leader. Press Update keys afterwards." }
+          "Adds " .. m.name .. "'s pet after the leader. Press Update macros afterwards." }
       end
     end
-    items[#items + 1] = { "Edit macro text…", function() A.openText(p, c.name, c.label) end, "The last resort: write the macro yourself. The key is then frozen on level-ups." }
+    items[#items + 1] = { "Edit macro text…", function() A.openText(p, c.name, c.label) end, "The last resort: write the macro yourself. The macro is then frozen on level-ups." }
   end
-  if ov then items[#items + 1] = { "Back to WoWBoxer's version", function() Core().setOverride(c.name, nil) end, "Removes your targeting or text for this key." } end
+  if ov then items[#items + 1] = { "Back to WoWBoxer's version", function() Core().setOverride(c.name, nil) end, "Removes your targeting or text for this macro." } end
   return items
 end
 --- Tooltip lines for a key with an override.
@@ -341,7 +341,7 @@ local function resetFrame()
   f.title.wbxCopy = "hint"
   f.ticks = {}
   local defs = {
-    { "char", "This character", "Settings, key choices, overrides, bar memory and reminders of this character." },
+    { "char", "This character", "Settings, macro choices, overrides, bar memory and reminders of this character." },
     { "account", "All my squads and saved builds", "Every squad and every saved talent build on this account." },
     { "macros", "WoWBoxer macros on this character", "Only macros named WBX – yours are never touched; their buttons become empty." },
     { "cvars", "Game settings WoWBoxer changed", "Restore first puts back the values WoWBoxer saved, then the backup is forgotten." },

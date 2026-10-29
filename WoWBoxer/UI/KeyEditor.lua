@@ -53,10 +53,10 @@ function KE.extraWarnings(c, sp, filler)
   end
   if #buffs > 0 then
     out[#out + 1] = table.concat(buffs, ", ") .. (#buffs == 1 and " is a buff or summon" or " are buffs or summons") ..
-      ": in an Enemy key every fight starts with " .. (#buffs == 1 and "it" or "them") .. ", and if one fails the sequence waits there. Put " ..
-      (#buffs == 1 and "it" or "them") .. " on " .. (#buffs == 1 and "its" or "their") .. " own key."
+      ": in an Enemy macro every fight starts with " .. (#buffs == 1 and "it" or "them") .. ", and if one fails the sequence waits there. Put " ..
+      (#buffs == 1 and "it" or "them") .. " on " .. (#buffs == 1 and "its" or "their") .. " own macro."
   end
-  if #slow > 0 then out[#out + 1] = "Long casts: " .. table.concat(slow, ", ") .. " – the key does nothing else meanwhile." end
+  if #slow > 0 then out[#out + 1] = "Long casts: " .. table.concat(slow, ", ") .. " – the macro does nothing else meanwhile." end
   local _ = filler
   return out
 end
@@ -65,8 +65,8 @@ end
 function KE.shortWarning(w)
   local one = w:match("^(.-) is a buff or summon:")
   local many = w:match("^(.-) are buffs or summons:")
-  if one then return one .. ": a buff – put it on its own key" end
-  if many then return many .. ": buffs – put them on their own key" end
+  if one then return one .. ": a buff – put it on its own macro" end
+  if many then return many .. ": buffs – put them on their own macro" end
   local slow = w:match("^Long casts: (.-) – ")
   if slow then return "Long cast: " .. slow end
   local head = w:match("^(.-)[:;]") or w:match("^(.-)%.%s") or w
@@ -82,7 +82,7 @@ end
 --- Save a draft into the member's custom keys (index = nil adds a new one). Returns index or nil, reason.
 function KE.save(m, c, index)
   local list = m.customSeq or {}
-  if not index and #list >= ns.State.CUSTOM_MAX then return nil, "At most " .. ns.State.CUSTOM_MAX .. " own keys." end
+  if not index and #list >= ns.State.CUSTOM_MAX then return nil, "At most " .. ns.State.CUSTOM_MAX .. " own macros." end
   if #(c.steps or {}) == 0 and (c.filler or "") == "" then return nil, "Add at least one spell." end
   local copy = {}
   for i, v in ipairs(list) do copy[i] = v end
@@ -147,15 +147,15 @@ function KE.Build(parent)
     get = function() return f.draft and f.draft.fills end, set = function(v) f.draft.fills = v; KE.Refresh() end })
   f.fills:SetPoint("LEFT", f.reset, "RIGHT", 6, 0)
   W.ddTip(f.kind, "Kind", "Sequence: each press casts the next step. Priority: each press casts the first step that is ready.")
-  W.ddTip(f.aim, "Aim", "Who the key casts on: an enemy (your or the leader's target) or a friend.")
+  W.ddTip(f.aim, "Aim", "Who the macro casts on: an enemy (your or the leader's target) or a friend.")
   -- Advanced mode: full targeting and options, and the macro text itself (saved keys only)
   f.targeting = W.button(f, "Targeting…", 90, 24, function()
     if f.index then ns.Advanced.openTargeting(f:GetParent(), "WBX C" .. f.index, f.draft and f.draft.name) end
-  end, "Advanced: who this key casts on, in order, plus reset, auto attack, pet and a modifier. Save the key first.")
+  end, "Advanced: who this macro casts on, in order, plus reset, auto attack, pet and a modifier. Save the macro first.")
   f.targeting:SetPoint("BOTTOMLEFT", 258, 8)
   f.textBtn = W.button(f, "Macro text…", 96, 24, function()
     if f.index then ns.Advanced.openText(f:GetParent(), "WBX C" .. f.index, f.draft and f.draft.name) end
-  end, "Advanced, the last resort: write this key's macro yourself (checked live). The key is then frozen on level-ups.")
+  end, "Advanced, the last resort: write this macro's macro yourself (checked live). The macro is then frozen on level-ups.")
   f.textBtn:SetPoint("LEFT", f.targeting, "RIGHT", 4, 0)
   W.ddTip(f.reset, "Starts over", "When the sequence starts again from the first step.")
   W.ddTip(f.fills, "Filler", "How many times the filler spell is cast between the other steps.")
@@ -167,7 +167,7 @@ function KE.Build(parent)
   sl.wbxCopy = "label"
   local slHit = CreateFrame("Frame", nil, f)
   slHit:SetAllPoints(sl)
-  W.tip(slHit, "Steps", "The spells of this key in order. Click a step to remove it; drop a spell from your spellbook here to add it.")
+  W.tip(slHit, "Steps", "The spells of this macro in order. Click a step to remove it; drop a spell from your spellbook here to add it.")
   f.strip = W.box(f, 0.05, 0.04, 0.025, 0.95)
   f.strip:SetPoint("TOPLEFT", 10, -128)
   f.strip:SetSize(312, 34)
@@ -198,7 +198,7 @@ function KE.Build(parent)
   f.fillerText.wbxCopy = "hint"
   local fHit = CreateFrame("Frame", nil, f)
   fHit:SetAllPoints(f.fillerText)
-  W.tip(fHit, "Filler", "A sequence key can repeat one spell between the other steps. Pick it with Filler in the spell list; set how often with Filler × N.")
+  W.tip(fHit, "Filler", "A sequence macro can repeat one spell between the other steps. Pick it with Filler in the spell list; set how often with Filler × N.")
 
   -- spell picker (right)
   local pl = W.text(f, "GameFontNormal", nil, W.GOLD)
@@ -214,9 +214,9 @@ function KE.Build(parent)
     r.icon = W.icon(r, 18)
     r.icon:SetPoint("LEFT", 2, 0)
     r.fill = W.button(r, "Filler", 48, 18, function() f.draft.filler = r.spell.name; KE.Refresh() end,
-      "Makes this spell the filler: it is cast between the steps (sequence keys only).")
+      "Makes this spell the filler: it is cast between the steps (sequence macros only).")
     r.fill:SetPoint("RIGHT", 0, 0)
-    r.add = W.button(r, "Add", 44, 18, function() KE.addStep(r.spell.name) end, "Adds this spell as the next step of the key.")
+    r.add = W.button(r, "Add", 44, 18, function() KE.addStep(r.spell.name) end, "Adds this spell as the next step of the macro.")
     r.add:SetPoint("RIGHT", r.fill, "LEFT", -4, 0)
     r.check = r:CreateTexture(nil, "OVERLAY")
     r.check:SetSize(14, 14)
@@ -228,7 +228,7 @@ function KE.Build(parent)
     r.name.wbxCopy = "data"
     W.tooltip(r, function(GT)
       GT:AddLine(r.spell and r.spell.name or "", 1, 0.82, 0)
-      if r.inKey then GT:AddLine("Already in this key", 0.56, 0.75, 0.42) end
+      if r.inKey then GT:AddLine("Already in this macro", 0.56, 0.75, 0.42) end
     end)
     return r
   end)
@@ -271,35 +271,35 @@ function KE.Build(parent)
     for _, w in ipairs(f.warnList or {}) do GT:AddLine(w, 1, 1, 1, true) end
   end)
 
-  f.save = W.button(f, "Save key", 100, 24, function()
+  f.save = W.button(f, "Save macro", 100, 24, function()
     local _, m = Core().me()
     if not m then return end
     local idx, err = KE.save(m, f.draft, f.index)
     if not idx then Core().print("|cffff8a80" .. err .. "|r"); return end
-    Core().log("info", "custom key C" .. idx .. " saved: " .. tostring(m.customSeq[idx] and m.customSeq[idx].name))
+    Core().log("info", "own macro C" .. idx .. " saved: " .. tostring(m.customSeq[idx] and m.customSeq[idx].name))
     KE.Close()
     if UI.panels and UI.panels.custom then UI.panels.custom.selected = "WBX C" .. idx end
     Core().changed()
-  end, "Saves this own key. It is created in the game when you place it or press Place all.")
+  end, "Saves this own macro. It is created in the game when you place it or press Place all.")
   f.save:SetPoint("BOTTOMRIGHT", -10, 8)
   f.cancel = W.button(f, "Cancel", 80, 24, function() KE.Close() end, "Closes the editor without saving.")
   f.cancel:SetPoint("RIGHT", f.save, "LEFT", -6, 0)
-  f.delete = W.button(f, "Delete key", 90, 24, function(self)
+  f.delete = W.button(f, "Delete macro", 90, 24, function(self)
     if not self.armed then self.armed = true; W.setLabel(self, "Sure?"); return end
     local _, m = Core().me()
-    if m and f.index then KE.delete(m, f.index); Core().log("info", "custom key C" .. f.index .. " deleted") end
+    if m and f.index then KE.delete(m, f.index); Core().log("info", "own macro C" .. f.index .. " deleted") end
     KE.Close(); Core().changed()
-  end, "Deletes this own key from WoWBoxer (click twice). The game macro is removed the next time you update your keys.")
+  end, "Deletes this own macro from WoWBoxer (click twice). The game macro is removed the next time you update your macros.")
   f.paste = W.button(f, "Paste…", 70, 24, function()
     ns.CopyBox.ShowPaste(function(d) KE.usePasted(d) end)
-  end, "Paste a key someone gave you (a WoWBoxer key or plain macro text). Only the spell names are used.")
+  end, "Paste a macro someone gave you (a WoWBoxer macro or plain macro text). Only the spell names are used.")
   f.paste:SetPoint("BOTTOMLEFT", 10, 8)
   f.copy = W.button(f, "Copy…", 70, 24, function()
     local _, m = Core().me()
     if not (m and f.draft) then return end
     local r = KE.preview(m, f.draft, ns.Compat.playerLevel())
-    ns.CopyBox.ShowCopy("Copy \"" .. (f.draft.name or "My key") .. "\"", r.macro, ns.Share.encodeKey(f.draft, m.cls))
-  end, "Shows the macro text and a WoWBoxer key, ready to copy and give to others.")
+    ns.CopyBox.ShowCopy("Copy \"" .. (f.draft.name or "My macro") .. "\"", r.macro, ns.Share.encodeKey(f.draft, m.cls))
+  end, "Shows the macro text and a WoWBoxer macro, ready to copy and give to others.")
   f.copy:SetPoint("LEFT", f.paste, "RIGHT", 6, 0)
   f.delete:SetPoint("LEFT", f.copy, "RIGHT", 6, 0)
   return f
@@ -318,16 +318,16 @@ function KE.usePasted(d)
   if filler ~= "" and not known[filler] then dropped[#dropped + 1] = filler; filler = "" end
   local x = f.draft
   x.kind, x.aim, x.steps, x.filler, x.fills, x.reset = d.kind, d.aim, steps, filler, d.fills or 1, d.reset or "combat"
-  if d.name and d.name ~= "" and d.name ~= "Pasted key" then x.name = d.name; f.name:SetText(d.name) end
+  if d.name and d.name ~= "" and d.name ~= "Pasted macro" then x.name = d.name; f.name:SetText(d.name) end
   if #dropped > 0 then Core().print("|cfff0b43cLeft out (not a " .. (ns.Data.classes[m.cls] and ns.Data.classes[m.cls].n or m.cls) .. " spell):|r " .. table.concat(dropped, ", ")) end
-  Core().log("info", "pasted key: " .. #steps .. " steps")
+  Core().log("info", "pasted macro: " .. #steps .. " steps")
   KE.Refresh()
 end
 
 function KE.addStep(name)
   local f = KE.frame
   if not f or not f.draft then return end
-  if #f.draft.steps >= MAX_STEPS then Core().print("A key holds at most " .. MAX_STEPS .. " steps."); return end
+  if #f.draft.steps >= MAX_STEPS then Core().print("A macro holds at most " .. MAX_STEPS .. " steps."); return end
   local _, m = Core().me()
   local known = false
   for _, s in ipairs(ns.Kit.spellsOf(m)) do if s.name == name then known = true end end
@@ -344,17 +344,17 @@ function KE.Open(parent, index)
   if f:GetParent() ~= parent then f:SetParent(parent); f:ClearAllPoints(); f:SetAllPoints(parent); f:SetFrameLevel((parent:GetFrameLevel() or 1) + 20) end
   local src = index and m.customSeq and m.customSeq[index]
   f.index = src and index or nil
-  f.draft = { id = src and src.id or nil, name = src and src.name or "My key", kind = src and src.kind or "sequence",
+  f.draft = { id = src and src.id or nil, name = src and src.name or "My macro", kind = src and src.kind or "sequence",
     aim = src and src.aim or "harm", steps = {}, filler = src and src.filler or "", fills = src and src.fills or 2,
     reset = src and src.reset or "combat" }
   for i, s in ipairs(src and src.steps or {}) do f.draft.steps[i] = s end
   f.name:SetText(f.draft.name)
-  f.title:SetText(f.index and ("Edit own key " .. f.index) or "New own key")
+  f.title:SetText(f.index and ("Edit own macro " .. f.index) or "New macro")
   f.delete:SetShown(f.index ~= nil)
   local adv = Core().advanced()
   f.targeting:SetShown(adv); f.textBtn:SetShown(adv)
   f.targeting:SetEnabled(f.index ~= nil); f.textBtn:SetEnabled(f.index ~= nil)
-  f.delete.armed = false; W.setLabel(f.delete, "Delete key")
+  f.delete.armed = false; W.setLabel(f.delete, "Delete macro")
   f:Show()
   KE.Refresh()
 end
