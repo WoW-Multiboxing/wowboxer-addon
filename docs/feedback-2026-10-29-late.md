@@ -75,6 +75,40 @@ The owner right-clicked **Holy Light** on the Paladin and only saw *Pick up* and
   - Buttons: **Save** · **Edit text** (the frozen-text last resort) · **Back to WoWBoxer's version** · **Cancel**.
 - "Also heal Bo's pet" stays as a one-click shortcut in the right-click menu of friendly macros.
 
+**The owner, 23:21: it must work the same for every character, and Targeting is one part of editing.**
+
+- **Leader and followers alike.** Every character gets exactly the same menu and editor in Advanced mode: the leader,
+  followers on party1–4, focus users. No role check may hide or disable Edit macro…, and the target list must offer
+  everything that makes sense from that client.
+  - The leader gets every squad member and pet ("Anna (party2)", "Bo's pet (party1pet)").
+  - A follower also gets "the leader" and "the leader's target".
+  - Test it on the leader's client too, not only on followers. Today it failed on the owner's Paladin leader.
+- **One editor, Targeting is a section of it.** Right-click → **Edit macro…** opens the Macro editor. Its sections:
+  1. **Spells** (single spell / sequence steps).
+  2. **Targeting.**
+  3. **Options.**
+  4. **Preview.**
+  There is no separate "Targeting…" entry in the menu any more.
+- **Drag and drop targeting.**
+  - **Left: Available targets.** Every target this client can use, as a tile with an icon:
+    - a class icon for squad members;
+    - a paw for pets;
+    - an eye for mouseover;
+    - a crosshair for "my target" / "the leader's target";
+    - a portrait for "myself".
+  - **Right: "This macro tries, in order".** Drag tiles from the left into the list. Drag inside the list to reorder,
+    and drag a row out (or click its ×) to remove it. Up/Down buttons stay as a keyboard-free fallback.
+- **Every row says exactly what it targets,** in one plain line plus the unit:
+  - "**Bo's pet** – the pet of party1 (party1pet)";
+  - "**Anna** – party2";
+  - "**The leader's target** – party1target";
+  - "**Your mouseover**";
+  - "**Yourself** – player".
+  - Hover shows the macro conditional, e.g. `[@party1pet,help,nodead]`, and when it applies: "when Bo's pet exists,
+    is friendly and alive".
+  - If the unit is missing right now (Bo not in the party), the row is greyed: "Bo is not in your party – skipped".
+- The preview updates live while you drag.
+
 ## 4. **New macro** (replaces "New own key")
 
 The editor opens with one choice: **Single spell** or **Sequence** (Priority under "More").
@@ -100,5 +134,9 @@ The editor opens with one choice: **Single spell** or **Sequence** (Priority und
 - Words: a test that scans the UI strings for `" key"`/`"Keys"` used about our macros (allow-list for keybind,
   key press, Escape key …).
 - Edit macro in the menu: Advanced → present for recommended macros, own macros, spells on All spells and spells
-  without a macro. Standard → greyed with tip.
+  without a macro, **on the leader's client and on followers' clients (party1–4 and focus)**. Standard → greyed with
+  a tip.
+- Macro editor: drag from Available to the list, reorder by drag, remove by dragging out or ×; each row's text names
+  the unit ("Bo's pet – the pet of party1 (party1pet)"); a missing unit is greyed; the preview matches the built
+  macro.
 - New macro: single spell with each preset; sequence unchanged; single spell + Advanced targeting; ≤ 255.
