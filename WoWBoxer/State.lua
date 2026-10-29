@@ -109,7 +109,8 @@ function S.newMember(o)
     tags = tags, realm = S.cleanRealm(o.realm),
     -- Follow (line): the party unit of the member ahead as seen on THIS client (docs/follow-line.md); per client,
     -- never in the share string or Sync
-    lineUnit = (o.lineUnit and E.contains(E.UNITS, o.lineUnit) and o.lineUnit ~= "focus") and o.lineUnit or nil }
+    lineUnit = (o.lineUnit and E.contains(E.UNITS, o.lineUnit) and o.lineUnit ~= "focus") and o.lineUnit or nil,
+    buildName = R.cleanText(o.buildName, 40) }
 end
 --- A realm for "Name-Realm" (another realm than this character's): letters, digits and ' only, no spaces; else nil.
 function S.cleanRealm(v)
@@ -310,10 +311,40 @@ function S.composition(s)
 end
 
 -- ------------------------------------------------------------------ DB
+-- ------------------------------------------------------------------ own builds (imported from Wowhead, docs/talent-import.md)
+S.BUILDS_MAX = 20
+--- Clean WoWBoxerDB.builds: {[cls] = {{id = "u…", label, kind, order, talented, link, saved, user = true, source}}}.
+function S.cleanBuilds(t)
+  local out = {}
+  if type(t) ~= "table" then return out end
+  for _, cls in ipairs(D().classOrder) do
+    local list = {}
+    for _, b in ipairs(type(t[cls]) == "table" and t[cls] or {}) do
+      if type(b) == "table" and #list < S.BUILDS_MAX then
+        local order = S.sanitizeOrder(cls, b.order or {})
+        local id = (type(b.id) == "string" and b.id:find("^u%w+$") and #b.id <= 24) and b.id or S.uid("u")
+        if #order > 0 then
+          local name = R.cleanText(b.label or b.name, 40)
+          local link = (type(b.link) == "string" and #b.link <= 300 and b.link:find("^https://www%.wowhead%.com/")) and b.link or nil
+          local saved = (type(b.saved) == "string" and b.saved:find("^%d%d%d%d%-%d%d%-%d%d$")) and b.saved or nil
+          list[#list + 1] = { id = id, label = (name and name ~= "") and name or "My build", kind = b.kind == "exact-order" and "exact-order" or "final-derived",
+            order = order, talented = clampT(b.talented), link = link, saved = saved, user = true,
+            source = { site = link and "Imported from Wowhead" or "Your build", url = link, updated = saved } }
+        end
+      end
+    end
+    if #list > 0 then out[cls] = list end
+  end
+  return out
+end
+
 function S.initDB(db, cdb)
   db = type(db) == "table" and db or {}
   cdb = type(cdb) == "table" and cdb or {}
   db.v = 1
+  -- builds first: a member's guide may be one of them ("u…")
+  db.builds = S.cleanBuilds(db.builds)
+  K.setBuilds(db.builds)
   local squads = {}
   if type(db.squads) == "table" then
     for i, s in ipairs(db.squads) do if i <= 30 then squads[#squads + 1] = S.newSquad(s) end end

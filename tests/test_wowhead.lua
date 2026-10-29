@@ -101,4 +101,72 @@ H.eq(WH.import("https://www.wowhead.com/forever/talent-calc/druid/v2410222-4_t3/
 -- the encoder writes the example back
 H.eq(WH.encode("druid", ex.order, 0, true), "https://www.wowhead.com/forever/talent-calc/druid/v2410222-4_t0/0abaaaDEF1aaaa", "encode: the example link again")
 
+-- the Talents tab: Import → preview → Save as → My builds → Use → its next point; Rename, Delete; share string
+do
+  local UI, Core = ns.UI, ns.Core
+  Core.cdb.guide = "done"
+  UI.Open("talents")
+  local p = UI.panels.talents
+  local tab
+  for _, t in ipairs(UI.tabs) do if t.key == "talents" then tab = t end end
+  p.importBtn:Click()
+  local f = p.imp
+  H.ok(f:IsShown(), "Import opens the window")
+  H.ok(not f.save:IsEnabled(), "nothing to save before a link")
+  f.link:SetText(EX); f.link._scripts.OnTextChanged(f.link)
+  H.eq(f.info:GetText(), "Druid · 11/4/0 · 15 points · exact click order (levels 10–24)", "live preview")
+  H.eq(f.name:GetText(), "Wowhead 11/4/0", "default name")
+  H.ok(f.save:IsEnabled() and f.use:IsEnabled(), "Save as + Save and use for the right class")
+  f.save:Click()
+  local list = Core.db.builds.druid
+  H.ok(list and #list == 1 and list[1].label == "Wowhead 11/4/0" and list[1].link == EX, "saved in WoWBoxerDB.builds.druid")
+  H.ok(f.status:GetText():find("Saved", 1, true), "says so: " .. tostring(f.status:GetText()))
+  local vals = p.guide.opts.values()
+  H.eq(vals[1][2], "My build: Wowhead 11/4/0 (yours)", "first in the Guide list, marked (yours)")
+  H.ok(vals[1][3]:find("Imported from Wowhead", 1, true) and vals[1][3]:find(EX, 1, true), "its tooltip: imported from Wowhead + the link")
+  H.eq(ns.Kit.guidesOf("druid")[1].id, list[1].id, "Kit.guidesOf returns your builds first")
+  f.close:Click()
+  p.guide.select(vals[1][1])
+  local _, m = Core.me()
+  H.eq(m.guide, list[1].id, "picked for this character")
+  H.eq(table.concat(ns.Kit.plan(m), ","), table.concat(ex.order, ","), "the plan is the build")
+  H.ok(p.nextName:GetText() ~= nil and p.kind:GetText():find("Your build", 1, true), "the Talents tab shows it: " .. tostring(p.kind:GetText()))
+  H.ok(p.renBtn:IsShown() and p.delBtn:IsShown(), "Rename / Delete on your own build")
+  -- Wowhead link of the build
+  H.eq(tab.copyLink(), EX, "Copy Wowhead link gives the link back")
+  -- rename
+  p.renBtn:Click(); p.renBox:SetText("Boomkin 15"); p.renBox._scripts.OnEnterPressed(p.renBox)
+  H.eq(list[1].label, "Boomkin 15", "renamed")
+  -- the share string carries the build (order + name), not the link
+  local s = Core.me()
+  local str = ns.Share.export(s, {})
+  local res = ns.Share.import(str)
+  local rm = res.squad.members[1]
+  H.eq(table.concat(rm.build, ","), table.concat(ex.order, ","), "share string: the member's build travels")
+  H.eq(rm.buildName, "Boomkin 15", "with its name")
+  H.ok(not str:find("wowhead", 1, true), "no link text in the share string")
+  -- a druid link while this character is a druid is usable; a mage link only saves
+  tab.openImport(p)
+  f.link:SetText("https://www.wowhead.com/forever/talent-calc/mage/v25"); f.link._scripts.OnTextChanged(f.link)
+  H.ok(f.save:IsEnabled() and not f.use:IsEnabled(), "another class: Save as only")
+  f.save:Click()
+  H.ok(f.status:GetText():find("Saved for Mage – pick it on a Mage", 1, true), "Saved for Mage – pick it on a Mage")
+  f.close:Click()
+  -- survives a reload (SavedVariables) and m.guide still points at it
+  local db2 = ns.State.initDB(Core.db, Core.cdb)
+  H.eq(#db2.builds.druid, 1, "builds survive the SavedVariables clean-up")
+  H.ok(ns.State.newSquad(Core.me()).members[1].guide == list[1].id, "a member keeps its build id")
+  -- delete (asks first): back to the recommended guide
+  p.delBtn:Click()
+  local menu = W.env.WoWBoxerMenu
+  local yes
+  for _, b in ipairs(menu.rows) do if b:IsShown() and b.label:GetText() == "Yes, delete this build" then yes = b end end
+  yes:Click()
+  H.eq(Core.db.builds.druid, nil, "deleted")
+  local _, m2 = Core.me()
+  H.eq(m2.guide, ns.Kit.defaultGuideFor("druid", m2.role), "back to the recommended guide")
+  H.eq(W.calls.LearnTalent, nil, "never touches the game's talents")
+  H.eq(W.calls.CreateMacro, nil, "nothing written to the game")
+end
+
 os.exit(H.report("wowhead") and 0 or 1)

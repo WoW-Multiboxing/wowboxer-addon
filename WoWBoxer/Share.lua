@@ -80,12 +80,16 @@ function Sh.export(squad, extra)
   extra = extra or {}
   local members = Json.array()
   for _, m in ipairs(squad.members) do
+    -- an own build (a "u…" guide) travels as the member's build: order + name, no link text
+    local build, buildName = m.build, m.buildName
+    local own = (not build or #build == 0) and ns.Kit.guide(m.cls, m.guide or "") or nil
+    if own and own.user then build, buildName = own.order, own.label end
     local custom = Json.array()
     for _, c in ipairs(m.customSeq or {}) do
       custom[#custom + 1] = { id = c.id, name = c.name, kind = c.kind, aim = c.aim, steps = Json.array(E_copy(c.steps)), filler = c.filler, fills = c.fills, reset = c.reset }
     end
     members[#members + 1] = { id = m.id, name = m.name, cls = m.cls, race = m.race, role = m.role, level = m.level, leader = m.leader, unit = m.unit,
-      talented = m.talented, build = Json.array(E_copy(m.build)), guide = m.guide, seq = m.seq, seqTarget = m.seqTarget, customSeq = custom,
+      talented = m.talented, build = Json.array(E_copy(build)), buildName = buildName, guide = m.guide, seq = m.seq, seqTarget = m.seqTarget, customSeq = custom,
       pins = Json.array(E_copy(m.pins)), tags = Json.array(E_copy(m.tags)), seqTier = m.seqTier, realm = m.realm }
   end
   local payload = { f = Sh.FORMAT, game = extra.game or "any",

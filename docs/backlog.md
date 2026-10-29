@@ -31,6 +31,13 @@ minimap button, much more drag & drop of macros onto the action bars.
    the bar after **Update keys**. Custom keys → New own key → **Paste…** your macro → read the warnings → **Copy…**.
 7. On Dorin: Squad → Home, Readiness, Key map and Plan – PrtScn each. Then `/reload` on every client and tell Claude "done".
 
+## Talents: import a Wowhead link (docs/talent-import.md)
+- [x] vendor/wowhead/forever-trees.json → Data/WowheadOrder.lua (build_data, --check).
+- [x] Lua decoder/encoder (string parsing only) + tests/test_wowhead.lua (round trip, example, bad links, clamp, >51, newer format, UI).
+- [x] Talents: Import window (preview, warnings, name, Save as / Save and use), My builds in the Guide list, Rename/Delete,
+      Wowhead link; WoWBoxerDB.builds; the member's build travels in the share string; never LearnTalent.
+- [ ] Mage Arcane/Fire trees differ between Wowhead and WoWBoxer's data – re-check on the launch client (WS-A, LOG).
+
 ## Sequences for all nine classes (docs/sequences-all-classes.md)
 - [x] Companion v8.5 engine applied in wowboxer-site (764cdfd, D to review); vendor re-synced (`tools/sync_companion.sh`).
 - [x] Engine.lua: SEQ for all classes + buildPriority (pet, !Auto Shot, ranged leader aim, empty keys); parity 0 failures.

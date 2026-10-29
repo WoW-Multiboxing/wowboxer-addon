@@ -439,6 +439,59 @@ function Core.exportString(squad)
   return Sh.export(squad, { game = C.game(), addons = Core.db.settings.addons })
 end
 
+-- ------------------------------------------------------------------ own talent builds (WoWBoxer's data only)
+--- Save an imported build (WH.import result) as `name`; use = pick it for this character (same class only).
+--- Never touches the game's talents (no LearnTalent): the player spends points in the game's talent window.
+function Core.saveBuild(res, name, use, link)
+  local db = Core.db
+  local cls = res.cls
+  db.builds[cls] = db.builds[cls] or {}
+  local list = db.builds[cls]
+  if #list >= S.BUILDS_MAX then return nil, "At most " .. S.BUILDS_MAX .. " builds per class" end
+  name = R.cleanText(name or "", 40)
+  if not name or name == "" then name = "Wowhead " .. res.split end
+  local saved = (_G.date and _G.date("%Y-%m-%d")) or nil
+  local b = S.cleanBuilds({ [cls] = { { id = S.uid("u"), label = name, kind = res.kind, order = res.order, talented = res.talented, link = link, saved = saved } } })[cls][1]
+  list[#list + 1] = b
+  Core.log("info", "build saved: " .. cls .. " " .. name .. " (" .. #b.order .. " points)")
+  local _, m = Core.me()
+  if use and m and m.cls == cls then Core.useGuide(b.id) end
+  Core.changed()
+  return b
+end
+--- Pick a guide or build for this character (its own imported squad build is dropped).
+function Core.useGuide(id)
+  local _, m = Core.me()
+  if not m then return end
+  m.guide, m.build, m.buildName = id, {}, nil
+  Core.log("info", "guide " .. tostring(id))
+  Core.changed()
+end
+function Core.renameBuild(cls, id, name)
+  name = R.cleanText(name or "", 40)
+  for _, b in ipairs(Core.db.builds[cls] or {}) do
+    if b.id == id and name and name ~= "" then b.label = name; Core.changed(); return true end
+  end
+  return false
+end
+--- Delete a build; every member that used it falls back to the default guide for its role.
+function Core.deleteBuild(cls, id)
+  local list = Core.db.builds[cls] or {}
+  for i, b in ipairs(list) do
+    if b.id == id then
+      table.remove(list, i)
+      if #list == 0 then Core.db.builds[cls] = nil end
+      for _, s in ipairs(Core.db.squads) do
+        for _, m in ipairs(s.members) do if m.cls == cls and m.guide == id then m.guide = K.defaultGuideFor(m.cls, m.role) end end
+      end
+      Core.log("info", "build deleted: " .. b.label)
+      Core.changed()
+      return true
+    end
+  end
+  return false
+end
+
 -- ------------------------------------------------------------------ level-up offers
 --- What a reminder is about (docs/squad-v2-simple.md §4): only real changes – a new key or a key whose macro text
 --- changed – and never a key the player keeps off the bars. Returns signature, count, items.

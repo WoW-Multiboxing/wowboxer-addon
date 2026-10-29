@@ -216,11 +216,24 @@ function K.seqPlan(m)
 end
 
 -- ------------------------------------------------------------------ guides
-function K.guidesOf(cls) return D().guides[cls] or {} end
+--- The player's own builds (WoWBoxerDB.builds, set by State.initDB): {[cls] = {{id = "u…", label, kind, order, …}}}.
+K.userBuilds = nil
+function K.setBuilds(b) K.userBuilds = b end
+--- The data guides only (defaults and parity never pick a player's build).
+function K.dataGuidesOf(cls) return D().guides[cls] or {} end
+--- The player's builds first ("My builds"), then the data guides. A build works everywhere a guide id works.
+function K.guidesOf(cls)
+  local mine = K.userBuilds and K.userBuilds[cls]
+  if not (mine and #mine > 0) then return K.dataGuidesOf(cls) end
+  local out = {}
+  for _, b in ipairs(mine) do out[#out + 1] = b end
+  for _, g in ipairs(K.dataGuidesOf(cls)) do out[#out + 1] = g end
+  return out
+end
 function K.guide(cls, id) for _, g in ipairs(K.guidesOf(cls)) do if g.id == id then return g end end return nil end
 function K.defaultGuide(cls)
   local first
-  for _, g in ipairs(K.guidesOf(cls)) do first = first or g; if g.default then return g.id end end
+  for _, g in ipairs(K.dataGuidesOf(cls)) do first = first or g; if g.default then return g.id end end
   return first and first.id or nil
 end
 --- Best guide for a class + role: the class default if it matches the role's spec, else the longest exact/derived guide of that spec.
@@ -228,7 +241,7 @@ function K.defaultGuideFor(cls, role)
   local spec, def = (D().roleSpec[cls] or {})[role], K.defaultGuide(cls)
   if not spec or (K.guide(cls, def) or {}).spec == spec then return def end
   local c, idx = {}, {}
-  for i, g in ipairs(K.guidesOf(cls)) do if g.spec == spec and #g.order > 0 then c[#c + 1] = g; idx[g] = i end end
+  for i, g in ipairs(K.dataGuidesOf(cls)) do if g.spec == spec and #g.order > 0 then c[#c + 1] = g; idx[g] = i end end
   tsort(c, function(a, b)
     local ea, eb = a.kind ~= "exact-order" and 1 or 0, b.kind ~= "exact-order" and 1 or 0
     if ea ~= eb then return ea < eb end

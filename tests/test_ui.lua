@@ -263,6 +263,13 @@ local function layoutPass(screen, opts)
   ns.Sync.dismiss()
   UI.Select("keys")
   check("keys after level-up")
+  -- the talent import window with a link and warnings
+  UI.Select("talents")
+  for _, t in ipairs(UI.tabs) do if t.key == "talents" then t.openImport(UI.panels.talents) end end
+  local imp = UI.panels.talents.imp
+  imp.link:SetText("https://www.wowhead.com/forever/talent-calc/druid/v2410222-4_t3"); imp.link._scripts.OnTextChanged(imp.link)
+  check("talent import window")
+  imp:Hide()
   -- help overlays and the squad guide stay inside the window
   for _, key in ipairs({ "keys", "setup", "share" }) do
     UI.Select(key); UI.helpBtn:Click(); check("help overlay " .. key); ns.Help.Hide()

@@ -4,6 +4,7 @@ local _, ns = ...
 local UI, W = ns.UI, ns.Widgets
 local tab = { key = "talents", label = "Talents", icon = "Ability_Marksmanship", tip = "The talent order of your guide and the next point to take." }
 local ROW_H = 20
+local OWN = "\1own" -- the build that came with the squad (m.build)
 local LEFT_W, LIST_W = 300, 322
 
 local KIND = { ["exact-order"] = "Exact point order from the guide", ["final-derived"] = "Guide's final build; order by WoWBoxer",
@@ -18,13 +19,42 @@ function tab.build(p)
       local _, m = ns.Core.me()
       local v = {}
       if not m then return v end
-      for _, g in ipairs(ns.Kit.guidesOf(m.cls)) do v[#v + 1] = { g.id, g.label .. (g.default and " *" or ""), tab.guideTip(g) } end
+      if m.build and #m.build > 0 then v[#v + 1] = { OWN, (m.buildName or "Own build") .. " (from your squad)", "The build that came with your squad (" .. #m.build .. " points)." } end
+      for _, g in ipairs(ns.Kit.guidesOf(m.cls)) do
+        v[#v + 1] = { g.id, g.user and ("My build: " .. g.label .. " (yours)") or (g.label .. (g.default and " *" or "")), tab.guideTip(g) }
+      end
       return v
     end,
-    get = function() local _, m = ns.Core.me(); return m and m.guide end,
-    set = function(v) local _, m = ns.Core.me(); if m then m.guide = v; ns.Core.changed() end end })
+    get = function() local _, m = ns.Core.me(); if not m then return nil end; return (m.build and #m.build > 0) and OWN or m.guide end,
+    set = function(v) if v ~= OWN then ns.Core.useGuide(v) end end })
   p.guide:SetPoint("LEFT", lg, "RIGHT", 6, 0)
   W.ddTip(p.guide, "Guide", "The talent guide WoWBoxer follows for this character. * = recommended for your role. Each guide shows its source and type when you hover it in the list.")
+  -- Import a Wowhead link, copy one, rename / delete your own build
+  p.importBtn = W.button(p, "Import", 70, 22, function() tab.openImport(p) end,
+    "Paste a Wowhead WoW Forever talent link and save it as your own build. It only changes WoWBoxer's plan: you still spend the points in the game's talent window.")
+  p.importBtn:SetPoint("TOPRIGHT", p, "TOPRIGHT", -4, -2)
+  p.linkBtn = W.button(p, "Wowhead link", 100, 22, function() tab.copyLink() end, "Shows this guide or build as a Wowhead talent link to copy (Ctrl+C) and open on Wowhead.")
+  p.linkBtn:SetPoint("RIGHT", p.importBtn, "LEFT", -6, 0)
+  p.renBtn = W.button(p, "Rename", 64, 20, function() tab.startRename(p) end, "Gives your build another name.")
+  p.renBtn:SetPoint("LEFT", p.guide, "RIGHT", 8, 0)
+  p.delBtn = W.button(p, "Delete", 56, 20, function(self)
+    W.menu(self, { { "Yes, delete this build", function() local g = tab.current(); if g and g.user then ns.Core.deleteBuild(g.cls or tab.cls(), g.id) end end },
+      { "No", function() end } })
+  end, "Deletes your build (asks first). Characters that used it go back to the recommended guide.")
+  p.delBtn:SetPoint("LEFT", p.renBtn, "RIGHT", 4, 0)
+  p.renBox = W.frame("EditBox", p, "InputBoxTemplate")
+  p.renBox:SetSize(290, 20)
+  p.renBox:SetAutoFocus(false)
+  p.renBox:SetMaxLetters(40)
+  p.renBox:SetPoint("LEFT", p.guide, "LEFT", 6, 0)
+  p.renBox:Hide()
+  local function renDone(self, save)
+    local g = tab.current()
+    if save and g and g.user then ns.Core.renameBuild(tab.cls(), g.id, self:GetText()) end
+    self:Hide(); self:ClearFocus(); UI.Refresh()
+  end
+  p.renBox:SetScript("OnEnterPressed", function(self) renDone(self, true) end)
+  p.renBox:SetScript("OnEscapePressed", function(self) renDone(self, false) end)
   p.kind = W.text(p, "GameFontHighlightSmall", nil, W.GREEN)
   p.kind:SetPoint("TOPLEFT", 0, -30)
   p.kind:SetWidth(LEFT_W)
@@ -109,6 +139,132 @@ function tab.build(p)
   end)
 end
 
+local function cls() local _, m = ns.Core.me(); return m and m.cls end
+tab.cls = cls
+--- The guide or build this character uses (nil for a squad build).
+function tab.current() local _, m = ns.Core.me(); if not m or (m.build and #m.build > 0) then return nil end return ns.Kit.guide(m.cls, m.guide) end
+function tab.startRename(p)
+  local g = tab.current()
+  if not (g and g.user) then return end
+  p.renBox:SetText(g.label); p.renBox:Show(); p.renBox:SetFocus(); UI.Refresh()
+end
+--- The plan as a Wowhead link in the copy box (or why there is none).
+function tab.copyLink()
+  local _, m = ns.Core.me()
+  if not m then return end
+  local order = ns.Kit.plan(m)
+  local link = #order > 0 and ns.Wowhead.encode(m.cls, order, m.talented, true) or nil
+  if link then ns.CopyBox.ShowCopy("Wowhead link", link)
+  else ns.Core.print(#order == 0 and "This guide has no point order." or "This build has a talent Wowhead's calculator does not have, so it can't be a Wowhead link.") end
+  return link
+end
+
+-- ------------------------------------------------------------------ the Import window
+local CLASS_N = function(c) return ns.Data.classes[c] and ns.Data.classes[c].n or c end
+--- The preview lines for a link: text, warnings (orange), result.
+function tab.preview(link)
+  if not link or link:match("^%s*$") then return "Paste a Wowhead talent link (WoW Forever).", "", nil end
+  local r = ns.Wowhead.import(link)
+  if r.error then return "|cffff8a80" .. r.error .. "|r", "", nil end
+  local E = ns.Engine
+  local first, last = E.levelForPoint(0, r.talented), E.levelForPoint(r.points - 1, r.talented)
+  local text = CLASS_N(r.cls) .. " · " .. r.split .. " · " .. r.points .. " points · " .. (r.hasOrder and "exact click order" or "order by WoWBoxer") ..
+    " (levels " .. first .. "–" .. last .. ")"
+  local warn = {}
+  for _, w in ipairs(r.warnings) do warn[#warn + 1] = w end
+  local _, m = ns.Core.me()
+  if m and m.cls ~= r.cls then warn[#warn + 1] = "A " .. CLASS_N(r.cls) .. " build: Save as keeps it for your " .. CLASS_N(r.cls) .. " characters."
+  elseif m and r.talented ~= (m.talented or 0) then warn[#warn + 1] = "The link uses Talented rank " .. r.talented .. "; this character has " .. (m.talented or 0) .. " (not changed)." end
+  return text, table.concat(warn, "\n"), r
+end
+local function importFrame(p)
+  if p.imp then return p.imp end
+  local f = W.box(p, 0.11, 0.085, 0.05, 0.99)
+  f:SetPoint("TOPLEFT", 20, -30)
+  f:SetPoint("BOTTOMRIGHT", -20, 40)
+  f:SetFrameLevel((p:GetFrameLevel() or 1) + 30)
+  f:EnableMouse(true)
+  f.wbxModal = true
+  f.title = W.text(f, "GameFontNormalLarge", 15, W.GOLD)
+  f.title:SetPoint("TOPLEFT", 16, -14)
+  f.title:SetText("Import a talent build")
+  f.title.wbxCopy = "label"
+  f.close = W.button(f, "Close", 70, 22, function() f:Hide() end, "Closes this. Nothing is saved.")
+  f.close:SetPoint("TOPRIGHT", -12, -10)
+  local ll = W.text(f, "GameFontNormalSmall", nil, W.GOLD)
+  ll:SetPoint("TOPLEFT", 16, -48)
+  ll:SetText("Wowhead link")
+  ll.wbxCopy = "label"
+  f.link = W.frame("EditBox", f, "InputBoxTemplate")
+  f.link:SetHeight(20)
+  f.link:SetPoint("TOPLEFT", 22, -64)
+  f.link:SetPoint("TOPRIGHT", -16, -64)
+  f.link:SetAutoFocus(false)
+  f.link:SetMaxLetters(ns.Wowhead.MAX_LINK + 20)
+  f.link:SetScript("OnTextChanged", function() tab.refreshImport(p) end)
+  f.link:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+  W.tip(f.link, "Wowhead link", "Paste (Ctrl+V) a link from Wowhead's WoW Forever talent calculator. WoWBoxer only reads it – nothing in it is run.")
+  f.info = W.text(f, "GameFontHighlight", nil, W.TEXT)
+  f.info:SetPoint("TOPLEFT", 16, -96)
+  f.info:SetPoint("TOPRIGHT", -16, -96)
+  f.info.wbxCopy = "data"
+  f.warn = W.text(f, "GameFontHighlightSmall", nil, W.ORANGE)
+  f.warn:SetPoint("TOPLEFT", f.info, "BOTTOMLEFT", 0, -6)
+  f.warn:SetPoint("TOPRIGHT", f.info, "BOTTOMRIGHT", 0, -6)
+  if f.warn.SetMaxLines then f.warn:SetMaxLines(5) end
+  f.warn.wbxCopy = "data"
+  local nl = W.text(f, "GameFontNormalSmall", nil, W.GOLD)
+  nl:SetPoint("BOTTOMLEFT", 16, 50)
+  nl:SetText("Name")
+  nl.wbxCopy = "label"
+  f.name = W.frame("EditBox", f, "InputBoxTemplate")
+  f.name:SetSize(220, 20)
+  f.name:SetAutoFocus(false)
+  f.name:SetMaxLetters(40)
+  f.name:SetPoint("LEFT", nl, "RIGHT", 12, 0)
+  f.name:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+  f.status = W.text(f, "GameFontHighlightSmall", nil, W.GREEN)
+  f.status:SetPoint("BOTTOMLEFT", 16, 18)
+  f.status:SetPoint("BOTTOMRIGHT", f, "BOTTOM", 0, 18)
+  f.status.wbxCopy = "data"
+  local function save(use)
+    local _, _, r = tab.preview(f.link:GetText())
+    if not r then return end
+    local b, why = ns.Core.saveBuild(r, f.name:GetText(), use, f.link:GetText():match("^%s*(.-)%s*$"))
+    local _, m = ns.Core.me()
+    if not b then f.status:SetText("|cffff8a80" .. tostring(why) .. "|r"); return end
+    if m and m.cls ~= r.cls then f.status:SetText("Saved for " .. CLASS_N(r.cls) .. " – pick it on a " .. CLASS_N(r.cls) .. ".")
+    elseif use then f:Hide()
+    else f.status:SetText("Saved: " .. b.label .. " – pick it in the Guide list.") end
+  end
+  f.use = W.button(f, "Save and use", 110, 24, function() save(true) end, "Saves the build and picks it for this character. Nothing changes in the game's talents.")
+  f.use:SetPoint("BOTTOMRIGHT", -12, 12)
+  f.save = W.button(f, "Save as", 80, 24, function() save(false) end, "Saves the build under the name above. It shows first in the Guide list under My builds.")
+  f.save:SetPoint("RIGHT", f.use, "LEFT", -6, 0)
+  f:Hide()
+  p.imp = f
+  return f
+end
+function tab.openImport(p)
+  local f = importFrame(p)
+  f.link:SetText(""); f.name:SetText(""); f.status:SetText(""); f.lastSplit = nil
+  f:Show()
+  tab.refreshImport(p)
+  f.link:SetFocus()
+end
+function tab.refreshImport(p)
+  local f = p.imp
+  if not (f and f:IsShown()) then return end
+  local text, warn, r = tab.preview(f.link:GetText())
+  f.info:SetText(text); f.warn:SetText(warn)
+  local _, m = ns.Core.me()
+  f.save:SetEnabled(r ~= nil)
+  f.use:SetEnabled(r ~= nil and m ~= nil and m.cls == r.cls)
+  local def = r and ("Wowhead " .. r.split) or nil
+  if def and (f.name:GetText() == "" or f.name:GetText() == f.lastSplit) then f.name:SetText(def) end
+  f.lastSplit = def
+end
+
 local KIND_SHORT = { ["exact-order"] = "Exact order", ["final-derived"] = "Final build, order by WoWBoxer", priorities = "Priorities only",
   adaptation = "Adaptation" }
 --- A guide's source and type in one tooltip text.
@@ -117,6 +273,7 @@ function tab.guideTip(g)
   local parts = { (KIND_SHORT[g.kind] or g.kind or "?") .. "." }
   parts[#parts + 1] = "Source: " .. (src.site or "?") .. (src.author and (", " .. src.author) or "") .. (src.updated and (" (" .. src.updated .. ")") or "") .. "."
   if src.scope then parts[#parts + 1] = "Levels " .. src.scope .. "." end
+  if src.url then parts[#parts + 1] = src.url end
   if g.note and g.note ~= "" then parts[#parts + 1] = g.note end
   return table.concat(parts, " ")
 end
@@ -153,8 +310,14 @@ function tab.refresh(p)
   local g = K.guide(m.cls, m.guide)
   local level = ns.Compat.playerLevel()
   local warn = ns.Compat.isForever() and "" or "|cffd9b36c(WoW: Forever talents – this client differs)|r "
-  if kind == "build" then p.kind:SetText(warn .. "Your own build (" .. #order .. " points)")
+  if kind == "build" then p.kind:SetText(warn .. (m.buildName or "Your own build") .. " (" .. #order .. " points, from your squad)")
+  elseif g and g.user then p.kind:SetText(warn .. "Your build · " .. (KIND_SHORT[g.kind] or g.kind))
   else p.kind:SetText(warn .. (g and (KIND[g.kind] or g.kind) or "No guide")) end
+  local cur = tab.current()
+  local mine = cur ~= nil and cur.user == true
+  p.renBtn:SetShown(mine and not p.renBox:IsShown()); p.delBtn:SetShown(mine and not p.renBox:IsShown())
+  p.guide:SetShown(not p.renBox:IsShown())
+  tab.refreshImport(p)
   local have = E.pointsAt(level, m.talented)
   -- next point
   local nextIdx = have > 0 and have or 1
