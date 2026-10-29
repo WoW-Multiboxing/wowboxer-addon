@@ -141,12 +141,14 @@ local function editorFrame(parent)
   f.wbxModal = true
   f:Hide()
   A.ef = f
+  f.parts = {} -- sections 2–4 (shown on the Targeting tab); section 1 for own macros is the spells box
+  local function part(x) f.parts[#f.parts + 1] = x; return x end
   local function head(text, x, y)
     local h = W.text(f, "GameFontNormalSmall", nil, W.GOLD)
     h:SetPoint("TOPLEFT", x, y)
     h:SetText(text)
     h.wbxCopy = "hint"
-    return h
+    return part(h)
   end
   f.title = W.text(f, "GameFontNormal", nil, W.GOLD)
   f.title:SetPoint("TOPLEFT", 10, -8)
@@ -157,21 +159,20 @@ local function editorFrame(parent)
   f.spells:SetPoint("TOPLEFT", 70, -28)
   f.spells:SetWidth(480)
   f.spells.wbxCopy = "data"
-  f.editSpells = W.button(f, "Edit spells", 84, 20, function()
-    local i = f.name and tonumber(f.name:match("^WBX C(%d)$"))
-    if i then f:Hide(); ns.KeyEditor.Open(parent, i) end
-  end, "Opens the own-macro editor: steps, filler and kind.")
+  part(f.spells)
+  f.editSpells = W.button(f, "Edit spells", 84, 20, function() A.showSection("spells") end, "Steps, filler and kind of this own macro.")
   f.editSpells:SetPoint("TOPRIGHT", -10, -24)
+  part(f.editSpells)
   -- 2 Targeting: Available targets (left) → This macro tries, in order (right)
   head("2 Targeting – drag a target into the list", 10, -50)
-  f.avail = CreateFrame("Frame", nil, f)
+  f.avail = part(CreateFrame("Frame", nil, f))
   f.avail:SetPoint("TOPLEFT", 10, -66)
   f.avail:SetSize(268, 8 * A.ROW_H)
   f.availBg = f.avail:CreateTexture(nil, "BACKGROUND")
   f.availBg:SetAllPoints()
   f.availBg:SetColorTexture(0, 0, 0, 0.25)
   f.tiles = {}
-  f.list = CreateFrame("Frame", nil, f)
+  f.list = part(CreateFrame("Frame", nil, f))
   f.list:SetPoint("TOPLEFT", 290, -66)
   f.list:SetPoint("TOPRIGHT", -10, -66)
   f.list:SetHeight(8 * A.ROW_H)
@@ -182,6 +183,7 @@ local function editorFrame(parent)
   f.listHead:SetPoint("BOTTOMLEFT", f.list, "TOPLEFT", 0, 3)
   f.listHead:SetText("This macro tries, in order")
   f.listHead.wbxCopy = "hint"
+  part(f.listHead)
   f.empty = W.text(f.list, "GameFontHighlightSmall", nil, W.MUTED, "CENTER")
   f.empty:SetPoint("CENTER", 0, 0)
   f.empty:SetText("Drag targets here")
@@ -205,13 +207,14 @@ local function editorFrame(parent)
     r.aim = W.button(r, "Friendly", 62, 20, function()
       local t = f.targets[i]; if not t then return end
       if t.help == true then t.help = false elseif t.help == false then t.help = nil else t.help = true end
+      f.touched = true
       A.refreshEditor()
     end, "Friendly: only friends. Enemy: only enemies. Either: both.")
     r.aim:SetPoint("LEFT", 198, 0)
     r.dead = W.frame("CheckButton", r, "UICheckButtonTemplate")
     r.dead:SetSize(20, 20)
     r.dead:SetPoint("LEFT", r.aim, "RIGHT", 2, 0)
-    r.dead:SetScript("OnClick", function(self) local t = f.targets[i]; if t then t.nodead = self:GetChecked() and true or false; A.refreshEditor() end end)
+    r.dead:SetScript("OnClick", function(self) local t = f.targets[i]; if t then f.touched = true; t.nodead = self:GetChecked() and true or false; A.refreshEditor() end end)
     W.tip(r.dead, "Skip if dead", "Ticked: skips this target when it is dead (untick for resurrection).")
     local function arrow(tex, d, tipText)
       local b = CreateFrame("Button", nil, r)
@@ -223,7 +226,7 @@ local function editorFrame(parent)
     end
     r.up = arrow("Interface\\ChatFrame\\UI-ChatIcon-ScrollUp-Up", -1, "Up")
     r.down = arrow("Interface\\ChatFrame\\UI-ChatIcon-ScrollDown-Up", 1, "Down")
-    r.remove = W.button(r, "x", 22, 20, function() table.remove(f.targets, i); A.refreshEditor() end, { "Remove", "Takes this target out (or drag it out of the list)." })
+    r.remove = W.button(r, "x", 22, 20, function() f.touched = true; table.remove(f.targets, i); A.refreshEditor() end, { "Remove", "Takes this target out (or drag it out of the list)." })
     r.remove:SetPoint("RIGHT", -2, 0)
     r.down:SetPoint("RIGHT", r.remove, "LEFT", -2, 0)
     r.up:SetPoint("RIGHT", r.down, "LEFT", -1, 0)
@@ -244,14 +247,16 @@ local function editorFrame(parent)
   head("3 Options", 10, oy)
   f.mod = W.dropdown(f, { width = 130,
     values = function() return { { "none", "No modifier" }, { "shift", "Shift = myself" }, { "ctrl", "Ctrl = myself" }, { "alt", "Alt = myself" } } end,
-    get = function() return f.opts.mod or "none" end, set = function(v) f.opts.mod = v ~= "none" and v or nil; A.refreshEditor() end })
+    get = function() return f.opts.mod or "none" end, set = function(v) f.touched = true; f.opts.mod = v ~= "none" and v or nil; A.refreshEditor() end })
   f.mod:SetPoint("TOPLEFT", 80, oy + 4)
+  part(f.mod)
   W.ddTip(f.mod, "Modifier", "Hold Shift (Ctrl, Alt) while you press the macro's keybind to cast it on yourself.")
   local function tri(width, key, labels, title, tip)
     local d = W.dropdown(f, { width = width, values = function() return { { "keep", labels[1] }, { "on", labels[2] }, { "off", labels[3] } } end,
       get = function() local v = f.opts[key]; return v == true and "on" or v == false and "off" or "keep" end,
       set = function(v)
         if v == "on" then f.opts[key] = true elseif v == "off" then f.opts[key] = false else f.opts[key] = nil end
+        f.touched = true
         A.refreshEditor()
       end })
     W.ddTip(d, title, tip)
@@ -259,12 +264,15 @@ local function editorFrame(parent)
   end
   f.start = tri(130, "startattack", { "Attack: as built", "Auto attack on", "Auto attack off" }, "Auto attack", "Adds or removes /startattack (enemy macros).")
   f.start:SetPoint("LEFT", f.mod, "RIGHT", 8, 0)
+  part(f.start)
   f.pet = tri(120, "petattack", { "Pet: as built", "Pet attacks", "No pet line" }, "Pet", "Adds or removes /petattack (enemy macros).")
   f.pet:SetPoint("LEFT", f.start, "RIGHT", 8, 0)
+  part(f.pet)
   f.reset = W.dropdown(f, { width = 130,
     values = function() local v = { { "keep", "Reset: as built" } }; for _, r in ipairs(O().RESETS) do v[#v + 1] = { r, "reset=" .. r } end return v end,
-    get = function() return f.opts.reset or "keep" end, set = function(v) f.opts.reset = v ~= "keep" and v or nil; A.refreshEditor() end })
+    get = function() return f.opts.reset or "keep" end, set = function(v) f.touched = true; f.opts.reset = v ~= "keep" and v or nil; A.refreshEditor() end })
   f.reset:SetPoint("LEFT", f.pet, "RIGHT", 8, 0)
+  part(f.reset)
   W.ddTip(f.reset, "Reset", "When a sequence macro starts over: after combat, on a new target, after some seconds.")
   -- 4 Preview
   local py = oy - 30
@@ -276,6 +284,7 @@ local function editorFrame(parent)
   f.preview:SetJustifyV("TOP")
   if f.preview.SetNonSpaceWrap then f.preview:SetNonSpaceWrap(true) end
   f.preview.wbxCopy = "data"
+  part(f.preview)
   f.info = W.line(f, "GameFontHighlightSmall", nil, W.MUTED)
   f.info:SetPoint("BOTTOMLEFT", 10, 36)
   f.info:SetPoint("BOTTOMRIGHT", -10, 36)
@@ -290,7 +299,32 @@ local function editorFrame(parent)
   f.text = W.button(f, "Edit text", 80, 24, function() local n, l = f.name, f.label; f:Hide(); A.openText(parent, n, l) end,
     "The last resort: write the macro text yourself (checked live). The macro is then frozen on level-ups.")
   f.text:SetPoint("LEFT", f.back, "RIGHT", 6, 0)
+  -- the section tabs: 1 Spells (own macros: steps, filler, kind, presets) · 2–4 Targeting, Options, Preview
+  f.tabTarget = W.button(f, "Targeting", 84, 20, function() A.showSection("target") end, "Targeting (drag and drop), options and the preview.")
+  f.tabTarget:SetPoint("TOPRIGHT", -10, -4)
+  f.tabSpells = W.button(f, "Spells", 64, 20, function() A.showSection("spells") end, "The spells of this macro: single spell, sequence or priority.")
+  f.tabSpells:SetPoint("RIGHT", f.tabTarget, "LEFT", -4, 0)
+  f.spellsBox = CreateFrame("Frame", nil, f)
+  f.spellsBox:SetPoint("TOPLEFT", 0, -26)
+  f.spellsBox:SetPoint("BOTTOMRIGHT", 0, 34)
+  f.spellsBox:Hide()
+  f:SetScript("OnHide", function() local K = ns.KeyEditor.frame; if K then K:Hide(); K.draft = nil end end)
   return f
+end
+
+--- Show one section of the editor: "spells" (own macros) or "target" (targeting, options, preview).
+function A.showSection(which)
+  local f = A.ef
+  if not f then return end
+  if which == "target" and not f.name then which = "spells" end -- a new macro: its spells first
+  f.section = which
+  local spells = which == "spells"
+  f.spellsBox:SetShown(spells)
+  for _, x in ipairs(f.parts) do x:SetShown(not spells) end
+  f.editSpells:SetShown(not spells and f.own ~= nil)
+  if spells then f.tabSpells:LockHighlight(); f.tabTarget:UnlockHighlight() else f.tabTarget:LockHighlight(); f.tabSpells:UnlockHighlight() end
+  f.tabTarget:SetEnabled(f.name ~= nil)
+  A.refreshEditor()
 end
 
 --- An available target tile (left side): drag it into the list, or click it to add it at the end.
@@ -326,6 +360,7 @@ end
 local function copy(t) local c = {}; for k, v in pairs(t) do c[k] = v end return c end
 function A.insert(t, at)
   local f = A.ef
+  f.touched = true
   if #f.targets >= O().MAX_TARGETS then return false end
   at = math.max(1, math.min(#f.targets + 1, at or (#f.targets + 1)))
   table.insert(f.targets, at, copy(t))
@@ -334,6 +369,7 @@ function A.insert(t, at)
 end
 function A.moveRow(i, j)
   local f = A.ef
+  f.touched = true
   if not f.targets[i] then return end
   j = math.max(1, math.min(#f.targets, j))
   if i == j then return end
@@ -361,18 +397,55 @@ function A.drop()
   if d.kind == "new" then
     if at then A.insert(d.target, at) end
   elseif d.kind == "row" then
-    if at then A.moveRow(d.index, math.min(at, #f.targets)) else table.remove(f.targets, d.index); A.refreshEditor() end
+    if at then A.moveRow(d.index, math.min(at, #f.targets)) else f.touched = true; table.remove(f.targets, d.index); A.refreshEditor() end
   end
 end
 
 --- Open the Macro editor for macro `name` (any macro: recommended, sequence, squad or own).
-function A.openEditor(parent, name, label)
-  local d = current(name)
-  if not d then return false end
+--- The base macro the targeting works on: for an own macro the draft being edited, else the engine's macro.
+local function baseOf(f)
+  if f.own and ns.KeyEditor.frame and ns.KeyEditor.frame.draft then
+    local _, m = Core().me()
+    local ok, r = pcall(ns.KeyEditor.preview, m, ns.KeyEditor.frame.draft, ns.Compat.playerLevel())
+    if ok and r and r.macro and r.macro ~= "" then return r.macro end
+  end
+  local d = f.name and current(f.name)
+  return d and (d.engineBody or d.body) or ""
+end
+A.baseOf = baseOf
+--- Log one step of an own-macro flow (the diagnose shows them: docs/feedback-2026-10-30-night.md §1).
+function A.flow(step) Core().log("info", "own macro: " .. step) end
+
+--- New macro: the same Macro editor, starting with "Single spell or Sequence".
+function A.openNew(parent)
   local f = editorFrame(parent)
+  f.name, f.label, f.own, f.ctx, f.touched = nil, "New macro", "new", O().ctx(), false
+  f.targets, f.opts, f.base, f.help = {}, {}, "", nil
+  f.title:SetText("Macro editor – New macro")
+  ns.KeyEditor.Open(f.spellsBox, nil)
+  f:Show()
+  A.flow("new")
+  A.showSection("spells")
+  return true
+end
+
+function A.openEditor(parent, name, label)
+  local own = name and tonumber(name:match("^WBX C(%d)$"))
+  local d = current(name)
+  if not d and not own then return false end
+  local f = editorFrame(parent)
+  f.own, f.touched = own, false
+  if own then
+    local _, m = Core().me()
+    if not (m and m.customSeq and m.customSeq[own]) then return false end
+    ns.KeyEditor.Open(f.spellsBox, own)
+    label = label or m.customSeq[own].name
+    A.flow("open C" .. own)
+  end
+  d = d or { body = "", label = label }
   f.name, f.label, f.ctx = name, label or name, O().ctx()
   local ov = Core().cdb.overrides[name]
-  local base = d.engineBody or d.body
+  local base = own and baseOf({ own = own, name = name }) or (d.engineBody or d.body)
   f.base = base
   f.help = base:find("help", 1, true) and true or (base:find("harm", 1, true) and false or nil)
   f.targets, f.opts = {}, {}
@@ -387,10 +460,10 @@ function A.openEditor(parent, name, label)
   if #names == 0 and d.seq and d.seq.spells then for _, n in ipairs(d.seq.spells) do names[#names + 1] = n end end
   if #names == 0 then names[1] = d.label end
   f.spells:SetText(kind .. ": " .. table.concat(names, " › "))
-  f.editSpells:SetShown(name:match("^WBX C%d$") ~= nil)
   f.title:SetText("Macro editor – " .. f.label)
   f:Show()
-  A.refreshEditor()
+  -- own macros start on their spells (Standard: spells only; the presets are there); others on the targeting
+  A.showSection((own and not A.on()) and "spells" or (own and "spells") or "target")
   return true
 end
 A.openTargeting = A.openEditor -- 0.9.9 name
@@ -403,6 +476,13 @@ end
 function A.refreshEditor()
   local f = A.ef
   if not (f and f:IsShown()) then return end
+  f.tabTarget:SetShown(A.on() or not f.own) -- Standard own macros: the presets in Spells are their targeting
+  f.tabSpells:SetShown(f.own ~= nil)
+  f.back:SetShown(f.name ~= nil); f.text:SetShown(f.name ~= nil and A.on())
+  if f.own then
+    f.base = baseOf(f)
+    f.help = f.base:find("help", 1, true) and true or (f.base:find("harm", 1, true) and false or nil)
+  end
   -- available targets: everything this client can use (the leader's client gets every member and pet too)
   local choices = O().choices(f.ctx, f.help)
   for i, c in ipairs(choices) do
@@ -438,7 +518,8 @@ function A.refreshEditor()
   if ov then body, missing = O().apply(f.base, ov, f.ctx) end
   f.body = body
   f.preview:SetText(body)
-  local ok, why = ns.Rules.validateMacro(f.name, body)
+  local ok, why = ns.Rules.validateMacro(f.name or "WBX C1", body)
+  if f.own and body == "" then ok, why = true, nil end -- a new macro: its spells come first (the Spells section says so)
   local msg = #body .. "/255"
   if #body > 255 then msg = "|cffff8a80Too long (" .. #body .. "/255): remove a target or untick Skip if dead|r"
   elseif not ok then msg = "|cffff8a80" .. tostring(why) .. "|r"
@@ -449,11 +530,23 @@ function A.refreshEditor()
   f.back:SetEnabled(Core().cdb.overrides[f.name] ~= nil)
 end
 A.refreshTargeting = A.refreshEditor
+--- Save: an own macro saves its spells first (and its preset), then the targeting when it was changed here.
 function A.saveEditor()
   local f = A.ef
-  Core().setOverride(f.name, A.draft())
+  if f.own then
+    local idx, err = ns.KeyEditor.commit()
+    if not idx then Core().print("|cffff8a80" .. tostring(err) .. "|r"); A.flow("save failed: " .. tostring(err)); return end
+    f.name = "WBX C" .. idx
+    A.flow("saved C" .. idx .. (f.touched and " with targeting" or ""))
+    if f.touched and A.on() then Core().setOverride(f.name, A.draft()) end
+    if ns.UI.panels and ns.UI.panels.custom then ns.UI.panels.custom.selected = f.name end
+    Core().changed()
+  else
+    Core().setOverride(f.name, A.draft())
+  end
   f:Hide()
 end
+--- Closing the editor closes its Spells section too (the draft is dropped).
 A.saveTargeting = A.saveEditor
 
 -- ------------------------------------------------------------------ Edit macro text (§3, the last resort)
@@ -521,7 +614,10 @@ function A.menuItems(p, c)
   local items = {}
   local isSpell = c.kind == "spell" and c.spell ~= nil
   if not (c.name or isSpell) or c.kind == "new" or c.kind == "squadkey" then return items end
-  if not A.on() then
+  local own = c.name and c.name:match("^WBX C%d$")
+  if not A.on() and own then
+    items[#items + 1] = { "Edit macro…", function() A.editCell(p, c) end, "Spells, kind and targeting preset of this own macro." }
+  elseif not A.on() then
     items[#items + 1] = { "Edit macro… (Advanced mode)", function() end, "Turn on Advanced in the window header to change who this macro casts on.", true }
   else
     items[#items + 1] = { "Edit macro…", function() A.editCell(p, c) end, "Spells, targeting (drag and drop), options and a live preview of this macro." }

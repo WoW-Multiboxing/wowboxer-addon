@@ -127,11 +127,11 @@ xf:Hide()
 -- KeyEditor shows Targeting… / Macro text… only in Advanced
 UI.Select("custom")
 UI.panels.custom.cells[1]:Click("LeftButton")
-H.ok(ns.KeyEditor.frame.targeting:IsShown(), "KeyEditor: Edit macro… in Advanced")
+H.ok(ns.Advanced.ef:IsShown() and (not ns.Advanced.ef.tabSpells:IsShown() or ns.Advanced.ef.tabTarget:IsShown()), "own macros: the Macro editor, Targeting in Advanced")
 ns.KeyEditor.Close()
 UI.modeStd:Click()
 UI.panels.custom.cells[1]:Click("LeftButton")
-H.ok(not ns.KeyEditor.frame.targeting:IsShown(), "KeyEditor: hidden in Standard")
+H.ok(ns.Advanced.ef:IsShown() and not (ns.Advanced.ef.tabSpells:IsShown() and ns.Advanced.ef.tabTarget:IsShown()), "Standard: an own macro has no Targeting tab")
 ns.KeyEditor.Close()
 
 -- Reset to default

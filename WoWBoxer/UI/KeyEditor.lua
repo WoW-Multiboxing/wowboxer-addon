@@ -119,13 +119,11 @@ local function spellFromCursor()
   return ns.Compat.safe(name)
 end
 
+--- The Spells section of the Macro editor (UI/Advanced.lua): there is no separate window any more.
 function KE.Build(parent)
   if KE.frame then return KE.frame end
-  local f = W.box(parent, 0.1, 0.078, 0.055, 0.99)
+  local f = CreateFrame("Frame", nil, parent)
   f:SetAllPoints()
-  f:SetFrameLevel((parent:GetFrameLevel() or 1) + 20)
-  f:EnableMouse(true)
-  f.wbxModal = true
   f:Hide()
   KE.frame = f
 
@@ -310,7 +308,7 @@ function KE.Build(parent)
     local idx, err = KE.save(m, f.draft, f.index)
     if not idx then Core().print("|cffff8a80" .. err .. "|r"); return end
     KE.applyPreset(idx, f.draft.preset)
-    Core().log("info", "own macro C" .. idx .. " saved: " .. tostring(m.customSeq[idx] and m.customSeq[idx].name))
+    Core().log("info", "own macro: C" .. idx .. " saved as " .. tostring(m.customSeq[idx] and m.customSeq[idx].name) .. " (" .. tostring(m.customSeq[idx] and m.customSeq[idx].kind) .. ")")
     KE.Close()
     if UI.panels and UI.panels.custom then UI.panels.custom.selected = "WBX C" .. idx end
     Core().changed()
@@ -321,7 +319,7 @@ function KE.Build(parent)
   f.delete = W.button(f, "Delete macro", 90, 24, function(self)
     if not self.armed then self.armed = true; W.setLabel(self, "Sure?"); return end
     local _, m = Core().me()
-    if m and f.index then KE.delete(m, f.index); Core().log("info", "own macro C" .. f.index .. " deleted") end
+    if m and f.index then KE.delete(m, f.index); Core().log("info", "own macro: deleted C" .. f.index) end
     KE.Close(); Core().changed()
   end, "Deletes this own macro from WoWBoxer (click twice). The game macro is removed the next time you update your macros.")
   f.paste = W.button(f, "Paste…", 70, 24, function()
@@ -336,6 +334,10 @@ function KE.Build(parent)
   end, "Shows the macro text and a WoWBoxer macro, ready to copy and give to others.")
   f.copy:SetPoint("LEFT", f.paste, "RIGHT", 6, 0)
   f.delete:SetPoint("LEFT", f.copy, "RIGHT", 6, 0)
+  -- the Macro editor's Save / Cancel / Edit macro… do this now (one window for every macro)
+  f.save:SetScript("OnClick", function() ns.Advanced.saveEditor() end); f.save:Hide()
+  f.cancel:SetScript("OnClick", function() KE.Close() end); f.cancel:Hide()
+  f.targeting:Hide()
   return f
 end
 
@@ -413,14 +415,28 @@ function KE.Open(parent, index)
   f.name:SetText(f.draft.name)
   f.title:SetText(f.index and ("Edit own macro " .. f.index) or "New macro")
   f.delete:SetShown(f.index ~= nil)
-  local adv = Core().advanced()
-  f.targeting:SetShown(adv); f.textBtn:SetShown(adv)
+  f.targeting:SetShown(false); f.save:Hide(); f.cancel:Hide()
   f.targeting:SetEnabled(f.index ~= nil); f.textBtn:SetEnabled(f.index ~= nil)
   f.delete.armed = false; W.setLabel(f.delete, "Delete macro")
   f:Show()
   KE.Refresh()
 end
-function KE.Close() if KE.frame then KE.frame:Hide(); KE.frame.draft = nil end end
+function KE.Close()
+  if KE.frame then KE.frame:Hide(); KE.frame.draft = nil end
+  if ns.Advanced and ns.Advanced.ef then ns.Advanced.ef:Hide() end
+end
+--- Save the draft (the Macro editor's Save). Returns the own macro's index or nil, reason.
+function KE.commit()
+  local f = KE.frame
+  local _, m = Core().me()
+  if not (f and f.draft and m) then return nil, "Nothing to save." end
+  local idx, err = KE.save(m, f.draft, f.index)
+  if not idx then return nil, err end
+  KE.applyPreset(idx, f.draft.preset)
+  f.index = idx
+  Core().log("info", "own macro: C" .. idx .. " saved as " .. tostring(m.customSeq[idx] and m.customSeq[idx].name) .. " (" .. tostring(m.customSeq[idx] and m.customSeq[idx].kind) .. ")")
+  return idx
+end
 function KE.IsOpen() return KE.frame ~= nil and KE.frame:IsShown() end
 
 function KE.Refresh()

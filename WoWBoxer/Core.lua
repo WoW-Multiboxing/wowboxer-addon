@@ -510,7 +510,7 @@ function Core.newSingle(spell, preset)
     Core.cdb.overrides[name] = ns.Override.clean({ targets = { { who = "mouseover", help = true, nodead = true },
       { who = "member", name = preset.pet, pet = true, help = true, nodead = true } } })
   else Core.cdb.overrides[name] = nil end
-  Core.log("info", "own macro C" .. i .. ": single spell " .. spell.name)
+  Core.log("info", "own macro: C" .. i .. " made from the spell " .. spell.name)
   Core.changed()
   return i
 end
@@ -831,6 +831,21 @@ function Core.selftest(quiet)
     r.buttons[slot] = { content = c.kind .. (c.name and (":" .. c.name) or (c.id and (":" .. c.id) or "")), keys = table.concat(keys, " ") }
   end
   r.bindingSet = ns.Binds.currentSet()
+  -- own macros C1–C8 and the last steps of their flows (docs/feedback-2026-10-30-night.md §1)
+  if ctx then
+    r.ownMacros = {}
+    for i, c in ipairs(ctx.member.customSeq or {}) do
+      local st
+      for _, it in ipairs(ctx.macros.items) do if it.name == "WBX C" .. i then st = it.status end end
+      r.ownMacros[i] = { name = c.name, kind = c.kind, steps = table.concat(c.steps or {}, ","), status = st, override = Core.cdb.overrides["WBX C" .. i] ~= nil }
+    end
+    r.ownFlow = {}
+    for k = #db.log, 1, -1 do
+      local e = db.log[k]
+      if e.m:find("^own macro") then table.insert(r.ownFlow, 1, e.m) end
+      if #r.ownFlow >= 20 then break end
+    end
+  end
   r.lastReset = db.lastReset
   local nOrig = 0
   for _ in pairs(Core.cdb.barOriginal or {}) do nOrig = nOrig + 1 end

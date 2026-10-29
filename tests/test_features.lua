@@ -499,9 +499,9 @@ do
   pick("Conflagrate")
   if f.draft.steps[3] == "Conflagrate" then H.ok((f.warnFull or ""):find("Immolate") ~= nil, "Conflagrate warning shown") ; f.stepBtns[3]:Click() end
   f.name:SetText("Dots"); f.name._scripts.OnTextChanged(f.name, true)
-  findButton(W, "Save macro"):Click()
+  ns.Advanced.ef.save:Click()
   local _, m = Core.me()
-  H.eq(#m.customSeq, 1, "saved")
+  H.eq(#m.customSeq, 1, "saved: " .. table.concat(W.chat, " / "):sub(-200))
   H.eq(m.customSeq[1].name, "Dots", "named")
   H.ok(not f:IsShown(), "editor closed")
   H.eq(W.calls.CreateMacro, nil, "saving writes nothing to the game")
@@ -518,7 +518,8 @@ do
   H.eq(f.index, 1, "editing C1")
   f.draft.kind = "priority"; KE.Refresh()
   H.ok(not f.reset:IsShown(), "no reset option for a priority list")
-  findButton(W, "Save macro"):Click()
+  H.ok(ns.Advanced.ef:IsShown() and ns.Advanced.ef.section == "spells", "own macros open the Macro editor on its Spells section")
+  ns.Advanced.ef.save:Click()
   H.eq(m.customSeq[1].kind, "priority", "kind changed")
   -- limits and delete
   for i = 2, 8 do KE.save(m, { name = "K" .. i, kind = "sequence", aim = "harm", steps = { "Immolate" }, filler = "Shadow Bolt", fills = 1, reset = "combat" }) end

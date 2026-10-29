@@ -39,7 +39,7 @@ Help.PAGES = {
   editor = { tip = { "Build a macro from your spells.", "Add spells as steps; pick a filler.", "Save, then place it like any macro." },
     callouts = function() local f = ns.KeyEditor.frame
       return { { f.kind, "Sequence or priority list" }, { f.strip, "Steps: click one to remove" }, { f.pickSf, "Add spells or pick a filler" },
-        { f.macroSf, "The macro WoW will run" }, { f.save, "Save the macro" } } end },
+        { f.macroSf, "The macro WoW will run" }, { ns.Advanced.ef and ns.Advanced.ef.save, "Save the macro" } } end },
   talents = { tip = { "The talent order of your guide.", "Take the point shown under Next." },
     callouts = function() local p = UI.panels.talents
       return { { p.guide, "Pick a talent guide" }, { p.nb, "Your next talent" }, { p.sf, "The whole point order" }, { p.readback, "Points spent in game" } } end },

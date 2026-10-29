@@ -565,7 +565,7 @@ end
 function Book.menuFor(p, c)
   local items = {}
   if ns.Compat.inCombat() then return { { "Not in combat – try again after the fight", function() end } } end
-  if c.kind == "new" then return { { "New macro", function() ns.KeyEditor.Open(p, nil) end } } end
+  if c.kind == "new" then return { { "New macro", function() ns.Advanced.openNew(p) end } } end
   if c.kind == "squadkey" then return { { "Make this macro", function() Book.setSquadKey(c.squadKey, true) end } } end
   if c.kind == "spell" and not c.name then
     items[#items + 1] = { c.pending and "Pick up (macro works once learned)" or "Pick up (make a macro)", function() pickupCell(c) end }
@@ -583,8 +583,7 @@ function Book.menuFor(p, c)
       items[#items + 1] = { "Keep off my bars", function() Core().setKeptOff(c.name, true) end, "Place all leaves this macro off your bars and WoWBoxer never reminds you about it. You can still drag it." }
     end
   end
-  local i = c.name and tonumber(c.name:match("^WBX C(%d)$"))
-  if i then items[#items + 1] = { "Edit", function() ns.KeyEditor.Open(p, i) end } end
+
   if ns.Advanced then for _, it in ipairs(ns.Advanced.menuItems(p, c)) do items[#items + 1] = it end end
   if c.d and c.d.body then items[#items + 1] = { "Copy…", function() Book.copyKey(c) end } end
   if directBound(c) then items[#items + 1] = { "Remove keybind", function() Core().unbindKey(c.name) end } end
@@ -732,10 +731,10 @@ local function makeCell(p, parent, small)
     local c = self.cell
     if not c then return end
     if button == "RightButton" or (_G.IsShiftKeyDown and _G.IsShiftKeyDown()) then W.menu(self, Book.menuFor(p, c)); return end
-    if c.kind == "new" then ns.KeyEditor.Open(p, nil); return end
+    if c.kind == "new" then ns.Advanced.openNew(p); return end
     if p.mode == "custom" then
       local i = c.name and tonumber(c.name:match("^WBX C(%d)$"))
-      if i then ns.KeyEditor.Open(p, i) end
+      if i then ns.Advanced.openEditor(p, c.name, c.label) end
       return
     end
     if p.mode ~= "keys" then return end
