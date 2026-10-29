@@ -3,7 +3,7 @@
 // tokens), read back with importWowhead, and must give the same order. Plus a few bad links. node docs/patches/wowhead_import.test.js
 const path = require('path'), root = path.join(__dirname, '..', '..');
 const D = require(path.join(root, 'vendor/companion/app_data.json')), E = require(path.join(root, 'vendor/companion/engine.js'));
-const WH = require('./wowhead-forever-trees.json'), { importWowhead } = require('./wowhead_import.js');
+const WH = require('../../vendor/wowhead/forever-trees.json'), { importWowhead } = require('./wowhead_import.js');
 let pass = 0, fail = 0, skip = 0;
 function encode(cls, order, compress) {
   const T = E.makeTree(D.talents[cls]), idx = {};

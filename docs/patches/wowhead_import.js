@@ -79,7 +79,7 @@ module.exports = { importWowhead };
 if (require.main === module) { // node docs/patches/wowhead_import.js [link]
   const path = require('path'), root = path.join(__dirname, '..', '..');
   const D = require(path.join(root, 'vendor/companion/app_data.json')), E = require(path.join(root, 'vendor/companion/engine.js'));
-  const WH = require('./wowhead-forever-trees.json');
+  const WH = require('../../vendor/wowhead/forever-trees.json');
   const link = process.argv[2] || 'https://www.wowhead.com/forever/talent-calc/druid/v2410222-4_t0/0abaaaDEF1aaaa';
   const r = importWowhead(link, D, WH, E);
   if (r.error) { console.log('ERROR', r.error); process.exit(1); }

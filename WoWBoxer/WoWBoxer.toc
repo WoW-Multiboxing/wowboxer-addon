@@ -23,8 +23,10 @@ Data\Class_shaman.lua
 Data\Class_mage.lua
 Data\Class_warlock.lua
 Data\Class_druid.lua
+Data\WowheadOrder.lua
 Engine.lua
 Kit.lua
+Wowhead.lua
 Json.lua
 Rules.lua
 Compat.lua
