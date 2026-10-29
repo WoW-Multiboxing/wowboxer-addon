@@ -1210,6 +1210,16 @@ function Book.buildGuide(p)
   g.back = W.button(g, "Back", 70, 26, function() g.step = math.max(1, g.step - 1); Core().cdb.guideStep = g.step; UI.Refresh() end, "Goes back one step.")
   g.back:SetPoint("BOTTOMLEFT", 16, 16)
   g.done = W.button(g, "Close", 90, 26, function() Book.closeGuide(p) end, "Closes the guide and shows your macros.")
+  -- step 3: automation (docs/feedback-2026-10-30-night.md §6)
+  g.autoPreset = W.button(g, "Levelling squad", 130, 28, function()
+    if ns.Auto then ns.Auto.preset(); Core().log("info", "guide: automation preset levelling squad") end
+    g.step = 4; Core().cdb.guideStep = 4; UI.Refresh()
+  end, "Turns on: accept invites, quests, quest sharing and turn-in, dialogs, resurrections, summons, role checks, selling junk and repairing – for your squad only.")
+  g.autoPreset.wbxBig = true
+  g.autoPreset:SetPoint("TOPLEFT", 24, -150)
+  g.autoChoose = W.button(g, "Choose…", 100, 28, function() Book.closeGuide(p); UI.Select("automation") end,
+    "Closes the guide and opens the Automation page: one tick per automation.")
+  g.autoChoose:SetPoint("LEFT", g.autoPreset, "RIGHT", 8, 0)
   g.done:SetPoint("BOTTOMRIGHT", -16, 16)
   g:Hide()
 end
@@ -1219,10 +1229,12 @@ function Book.closeGuide(p)
   if p.guide then p.guide:Hide() end
   UI.Refresh()
 end
---- Show the guide again (minimap menu, Setup).
+--- Start the first-run guide again at step 1 (minimap / Addon Compartment menu, right-click on "?", /wbx guide).
 function Book.ShowGuide()
-  Core().cdb.guide, Core().cdb.guideStep = nil, 1
+  Core().cdb.guide, Core().cdb.guideStep = "restart", 1
+  Core().log("info", "first-run guide restarted")
   UI.Open("keys")
+  UI.Refresh()
 end
 
 --- "Bar 1 · 1–10 and Bottom Left Bar · 9–11": where Place all puts the keys.
@@ -1244,18 +1256,18 @@ end
 
 function Book.refreshGuide(p, ctx)
   local g, cdb = p.guide, Core().cdb
-  local want = ctx and cdb.guide ~= "done" and (not cdb.lastSync or (cdb.guideStep or 1) >= 3) and cdb.guide ~= "skip"
+  local want = ctx and (cdb.guide == "restart" or (cdb.guide ~= "done" and (not cdb.lastSync or (cdb.guideStep or 1) >= 3) and cdb.guide ~= "skip"))
   p.body:SetShown(not want)
   if not want then g:Hide(); return end
-  g.step = math.max(1, math.min(3, cdb.guideStep or 1))
+  g.step = math.max(1, math.min(4, cdb.guideStep or 1))
   g:Show()
   local mem, info = ctx.member, Core().playerInfo()
   local cls = ns.Data.classes[mem.cls]
-  for _, x in ipairs({ g.roleLabel, g.playLabel, g.lead, g.follow, g.seq, g.replace, g.next, g.place, g.drag, g.done }) do x:Hide() end
+  for _, x in ipairs({ g.roleLabel, g.playLabel, g.lead, g.follow, g.seq, g.replace, g.next, g.place, g.drag, g.done, g.autoPreset, g.autoChoose }) do x:Hide() end
   for _, b in ipairs(g.roles) do b:Hide() end
-  g.back:SetShown(g.step > 1 and g.step < 3)
+  g.back:SetShown(g.step > 1 and g.step < 4)
   if g.step == 1 then
-    g.title:SetText("Step 1 of 3 – Who is " .. (info.name or "this") .. "?")
+    g.title:SetText("Step 1 of 4 – Who is " .. (info.name or "this") .. "?")
     g.text:SetText("Pick a role, leader or follower, and sequence macros.")
     g.roleLabel:Show(); g.playLabel:Show(); g.lead:Show(); g.follow:Show(); g.next:Show()
     g.seq:Show(); g.seq.Refresh()
@@ -1270,14 +1282,18 @@ function Book.refreshGuide(p, ctx)
     end
     if mem.leader then g.lead:LockHighlight(); g.follow:UnlockHighlight() else g.follow:LockHighlight(); g.lead:UnlockHighlight() end
   elseif g.step == 2 then
-    g.title:SetText("Step 2 of 3 – Your action bar")
+    g.title:SetText("Step 2 of 4 – Your action bar")
     g.occupied = ctx.bars.counts.occupied or 0
     g.text:SetText("Place all puts your " .. #ctx.desired .. " macros on " .. Book.whereText(ctx) .. ".")
     g.replace:Show(); g.replace:SetChecked(cdb.replace and true or false)
     g.place:Show(); g.drag:Show()
     g.place:SetEnabled(not ns.Compat.inCombat())
+  elseif g.step == 3 then
+    g.title:SetText("Step 3 of 4 – Automation")
+    g.text:SetText("Pick Levelling squad, or choose each automation yourself.")
+    g.autoPreset:Show(); g.autoChoose:Show(); g.next:Show()
   else
-    g.title:SetText("Step 3 of 3 – Done")
+    g.title:SetText("Step 4 of 4 – Done")
     g.text:SetText("WoWBoxer tells you when a level-up changes a macro.")
     g.done:Show()
   end

@@ -117,6 +117,7 @@ for _, sc in ipairs({
     add(copyProblems(W, UI.frame, tag .. " guide 1"))
     p.guide.next:Click(); add(copyProblems(W, UI.frame, tag .. " guide 2"))
     p.guide.drag:Click(); add(copyProblems(W, UI.frame, tag .. " guide 3"))
+    p.guide.next:Click(); add(copyProblems(W, UI.frame, tag .. " guide 4"))
     p.guide.done:Click()
   else
     Core.cdb.guide = "done"

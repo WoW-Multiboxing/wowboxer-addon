@@ -805,6 +805,7 @@ local HELP = {
   "/wbx – open or close the window",
   "/wbx sync – create/update your macros and place new ones on your bars (same as Place all)",
   "/wbx minimap – show or hide the minimap button",
+  "/wbx guide – start the first-run guide again at step 1",
   "/wbx bars – list where each macro is and its keybind",
   "/wbx keys – open the game's key bindings (Quick Keybind mode where available)",
   "/wbx team on|off – team status panel (display only: follow, target, mana of your other clients)",
@@ -832,6 +833,7 @@ function Core.slash(msg)
     local res = ns.Audit and ns.Audit.run()
     chat("Layout audit: " .. (res and #res or 0) .. " finding(s), saved for the next /reload.")
   elseif cmd == "keys" then Core.openKeyBindings()
+  elseif cmd == "guide" then if ns.Book then ns.Book.ShowGuide() end
   elseif cmd == "reset" and rest == "all" then
     if ns.Advanced then ns.Advanced.openReset() end -- the same two-step window; never resets directly
   elseif cmd == "reset" then

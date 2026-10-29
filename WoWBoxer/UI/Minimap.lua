@@ -52,16 +52,18 @@ local function tooltip(GT)
 end
 
 -- ------------------------------------------------------------------ right-click menu
-local ITEMS = {
+local ITEMS = { -- (MM.MENU, for tests)
   { "Open WoWBoxer", function() ns.UI.Open("keys") end },
   { "Place all macros", function() ns.Core.sync({ replace = ns.Core.cdb.replace }) end },
   { "First-run guide", function() ns.Book.ShowGuide() end },
   { "Squad guide", function() ns.Help.ShowSquadGuide() end },
   { "Setup", function() ns.UI.Open("setup") end },
+  { "Automation", function() ns.UI.Open("automation") end },
   { "Key bindings", function() ns.Core.openKeyBindings() end },
   { "Hide minimap button", function() MM.SetHidden(true) end },
   { "Close", function() end },
 }
+MM.MENU = ITEMS
 function MM.ShowMenu(anchor)
   if not MM.menu then
     local m = W.box(UIParent, 0.07, 0.055, 0.035, 0.97)

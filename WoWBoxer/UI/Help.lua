@@ -126,12 +126,13 @@ function Help.attach(f)
   hl:SetVertexColor(1, 0.85, 0.4, 0.22)
   b:SetScript("OnMouseDown", function() b.icon:SetPoint("CENTER", 1, -1) end)
   b:SetScript("OnMouseUp", function() b.icon:SetPoint("CENTER", 0, 0) end)
-  b:SetScript("OnClick", function() Help.Toggle() end)
+  b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+  b:SetScript("OnClick", function(_, button) if button == "RightButton" then Help.Hide(); ns.Book.ShowGuide() else Help.Toggle() end end)
   W.tooltip(b, function(GT)
-    GT:AddLine("Help: how to use this page", 1, 0.82, 0)
+    GT:AddLine("Help for this page", 1, 0.82, 0)
     local def = Help.PAGES[Help.pageKey()]
     for _, l in ipairs(def and def.tip or {}) do GT:AddLine(l, 1, 1, 1, true) end
-    GT:AddLine("Click: show help on the page", 0.66, 0.6, 0.49)
+    GT:AddLine("Right-click: start the first-run guide again.", 0.66, 0.6, 0.49)
   end)
   -- one pulse: the glow fades in and out once
   if b.CreateAnimationGroup then

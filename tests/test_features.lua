@@ -993,4 +993,32 @@ do
   H.eq(#errors(ns), 0, "no errors (keybinds)")
 end
 
+-- the first-run guide restarts at step 1: minimap/compartment menu, right-click on "?", /wbx guide (§4)
+do
+  local W, ns = boot({ name = "Dorin", class = "PALADIN", race = "Scourge", level = 10 })
+  local Core, UI = ns.Core, ns.UI
+  UI.Open("keys"); Core.sync({})
+  Core.cdb.guide = "done"
+  UI.Refresh()
+  local g = UI.panels.keys.guide
+  H.ok(not g:IsShown(), "guide done and keys placed: hidden")
+  local function restart(how, fn)
+    Core.cdb.guide, Core.cdb.guideStep = "done", 3; UI.Select("setup"); UI.Refresh()
+    fn()
+    H.ok(UI.current == "keys" and g:IsShown() and g.title:GetText():find("^Step 1 of 4"), how .. ": the guide starts again at step 1")
+  end
+  restart("/wbx guide", function() W.env.SlashCmdList.WOWBOXER("guide") end)
+  restart("? right-click", function() UI.helpBtn._scripts.OnClick(UI.helpBtn, "RightButton") end)
+  local entry
+  for _, it in ipairs(ns.Minimap.MENU or {}) do if it[1] == "First-run guide" then entry = it end end
+  if entry then restart("minimap menu", function() entry[2]() end) end
+  local lines = {}
+  local GT = W.env.GameTooltip
+  local old = GT.AddLine
+  GT.AddLine = function(_, t) lines[#lines + 1] = t end
+  UI.helpBtn._scripts.OnEnter(UI.helpBtn)
+  GT.AddLine = old
+  H.ok(table.concat(lines, "|"):find("Help for this page", 1, true) and table.concat(lines, "|"):find("Right-click: start the first-run guide again.", 1, true), "? tooltip says so")
+end
+
 os.exit(H.report("features") and 0 or 1)

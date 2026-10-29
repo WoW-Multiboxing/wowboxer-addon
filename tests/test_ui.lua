@@ -50,9 +50,9 @@ for _, scenario in ipairs({
   -- first run: the 3-step guide
   local guide = UI.panels.keys.guide
   H.ok(guide:IsShown(), tag .. "guide on a fresh character")
-  H.ok(anyText(W, "^Step 1 of 3") ~= nil, tag .. "guide step 1")
+  H.ok(anyText(W, "^Step 1 of 4") ~= nil, tag .. "guide step 1")
   findButton(W, "Next"):Click()
-  H.ok(anyText(W, "^Step 2 of 3") ~= nil, tag .. "guide step 2")
+  H.ok(anyText(W, "^Step 2 of 4") ~= nil, tag .. "guide step 2")
   H.ok(anyText(W, "Place all puts your %d+ macros on Action Bar 1") ~= nil, tag .. "step 2 says where the keys go")
   H.eq(W.calls.CreateMacro, nil, tag .. "the guide writes nothing before the click")
   findButton(W, "Place all"):Click()
@@ -60,7 +60,9 @@ for _, scenario in ipairs({
   local onBar = 0
   for slot = 1, 12 do if (W.slotMacroName(slot) or ""):sub(1, 3) == "WBX" then onBar = onBar + 1 end end
   H.ok(onBar > 0, tag .. "keys on action bar 1")
-  H.ok(anyText(W, "^Step 3 of 3") ~= nil, tag .. "guide step 3")
+  H.ok(anyText(W, "^Step 3 of 4") ~= nil and findButton(W, "Levelling squad") ~= nil, tag .. "guide step 3: automation")
+  findButton(W, "Next"):Click()
+  H.ok(anyText(W, "^Step 4 of 4") ~= nil, tag .. "guide step 4")
   findButton(W, "Close"):Click()
   H.ok(not guide:IsShown(), tag .. "guide closed")
   H.ok(anyText(W, "All macros on your bars") ~= nil or anyText(W, "All set") ~= nil, tag .. "next step: all done")
@@ -198,6 +200,8 @@ local function layoutPass(screen, opts)
   check("guide step 2")
   findButton(W, "Drag myself"):Click()
   check("guide step 3")
+  UI.panels.keys.guide.next:Click()
+  check("guide step 4")
   findButton(W, "Close"):Click()
   for _, t in ipairs(UI.tabs) do UI.Select(t.key); check("tab " .. t.key) end
   -- a squad of three, every squad page
