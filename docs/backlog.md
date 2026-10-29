@@ -1,10 +1,10 @@
 # WoWBoxer addon – backlog
 
-## The owner: in-game check of 0.9.7 (2 Classic Era clients; a Rogue or Druid follower)
-1. Restart WoW. On the Rogue/Druid follower: My keys → tick **Use sequence keys** → **Medium** → **Update keys**.
-2. Dorin targets a mob; on the follower press the **Combo** key a few times: do combo points build and the finisher fire?
-3. If not: press **Assist** once, then Combo again – tell Claude which one worked.
-4. On a Hunter or Warrior (if you have one) try its sequence key the same way; `/reload` everywhere, then "done".
+## The owner: in-game check of 0.9.8 (one client, your druid)
+1. Restart WoW, log in the druid, `/wbx` → **Talents** → **Import**.
+2. Paste `https://www.wowhead.com/forever/talent-calc/druid/v2410222-4_t0/0abaaaDEF1aaaa`: preview says Druid · 11/4/0 · 15 points.
+3. **Save and use**: the Guide list shows "My build: Wowhead 11/4/0 (yours)" and Next shows its point; try **Wowhead link**.
+4. (Still open from 0.9.7: Combo key on a Rogue/Druid follower.) `/reload`, tell Claude "done".
 
 ## The owner: screenshots for the website (one client, any character, ~2 min)
 1. Log in, `/wbx`, then Print Screen on **My keys**, **All spells**, **Talents**, **Squad** and **Setup** (one each).
