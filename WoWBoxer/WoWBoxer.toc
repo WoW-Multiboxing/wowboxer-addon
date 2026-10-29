@@ -5,7 +5,7 @@
 ## Version: @project-version@
 ## SavedVariables: WoWBoxerDB
 ## SavedVariablesPerCharacter: WoWBoxerCharDB
-## IconTexture: Interface\Icons\Ability_Hunter_Pet_Wolf
+## IconTexture: Interface\AddOns\WoWBoxer\Media\Logo
 ## AddonCompartmentFunc: WoWBoxer_OnAddonCompartmentClick
 ## AddonCompartmentFuncOnEnter: WoWBoxer_OnAddonCompartmentEnter
 ## AddonCompartmentFuncOnLeave: WoWBoxer_OnAddonCompartmentLeave

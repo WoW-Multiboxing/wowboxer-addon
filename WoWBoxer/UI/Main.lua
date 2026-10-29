@@ -5,6 +5,8 @@
 local _, ns = ...
 local UI = {}
 ns.UI = UI
+UI.LOGO = "Interface\\AddOns\\WoWBoxer\\Media\\Logo"           -- the WoWBoxer shield (same as CurseForge)
+UI.LOGO_SMALL = "Interface\\AddOns\\WoWBoxer\\Media\\LogoSmall"
 local W = ns.Widgets
 
 UI.WIDTH, UI.HEIGHT = 760, 500
@@ -71,8 +73,13 @@ function UI.Build()
   UI.spine:SetPoint("BOTTOM", 0, 2)
   UI.spine:SetWidth(6)
 
+  local logo = f:CreateTexture(nil, "ARTWORK")
+  logo:SetSize(22, 22)
+  logo:SetPoint("TOPLEFT", 16, -10)
+  logo:SetTexture(UI.LOGO)
+  UI.logo = logo
   local title = W.text(f, "GameFontNormalLarge", 16, W.GOLD)
-  title:SetPoint("TOPLEFT", 20, -14)
+  title:SetPoint("TOPLEFT", 42, -14)
   title:SetText("WoWBoxer")
   local close = W.frame("Button", f, "UIPanelCloseButton")
   close:SetSize(28, 28)
@@ -81,7 +88,7 @@ function UI.Build()
   -- character line between the title and the help/close buttons: "Name · Warlock 4 · Follower" + a small client tag;
   -- squad, leader and client in the tooltip
   local whoHit = CreateFrame("Frame", nil, f)
-  whoHit:SetPoint("TOPLEFT", 112, -14)
+  whoHit:SetPoint("TOPLEFT", 134, -14)
   whoHit:SetPoint("TOPRIGHT", -100, -14)
   whoHit:SetHeight(18)
   UI.who = W.line(whoHit, "GameFontHighlightSmall", nil, W.TEXT)

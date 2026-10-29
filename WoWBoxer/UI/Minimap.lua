@@ -9,7 +9,7 @@ ns.Minimap = MM
 local W = ns.Widgets
 
 MM.DEFAULT_ANGLE = 210
-local ICON = "Interface\\Icons\\Ability_Hunter_Pet_Wolf"
+local ICON = "Interface\\AddOns\\WoWBoxer\\Media\\LogoSmall" -- the WoWBoxer shield (same as CurseForge)
 
 local function settings() return ns.Core.db and ns.Core.db.settings or {} end
 
@@ -106,10 +106,9 @@ function MM.Create()
   bg:SetPoint("TOPLEFT", 7, -5)
   bg:SetTexture("Interface\\Minimap\\UI-Minimap-Background")
   local icon = b:CreateTexture(nil, "ARTWORK")
-  icon:SetSize(17, 17)
-  icon:SetPoint("TOPLEFT", 7, -6)
+  icon:SetSize(19, 19)
+  icon:SetPoint("TOPLEFT", 6, -5)
   icon:SetTexture(ICON)
-  if icon.SetTexCoord then icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) end
   b.icon = icon
   local border = b:CreateTexture(nil, "OVERLAY")
   border:SetSize(53, 53)
