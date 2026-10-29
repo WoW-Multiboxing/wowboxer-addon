@@ -6,6 +6,10 @@
 3. On Dorin press the **Invite squad** key (others accept by hand); on a follower press **Follow** and **Assist**.
 4. `/reload` everywhere: no reminder for what you already saw. PrtScn the Squad page, then tell Claude "done".
 
+## The owner: screenshots for the website (one client, any character, ~2 min)
+1. Log in, `/wbx`, then Print Screen on **My keys**, **All spells**, **Talents**, **Squad** and **Setup** (one each).
+2. Tell Claude "screenshots done" – Claude picks and crops them (no character names visible) for the website.
+
 Shared work list. **Claude Code (PC) owns the code** and ticks items off here (`[x]` + commit hash). The cloud session
 only adds research and items here and in `docs/research/`; it never edits code. Read this file at the start of every
 milestone. Research behind the items: `docs/research/2026-10-27-ui-bars-minimap.md`.
