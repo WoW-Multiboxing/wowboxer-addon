@@ -71,4 +71,28 @@ do
   H.ok(W.chatHas("keys? changed"), "but the level-up offer was shown")
 end
 
+-- v8.5 sequences: the diagnose holds the [AFKLAR] spell-name check; a Rogue follower gets a combo key + the Assist tip
+do
+  local W = Mock.new(H, { name = "Stabby", class = "ROGUE", race = "Scourge", level = 30, party = { party1 = "Dorin" } })
+  local ns = H.loadAddon({ env = W.env })
+  W.fire("ADDON_LOADED", "WoWBoxer"); W.fire("PLAYER_LOGIN")
+  for _, sp in ipairs(ns.Data.spells.rogue) do if sp.level <= 30 and sp.gate ~= "talent" then W.known[sp.name] = true end end
+  local Core = ns.Core
+  Core.ensureMe()
+  Core.setPlaysAs("party1")
+  local _, m = Core.me()
+  m.seq = "medium"
+  local key
+  for _, d in ipairs(Core.compute().desired) do if d.key == "S1" then key = d end end
+  H.ok(key and key.body:find("[@party1target,harm,nodead] reset=combat Sinister Strike, Sinister Strike, Slice and Dice", 1, true),
+    "Rogue follower: combo sequence on the leader's target: " .. tostring(key and key.body))
+  H.ok(key.body:find("/startattack", 1, true) and #key.body <= 255, "starts auto attack, at most 255 characters")
+  local r = Core.selftest(true)
+  H.ok(r.seqCheck and r.seqCheck.names["Hemorrhage"] and r.seqCheck.names["Hemorrhage"].id, "diagnose: v8.5 spell names checked by spell ID")
+  H.eq(#r.seqCheck.open, 3, "diagnose: the three in-game checks are listed")
+  H.eq(r.seqCheck.mine.seq, "medium", "diagnose: this character's sequence tier")
+  H.ok(ns.Widgets.SEQ_KINDS:find("Sequence key", 1, true) and ns.Widgets.SEQ_KINDS:find("Priority key", 1, true), "help: one sentence each on sequence vs priority keys")
+  H.eq(W.calls.CreateMacro, nil, "nothing written")
+end
+
 os.exit(H.report("diag") and 0 or 1)

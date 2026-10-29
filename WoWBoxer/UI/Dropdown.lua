@@ -217,7 +217,10 @@ W.SEQ_TIERS = {
   { "medium", "Medium", "The usual rotation for your level." },
   { "advanced", "Advanced", "More spells and dots – for experienced players." },
 }
-W.SEQ_CLASSES = "Built-in sequences: Paladin, Priest, Warlock – make your own under Custom keys."
+W.SEQ_CLASSES = "Every class has built-in sequence keys – make your own under Custom keys."
+--- One sentence each: sequence keys vs priority keys (docs/sequences-all-classes.md §4).
+W.SEQ_KINDS = "Sequence key: each press casts the next spell of a fixed order (DoTs first, then the filler). " ..
+  "Priority key: each press casts the first spell in the list that is ready (Execute, Revenge, Stormstrike …)."
 local SEQ_LABEL = "Use sequence keys"
 --- opts: {member=fn -> m, set=fn(m, tier)? (default: m.seq = tier + Core.changed()), width (dropdown, default 100)}.
 --- A frame (check + tier dropdown, or a note for classes without sequences) with Refresh() and its own width.
@@ -240,7 +243,7 @@ function W.seqControl(parent, opts)
   W.tip(f.check, SEQ_LABEL, function()
     local m = opts.member()
     if m and not ns.Engine.seqSupported(m.cls) then return W.SEQ_CLASSES end
-    return "Adds a key that casts your rotation: each press casts the next spell. One press is still one spell on one character."
+    return "Adds a key that casts your rotation. " .. W.SEQ_KINDS .. " One press is still one spell on one character."
   end)
   f.tier = W.dropdown(f, { width = ddW,
     values = function() return W.SEQ_TIERS end,

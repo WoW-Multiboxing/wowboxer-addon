@@ -594,6 +594,13 @@ local function cellTooltip(GT, c)
   if c.group == "helper" then GT:AddLine(Book.helperText(c.item.key), 1, 1, 1, true)
   else GT:AddLine(Book.describe(d, nil), 1, 1, 1, true) end
   if d and d.steps and #d.steps > 1 then GT:AddLine(W.stepsText(d.steps), 0.85, 0.72, 1, true) end
+  if d and d.seq and d.seq.label == "Combo" then
+    local _, me = Core().me()
+    if me and not me.leader then
+      -- [AFKLAR: do combo points add up on [@party1target] when your own target is something else?]
+      GT:AddLine("Combo points stay on your own target: if they don't add up, press Assist first (one press).", 1, 0.82, 0.4, true)
+    end
+  end
   local sp = c.spell or (d and d.spell)
   if sp then local rl = Book.rankLine(sp, ns.Compat.playerLevel()); if rl then GT:AddLine(rl, 0.8, 0.8, 0.8, true) end end
   if d and d.body then for line in (d.body .. "\n"):gmatch("([^\n]*)\n") do if line ~= "" then GT:AddLine(line, 0.56, 0.85, 0.45) end end end

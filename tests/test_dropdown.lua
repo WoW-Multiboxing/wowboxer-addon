@@ -106,9 +106,14 @@ do
   local _, ns = boot({ class = "HUNTER", race = "Orc", level = 20 })
   ns.UI.Open("keys")
   local sc = ns.UI.panels.keys.seq
-  H.ok(not sc.check:IsEnabled(), "Hunter: sequence box disabled")
-  H.ok(not sc.tier:IsShown() and sc.note:IsShown(), "Hunter: note instead of the tier")
-  H.ok(sc.noteHit._scripts.OnEnter ~= nil, "the note explains which classes have sequences")
+  H.ok(sc.check:IsEnabled(), "v8.5: Hunter has sequence keys too")
+  sc.check:Click()
+  H.ok(sc.tier:IsShown() and not sc.note:IsShown(), "Hunter: Simple / Medium / Advanced")
+  local _, m = ns.Core.me()
+  H.eq(m.seq, "simple", "ticked: Simple")
+  local found
+  for _, d in ipairs(ns.Core.compute().desired) do if d.key == "S1" then found = d end end
+  H.ok(found and found.body:find("!Auto Shot", 1, true) and found.body:find("/petattack", 1, true), "Hunter Shots key: pet + Auto Shot: " .. tostring(found and found.body))
 end
 
 -- ------------------------------------------------------------------ Blizzard's dropdown when the client has it

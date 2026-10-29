@@ -535,6 +535,21 @@ function Core.selftest(quiet)
     r.team = { active = ns.Team.active(), version = ns.Team.version(), members = s and #s.members or 0, presets = s and #(s.presets or {}) or 0,
       me = me and me.name or nil, peers = peers }
   end
+  -- docs/sequences-all-classes.md §5 [AFKLAR]: spell names of the v8.5 sequences on this client (by spell ID), and
+  -- what can only be seen in play (left open here, results go into LOG.md)
+  local sq = { names = {}, open = { "combo points for followers ([@party1target] builder)", "!Auto Shot after Aimed Shot (clip?)",
+    "warrior priority lines fall through (Execute / Overpower / Victory Rush)" } }
+  for _, n in ipairs({ "Primal Bite", "Arcane Wrath", "Frostfire Bolt", "Riptide", "Lava Burst", "Stormstrike", "Hemorrhage" }) do
+    local found
+    for _, cls in ipairs(ns.Data.classOrder) do
+      for _, s in ipairs(ns.Data.spells[cls] or {}) do if not found and s.name == n then found = s end end
+    end
+    local id = found and found.ranks and found.ranks[1] and found.ranks[1].id
+    local client = id and C.spellName(id) or nil
+    sq.names[n] = { id = id, client = client, ok = client == n }
+  end
+  if ctx then sq.mine = { cls = ctx.member.cls, role = ctx.member.role, seq = ctx.member.seq, leader = ctx.member.leader } end
+  r.seqCheck = sq
   r.ui = { dropdown = (ns.Widgets and ns.Widgets.hasBlizzardDropdown and ns.Widgets.hasBlizzardDropdown()) and "blizzard" or "own" }
   r.ui.helpPlate = (ns.Help and ns.Help.blizzard and ns.Help.blizzard()) and "blizzard" or "own"
   r.ui.helpUsed = ns.Help and ns.Help.diag or nil
