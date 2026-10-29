@@ -803,4 +803,30 @@ do
   H.eq(#errors(ns), 0, "no errors (future spells): " .. table.concat(errors(ns), " | "))
 end
 
+-- All spells: search, "New at <level>", ranks in the tooltip
+do
+  local W, ns = boot({ name = "Dorin", class = "PALADIN", race = "Scourge", level = 10 })
+  local UI, Book = ns.UI, ns.Book
+  ns.Core.cdb.guide = "done"
+  UI.Open("spells")
+  local p = UI.panels.spells
+  local all = #p.cells
+  p.search:SetText("holy"); p.search._scripts.OnTextChanged(p.search)
+  local names = {}
+  for _, b in ipairs(p.cells) do if b:IsShown() and b.cell then names[#names + 1] = b.cell.label end end
+  H.ok(#names > 0 and #names < all, "search narrows the list (" .. #names .. " of " .. all .. ")")
+  for _, n in ipairs(names) do H.ok(n:lower():find("holy", 1, true) ~= nil, "match: " .. n) end
+  p.search:SetText("zzzz"); p.search._scripts.OnTextChanged(p.search)
+  H.eq(p.empty:GetText(), "No spell matches", "nothing found: says so")
+  p.search:SetText(""); p.search._scripts.OnTextChanged(p.search)
+  local devo
+  for _, s in ipairs(ns.Data.spells.paladin) do if s.name == "Devotion Aura" then devo = s end end
+  H.ok(Book.newAt(devo, 10), "Devotion Aura rank 2 is new at 10")
+  H.eq(Book.rankLine(devo, 10), "Rank 2 of 7 · next rank at 20", "ranks in the tooltip")
+  local newCell
+  for _, sec in ipairs(Book.spellSections(ns.Core.compute())) do for _, c in ipairs(sec.cells) do if c.label == "Devotion Aura" then newCell = c end end end
+  H.ok(newCell and newCell.sub:find("New at 10", 1, true), "All spells marks it: " .. tostring(newCell and newCell.sub))
+  H.eq(#errors(ns), 0, "no errors (spell search)")
+end
+
 os.exit(H.report("features") and 0 or 1)

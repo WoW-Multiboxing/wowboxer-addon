@@ -262,8 +262,29 @@ function Book.setSquadKey(key, on)
   Core().changed()
 end
 
---- All spells as two sections: {learned (incl. at your trainer), future = later levels, by unlock level}.
-function Book.spellSections(ctx)
+--- "Rank 3 of 7 · next rank at 30" for a spell with ranks (nil without).
+function Book.rankLine(s, level)
+  local ranks = s.ranks or {}
+  if #ranks < 2 then return nil end
+  local now, nx = ns.Kit.rankAt(s, level), ns.Kit.nextRank(s, level)
+  local t = now and ("Rank " .. (now.r or "?") .. " of " .. #ranks) or ("Rank 1 at level " .. (ranks[1].l or s.level))
+  if now and nx then t = t .. " · next rank at " .. nx.l elseif now then t = t .. " · highest rank" end
+  return t
+end
+--- True when spell s (or one of its ranks) is learned exactly at `level`.
+function Book.newAt(s, level)
+  if s.level == level then return true end
+  for _, r in ipairs(s.ranks or {}) do if r.l == level then return true end end
+  return false
+end
+--- Does spell s match the search text (name or category, any case)?
+function Book.matches(s, q)
+  if not q or q == "" then return true end
+  q = q:lower()
+  return (s.name or ""):lower():find(q, 1, true) ~= nil or (type(s.category) == "string" and s.category:lower():find(q, 1, true) ~= nil)
+end
+--- All spells as two sections: {learned (incl. at your trainer), future = later levels, by unlock level}. q = search.
+function Book.spellSections(ctx, q)
   local learned, future = { cells = {} }, { title = "Future spells", cells = {}, future = true }
   if not ctx then return { learned, future } end
   local keyOf = {}
@@ -283,16 +304,20 @@ function Book.spellSections(ctx)
       for _, x in ipairs(ctx.macros.items) do if x.name == key then it = x end end
       sub, col, word = Book.kindName(it or { key = "" }), W.GREEN, "Already a key"
     else sub, col, word = "", W.BLUE, "Drag to your bar" end
+    if Book.newAt(s, ctx.level) then
+      sub = "|cffb7f07aNew at " .. ctx.level .. "|r" .. (sub ~= "" and (" · " .. sub) or "")
+      word = "New at level " .. ctx.level .. " · " .. word
+    end
     return { kind = "spell", label = s.name, sub = sub, color = col, icon = s.icon, spell = s, name = key or false, st = { word = word, color = col } }
   end
   local lists = ns.Kit.kitLists(m)
   local shown = {}
   for _, l in ipairs({ lists.primary, lists.others }) do
-    for _, s in ipairs(l) do shown[s] = true; learned.cells[#learned.cells + 1] = cell(s, M.pendingOf(m, s, ctx.level, ctx.live)) end
+    for _, s in ipairs(l) do shown[s] = true; if Book.matches(s, q) then learned.cells[#learned.cells + 1] = cell(s, M.pendingOf(m, s, ctx.level, ctx.live)) end end
   end
   local later = {}
   for i, s in ipairs(ns.Kit.spellsOf(m)) do
-    if not shown[s] and s.action ~= "passive" then
+    if not shown[s] and s.action ~= "passive" and Book.matches(s, q) then
       local p = M.pendingOf(m, s, ctx.level, ctx.live)
       if p == nil then learned.cells[#learned.cells + 1] = cell(s, nil) -- known already (the data says later)
       elseif type(p) == "number" then later[#later + 1] = { s = s, p = p, i = i } end
@@ -511,6 +536,8 @@ local function cellTooltip(GT, c)
   if c.group == "helper" then GT:AddLine(Book.helperText(c.item.key), 1, 1, 1, true)
   else GT:AddLine(Book.describe(d, nil), 1, 1, 1, true) end
   if d and d.steps and #d.steps > 1 then GT:AddLine(W.stepsText(d.steps), 0.85, 0.72, 1, true) end
+  local sp = c.spell or (d and d.spell)
+  if sp then local rl = Book.rankLine(sp, ns.Compat.playerLevel()); if rl then GT:AddLine(rl, 0.8, 0.8, 0.8, true) end end
   if d and d.body then for line in (d.body .. "\n"):gmatch("([^\n]*)\n") do if line ~= "" then GT:AddLine(line, 0.56, 0.85, 0.45) end end end
   if c.item and c.item.why then GT:AddLine(c.item.why, 1, 0.54, 0.5, true) end
   local pending = c.pending or (c.d and c.d.pending)
@@ -808,6 +835,20 @@ local function build(p, mode)
     p.hint:SetPoint("TOPLEFT", 4, -8)
     p.hint:SetText(mode == "spells" and "Grey: at your trainer · Lock: later levels" or "Up to 8 own keys")
     p.hint.wbxCopy = "hint"
+    if mode == "spells" then
+      -- search: name or category
+      p.search = W.frame("EditBox", p.right, "InputBoxTemplate")
+      p.search:SetSize(120, 20)
+      p.search:SetAutoFocus(false)
+      p.search:SetMaxLetters(30)
+      p.search:SetPoint("TOPRIGHT", p.right, "TOPRIGHT", -2, -5)
+      p.hint:SetText("Grey: trainer · Lock: later")
+      p.hint:SetPoint("RIGHT", p.search, "LEFT", -12, 0)
+      p.search:SetScript("OnTextChanged", function(self) local t = self:GetText() or ""; if t ~= (p.query or "") then p.query = t; p.page = 1; UI.Refresh() end end)
+      p.search:SetScript("OnEscapePressed", function(self) self:SetText(""); self:ClearFocus() end)
+      p.search:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
+      W.tip(p.search, "Search spells", "Type part of a spell's name or its kind (Heal, Buff, …). Esc clears it.")
+    end
   end
   p.empty = W.text(p.left, "GameFontHighlight", nil, W.MUTED, "CENTER")
   p.empty:SetPoint("TOPLEFT", 10, -TOP_H - 30)
@@ -898,7 +939,7 @@ local function refresh(p, ctx)
     pages = Book.flow(spread.sections, p.listH, 2, PITCH)
   elseif p.mode == "spells" then
     -- one flow: the known spells, then a "Future spells" rule (repeated on each page) and the later ones
-    pages = Book.flow(Book.spellSections(ctx), p.listH, 2, PITCH)
+    pages = Book.flow(Book.spellSections(ctx, p.query), p.listH, 2, PITCH)
   else
     local list = Book.cells(p.mode, ctx)
     local per = math.floor(p.listH / PITCH) * 2
@@ -926,7 +967,7 @@ local function refresh(p, ctx)
   if perSpread == 2 then placePage(p, p.right, pages[first + 2], ci, ri) end
   local count = 0
   for _, pg in ipairs(pages) do for _, e in ipairs(pg) do if e.cell then count = count + 1 end end end
-  p.empty:SetText(count == 0 and (p.mode == "custom" and "No own keys yet" or "No keys yet – visit your trainer") or "")
+  p.empty:SetText(count == 0 and (p.mode == "custom" and "No own keys yet" or (p.query and p.query ~= "" and "No spell matches") or "No keys yet – visit your trainer") or "")
   p.pageText:SetText(spreads > 1 and (p.page .. " / " .. spreads) or "")
   p.prev:SetShown(spreads > 1); p.next:SetShown(spreads > 1)
   p.prev:SetEnabled(p.page > 1); p.next:SetEnabled(p.page < spreads)
