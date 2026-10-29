@@ -1,10 +1,10 @@
 # WoWBoxer addon – backlog
 
-## The owner: in-game check of 0.9.5 (one Classic Era client is enough)
-1. Restart WoW, `/wbx` → My keys: click a key → **Bind key** → press **4**: the key lands on button 4, no warning.
-2. Bind another key to a key with something on its button: plain question, then **Put it there**.
-3. Press **Place spells** (left) and **Place squad keys** (right); both put only their page's keys on the bars.
-4. Setup: "Clear target on click" and the nameplate rows → **Apply**; `/reload` and tell Claude "done".
+## The owner: in-game check of 0.9.6 (3 Classic Era clients in one party, Dorin leads)
+1. Restart WoW. On each follower: `/wbx` → My keys → **Update keys**; Squad keys shows Follow (line) + Follow leader.
+2. Walk with Dorin; press **Follow (line)** on each follower: a line (Anna → Dorin, Bo → Anna). Then **Follow leader**.
+3. Squad page: **Line: …** shows; on a follower open its row → **Up/Down**; My keys shows Follow as changed.
+4. Look at the new **?** top right (PrtScn), `/reload`, tell Claude "done".
 
 ## The owner: screenshots for the website (one client, any character, ~2 min)
 1. Log in, `/wbx`, then Print Screen on **My keys**, **All spells**, **Talents**, **Squad** and **Setup** (one each).
@@ -35,7 +35,7 @@ minimap button, much more drag & drop of macros onto the action bars.
 - [x] Follow (line) = WBX Follow on the party unit of the member ahead (this client, `m.lineUnit` saved after a click),
       Follow leader = WBX FollowLead (old body); ticks; Line text + Up/Down on the Squad page; checklist + top-line Fix
       "Use partyN"; help "?"; never in the share string (tests/test_followline.lua).
-- [ ] Help "?" button restyled (the owner: looks like it goes over the borders; quest-like but clearly help).
+- [x] Help "?" button restyled as a quest "?" in a round gold-rimmed slot, all inside its box (the owner: looks like it goes over the borders; quest-like but clearly help).
 
 ## Feedback 2026-10-29 evening (docs/feedback-2026-10-29-evening.md)
 - [x] 1. Settings: Clear target on click = On; enemy/friendly/personal nameplates; cast-bar CVars probed (diagnose

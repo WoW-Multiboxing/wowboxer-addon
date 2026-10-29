@@ -159,6 +159,15 @@ for _, scenario in ipairs({
   UI.panels.keys.cells[1]:Click("LeftButton")
   H.ok(not findButton(W, "Bind key"):IsEnabled(), tag .. "Bind key disabled in combat")
   W.combat = false
+  -- the "?" is a quest-style badge that stays inside its box and inside the window border
+  do
+    local hb, fr = W.rect(UI.helpBtn), W.rect(UI.frame)
+    H.ok(hb and hb[1] >= fr[1] + 6 and hb[3] <= fr[3] - 6 and hb[4] <= fr[4] - 6, tag .. "help button inside the window border")
+    for _, k in ipairs({ "rim", "bg", "icon", "glow" }) do
+      local r = W.rect(UI.helpBtn[k])
+      H.ok(r and r[1] >= hb[1] - 0.5 and r[3] <= hb[3] + 0.5 and r[2] >= hb[2] - 0.5 and r[4] <= hb[4] + 0.5, tag .. "help " .. k .. " inside its box")
+    end
+  end
   -- slash commands
   W.env.SlashCmdList.WOWBOXER("help"); W.env.SlashCmdList.WOWBOXER("show"); W.env.SlashCmdList.WOWBOXER("log 3"); W.env.SlashCmdList.WOWBOXER("selftest")
   W.env.SlashCmdList.WOWBOXER("")
