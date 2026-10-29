@@ -1,10 +1,10 @@
 # WoWBoxer addon – backlog
 
-## The owner: in-game check of 0.9.6 (3 Classic Era clients in one party, Dorin leads)
-1. Restart WoW. On each follower: `/wbx` → My keys → **Update keys**; Squad keys shows Follow (line) + Follow leader.
-2. Walk with Dorin; press **Follow (line)** on each follower: a line (Anna → Dorin, Bo → Anna). Then **Follow leader**.
-3. Squad page: **Line: …** shows; on a follower open its row → **Up/Down**; My keys shows Follow as changed.
-4. Look at the new **?** top right (PrtScn), `/reload`, tell Claude "done".
+## The owner: in-game check of 0.9.7 (2 Classic Era clients; a Rogue or Druid follower)
+1. Restart WoW. On the Rogue/Druid follower: My keys → tick **Use sequence keys** → **Medium** → **Update keys**.
+2. Dorin targets a mob; on the follower press the **Combo** key a few times: do combo points build and the finisher fire?
+3. If not: press **Assist** once, then Combo again – tell Claude which one worked.
+4. On a Hunter or Warrior (if you have one) try its sequence key the same way; `/reload` everywhere, then "done".
 
 ## The owner: screenshots for the website (one client, any character, ~2 min)
 1. Log in, `/wbx`, then Print Screen on **My keys**, **All spells**, **Talents**, **Squad** and **Setup** (one each).
@@ -30,6 +30,12 @@ minimap button, much more drag & drop of macros onto the action bars.
 6. On the warlock: My keys – check the **Helpers** section (hover Follow) and that Follow/Assist/Pet show real icons on
    the bar after **Update keys**. Custom keys → New own key → **Paste…** your macro → read the warnings → **Copy…**.
 7. On Dorin: Squad → Home, Readiness, Key map and Plan – PrtScn each. Then `/reload` on every client and tell Claude "done".
+
+## Sequences for all nine classes (docs/sequences-all-classes.md)
+- [x] Companion v8.5 engine applied in wowboxer-site (764cdfd, D to review); vendor re-synced (`tools/sync_companion.sh`).
+- [x] Engine.lua: SEQ for all classes + buildPriority (pet, !Auto Shot, ranged leader aim, empty keys); parity 0 failures.
+- [x] UI: tick + tier for every class; sequence vs priority sentence; Rogue/Cat Assist tip; diagnose `seqCheck`.
+- [ ] In game [AFKLAR]: combo points for followers, !Auto Shot after Aimed Shot, warrior fall-through, spell names on Forever.
 
 ## Follow in a line (docs/follow-line.md, the owner 2026-10-29)
 - [x] Follow (line) = WBX Follow on the party unit of the member ahead (this client, `m.lineUnit` saved after a click),
