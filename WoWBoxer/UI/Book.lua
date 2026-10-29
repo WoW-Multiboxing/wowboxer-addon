@@ -537,6 +537,8 @@ function Book.onBindKey(c, full)
     return
   end
   if k.kind == "button" then
+    if k.broken then Core().giveBack(full) end -- the key first goes back to its button (it pressed a WBX macro directly)
+    if k.here then c:Stop(); return end -- the macro already sits on that button: giving the key back was all
     if k.empty then c:Stop(); Core().placeOn(name, k.slot, full); return end
     c:Ask("|cffffd100" .. full .. "|r is " .. KB.buttonName(k.slot) .. " (" .. k.what .. ").\nPut this macro there?", "Put it there", "Another keybind",
       function() Core().placeOn(name, k.slot, full) end, full)

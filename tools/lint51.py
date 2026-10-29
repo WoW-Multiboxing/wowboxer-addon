@@ -26,6 +26,11 @@ FORBIDDEN = [
 # following and NPC interaction stay forbidden everywhere.
 AUTOMATION = {'AcceptQuest', 'CompleteQuest', 'GetQuestReward', 'AcceptGroup', 'TakeTaxiNode', 'RepairAllItems', 'UseContainerItem'}
 AUTOMATION_FILES = {'Auto.lua'}
+# Writes to keybinds, action slots and the cursor: only in Binds.lua / Bars.lua (one place, a source= log line each,
+# docs/feedback-2026-10-30-night.md §3.2) – also when called as G.X or _G.X.
+WRITE_API = {'SetBinding', 'SetBindingMacro', 'SetBindingClick', 'SetBindingSpell', 'SetBindingItem', 'SaveBindings',
+             'PlaceAction', 'PickupAction', 'ClearCursor', 'PickupMacro', 'PickupSpell', 'PickupItem'}
+WRITE_FILES = {'Binds.lua', 'Bars.lua'}
 FORBIDDEN_RE = re.compile(r'(?<![\w.:])(' + '|'.join(map(re.escape, FORBIDDEN)) + r')(?!\w)')
 
 
@@ -99,6 +104,9 @@ def check(path):
                 else:
                     k += 1
         automation_ok = text in AUTOMATION and os.path.basename(path) in AUTOMATION_FILES
+        write_ok = os.path.basename(path) in WRITE_FILES or (prev and prev[0] == 'op' and prev[1] == ':')
+        if kind == 'name' and text in WRITE_API and not write_ok:
+            errs.append((line, '%s outside Binds.lua / Bars.lua (use the write layer there)' % text))
         if kind == 'name' and FORBIDDEN_RE.fullmatch(text) and not (prev and prev[0] == 'op' and prev[1] in ('.', ':')) and not automation_ok:
             errs.append((line, 'forbidden call/name: %s' % text))
         prev = (kind, text)

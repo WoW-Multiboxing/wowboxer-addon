@@ -285,8 +285,7 @@ function Core.pickup(name)
   end
   local idx = M.findIndex(name)
   if not idx then return false, "Macro not found." end
-  if C.cursorBusy() then ClearCursor() end
-  PickupMacro(idx)
+  B.pickupMacro(idx, "drag " .. name)
   return true
 end
 --- Same for a spell from the spell list: it becomes an extra key "WBX <Spell>" (kept for this character).
@@ -316,6 +315,7 @@ function Core.scanBars()
   end
   cdb.slots = found
   for name in pairs(found) do cdb.placedOnce[name] = true end
+  B.watch() -- a slot the player dragged a WBX macro onto keeps what was there before (Reset to default)
 end
 
 -- ------------------------------------------------------------------ key bindings
@@ -352,10 +352,11 @@ end
 --- press; whatever the button held goes back to nothing (the player confirmed that).
 function Core.placeOn(name, slot, key)
   return Core.whenSafe("Put " .. name .. " on a button", function()
-    local ok, why = Core.pickup(name)
+    local ok, why = Core.pickup(name) -- creates / updates the macro first
     if not ok then chat("|cffff6060Could not place:|r " .. tostring(why)); return end
-    PlaceAction(slot)
-    if C.cursorBusy() then ClearCursor() end
+    B.clearCursor("placeOn")
+    local placed, err = B.placeMacro(M.findIndex(name), slot, "placeOn " .. tostring(key))
+    if not placed then chat("|cffff6060Could not place:|r " .. tostring(err)); return end
     Core.cdb.slots[name] = slot
     Core.cdb.placedOnce[name] = true
     chat(Core.keyLabel(name) .. " is now on " .. ns.Binds.buttonName(slot) .. (key and (" (keybind " .. key .. ")") or "") .. ".")
@@ -631,6 +632,26 @@ function Core.deleteBuild(cls, id)
   return false
 end
 
+-- ------------------------------------------------------------------ login checks (questions, nothing without a click)
+--- A 1–= key that presses a WBX macro directly (the 0.9.4 bind bug): ask once per login to give it back.
+function Core.loginChecks()
+  local lost = ns.Binds.lostButtons()
+  if #lost > 0 and ns.UI and ns.UI.Popup and not Core.askedFix then
+    Core.askedFix = true
+    local keys, btns = {}, {}
+    for _, l in ipairs(lost) do keys[#keys + 1] = l.key; btns[#btns + 1] = tostring(l.slot) end
+    local one = #lost == 1
+    ns.UI.Popup("Key " .. table.concat(keys, ", ") .. (one and " presses" or " press") .. " a WoWBoxer macro directly, so action button " ..
+      table.concat(btns, ", ") .. (one and " has" or " have") .. " no keybind.", {
+      { "Fix now", function() for _, l in ipairs(lost) do Core.giveBack(l.key) end end, "Puts back ACTIONBUTTON" .. lost[1].slot .. (one and "" or " (and the others)") .. ". The macro stays on your bars." },
+      { "Not now", function() end, "Asks again at the next login." } })
+    Core.log("info", "login: asked to give back " .. table.concat(keys, ","))
+    return true
+  end
+  if ns.Auto and ns.Auto.nudge then return ns.Auto.nudge() end
+  return false
+end
+
 -- ------------------------------------------------------------------ level-up offers
 --- What a reminder is about (docs/squad-v2-simple.md §4): only real changes – a new key or a key whose macro text
 --- changed – and never a key the player keeps off the bars. Returns signature, count, items.
@@ -750,6 +771,15 @@ function Core.selftest(quiet)
     for _, o in ipairs(ns.Auto.OPTIONS) do on[o[1]] = ns.Auto.on(o[1]) end
     r.auto = { api = okA and aprobe or { error = tostring(aprobe) }, on = on, last = ns.Auto.last }
   end
+  -- the 12 main buttons and their keybinds at login: slot, content, key ("button 3 missing" is visible in the files)
+  r.buttons = {}
+  for slot = 1, 12 do
+    local c = B.content(slot)
+    local keys = {}
+    for _, k in ipairs(ns.Binds.keysFor("", slot)) do keys[#keys + 1] = k.key end
+    r.buttons[slot] = { content = c.kind .. (c.name and (":" .. c.name) or (c.id and (":" .. c.id) or "")), keys = table.concat(keys, " ") }
+  end
+  r.bindingSet = ns.Binds.currentSet()
   local okB, direct = pcall(ns.Binds.directWbx)
   r.binds = { direct = okB and direct or { error = tostring(direct) }, prev = Core.cdb.bindPrev, lost = okB and ns.Binds.lostButtons() or nil }
   r.ui = { dropdown = (ns.Widgets and ns.Widgets.hasBlizzardDropdown and ns.Widgets.hasBlizzardDropdown()) and "blizzard" or "own" }
@@ -870,6 +900,7 @@ function Core.onEvent(event, ...)
     if ns.Sync and ns.Sync.Init then ns.Sync.Init() end
     if ns.Auto and ns.Auto.Init then ns.Auto.Init() end
     if C_Timer and C_Timer.After then C_Timer.After(3, function() Core.checkOffer("login") end) end
+    if C_Timer and C_Timer.After then C_Timer.After(6, function() local ok, err = pcall(Core.loginChecks); if not ok then Core.log("error", "login checks: " .. tostring(err)) end end) end
     -- read-only diagnose a few seconds after login, so a /reload is enough to see how the addon behaves in this client
     if C_Timer and C_Timer.After then
       C_Timer.After(5, function()

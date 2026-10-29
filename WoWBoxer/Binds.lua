@@ -89,15 +89,17 @@ end
 function KB.classify(name, key)
   local used = KB.actionOf(key)
   if not used then return { kind = "free" } end
-  if used == "MACRO " .. name then return { kind = "same" } end
-  local slot = KB.slotForCommand(used)
+  -- a 1–= key that presses a WBX macro directly is broken (0.9.4): it is still its action button's key, never "other"
+  local broken = KB.DEFAULT_KEYS[key] and used:find("^MACRO WBX") and KB.DEFAULT_KEYS[key] or nil
+  if used == "MACRO " .. name and not broken then return { kind = "same" } end
+  local slot = broken or KB.slotForCommand(used)
   if slot then
     local a = ns.Compat.actionInfo(slot)
-    if not a then return { kind = "button", slot = slot, empty = true } end
-    if a.kind == "macro" and a.name == name then return { kind = "same", slot = slot } end
+    if not a then return { kind = "button", slot = slot, empty = true, broken = broken and true or nil } end
+    if a.kind == "macro" and a.name == name then return { kind = broken and "button" or "same", slot = slot, broken = broken and true or nil, here = true } end
     local what = a.name
     if not what and a.kind == "item" and G.GetItemInfo then local ok, n = pcall(G.GetItemInfo, a.id); what = ok and n or nil end
-    return { kind = "button", slot = slot, what = what or "something" }
+    return { kind = "button", slot = slot, what = what or "something", broken = broken and true or nil }
   end
   return { kind = "other", text = KB.bindingText(used) }
 end
@@ -109,9 +111,36 @@ function KB.buttonName(slot)
   return ns.Bars.barLabel(first) .. " button " .. n
 end
 
-local function save()
-  local set = G.CHARACTER_BINDINGS or KB.CHARACTER_SET
+-- ------------------------------------------------------------------ the ONLY writes to keybinds (lint51 checks it)
+local function log(msg) if ns.Core then ns.Core.log("info", msg) end end
+--- The binding set this character uses now (1 = account-wide, 2 = this character). WoWBoxer keeps it: SaveBindings(2)
+--- would switch an account-wide character to character bindings.
+function KB.currentSet()
+  if G.GetCurrentBindingSet then local ok, s = pcall(G.GetCurrentBindingSet); if ok and (s == 1 or s == 2) then return s end end
+  return G.CHARACTER_BINDINGS or KB.CHARACTER_SET
+end
+local function save(source)
+  local set = KB.currentSet()
   if G.SaveBindings then G.SaveBindings(set) end
+  log("keybinds saved to the " .. (set == 1 and "account" or "character") .. " set (source=" .. tostring(source) .. ")")
+  local c = ns.Core and ns.Core.cdb
+  if set == 1 and c and not c.toldAccountSet then
+    c.toldAccountSet = true
+    if ns.Core then ns.Core.print("Your keybinds are account-wide, so WoWBoxer's keybinds apply to every character on this account.") end
+  end
+end
+KB.save = save
+--- Set key -> command (nil = unbind). The one SetBinding of the addon.
+function KB.write(key, cmd, source)
+  local ok = G.SetBinding and pcall(G.SetBinding, key, cmd)
+  log("keybind " .. tostring(key) .. " -> " .. tostring(cmd or "nothing") .. " (source=" .. tostring(source) .. ")")
+  return ok
+end
+--- Set key -> WBX macro. The one SetBindingMacro of the addon.
+function KB.writeMacro(key, name, source)
+  local ok, res = pcall(G.SetBindingMacro, key, name)
+  log("keybind " .. tostring(key) .. " -> MACRO " .. tostring(name) .. " (source=" .. tostring(source) .. ")")
+  return ok and res
 end
 
 local function prevStore() local c = ns.Core and ns.Core.cdb; if c then c.bindPrev = c.bindPrev or {} return c.bindPrev end return {} end
@@ -129,11 +158,11 @@ function KB.bind(name, key)
   if not G.SetBindingMacro then return false, "SetBindingMacro is not available" end
   local before = KB.actionOf(key)
   if KB.slotForCommand(before) then return false, key .. " is the keybind of " .. KB.buttonName(KB.slotForCommand(before)) .. " – put the macro on that button instead" end
-  local ok = G.SetBindingMacro(key, name)
-  if not ok then return false, "the game refused the macro" end
   local prev = prevStore()
   if prev[key] == nil and before ~= "MACRO " .. name then prev[key] = before or "" end -- "" = it did nothing before
-  save()
+  local ok = KB.writeMacro(key, name, "set keybind")
+  if not ok then return false, "the game refused the keybind" end
+  save("set keybind")
   return true, before
 end
 
@@ -143,7 +172,7 @@ local function restoreKey(key)
   local prev = prevStore()
   local cmd = prev[key]
   if cmd == nil and KB.DEFAULT_KEYS[key] then cmd = "ACTIONBUTTON" .. KB.DEFAULT_KEYS[key] end
-  if cmd and cmd ~= "" and not cmd:find("^MACRO WBX") then G.SetBinding(key, cmd) else G.SetBinding(key); cmd = nil end
+  if cmd and cmd ~= "" and not cmd:find("^MACRO WBX") then KB.write(key, cmd, "restore") else KB.write(key, nil, "restore"); cmd = nil end
   prev[key] = nil
   return cmd
 end
@@ -154,7 +183,7 @@ function KB.unbind(name)
   if not ns.Rules.isOurs(name) or ns.Compat.inCombat() or not G.SetBinding then return 0 end
   local n = 0
   for _, k in ipairs(keysOf("MACRO " .. name)) do restoreKey(k); n = n + 1 end
-  if n > 0 then save() end
+  if n > 0 then save("remove keybind") end
   return n
 end
 
@@ -189,9 +218,9 @@ function KB.giveBack(key)
   if ns.Compat.inCombat() or not G.SetBinding then return false end
   local slot = KB.DEFAULT_KEYS[key]
   if not slot then return false end
-  G.SetBinding(key, "ACTIONBUTTON" .. slot)
+  KB.write(key, "ACTIONBUTTON" .. slot, "give back")
   prevStore()[key] = nil
-  save()
+  save("give back")
   return true
 end
 --- Reset to default: every key WoWBoxer bound goes back to what it did before (and 1–= to their buttons).
@@ -199,7 +228,7 @@ function KB.restoreAll()
   if ns.Compat.inCombat() or not G.SetBinding then return 0 end
   local n = 0
   for _, d in ipairs(KB.directWbx()) do restoreKey(d.key); n = n + 1 end
-  if n > 0 then save() end
+  if n > 0 then save("reset") end
   return n
 end
 

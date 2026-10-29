@@ -208,7 +208,7 @@ function KE.Build(parent)
   local function drop()
     local name = spellFromCursor()
     if not name then return end
-    ClearCursor()
+    ns.Bars.clearCursor("macro editor: spell dropped")
     KE.addStep(name)
   end
   f.strip:SetScript("OnReceiveDrag", drop)

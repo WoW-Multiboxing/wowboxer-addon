@@ -248,6 +248,47 @@ function UI.Open(tab)
   if ns.Audit then ns.Audit.onFirstOpen() end
 end
 
+-- ------------------------------------------------------------------ a small question (login fixes, nudges)
+--- UI.Popup(text, {{label, fn, tip}, …}): one sentence and up to three buttons, under the top centre. A click on any
+--- button closes it; nothing happens without a click.
+function UI.Popup(text, buttons)
+  local o = UI.popup
+  if not o then
+    o = W.box(UIParent, 0.1, 0.13, 0.06, 0.97)
+    o:SetFrameStrata("DIALOG")
+    o:SetClampedToScreen(true)
+    o:SetPoint("TOP", 0, -170)
+    o:SetWidth(420)
+    o.text = W.text(o, "GameFontHighlight", nil, W.TEXT, "CENTER")
+    o.text:SetPoint("TOPLEFT", 12, -12)
+    o.text:SetPoint("TOPRIGHT", -12, -12)
+    o.text.wbxCopy = "guide"
+    o.btns = {}
+    for i = 1, 3 do
+      local b = W.button(o, "OK", 90, 22, function(self) o:Hide(); if self.fn then self.fn() end end)
+      W.tip(b, function() return b:GetText() end, function() return b.tipText end)
+      o.btns[i] = b
+    end
+    UI.popup = o
+  end
+  o.text:SetText(text)
+  local prev
+  for i, b in ipairs(o.btns) do
+    local d = buttons[i]
+    b:SetShown(d ~= nil)
+    if d then
+      W.setLabel(b, d[1]); b.fn, b.tipText = d[2], d[3]
+      b:ClearAllPoints()
+      if prev then b:SetPoint("LEFT", prev, "RIGHT", 6, 0) else b:SetPoint("BOTTOMLEFT", 12, 10) end
+      prev = b
+    end
+  end
+  local th = o.text:GetStringHeight() or 14
+  o:SetHeight(math.ceil(th) + 12 + 10 + 22 + 12)
+  o:Show()
+  return o
+end
+
 -- ------------------------------------------------------------------ level-up toast
 -- One sentence + Update keys / Later + "Don't show again" (this pending state, this character; a new change shows
 -- again). Width from the text (300–480), height from the wrapped text, under the top centre.

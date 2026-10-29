@@ -163,7 +163,8 @@ do
   H.ok(cap:IsShown(), "still capturing")
   cap._scripts.OnKeyDown(cap, "F")
   H.eq(W.bindings.F, "MACRO WBX K2", "F bound to WBX K2")
-  H.eq(W.bindingSet, 2, "saved as character bindings")
+  H.eq(W.bindingSet, 1, "the account-wide binding set is kept (SaveBindings(1), not switched to 2)")
+  H.ok(W.chatHas("account%-wide"), "and the player is told once")
   H.ok(not cap:IsShown(), "capture closed")
   W.mods.shift = true
   findButton(W, "Set keybind"):Click()
@@ -943,12 +944,25 @@ do
   H.ok(fix and fix.hint:find("action button 3 has no keybind", 1, true), "checklist line + Give back")
   local d = Core.selftest(true)
   H.ok(d.binds and d.binds.direct[1] and d.binds.direct[1].key == "3" and d.binds.direct[1].macro == "WBX K2", "diagnose lists the direct WBX keybind")
+  H.ok(d.buttons and d.buttons[3] and d.buttons[3].keys == "" and d.buttons[1].keys == "1", "diagnose snapshot: button 3 has no keybind, button 1 has 1")
+  -- regression (the owner's Paladin, 30 Oct): binding another macro on 3 while 3 is the broken direct keybind = its button
+  local k = KB.classify("WBX K3", "3")
+  H.ok(k.kind == "button" and k.slot == 3 and k.broken, "a broken 1–= key counts as its action button, never other")
+  -- the login popup: Fix now
+  W.flush()
+  local pop = UI.popup
+  H.ok(pop and pop:IsShown() and pop.text:GetText():find("Key 3 presses a WoWBoxer macro directly, so action button 3 has no keybind.", 1, true), "login popup")
+  H.eq(pop.btns[1]:GetText(), "Fix now", "Fix now")
+  H.eq(W.bindings["3"], "MACRO WBX K2", "nothing before the click")
+  pop.btns[1]:Click()
+  H.eq(W.bindings["3"], "ACTIONBUTTON3", "Fix now: 3 presses button 3 again")
+  W.bindings["3"] = "MACRO WBX K2"
   W.combat = true
   step.button[3]()
   H.eq(W.bindings["3"], "MACRO WBX K2", "never in combat")
   W.combat = false; W.fire("PLAYER_REGEN_ENABLED")
   H.eq(W.bindings["3"], "ACTIONBUTTON3", "Give 3 back to button 3")
-  H.eq(W.bindingSet, 2, "saved in the character set")
+  H.eq(W.bindingSet, 1, "saved in the set the character uses")
   H.eq(#KB.lostButtons(), 0, "nothing lost any more")
   -- bindPrev is stored on every bind, and Remove keybind puts it back
   Core.bindKey("WBX K1", "J")
