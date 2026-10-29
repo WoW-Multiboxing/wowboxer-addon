@@ -47,11 +47,18 @@ function SP.presetValues(s)
   end
   return v
 end
---- "Leader" or "follows Dorin".
+local ORD = { "1st", "2nd", "3rd" }
+--- "Leader" or "2nd in line · follows Anna" (the follow line: the squad order, docs/follow-line.md).
 function SP.followsText(m, s)
   if m.leader then return "Leader" end
-  local L = S().leaderOf(s)
-  return "follows " .. (L and L.name or "the leader")
+  local line = S().line(s)
+  for i, x in ipairs(line) do
+    if x == m then
+      local n = i - 1
+      return (ORD[n] or (n .. "th")) .. " in line · follows " .. (line[i - 1] and line[i - 1].name or "the leader")
+    end
+  end
+  return "follows the leader"
 end
 
 -- ------------------------------------------------------------------ actions (each saves at once and flashes "Saved")
@@ -358,7 +365,7 @@ local function buildEditor(f, parent)
   e.up:SetPoint("RIGHT", e.down, "LEFT", -4, 0)
   -- line 2
   e.plays = dd(150, function() return ns.Book.playsAsValues() end, function(x) return x.leader and "leader" or x.unit end,
-    function(x, v) return S().setPlaysAs(squad(), x, v) end, "Plays as", "Leader: plays normally. Follower: its keys use the leader's target through the unit (party1–4 or focus).")
+    function(x, v) return S().setPlaysAs(squad(), x, v) end, "Plays as", "Leader: plays normally. Follower: where the leader is in this character's party (party1–4 or focus); its keys use the leader's target through it. The place in the follow line is the squad order: Up / Down.")
   local pl = lbl("Plays as")
   pl:SetPoint("TOPLEFT", 30, -35)
   e.plays:SetPoint("LEFT", pl, "RIGHT", 6, 0)

@@ -123,7 +123,8 @@ end
 function Book.playsAsValues()
   local v = { { "leader", "Leader", "This character leads: its keys use its own target." } }
   for _, u in ipairs(ns.Engine.UNITS) do
-    v[#v + 1] = { u, "Follower (" .. u .. ")", "Its keys use the leader's target through " .. u .. " and heal the leader." }
+    -- the unit is where THIS client sees the leader – not the place in the follow line (that is the squad order)
+    v[#v + 1] = { u, "Follower – leader is " .. u, "The leader is " .. u .. " on this character's client: Assist, Follow leader and the spell keys use it. The place in the follow line is the squad order (Up / Down on the Squad page)." }
   end
   return v
 end
@@ -840,7 +841,7 @@ local function build(p, mode)
       get = function() local mem = me(); return mem and (mem.leader and "leader" or mem.unit) end,
       set = function(v) Core().setPlaysAs(v) end })
     p.playsAs:SetPoint("LEFT", p.role, "RIGHT", 8, 0)
-    W.ddTip(p.playsAs, "Plays as", "Leader: your keys use your own target. Follower: your keys use the leader's target (party1–4 or focus). One key press is still one action on this character.")
+    W.ddTip(p.playsAs, "Plays as", "Leader: your keys use your own target. Follower: where the leader is in your party here (party1–4 or focus) – your keys use the leader's target through it. Your place in the follow line is the squad order. One key press is still one action on this character.")
     p.seq = W.seqControl(p.right, { member = me, width = 96 })
     p.seq:SetPoint("TOPLEFT", 0, -30)
     p.helperPool = {}

@@ -228,7 +228,7 @@ do
   for _, x in ipairs(ns.State.racesFor("priest")) do if x.k == added.race then raceOk = true end end
   H.ok(raceOk, "race: the first valid race")
   H.ok(p.saved:IsShown() and p.saved:GetText():find("Saved", 1, true) ~= nil, "Saved flashes")
-  H.eq(f.pool.rows[2].follows:GetText(), "follows Dorin", "the row says whom it follows")
+  H.eq(f.pool.rows[2].follows:GetText(), "1st in line · follows Dorin", "the row says its place in the line and whom it follows")
   H.ok(f.pool.rows[1].me:IsShown() and not f.pool.rows[1].remove:IsShown(), "own row: This character, no remove")
   f.add.name:SetText("wowtwo"); f.add.go:Click()
   H.eq(#s.members, 2, "the same name twice is refused")
@@ -241,7 +241,7 @@ do
   H.eq(added.role, "healer", "role from the row")
   r2.crown:Click()
   H.ok(added.leader and not select(2, Core.me()).leader, "the crown makes Wowtwo the leader")
-  H.eq(f.pool.rows[1].follows:GetText(), "follows Wowtwo", "and Dorin follows Wowtwo")
+  H.eq(f.pool.rows[1].follows:GetText(), "1st in line · follows Wowtwo", "and Dorin follows Wowtwo")
   f.pool.rows[1].crown:Click()
   H.ok(select(2, Core.me()).leader, "crown back to Dorin")
   -- inline editor
