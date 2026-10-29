@@ -60,7 +60,7 @@ so the player chooses them and sees them:
 | **Target leader** | followers (off by default) | `/target party1` |
 | **Focus leader** | followers using focus | `/focus [@target,help,nodead]` (as today) |
 | Pet attack / Pet back | pet classes | as today |
-- **Decision (the owner, 19:51): only Invite uses names.** Follow, Assist, Target and all spell keys stay on party units
+- **Decision (the owner, 19:51): only Invite uses names.** (Update 20:51: Follow (line) also uses names – see `follow-line.md`.) Follow, Assist, Target and all spell keys stay on party units
   (party1–4 / focus), exactly as today. Invite uses `Name-Realm` when the member is on another realm.
 - `/invite` must be added to `Rules.SLASH_WHITELIST` (`/target` is already there) (`/invite` is a normal chat command; one press sends
   the invites, the other characters still accept by hand – **never auto-accept**).
