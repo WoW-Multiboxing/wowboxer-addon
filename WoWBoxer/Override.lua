@@ -14,7 +14,6 @@ ns.Override = O
 local sfind, smatch, sgsub, slower = string.find, string.match, string.gsub, string.lower
 local tconcat = table.concat
 local function S() return ns.State end
-local function C() return ns.Compat end
 
 O.MAX_TARGETS = 8
 O.KINDS = { "mouseover", "target", "leader", "leadertarget", "member", "mypet", "unit", "focus", "targettarget", "player" }
@@ -223,7 +222,7 @@ local COND_WORDS = { help = 1, harm = 1, dead = 1, nodead = 1, exists = 1, noexi
   stealth = 1, nostealth = 1, channeling = 1, nochanneling = 1, pet = 1, nopet = 1, group = 1, nogroup = 1, flying = 1, noflying = 1,
   mounted = 1, nomounted = 1, indoors = 1, outdoors = 1, swimming = 1, noswimming = 1, party = 1, raid = 1, actionbar = 1, bar = 1,
   bonusbar = 1, button = 1, btn = 1, equipped = 1, worn = 1, form = 1, stance = 1, noform = 1, nostance = 1, known = 1, noknown = 1,
-  spec = 1, talent = 1, flyable = 1, noflyable = 1, resting = 1, noresting = 1, modifier = 1, nomodifier = 1, target = 1, nopet = 1 }
+  spec = 1, talent = 1, flyable = 1, noflyable = 1, resting = 1, noresting = 1, modifier = 1, nomodifier = 1, target = 1 }
 --- Problems with the conditionals of a body: list of plain sentences (empty = fine).
 function O.checkConditionals(body)
   local out = {}
