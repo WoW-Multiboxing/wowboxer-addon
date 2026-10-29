@@ -447,7 +447,7 @@ function Book.nextStep(ctx, mode)
   if nOv > 0 and not Core().advanced() and mode == "keys" then
     return { text = nOv .. (nOv == 1 and " key uses" or " keys use") .. " your own targeting", tip = "You changed them in Advanced mode; they stay active. Right-click a key → Back to WoWBoxer's version.",
       button = { "Show", "Selects the first key with your own targeting.", function()
-        for name in pairs(Core().cdb.overrides) do UI.panels.keys.selected = name; break end
+        UI.panels.keys.selected = next(Core().cdb.overrides)
         UI.Refresh() end } }
   end
   if mode == "spells" then return { text = "Drag a spell to your bar", tip = "Any spell you drag becomes a WoWBoxer key for this character." } end
