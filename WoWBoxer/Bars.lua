@@ -77,7 +77,7 @@ end
 -- Every PickupMacro / PlaceAction / PickupAction / ClearCursor of the addon is here (lint51 checks it), with a log line
 -- naming who asked (source=). Before WoWBoxer first changes a slot, what was there goes into cdb.barOriginal[slot]
 -- (never overwritten), so Reset to default can put the bars back as they were.
-local function cdb() return ns.Core and ns.Core.cdb end
+local function charDB() return ns.Core and ns.Core.cdb end
 local function log(msg) if ns.Core then ns.Core.log("info", msg) end end
 --- What a slot holds, as data: {kind = "empty"} | {kind = "spell"/"item"/"macro", id, name}.
 function B.content(slot)
@@ -87,7 +87,7 @@ function B.content(slot)
 end
 --- Remember what slot held before WoWBoxer's first change (once; a WBX macro there is never "the original").
 function B.snapshot(slot, before)
-  local c = cdb()
+  local c = charDB()
   if not (c and slot) then return end
   c.barOriginal = c.barOriginal or {}
   if c.barOriginal[slot] ~= nil then return end
@@ -98,7 +98,7 @@ end
 --- Watch the bars (scanBars): a slot that now holds a WBX macro but was something else last time (the player dragged
 --- it there) gets that something else as its original.
 function B.watch()
-  local c = cdb()
+  local c = charDB()
   if not c then return end
   c.barSeen = c.barSeen or {}
   for slot = 1, 120 do
@@ -132,8 +132,8 @@ function B.restoreSlot(slot, orig, source)
   local ok, err
   if orig.kind == "empty" then
     ok, err = pcall(function() PickupAction(slot); ClearCursor() end)
-  elseif orig.kind == "spell" and orig.id and G.PickupSpell then ok, err = pcall(function() PickupSpell(orig.id); PlaceAction(slot); ClearCursor() end)
-  elseif orig.kind == "item" and orig.id and G.PickupItem then ok, err = pcall(function() PickupItem(orig.id); PlaceAction(slot); ClearCursor() end)
+  elseif orig.kind == "spell" and orig.id and G.PickupSpell then ok, err = pcall(function() G.PickupSpell(orig.id); PlaceAction(slot); ClearCursor() end)
+  elseif orig.kind == "item" and orig.id and G.PickupItem then ok, err = pcall(function() G.PickupItem(orig.id); PlaceAction(slot); ClearCursor() end)
   elseif orig.kind == "macro" and orig.name and not R.isOurs(orig.name) then
     local idx = G.GetMacroIndexByName and G.GetMacroIndexByName(orig.name)
     if idx and idx > 0 then ok, err = pcall(function() PickupMacro(idx); PlaceAction(slot); ClearCursor() end) else ok, err = false, "macro " .. orig.name .. " is gone" end
