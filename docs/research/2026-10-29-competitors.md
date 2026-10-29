@@ -96,3 +96,48 @@ German only. | **No** – closest to WoWBoxer |
 - Do the CurseForge name and summary now (the owner, 2 minutes).
 - After launch, build P1 1–4 as one "Team alerts" release, then P2.
 - Keep the feature freeze before 5 Nov.
+
+## 5. Inside the code (the owner's zips: MAMA v2.12.2 LGPLv3, Multibox Follower Helper 3.0.1 All Rights Reserved)
+
+We take **ideas only**. We do not copy code: MAMA is LGPLv3 and WoWBoxer is MIT, and MFH is All Rights Reserved.
+
+**Forever facts found in MAMA's code (useful for our [AFKLAR] list):**
+
+- **Forever is interface 16001.** MFH ships a `_Camelot.toc`; MAMA has `## Interface: 16001, 120105`.
+- **`/follow Name` and `/assist Name` work on Forever** from an action-bar macro. `/click Button` from a macro does
+  nothing on Forever, but a CLICK keybind works. This closes the open question in `follow-line.md` (we use party
+  units anyway).
+- **Forever has these APIs:** `C_SpellBook.IsSpellKnown`, `Settings.GetSetting("PROXY_SHOW_ACTIONBAR_2..5")` (turn
+  bars 2–5 on through the Settings proxies), `Constants.MacroConsts.MAX_ACCOUNT_MACROS`, and `C_CVar`.
+- **Whispers can arrive "secret" (chat lockdown) on Forever.** MAMA forwards "a whisper we can't read" in that case.
+  Our team messages must handle secret values too: `issecretvalue`, as already probed in `Compat`.
+
+**How MAMA's follow-broken alert avoids false alarms (copy the idea):**
+
+- **When a follower warns:**
+  - `AUTOFOLLOW_END` out of combat starts a 1 s ticker for up to 10 s.
+  - It warns only if the lead is then out of follow range (`CheckInteractDistance(unit, 4)`) and we did not start
+    following again.
+  - A `/follow` that didn't start within 1 s (detected by hooking `FollowUnit`) also warns.
+- **When it stays quiet:**
+  - in combat, within 5 s after combat, or while casting;
+  - when the lead was not seen in the last 120 s;
+  - when the lead or the follower is dead, a ghost or on a taxi;
+  - at most once per 15 s per window.
+- **On the lead's side:** drop warnings for 20 s after a loading screen, landing, release or resurrection. Then a raid
+  warning + sound.
+
+**MFH ideas:**
+
+- **Its own short sounds** (follow on/off, low health/mana/no mana, mount on/off) on the **Master** channel, so they
+  are heard while other sounds are off.
+- **Followers' `UI_ERROR_MESSAGE` sent to the master** ("error sharing"): the leader sees "Bo: Out of range" /
+  "Bo: Not enough mana". Display only, and very useful for spotting a follower that is not casting.
+- **Mount on/off cue:** the leader hears when a follower mounts or dismounts.
+
+**Added to §3:**
+
+- **P1 #5:** error sharing (followers' red error text shown on the leader, rate-limited).
+- **P2 #10:** mount/dismount cue.
+- **P2 #11:** "Show action bars 2–5" in Setup, one click through the Settings proxies, because Place all uses Bottom
+  Left/Right and those bars are hidden on a new character.
