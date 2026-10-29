@@ -43,6 +43,11 @@ python tools/lint51.py && node tools/build_data.js --check && node tools/export_
 bash tests/run_all.sh          # Lua 5.1; on Windows falls back to python tools/lua.py (lupa)
 node share/test.js
 ```
+Releasing: `docs/release.md` (tag → CI → CurseForge). **Every release ends with the website version:** after the
+release is live on CurseForge, set `version:` (e.g. `'v0.9.8 beta'`) and `updated:` (today) in
+`wowboxer-site/content/pages/addon.md` – nothing else – then `npm ci && npm run build` ("✓ output ok"), commit as
+WoW-Multiboxing <348792173+WoW-Multiboxing@users.noreply.github.com> "content: AddOn version vX.Y.Z", pull --rebase,
+push main, check the Vercel deployment is READY and wowboxer.com/addon/ shows it, and note it in the [WS-E] LOG block.
 In-game loop (never send input to the game; screenshots and reading files are fine):
 ```
 powershell -File tools/install.ps1   # copy WoWBoxer/ into _classic_era_ and _forever_ Interface\AddOns

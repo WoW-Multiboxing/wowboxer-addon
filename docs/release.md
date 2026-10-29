@@ -9,6 +9,18 @@ the last tag. To upload an existing tag again: Actions → release → Run workf
 Game versions come from the TOC `## Interface:` list: 11509 → Classic Era 1.15.9, 16001 → Forever 1.60.1.
 CurseForge knows both (checked 2026-10-28: 1.60.1 = id 17053, 1.15.9 = id 16630). Project ID 1771228.
 
+## Last step of every release: the version on the website (the owner, 2026-10-29)
+After the tag is pushed and the release is live on CurseForge, wowboxer.com/addon/ (and so Google) must show it:
+1. Website repo `WoW-Multiboxing/wowboxer-site` in `%USERPROFILE%\wowboxer-site` (clone it if missing, else
+   `git pull --rebase`).
+2. In `content/pages/addon.md` set `version:` to the new version in the same form, e.g. `version: 'v0.9.8 beta'`
+   (no "beta" once the release is stable), and `updated:` to today's date (`YYYY-MM-DD`). Change nothing else.
+3. `npm ci && npm run build` – it must end with "✓ output ok".
+4. Commit as `WoW-Multiboxing <348792173+WoW-Multiboxing@users.noreply.github.com>` with the message
+   `content: AddOn version vX.Y.Z`, `git pull --rebase`, push to main.
+5. Check that the Vercel deployment for that commit is READY and that https://wowboxer.com/addon/ shows the version.
+6. Mention it in the `[WS-E]` block in LOG.md.
+
 ## One-time CurseForge setup (the owner, in the browser)
 1. https://authors.curseforge.com → **Create project** → World of Warcraft → Addon. Name `WoWBoxer`, summary and
    description below, licence MIT, categories **Action Bars** and **Miscellaneous**, logo: any square image.
