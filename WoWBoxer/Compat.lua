@@ -324,6 +324,53 @@ function C.setCVar(name, value)
   if CV and CV.SetCVar then return pcall(CV.SetCVar, name, value) end
   return pcall(G.SetCVar, name, value)
 end
+--- The game's Settings object for a CVar, or nil (Classic Era 1.15 / modern: Settings.GetSetting(variable)).
+function C.cvarSetting(name)
+  local S = G.Settings
+  if not (S and S.GetSetting) then return nil end
+  local ok, s = pcall(S.GetSetting, name)
+  if ok and type(s) == "table" and s.SetValue then return s end
+  return nil
+end
+--- Set a CVar so that it STICKS (docs/feedback-2026-10-30-night.md §2): through the Settings system when the CVar has
+--- a setting (deselectOnClick is the "Sticky Targeting" checkbox, negated), else C_CVar.SetCVar. Always reads back.
+--- Returns stuck (true = the value is now `want`), method, after.
+function C.setCVarSure(name, want)
+  local s = C.cvarSetting(name)
+  local method = "SetCVar"
+  if s then
+    method = "setting"
+    local okv, cur = pcall(s.GetValue, s)
+    if okv and type(cur) == "boolean" then
+      local b = want == "1"
+      pcall(s.SetValue, s, b)
+      if tostring(C.getCVar(name)) ~= want then pcall(s.SetValue, s, not b); method = "setting (negated)" end
+    else
+      pcall(s.SetValue, s, tonumber(want) or want)
+    end
+  end
+  if tostring(C.getCVar(name)) ~= want then
+    C.setCVar(name, want) -- the plain way as a last try
+    if s then method = method .. "+SetCVar" end
+  end
+  local after = C.getCVar(name)
+  return tostring(after) == want, method, after
+end
+--- Open the game's options where a setting lives (Controls for Sticky Targeting). [AFKLAR: category ids on Forever]
+function C.openOptions(name)
+  local S = G.Settings
+  if S and S.OpenToCategory then
+    local cats = {}
+    for _, c in ipairs({ "Controls" }) do cats[#cats + 1] = c end
+    if S.CONTROLS_CATEGORY_ID then table.insert(cats, 1, S.CONTROLS_CATEGORY_ID) end
+    if G.CONTROLS_LABEL then cats[#cats + 1] = G.CONTROLS_LABEL end
+    for _, cat in ipairs(cats) do if pcall(S.OpenToCategory, cat) then return "settings" end end
+  end
+  if G.SettingsPanel and G.ShowUIPanel and pcall(G.ShowUIPanel, G.SettingsPanel) then return "panel" end
+  if G.InterfaceOptionsFrame_Show and pcall(G.InterfaceOptionsFrame_Show) then return "interface" end
+  if G.ToggleGameMenu and pcall(G.ToggleGameMenu) then return "menu" end
+  return nil
+end
 
 -- ------------------------------------------------------------------ addons
 --- "loaded" | "installed" (present but not loaded) | "missing"

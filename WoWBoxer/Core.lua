@@ -392,22 +392,27 @@ function Core.cvarPlan(overrides)
     local cur = C.getCVar(c.name)
     local want = (overrides and overrides[c.name]) or c[role]
     out[#out + 1] = { name = c.name, label = c.label, why = c.why, current = cur, want = want, exists = cur ~= nil,
-      backup = Core.cdb.cvarBackup[c.name], status = cur == nil and "missing" or (want == nil and "leave") or (tostring(cur) == want and "ok") or "change" }
+      backup = Core.cdb.cvarBackup[c.name], status = cur == nil and "missing" or (want == nil and "leave") or (tostring(cur) == want and "ok")
+        or ((Core.cdb.cvarStuck or {})[c.name] and "stuck") or "change" }
   end
   return out, role
 end
 function Core.applyCVars(overrides)
   return Core.whenSafe("Apply settings", function()
-    local n = 0
+    local n, stuck = 0, {}
+    Core.cdb.cvarLog = Core.cdb.cvarLog or {}
+    Core.cdb.cvarStuck = Core.cdb.cvarStuck or {}
     for _, c in ipairs(Core.cvarPlan(overrides)) do
-      if c.status == "change" and R.CVAR_BY_NAME[c.name] then
+      if (c.status == "change" or c.status == "stuck") and R.CVAR_BY_NAME[c.name] then
         if Core.cdb.cvarBackup[c.name] == nil then Core.cdb.cvarBackup[c.name] = tostring(c.current) end
-        local ok = C.setCVar(c.name, c.want)
-        if ok then n = n + 1 else Core.log("error", "SetCVar failed: " .. c.name) end
+        local ok, method, after = C.setCVarSure(c.name, c.want)
+        Core.cdb.cvarLog[c.name] = { before = c.current, want = c.want, after = after, method = method }
+        Core.cdb.cvarStuck[c.name] = (not ok) or nil
+        if ok then n = n + 1 else stuck[#stuck + 1] = c.label; Core.log("warn", "cvar did not stick: " .. c.name .. " (" .. method .. ", now " .. tostring(after) .. ")") end
       end
     end
-    chat(n .. " setting(s) changed. Restore puts the old values back.")
-    Core.log("info", "cvars applied: " .. n)
+    chat(n .. " setting(s) changed. Restore puts the old values back." .. (#stuck > 0 and (" |cfff0b43cDidn't stick:|r " .. table.concat(stuck, ", ") .. " – Setup → Open Options.") or ""))
+    Core.log("info", "cvars applied: " .. n .. (#stuck > 0 and (", did not stick: " .. #stuck) or ""))
     Core.changed()
   end)
 end
@@ -415,9 +420,9 @@ function Core.restoreCVars()
   return Core.whenSafe("Restore settings", function()
     local n = 0
     for name, v in pairs(Core.cdb.cvarBackup) do
-      if R.CVAR_BY_NAME[name] and C.setCVar(name, v) then n = n + 1 end
+      if R.CVAR_BY_NAME[name] and C.setCVarSure(name, v) then n = n + 1 end
     end
-    Core.cdb.cvarBackup = {}
+    Core.cdb.cvarBackup, Core.cdb.cvarStuck = {}, {}
     chat(n .. " setting(s) restored.")
     Core.log("info", "cvars restored: " .. n)
     Core.changed()
@@ -547,7 +552,7 @@ function Core.resetToDefault(ch)
   end
   if ch.cvars then
     local n = 0
-    for name, v in pairs(Core.cdb.cvarBackup) do if R.CVAR_BY_NAME[name] and C.setCVar(name, v) then n = n + 1 end end
+    for name, v in pairs(Core.cdb.cvarBackup) do if R.CVAR_BY_NAME[name] and C.setCVarSure(name, v) then n = n + 1 end end
     Core.cdb.cvarBackup = {}
     Core.log("info", "reset: " .. n .. " cvars restored")
   end
@@ -717,7 +722,11 @@ function Core.selftest(quiet)
   else r.error = why end
   local cv = Core.cvarPlan()
   r.cvars = {}
-  for _, c in ipairs(cv) do r.cvars[c.name] = { cur = c.current, want = c.want, status = c.status } end
+  for _, c in ipairs(cv) do
+    local lg = (Core.cdb.cvarLog or {})[c.name]
+    r.cvars[c.name] = { cur = c.current, want = c.want, status = c.status, setting = C.cvarSetting(c.name) ~= nil,
+      before = lg and lg.before, after = lg and lg.after, method = lg and lg.method }
+  end
   local okP, probe = pcall(C.cvarProbe)
   r.cvarProbe = okP and probe or { error = tostring(probe) }
   r.addons = {}

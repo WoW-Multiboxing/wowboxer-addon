@@ -257,4 +257,45 @@ do
   H.eq(W.calls.LearnTalent, nil, "nothing is spent in the game")
 end
 
+-- CVars through the game's Settings system (docs/feedback-2026-10-30-night.md §2): deselectOnClick is the "Sticky
+-- Targeting" checkbox, negated; SetCVar alone does not stick
+do
+  local W = Mock.new(H, { name = "Anna", class = "PRIEST", level = 20 })
+  local ns = H.loadAddon({ env = W.env })
+  W.fire("ADDON_LOADED", "WoWBoxer"); W.fire("PLAYER_LOGIN")
+  local Core = ns.Core
+  ns.State.quickStart(Core.db, Core.cdb, Core.playerInfo())
+  W.cvars.deselectOnClick = "0" -- sticky targeting on (the old WoWBoxer advice)
+  local origSet = W.env.C_CVar.SetCVar
+  W.env.C_CVar.SetCVar = function(n, v) if n == "deselectOnClick" then return true end return origSet(n, v) end -- owned by Settings: no effect
+  local sticky = { value = true } -- the checkbox: Sticky Targeting = not deselectOnClick
+  function sticky:GetValue() return self.value end
+  function sticky:SetValue(v) self.value = v; W.cvars.deselectOnClick = v and "0" or "1" end
+  W.env.Settings = { GetSetting = function(n) if n == "deselectOnClick" then return sticky end end }
+  Core.applyCVars()
+  H.eq(W.cvars.deselectOnClick, "1", "Clear target on click is on (through the Settings checkbox)")
+  H.eq(sticky.value, false, "Sticky Targeting unticked")
+  local lg = Core.cdb.cvarLog.deselectOnClick
+  H.ok(lg and lg.before == "0" and lg.want == "1" and lg.after == "1" and lg.method:find("setting", 1, true), "logged: before/wanted/after/method " .. tostring(lg and lg.method))
+  local d = Core.selftest(true)
+  H.ok(d.cvars.deselectOnClick.setting and d.cvars.deselectOnClick.after == "1", "diagnose: setting + after")
+  -- a setting the game keeps refusing: "Didn't stick" + Open Options
+  W.cvars.deselectOnClick = "0"; sticky.value = true
+  function sticky:SetValue() end
+  Core.applyCVars()
+  local st
+  for _, c in ipairs(Core.cvarPlan()) do if c.name == "deselectOnClick" then st = c.status end end
+  H.eq(st, "stuck", "read back: Didn't stick")
+  ns.UI.Open("setup")
+  local p = ns.UI.panels.setup
+  local found = false
+  for _, r in ipairs(p.cvPool.rows) do if r:IsShown() and r.st:GetText() == "Didn't stick" then found = true end end
+  H.ok(found and p.openOpt:IsShown(), "the row says Didn't stick, and Open Options is offered")
+  local opened
+  W.env.Settings.OpenToCategory = function(c) opened = c; return true end
+  p.openOpt:Click()
+  H.ok(opened ~= nil, "Open Options opens the game's options")
+  H.ok(W.chatHas("Didn't stick"), "the chat line says which one did not stick")
+end
+
 os.exit(H.report("core") and 0 or 1)

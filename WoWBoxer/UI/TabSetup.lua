@@ -117,6 +117,11 @@ function tab.build(p)
   p.restore = W.button(p, "Restore", 90, 22, function() Core().restoreCVars() end,
     "Puts back the game settings WoWBoxer changed.")
   p.restore:SetPoint("LEFT", p.applyCv, "RIGHT", 6, 0)
+  -- a setting the game did not keep: open its options page (Sticky Targeting for "Clear target on click")
+  p.openOpt = W.button(p, "Open Options", 100, 22, function() ns.Compat.openOptions(p.stuckName) end, { "Open Options", function()
+    return p.stuckName == "deselectOnClick" and "Opens the game's Controls options. Untick Sticky Targeting there." or "Opens the game's options for the setting that did not stick." end })
+  p.openOpt:SetPoint("LEFT", p.restore, "RIGHT", 6, 0)
+  p.openOpt:Hide()
 
   local h2 = W.text(p, "GameFontNormal", nil, W.GOLD)
   h2:SetPoint("TOPLEFT", p.applyCv, "BOTTOMLEFT", 0, -12)
@@ -176,7 +181,7 @@ function tab.refresh(p)
   p.cvTitle:SetText("Game settings")
   p.cvRole = role
   p.cvPool:reset()
-  local nChange = 0
+  local nChange, nStuck, stuckName = 0, 0, nil
   local rows = 0
   for _, c in ipairs(plan) do
     if c.status ~= "missing" then -- only settings this client has
@@ -185,9 +190,11 @@ function tab.refresh(p)
     r.label:SetText(c.label)
     r.now:SetText(c.current == nil and "–" or tostring(c.current))
     r.rec:SetText(c.want or "–")
-    local st = ({ change = { "Change", W.ORANGE }, ok = { "OK", W.GREEN }, missing = { "n/a", W.MUTED }, leave = { "", W.MUTED } })[c.status]
+    local st = ({ change = { "Change", W.ORANGE }, ok = { "OK", W.GREEN }, missing = { "n/a", W.MUTED }, leave = { "", W.MUTED },
+      stuck = { "Didn't stick", W.ORANGE } })[c.status]
+    if c.status == "stuck" then nStuck = nStuck + 1; stuckName = c.name end
     r.st:SetText(st[1]); r.st:SetTextColor(st[2][1], st[2][2], st[2][3])
-    if c.status == "change" then nChange = nChange + 1 end
+    if c.status == "change" or c.status == "stuck" then nChange = nChange + 1 end
     W.tooltip(r, function(GT) GT:AddLine(c.label .. " (" .. c.name .. ")", 1, 0.82, 0); GT:AddLine(c.why, 1, 1, 1, true) end)
     end
   end
@@ -195,6 +202,8 @@ function tab.refresh(p)
   p.applyCv:SetPoint("TOPLEFT", LEFT_W + 20, -40 - rows * 19 - 6)
   W.setLabel(p.applyCv, nChange > 0 and ("Apply " .. nChange .. " setting" .. (nChange > 1 and "s" or "")) or "Settings OK")
   p.applyCv:SetEnabled(nChange > 0)
+  p.stuckName = stuckName
+  p.openOpt:SetShown(nStuck > 0)
   p.restore:SetEnabled(next(cdb.cvarBackup) ~= nil)
 end
 
