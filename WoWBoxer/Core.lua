@@ -444,6 +444,7 @@ function Core.applyImport(res)
   db.active = res.squad.id
   if next(res.cvars) then Core.cdb.importCVars = res.cvars end
   if #res.addons > 0 then db.settings.addons = res.addons end
+  if res.auto and ns.Auto then ns.Auto.import(res.auto); Core.log("info", "imported the squad's automation choice") end
   Core.cdb.squadId, Core.cdb.memberId = nil, nil
   local _, m = Core.me()
   Core.log("info", "imported squad " .. res.squad.name .. " (" .. #res.squad.members .. " characters), me=" .. tostring(m and m.name))
@@ -453,7 +454,7 @@ end
 function Core.exportString(squad)
   squad = squad or S.activeSquad(Core.db)
   if not squad then return nil end
-  return Sh.export(squad, { game = C.game(), addons = Core.db.settings.addons })
+  return Sh.export(squad, { game = C.game(), addons = Core.db.settings.addons, auto = ns.Auto and ns.Auto.export() or nil })
 end
 
 -- ------------------------------------------------------------------ Advanced mode: own targeting per key (Override.lua)

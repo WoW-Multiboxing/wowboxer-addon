@@ -78,6 +78,65 @@ function AU.member(name, inParty)
   return nil
 end
 function AU.isLeader() local _, me = Core().me(); return me ~= nil and me.leader == true end
+
+-- ------------------------------------------------------------------ "Accept from" (docs/feedback-2026-10-30-night.md §5)
+-- squad (default): WoWBoxer squad members in your party · friends: also friends, Battle.net friends on this game and
+-- your guild · everyone: anyone (the page warns first). Used by every accept: invites, escorts/shares, resurrections,
+-- summons and role checks. In Advanced mode a row can have its own choice.
+AU.FROM = { { "squad", "Squad only" }, { "friends", "Squad, friends and guild" }, { "everyone", "Everyone" } }
+AU.FROM_SHORT = { squad = "Squad", friends = "Squad, friends, guild", everyone = "Everyone" }
+AU.ACCEPTS = { invite = true, quests = true, res = true, summon = true, rolecheck = true }
+function AU.acceptFrom(key)
+  local s = db()
+  local o = key and ns.Advanced and ns.Advanced.on() and type(s.acceptOverride) == "table" and s.acceptOverride[key]
+  local v = o or s.acceptFrom
+  if v ~= "friends" and v ~= "everyone" then v = "squad" end
+  return v
+end
+--- Is `name` on this character's friends list (or a Battle.net friend playing this game)?
+function AU.isFriend(name)
+  local n = short(name)
+  if not n then return false end
+  n = n:lower()
+  local CF = G.C_FriendList
+  if CF and CF.GetNumFriends and CF.GetFriendInfoByIndex then
+    for i = 1, (CF.GetNumFriends() or 0) do local f = CF.GetFriendInfoByIndex(i); if f and f.name and short(f.name):lower() == n then return true end end
+  elseif G.GetNumFriends and G.GetFriendInfo then
+    for i = 1, (G.GetNumFriends() or 0) do local fn = G.GetFriendInfo(i); if fn and short(fn) and short(fn):lower() == n then return true end end
+  end
+  local BN = G.C_BattleNet
+  if BN and BN.GetFriendAccountInfo and G.BNGetNumFriends then
+    for i = 1, (G.BNGetNumFriends() or 0) do
+      local ok, a = pcall(BN.GetFriendAccountInfo, i)
+      local gi = ok and a and a.gameAccountInfo
+      if gi and gi.characterName and short(gi.characterName) and short(gi.characterName):lower() == n then return true end
+    end
+  end
+  return false
+end
+--- Is `name` in this character's guild?
+function AU.isGuild(name)
+  local n = short(name)
+  if not (n and G.IsInGuild and G.IsInGuild() and G.GetNumGuildMembers and G.GetGuildRosterInfo) then return false end
+  n = n:lower()
+  for i = 1, (G.GetNumGuildMembers() or 0) do
+    local gn = G.GetGuildRosterInfo(i)
+    if gn and short(gn) and short(gn):lower() == n then return true end
+  end
+  return false
+end
+--- May option `key` accept from `name`? inParty: a squad member must also be in the party (invites: not yet).
+--- Returns the display name or nil.
+function AU.allowed(key, name, inParty)
+  local n = short(name)
+  if not n then return nil end -- unknown / secret name: never
+  local m = AU.member(n, inParty)
+  if m then return m.name end
+  local from = AU.acceptFrom(key)
+  if from == "everyone" then return n end
+  if from == "friends" and (AU.isFriend(n) or AU.isGuild(n)) then return n end
+  return nil
+end
 local function shift() return G.IsShiftKeyDown and G.IsShiftKeyDown() and true or false end
 --- One log line per automatic action (and a chat line with the Chat line option).
 function AU.did(text)
@@ -121,12 +180,12 @@ end
 -- ------------------------------------------------------------------ 1. invites
 function AU.onInvite(name)
   if not AU.on("invite") then return end
-  local m = AU.member(name, false) -- not in the party yet: matched by name only
-  if not m then Core().log("info", "auto: invite from a non-squad player ignored"); return end
+  local who = AU.allowed("invite", name, false) -- not in the party yet: matched by name only
+  if not who then Core().log("info", "auto: invite not accepted (Accept from: " .. AU.FROM_SHORT[AU.acceptFrom("invite")] .. ")"); return end
   if skipShift("invite") then return end
   if call(G.AcceptGroup) then
     if G.StaticPopup_Hide then pcall(G.StaticPopup_Hide, "PARTY_INVITE") end
-    AU.did("Accepted the group invite from " .. m.name .. ".")
+    AU.did("Accepted the group invite from " .. who .. ".")
   end
 end
 AU.invited = {}
@@ -178,7 +237,7 @@ function AU.onQuestDetail()
   if call(G.AcceptQuest) then AU.did("Accepted quest " .. tostring(G.GetTitleText and C().safe(G.GetTitleText()) or id) .. ".") end
 end
 function AU.onQuestConfirm(name) -- an escort / shared start from a squad member
-  if not AU.on("quests") or not AU.member(name, true) or skipShift("quest") then return end
+  if not AU.on("quests") or not AU.allowed("quests", name, true) or skipShift("quest") then return end
   if call(G.ConfirmAcceptQuest) then AU.did("Accepted the quest " .. short(name) .. " started.") end
 end
 --- Leader: share a quest it just accepted (QUEST_ACCEPTED: retail = questID, Classic = questLogIndex, questID).
@@ -327,23 +386,23 @@ end
 -- ------------------------------------------------------------------ 4. resurrection, summons, role checks
 function AU.onResurrect(name)
   if not AU.on("res") then return end
-  local m = AU.member(name, true)
-  if not m or skipShift("resurrection") then return end
+  local who = AU.allowed("res", name, true)
+  if not who or skipShift("resurrection") then return end
   if call(G.AcceptResurrect) then
     if G.StaticPopup_Hide then pcall(G.StaticPopup_Hide, "RESURRECT"); pcall(G.StaticPopup_Hide, "RESURRECT_NO_SICKNESS") end
-    AU.did("Accepted the resurrection from " .. m.name .. ".")
+    AU.did("Accepted the resurrection from " .. who .. ".")
   end
 end
 function AU.onSummon()
   if not AU.on("summon") then return end
   local SI = G.C_SummonInfo
   local who = (SI and SI.GetSummonConfirmSummoner and SI.GetSummonConfirmSummoner()) or (G.GetSummonConfirmSummoner and G.GetSummonConfirmSummoner())
-  local m = AU.member(who, true)
-  if not m or skipShift("summon") then return end
+  local from = AU.allowed("summon", who, true)
+  if not from or skipShift("summon") then return end
   local ok = (SI and SI.ConfirmSummon and pcall(SI.ConfirmSummon)) or call(G.ConfirmSummon)
   if ok then
     if G.StaticPopup_Hide then pcall(G.StaticPopup_Hide, "CONFIRM_SUMMON") end
-    AU.did("Accepted the summon from " .. m.name .. ".")
+    AU.did("Accepted the summon from " .. from .. ".")
   end
 end
 function AU.onRoleCheck()
@@ -351,7 +410,7 @@ function AU.onRoleCheck()
   -- the group leader must be a squad member
   local leaderOk = false
   for _, u in ipairs(ns.Squad.PARTY) do
-    if G.UnitIsGroupLeader and C().safe(G.UnitIsGroupLeader(u)) == true and AU.member(C().unitName(u), true) then leaderOk = true end
+    if G.UnitIsGroupLeader and C().safe(G.UnitIsGroupLeader(u)) == true and AU.allowed("rolecheck", C().unitName(u), true) then leaderOk = true end
   end
   if AU.isLeader() and G.UnitIsGroupLeader and C().safe(G.UnitIsGroupLeader("player")) == true then leaderOk = true end
   if not leaderOk or skipShift("role check") then return end
@@ -445,6 +504,41 @@ function AU.onMerchant()
     if c > 0 then AU.did("Repaired for " .. (G.GetCoinText and G.GetCoinText(c) or (c .. " copper")) .. ".") end
   end
   if AU.on("restock") then AU.restock() end
+end
+
+-- ------------------------------------------------------------------ the nudge (once per character, §6)
+--- Is any automation on (beyond resurrections and summons, which are on by default)?
+function AU.anyOn()
+  for _, o in ipairs(AU.OPTIONS) do if o[1] ~= "res" and o[1] ~= "summon" and o[1] ~= "chat" and AU.on(o[1]) then return true end end
+  return false
+end
+--- At login, in a squad of two or more with automation off: ask once on this character.
+function AU.nudge()
+  local cdb = Core().cdb
+  local s = Core().me()
+  if not cdb or cdb.autoNudged or AU.anyOn() or not (s and #s.members >= 2) or not (ns.UI and ns.UI.Popup) then return false end
+  cdb.autoNudged = true
+  ns.UI.Popup("Automation is off – turn on Levelling squad? Invites, quests, dialogs, resurrections, summons and the vendor, for your squad only.", {
+    { "Yes", function() AU.preset(); Core().log("info", "automation: levelling squad (nudge)"); Core().changed() end, "Turns on the Levelling squad preset." },
+    { "Choose…", function() ns.UI.Open("automation") end, "Opens the Automation page: one tick per automation." },
+    { "Not now", function() end, "Does not ask again on this character. Automation is in the book." } })
+  Core().log("info", "automation nudge shown")
+  return true
+end
+--- The automation choice for the share string (data only): {on = {keys}, from}.
+function AU.export()
+  local on = {}
+  for _, o in ipairs(AU.OPTIONS) do if AU.on(o[1]) then on[#on + 1] = o[1] end end
+  return { on = on, from = AU.acceptFrom() }
+end
+--- Apply an imported automation choice (the Import click is the confirmation). Unknown keys are dropped.
+function AU.import(t)
+  if type(t) ~= "table" or type(t.on) ~= "table" then return false end
+  local want = {}
+  for _, k in ipairs(t.on) do if AU.BY_KEY[k] then want[k] = true end end
+  for _, o in ipairs(AU.OPTIONS) do AU.set(o[1], want[o[1]] == true) end
+  if t.from == "squad" or t.from == "friends" then db().acceptFrom = t.from end -- "everyone" never travels
+  return true
 end
 
 -- ------------------------------------------------------------------ probes (diagnose) and events

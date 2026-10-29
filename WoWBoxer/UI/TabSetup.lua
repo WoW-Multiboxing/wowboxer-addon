@@ -50,7 +50,7 @@ function tab.build(p)
   p.macrosOnly = W.button(p, "Macros only", 100, 22, function() Core().sync({ macrosOnly = true }) end,
     "Creates or updates your WoWBoxer macros without touching your action bars (drag them yourself from the book).")
   p.macrosOnly:SetPoint("LEFT", p.guideBtn, "RIGHT", 6, 0)
-  p.autoBtn = W.button(p, "Automation…", 96, 22, function() ns.AutomationPage.Open() end,
+  p.autoBtn = W.button(p, "Automation…", 96, 22, function() UI.Select("automation") end,
     "Squad automation: accept invites, quests, resurrections and summons, follow the leader's dialogs, sell junk, repair – each one a tick.")
   p.autoBtn:SetPoint("LEFT", p.macrosOnly, "RIGHT", 6, 0)
   -- Reset to default (docs/advanced-mode.md §5): a red text button at the bottom; opens a two-step window
@@ -123,8 +123,15 @@ function tab.build(p)
   p.openOpt:SetPoint("LEFT", p.restore, "RIGHT", 6, 0)
   p.openOpt:Hide()
 
+  -- a line that points at Automation (docs/feedback-2026-10-30-night.md §6)
+  p.autoLine = W.text(p, "GameFontHighlightSmall", nil, W.MUTED)
+  p.autoLine:SetPoint("TOPLEFT", p.applyCv, "BOTTOMLEFT", 0, -8)
+  p.autoLine:SetText("Also: invites, quests, summons →")
+  p.autoLine.wbxCopy = "hint"
+  p.autoLink = W.button(p, "Automation", 90, 20, function() UI.Select("automation") end, "Opens the Automation bookmark: invites, quests, dialogs, summons and the vendor for your squad.")
+  p.autoLink:SetPoint("LEFT", p.autoLine, "RIGHT", 6, 0)
   local h2 = W.text(p, "GameFontNormal", nil, W.GOLD)
-  h2:SetPoint("TOPLEFT", p.applyCv, "BOTTOMLEFT", 0, -12)
+  h2:SetPoint("TOPLEFT", p.autoLine, "BOTTOMLEFT", 0, -12)
   h2:SetText("Recommended addons")
   p.addons = W.text(p, "GameFontHighlightSmall", nil, W.TEXT)
   p.addons:SetPoint("TOPLEFT", h2, "BOTTOMLEFT", 0, -4)

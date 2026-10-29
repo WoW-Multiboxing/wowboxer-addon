@@ -218,7 +218,7 @@ do
   ns.UI.Open("setup")
   ns.UI.panels.setup.autoBtn:Click()
   local f = ns.AutomationPage.frame
-  H.ok(f:IsShown() and #f.ticks == #ns.Auto.OPTIONS, "Setup → Automation: one tick per option")
+  H.ok(f:IsShown() and #f.ticks == #ns.Auto.OPTIONS and ns.UI.current == "automation", "the Automation bookmark: one tick per option")
   f.preset:Click()
   local on = {}
   for _, c in ipairs(f.ticks) do if c:GetChecked() then on[#on + 1] = c.key end end
@@ -230,6 +230,86 @@ do
   f.ticks[1]:Click()
   H.ok(not ns.Auto.on("invite"), "a tick turns one option off")
   H.eq(ns.Core.db.settings.auto.invite, false, "stored account-wide")
+end
+
+-- "Accept from" (§5): each level × each accepting automation × stranger, friend, guild member, squad member
+do
+  local W, ns = boot("Anna")
+  local AU = ns.Auto
+  W.env.C_FriendList = { GetNumFriends = function() return 1 end, GetFriendInfoByIndex = function() return { name = "Fred" } end }
+  W.env.IsInGuild = function() return true end
+  W.env.GetNumGuildMembers = function() return 1 end
+  W.env.GetGuildRosterInfo = function() return "Gina-Realm" end
+  W.party = { party1 = "Dorin", party2 = "Bo", party3 = "Fred", party4 = "Gina" } -- everyone in the party
+  W.partyInfo.party3 = PAL; W.partyInfo.party4 = PAL
+  for _, k in ipairs({ "invite", "res", "summon" }) do AU.set(k, true) end
+  local function fire(kind, who)
+    reset(W)
+    if kind == "invite" then W.fire("PARTY_INVITE_REQUEST", who); return did(W, "AcceptGroup") ~= nil end
+    if kind == "res" then W.fire("RESURRECT_REQUEST", who); return did(W, "AcceptResurrect") ~= nil end
+    W.env.GetSummonConfirmSummoner = function() return who end
+    W.fire("CONFIRM_SUMMON"); return did(W, "ConfirmSummon") ~= nil
+  end
+  local want = {
+    squad = { Bo = true, Fred = false, Gina = false, Stranger = false },
+    friends = { Bo = true, Fred = true, Gina = true, Stranger = false },
+    everyone = { Bo = true, Fred = true, Gina = true, Stranger = true },
+  }
+  W.party.party1, W.party.party2 = "Dorin", "Bo"
+  for _, level in ipairs({ "squad", "friends", "everyone" }) do
+    ns.Core.db.settings.acceptFrom = level
+    for _, kind in ipairs({ "invite", "res", "summon" }) do
+      for who, yes in pairs(want[level]) do
+        if who == "Stranger" and kind ~= "invite" then W.party.party4 = "Stranger" end
+        H.eq(fire(kind, who), yes, level .. " × " .. kind .. " × " .. who)
+        W.party.party4 = "Gina"
+      end
+    end
+  end
+  -- Everyone warns first
+  ns.Core.db.settings.acceptFrom = "squad"
+  ns.UI.Open("automation")
+  local p = ns.UI.panels.automation
+  p.from.select("everyone")
+  H.eq(ns.Core.db.settings.acceptFrom, "squad", "Everyone: not before the warning is confirmed")
+  H.ok(ns.UI.popup:IsShown() and ns.UI.popup.text:GetText():find("Anyone can then invite you", 1, true), "the warning")
+  ns.UI.popup.btns[1]:Click()
+  H.eq(ns.Core.db.settings.acceptFrom, "everyone", "confirmed: Everyone")
+  ns.UI.Refresh()
+  H.ok(p.ticks[1].line:GetText():find("^Accepts from: Everyone"), "each accept row shows the choice: " .. p.ticks[1].line:GetText())
+  -- Advanced: one row overrides it
+  ns.Core.db.settings.advanced = true
+  ns.UI.Refresh()
+  H.ok(p.ticks[1].own:IsShown(), "Advanced: a row has its own Accept from")
+  p.ticks[1].own.select("squad")
+  H.eq(AU.acceptFrom("invite"), "squad", "the row's own choice wins")
+  H.eq(AU.acceptFrom("res"), "everyone", "the others keep the top choice")
+  ns.Core.db.settings.advanced = nil
+  H.eq(AU.acceptFrom("invite"), "everyone", "Standard: the top choice for all")
+end
+
+-- the nudge once per character, the share string carries the choice, the line in Setup
+do
+  local W, ns = boot("Anna")
+  local AU = ns.Auto
+  H.ok(AU.nudge(), "automation off in a squad: the nudge")
+  H.ok(ns.UI.popup.text:GetText():find("Automation is off – turn on Levelling squad?", 1, true), "the question")
+  local labels = {}
+  for _, b in ipairs(ns.UI.popup.btns) do if b:IsShown() then labels[#labels + 1] = b:GetText() end end
+  H.eq(table.concat(labels, ","), "Yes,Choose…,Not now", "Yes / Choose… / Not now")
+  ns.UI.popup.btns[1]:Click()
+  H.ok(AU.on("quests") and AU.on("dialog"), "Yes: Levelling squad")
+  H.ok(not AU.nudge(), "only once per character")
+  local str = ns.Core.exportString()
+  local res = ns.Share.import(str)
+  H.ok(res.auto and #res.auto.on >= 10 and res.auto.from == "squad", "the share string carries the automation choice (data only)")
+  AU.setAll(false)
+  ns.Core.applyImport(res)
+  H.ok(AU.on("quests"), "importing it (a click) applies the choice")
+  ns.UI.Open("setup")
+  H.ok(ns.UI.panels.setup.autoLink:IsShown() and ns.UI.panels.setup.autoLine:GetText():find("invites", 1, true), "Setup: a line under game settings → Automation")
+  ns.UI.panels.setup.autoLink:Click()
+  H.eq(ns.UI.current, "automation", "it opens the Automation bookmark")
 end
 
 os.exit(H.report("auto") and 0 or 1)

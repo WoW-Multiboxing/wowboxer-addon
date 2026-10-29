@@ -69,6 +69,9 @@ Help.PAGES = {
   ["squad:plan"] = { tip = { "Levelling together: trainer and talents." },
     callouts = function() local f = sq("plan")
       return { { f.heads and f.heads[3], "Next trainer visit" }, { f.heads and f.heads[4], "Next talent" }, { f.link, "Plan at the leader's level" } } end },
+  automation = { tip = { "Squad automation: one tick each.", "Accept from: who it reacts to.", "Hold Shift to skip once." },
+    callouts = function() local p = UI.panels.automation
+      return { { p.from, "Who it accepts from" }, { p.ticks[1], "One tick per automation" }, { p.preset, "One click for levelling" } } end },
   share = { tip = { "Move your squad between clients.", "A string holds no macro text or code." },
     callouts = function() local p = UI.panels.share
       return { { p.importSf, "Paste a string here" }, { p.importBtn, "Import after the preview" }, { p.exportSf, "Your squad as a string" },

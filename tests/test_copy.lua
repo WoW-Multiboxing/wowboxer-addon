@@ -189,7 +189,7 @@ for _, sc in ipairs({
       A.openTargeting(UI.panels.keys, kc.name, kc.label); add(copyProblems(W, A.ef, tag .. " targeting")); A.ef:Hide()
       A.openText(UI.panels.keys, kc.name, kc.label); add(copyProblems(W, A.xf, tag .. " macro text")); A.xf:Hide()
     end
-    ns.AutomationPage.Open(); add(copyProblems(W, ns.AutomationPage.frame, tag .. " automation")); ns.AutomationPage.frame:Hide()
+    ns.AutomationPage.Open(); add(copyProblems(W, ns.AutomationPage.frame, tag .. " automation")); UI.Select("keys")
     A.openReset(); add(copyProblems(W, A.rf, tag .. " reset 1")); A.rf.next:Click(); add(copyProblems(W, A.rf, tag .. " reset 2")); A.rf:Hide()
     A.setMode(false)
   end
