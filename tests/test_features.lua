@@ -829,4 +829,35 @@ do
   H.eq(#errors(ns), 0, "no errors (spell search)")
 end
 
+-- Place spells (left page) and Place squad keys (right page): each only its own page's keys
+do
+  local W, ns = boot({ name = "Lock", class = "WARLOCK", race = "Scourge", level = 20, party = { party1 = "Dorin" } })
+  local Core, UI = ns.Core, ns.UI
+  Core.cdb.guide = "done"
+  UI.Open("keys")
+  local s = Core.me()
+  table.insert(s.members, 1, ns.State.newMember({ name = "Dorin", cls = "paladin", race = "undead", role = "tank", leader = true }))
+  for _, m in ipairs(s.members) do m.leader = m.name == "Dorin" end
+  Core.changed()
+  local p = UI.panels.keys
+  H.ok(p.placeLeft:IsVisible() and p.placeLeft:IsEnabled(), "Place spells on the left page")
+  H.ok(p.placeRight:IsVisible() and p.placeRight:IsEnabled(), "Place squad keys on the right page")
+  local M = ns.Macros
+  W.combat = true
+  p.placeLeft:Click()
+  H.eq(M.findIndex("WBX K1"), nil, "never in combat")
+  W.combat = false; W.fire("PLAYER_REGEN_ENABLED")
+  H.ok(M.findIndex("WBX K1") ~= nil and W.slotMacroName(1) == "WBX K1", "after combat: spells placed")
+  H.eq(M.findIndex("WBX Follow"), nil, "squad keys untouched by Place spells")
+  H.ok(not p.placeLeft:IsEnabled(), "nothing left to place on the left page")
+  W.env.PickupAction(73) -- an empty slot: harmless
+  Core.cdb.offBars["WBX Pet"] = true
+  p.placeRight:Click()
+  H.ok(M.findIndex("WBX Follow") ~= nil and W.slotMacroName(11) == "WBX Follow", "Place squad keys: Follow on its button")
+  local onBar = false
+  for slot = 1, 120 do if W.slotMacroName(slot) == "WBX Pet" then onBar = true end end
+  H.ok(not onBar, "a key kept off the bars is skipped")
+  H.eq(#errors(ns), 0, "no errors (place per page)")
+end
+
 os.exit(H.report("features") and 0 or 1)

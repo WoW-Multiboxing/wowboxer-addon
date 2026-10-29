@@ -359,6 +359,21 @@ function Book.cells(mode, ctx)
   return out
 end
 
+--- How many keys of a page ("spells" | "squad") Place would create, update or put on a bar.
+function Book.pageWork(ctx, page)
+  if not ctx then return 0 end
+  local groups = Core().PAGE_GROUPS[page]
+  local n, seen = 0, {}
+  for _, it in ipairs(Core().onlyGroups(ctx.macros.items, ctx.desired, groups)) do
+    if it.status == "create" or it.status == "update" then n = n + 1; seen[it.name] = true end
+  end
+  local replace = Core().cdb.replace
+  for _, b in ipairs(Core().onlyGroups(ctx.bars.items, ctx.desired, groups)) do
+    if not seen[b.name] and (b.status == "empty" or b.status == "ours" or b.status == "missing" or (replace and b.status == "occupied")) then n = n + 1 end
+  end
+  return n
+end
+
 -- ------------------------------------------------------------------ the next step (banner)
 --- {text (≤ 8 words), tip (sentence), button={label, tip, fn}?} – the one thing to do now on this page.
 function Book.nextStep(ctx, mode)
@@ -823,6 +838,14 @@ local function build(p, mode)
     p.bind = W.button(p.det, "Bind key", 76, 22, function() if p.selected then p.capture:Start(p.selected, p.selLabel) end end,
       "Press a key to run this macro directly, also when it is not on a bar. Saved for this character only. Right-click a key for more.")
     p.bind:SetPoint("BOTTOMLEFT", 0, 0)
+    -- one Place button per page: the left page's spells, the right page's squad keys (same rules as Place all)
+    p.placeLeft = W.button(p.left, "Place spells", 100, 22, function() Core().sync({ replace = Core().cdb.replace, page = "spells" }) end,
+      "Creates or updates your spell and sequence keys and puts them on empty or WoWBoxer buttons (others only with Replace buttons in Setup). Keys you keep off your bars stay off.")
+    p.placeLeft:SetPoint("BOTTOMLEFT", 32, 2)
+    p.placeLeft.wbxBig = true
+    p.placeRight = W.button(p.right, "Place squad keys", 120, 20, function() Core().sync({ replace = Core().cdb.replace, page = "squad" }) end,
+      "Creates or updates your squad keys (Invite, Follow, Assist, pet keys …) and puts them on empty or WoWBoxer buttons. Keys you keep off your bars stay off.")
+    p.placeRight.wbxBig = true -- the right page's one action (the owner's wording)
     -- footer
     p.slots = W.text(p.right, "GameFontHighlightSmall", nil, W.MUTED, "RIGHT")
     p.slots:SetPoint("BOTTOMRIGHT", 0, 6)
@@ -973,6 +996,10 @@ local function refresh(p, ctx)
   p.prev:SetEnabled(p.page > 1); p.next:SetEnabled(p.page < spreads)
 
   if p.mode == "keys" then
+    local inCombat = ns.Compat.inCombat()
+    p.placeLeft:SetEnabled(not inCombat and Book.pageWork(ctx, "spells") > 0)
+    p.placeRight:SetShown(#spread.helpers.cells > 0)
+    p.placeRight:SetEnabled(not inCombat and Book.pageWork(ctx, "squad") > 0)
     -- helpers (right page)
     local y = 62
     local hc = spread.helpers.cells
@@ -982,6 +1009,8 @@ local function refresh(p, ctx)
       r:SetPoint("TOPLEFT", p.right, "TOPLEFT", 0, -y)
       r.text:SetText(spread.helpers.title)
       r:Show()
+      p.placeRight:ClearAllPoints()
+      p.placeRight:SetPoint("TOPRIGHT", p.right, "TOPRIGHT", 0, -y + 2)
       y = y + RULE_H
       for i, c in ipairs(hc) do
         local b = getHelper(p, i)

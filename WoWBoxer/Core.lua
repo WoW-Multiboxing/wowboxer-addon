@@ -119,18 +119,32 @@ function Core.setKeptOff(name, off)
   Core.changed()
 end
 
---- Create/update the macros, then place them on the bars. opts: {replace=bool, barsOnly=bool, macrosOnly=bool}
+--- Key groups per book page: "Place spells" (left page) and "Place squad keys" (right page).
+Core.PAGE_GROUPS = { spells = { kit = true, extra = true, sequence = true }, squad = { helper = true } }
+--- Only the items of ctx's plan whose key is in one of `groups` (all when groups is nil).
+local function only(items, desired, groups)
+  if not groups then return items end
+  local ok = {}
+  for _, d in ipairs(desired) do if groups[d.group] then ok[d.name] = true end end
+  local out = {}
+  for _, it in ipairs(items) do if ok[it.name] then out[#out + 1] = it end end
+  return out
+end
+Core.onlyGroups = only
+--- Create/update the macros, then place them on the bars. opts: {replace=bool, barsOnly=bool, macrosOnly=bool,
+--- page = "spells" | "squad" (only that page's keys)}
 function Core.sync(opts)
   opts = opts or {}
-  return Core.whenSafe("Update WoWBoxer keys", function()
+  local groups = opts.page and Core.PAGE_GROUPS[opts.page] or nil
+  return Core.whenSafe(opts.page == "squad" and "Place squad keys" or opts.page == "spells" and "Place spells" or "Update WoWBoxer keys", function()
     local ctx, why = Core.compute()
     if not ctx then chat(why); return end
     local mres = { created = 0, updated = 0, failed = {} }
-    if not opts.barsOnly then mres = M.apply(ctx.macros) end
+    if not opts.barsOnly then mres = M.apply({ items = only(ctx.macros.items, ctx.desired, groups) }) end
     local bres = { placed = 0, skipped = 0, failed = {} }
     if not opts.macrosOnly then
       local again = Core.compute() -- indices and statuses after creating macros
-      bres = B.apply(again.bars, Core.cdb, opts.replace)
+      bres = B.apply({ items = only(again.bars.items, again.desired, groups) }, Core.cdb, opts.replace)
     end
     Core.cdb.lastSync = { level = ctx.level, at = time and time() or 0 }
     local msg = string.format("%d keys created, %d updated, %d placed on your bars", mres.created, mres.updated, bres.placed)
