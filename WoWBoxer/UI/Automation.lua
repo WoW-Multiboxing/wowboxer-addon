@@ -44,14 +44,34 @@ function tab.build(p)
   W.ddTip(p.from, "Accept from", "Who the accepting automations react to: your WoWBoxer squad in your party (safest), also your friends and guild, or everyone.")
   p.ticks = {}
   local per = math.ceil(#AU().OPTIONS / 2)
+  local themed = W.themed()
   for i, o in ipairs(AU().OPTIONS) do
     local col, row = math.floor((i - 1) / per), (i - 1) % per
-    local c = W.check(p, o[2], function(_, v) AU().set(o[1], v); ns.Core.log("info", "automation " .. o[1] .. (v and " on" or " off")); UI.Refresh() end)
-    c:SetPoint("TOPLEFT", -2 + col * 336, -34 - row * 38)
+    local function onClick(_, v) AU().set(o[1], v); ns.Core.log("info", "automation " .. o[1] .. (v and " on" or " off")); UI.Refresh() end
+    local c
+    if themed then
+      -- a toggle card (docs/ui-redesign.md §3): switch, the option's name, one muted line about what it does
+      local card = W.card(p)
+      card:SetPoint("TOPLEFT", col * 336, -32 - row * 38)
+      card:SetSize(328, 35)
+      c = W.toggle(p, o[2], onClick)
+      c:SetPoint("LEFT", card, "LEFT", 10, 0)
+      c.card = card
+      c.label:ClearAllPoints()
+      c.label:SetPoint("TOPLEFT", card, "TOPLEFT", 50, -4)
+      ns.Theme.font(c.label, "bold", 12)
+      c.label:SetTextColor(ns.Theme.rgb("parchment"))
+      c.line = W.line(card, "GameFontHighlightSmall", 10, W.MUTED)
+      c.line:SetPoint("BOTTOMLEFT", card, "BOTTOMLEFT", 50, 5)
+      c.line:SetWidth(270)
+    else
+      c = W.check(p, o[2], onClick)
+      c:SetPoint("TOPLEFT", -2 + col * 336, -34 - row * 38)
+      c.line = W.line(p, "GameFontHighlightSmall", 10, W.MUTED)
+      c.line:SetPoint("TOPLEFT", 24 + col * 336, -34 - row * 38 - 19)
+      c.line:SetWidth(306)
+    end
     c.key = o[1]
-    c.line = W.line(p, "GameFontHighlightSmall", 10, W.MUTED)
-    c.line:SetPoint("TOPLEFT", 24 + col * 336, -34 - row * 38 - 19)
-    c.line:SetWidth(306)
     c.line.wbxCopy = "data"
     W.tip(c, o[2], o[3])
     if AU().ACCEPTS[o[1]] then
@@ -61,7 +81,8 @@ function tab.build(p)
         get = function() local t = settings().acceptOverride; return (type(t) == "table" and t[o[1]]) or "default" end,
         set = function(v) settings().acceptOverride = type(settings().acceptOverride) == "table" and settings().acceptOverride or {}
           settings().acceptOverride[o[1]] = v ~= "default" and v or nil; UI.Refresh() end })
-      c.own:SetPoint("TOPLEFT", 200 + col * 336, -34 - row * 38 - 14)
+      if themed then c.own:SetPoint("RIGHT", c.card, "RIGHT", -6, 0)
+      else c.own:SetPoint("TOPLEFT", 200 + col * 336, -34 - row * 38 - 14) end
       W.ddTip(c.own, "Accept from (this one)", "Advanced: this automation uses its own choice instead of the one at the top.")
     end
     p.ticks[#p.ticks + 1] = c
@@ -75,6 +96,7 @@ function tab.build(p)
   p.preset = W.button(p, "Levelling squad", 130, 24, function() AU().preset(); ns.Core.log("info", "automation preset: levelling squad"); UI.Refresh() end,
     "Turns on invites, quests, quest sharing and turn-in, dialogs, resurrections, summons, role checks, selling junk and repairing.")
   p.preset.wbxBig = true
+  W.primary(p.preset)
   p.preset:SetPoint("BOTTOMLEFT", 0, 2)
   p.allOn = W.button(p, "All on", 70, 24, function() AU().setAll(true); UI.Refresh() end, "Turns every automation on.")
   p.allOn:SetPoint("LEFT", p.preset, "RIGHT", 8, 0)
@@ -94,7 +116,9 @@ function tab.refresh(p)
     if AU().ACCEPTS[c.key] then text = "Accepts from: " .. AU().FROM_SHORT[AU().acceptFrom(c.key)] .. " · " .. text end
     c.line:SetText(text)
     if c.own then c.own:SetShown(adv and true or false); c.own.Refresh() end
-    c.line:SetWidth((c.own and adv) and 170 or 306)
+    if c.card then c.line:SetWidth((c.own and adv) and 154 or 270)
+    else c.line:SetWidth((c.own and adv) and 170 or 306) end
+    if c.card then ns.Theme.paint(c.card, nil, c:GetChecked() and "line" or "lineSoft") end
   end
 end
 
