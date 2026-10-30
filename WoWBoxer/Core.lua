@@ -879,6 +879,8 @@ end
 -- ------------------------------------------------------------------ slash commands
 local HELP = {
   "/wbx – open or close the window",
+  "/wbx discord | youtube | website – the link to copy; /wbx help – help on Discord (#setup-help)",
+  "/wbx report – Report a problem: a text to copy into #setup-help (nothing is sent)",
   "/wbx sync – create/update your macros and place new ones on your bars (same as Place all)",
   "/wbx minimap – show or hide the minimap button",
   "/wbx guide – start the first-run guide again at step 1",
@@ -897,7 +899,15 @@ function Core.slash(msg)
   local cmd, rest = msg:match("^(%S*)%s*(.-)$")
   cmd = (cmd or ""):lower()
   if cmd == "" then if ns.UI and ns.UI.Toggle then ns.UI.Toggle() else chat("window not available") end
-  elseif cmd == "help" or cmd == "?" then for _, l in ipairs(HELP) do chat(l) end
+  elseif cmd == "?" or cmd == "commands" then for _, l in ipairs(HELP) do chat(l) end
+  elseif cmd == "help" then
+    for _, l in ipairs(HELP) do chat(l) end
+    if ns.Community then
+      chat("Help on Discord: " .. ns.Community.chatLink("discordHelp", "#setup-help") .. " · " .. ns.Community.chatLink("report", "Report a problem"))
+      ns.Community.ShowLink("discordHelp")
+    end
+  elseif cmd == "discord" or cmd == "youtube" or cmd == "website" then if ns.Community then ns.Community.ShowLink(cmd) end
+  elseif cmd == "report" then if ns.Community then ns.Community.ShowReport() end
   elseif cmd == "sync" then Core.sync({ replace = rest == "replace" })
   elseif cmd == "team" then
     local on = rest == "on" or (rest == "" and Core.db.settings.team == false)

@@ -227,6 +227,7 @@ function UI.Build()
   f:SetScript("OnShow", function() UI.Refresh() end)
   buildHeader(f)
   buildRail(f)
+  if ns.Community then ns.Community.attachRail(UI.rail, UI.meter) end
 
   -- the page body; a 1-unit divider stands where the book had its spine (the spellbook pages split here)
   local pages = CreateFrame("Frame", nil, f)

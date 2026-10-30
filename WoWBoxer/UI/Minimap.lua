@@ -60,6 +60,10 @@ local ITEMS = { -- (MM.MENU, for tests)
   { "Setup", function() ns.UI.Open("setup") end },
   { "Automation", function() ns.UI.Open("automation") end },
   { "Key bindings", function() ns.Core.openKeyBindings() end },
+  { "Discord", function() ns.Community.ShowLink("discord") end },
+  { "YouTube", function() ns.Community.ShowLink("youtube") end },
+  { "Website", function() ns.Community.ShowLink("website") end },
+  { "Report a problem", function() ns.Community.ShowReport() end },
   { "Hide minimap button", function() MM.SetHidden(true) end },
   { "Close", function() end },
 }

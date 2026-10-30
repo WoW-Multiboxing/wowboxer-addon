@@ -95,3 +95,6 @@ local kp = UI.panels.keys
 for _, b in ipairs(kp.cells or {}) do
   if b:IsShown() and b.cell and b.cell.name then A.openTargeting(kp, b.cell.name, b.cell.label); dump("dialog-macro-editor", { UI.frame }); if A.ef then A.ef:Hide() end break end
 end
+local CM = ns.Community
+CM.ShowLink("discord"); dump("community-link", { CM.box }); CM.box:Hide()
+CM.ShowReport(); dump("community-report", { CM.rf }); CM.rf:Hide()

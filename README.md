@@ -26,6 +26,11 @@ always one action on one character.
 - **Team status** (optional, display only) – a small panel showing which of your clients lost follow, has another
   target than the leader, or is low on mana.
 - Minimap button (left-click open, right-click menu, drag to move) and an Addon Compartment entry on Forever.
+- **Community and help** – Discord, YouTube and the website at the bottom of the left rail and in the minimap menu:
+  a click shows the link in a copy box (addons cannot open a browser or use the clipboard, so you press Ctrl+C).
+- **Report a problem** – builds a text with your WoWBoxer version, game version, class/level/role, settings, macro
+  slots and the last log lines (character and realm names left out unless you tick the box). You copy it and paste it
+  in #setup-help on Discord – WoWBoxer never sends anything by itself.
 
 ## What it never does
 No input broadcasting: one key press is one action on one character. WoWBoxer automates the boring parts (invites, quests, dialogs, vendor, loot) with WoW's own addon API.
@@ -41,7 +46,8 @@ Unzip `WoWBoxer` into `World of Warcraft\_forever_\Interface\AddOns` (or `_class
 ## Commands
 `/wbx` open · `/wbx sync` place all macros · `/wbx show` list macros · `/wbx bars` where each macro is ·
 `/wbx keys` game key bindings · `/wbx cvars` / `/wbx cvars restore` · `/wbx team on|off` · `/wbx minimap` ·
-`/wbx scale 0.9` · `/wbx reset` · `/wbx selftest` · `/wbx log` · `/wbx debug` · `/wbx help`
+`/wbx scale 0.9` · `/wbx reset` · `/wbx selftest` · `/wbx log` · `/wbx debug` · `/wbx ?` (all commands) ·
+`/wbx discord` · `/wbx youtube` · `/wbx website` · `/wbx help` (help on Discord) · `/wbx report` (Report a problem)
 
 ## Credits and licence
 MIT licence. Talent data: Zephras (zephras.com), CC BY 4.0, changed by WoWBoxer; The Forever Era.
