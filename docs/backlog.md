@@ -1,10 +1,10 @@
 # WoWBoxer addon – backlog
 
-## The owner: TEST BUILD 0.13.0-test.2 (55b5f53) – new look, steps 1–2 (theme + window shell). Restart WoW first
-1. `/wbx`: navy window with gold trim, "WoWBoxer" in Cinzel + orange TEST BUILD, pages in a rail on the left; drag it by the header.
-2. Click every rail entry, Standard/Advanced, Reset, **?**, ×: each opens, texts are readable (Era and Forever).
-3. In each client type `/wbx shots` and don't touch anything for ~25 s (it screenshots every page), then `/reload`.
-4. Tell Claude "shots done" + anything that looks wrong. (The pages themselves get the new layout in the next steps.)
+## The owner: TEST BUILD 0.13.0-test.4 (07d3fba) – new look (My macros, Squad, Automation, Macro editor) + Community/Report. Restart WoW first
+1. `/wbx`: the four pages look like the mockup; drag a macro card to a bar, right-click one → Edit macro… → Save still work.
+2. Rail bottom → **Discord**: the link is selected – Ctrl+C, paste it in a browser; Esc closes. Same for `/wbx youtube`.
+3. `/wbx report`: type in "What happened?", Enter, **Select all**, Ctrl+C → paste in Notepad: no names unless ticked.
+4. In each client `/wbx shots` (~25 s, hands off), then `/reload`; tell Claude "shots done" + anything odd.
 
 Still open from test 1 (same build, behaviour unchanged): follower Setup → Apply; Paladin **Fix now**; guide restart; header **Reset**.
 
