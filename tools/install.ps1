@@ -25,7 +25,8 @@ if (-not $Next) {
   if ($tag -notmatch '^v(\d+)\.(\d+)\.(\d+)') { throw "cannot read the version from tag $tag (use -Next)" }
   $Next = '{0}.{1}.0' -f $Matches[1], ([int]$Matches[2] + 1)
 }
-$sha = (git -C $repo rev-parse --short=7 HEAD).Trim()
+# the last commit that changed the addon itself: docs-only commits do not make a new test build
+$sha = (git -C $repo log -1 --format=%h --abbrev=7 -- WoWBoxer).Trim()
 $dirty = (git -C $repo status --porcelain -- WoWBoxer)
 if ($dirty) {
   # uncommitted addon changes: a hash of the diff tells two different dirty builds apart
