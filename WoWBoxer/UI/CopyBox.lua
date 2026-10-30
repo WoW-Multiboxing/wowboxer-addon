@@ -55,6 +55,7 @@ local function frame()
   _G.WoWBoxerCopyFrame = f
   table.insert(UISpecialFrames, "WoWBoxerCopyFrame")
   CB.frame = f
+  W.dialog(f, "WoWBoxerCopyFrame")
   return f
 end
 
@@ -68,7 +69,7 @@ function CB.ShowCopy(title, macroText, keyString)
   f.e1:SetText(f.e1.fixed)
   local hasKey = keyString ~= nil
   f.l2:SetShown(hasKey); f.s2:SetShown(hasKey); f.sel2:SetShown(hasKey)
-  f.l2:SetText("WoWBoxer macro – on another character: My own macros → New macro → Paste:")
+  f.l2:SetText("WoWBoxer macro – on another character: Macro editor → New macro → Paste:")
   f.e2.fixed = keyString or ""
   f.e2:SetText(f.e2.fixed)
   f.result:SetText("Select the text, then Ctrl+C. Nothing in the game changes.")

@@ -46,6 +46,30 @@ local function plan()
     list[#list + 1] = { "dialog-advanced-on", function() local c = A.confirmFrame; if c and c:IsShown() then c.tick:Click() end end,
       function() if A.confirmFrame then A.confirmFrame:Hide() end end }
   end
+  -- the Macro editor flows (docs/feedback-2026-10-30-editor.md §5): drafts only – nothing is saved, all closed again
+  if A then
+    local KE = ns.KeyEditor
+    list[#list + 1] = { "editor-new-spells", function()
+      UI.Select("custom"); A.openNew(UI.panels.custom)
+      if KE.frame and KE.frame.choice then KE.frame.choice.single:Click() end
+    end }
+    list[#list + 1] = { "editor-new-targeting", function() A.showSection("target") end, function() if A.ef then A.ef:Hide() end end }
+    list[#list + 1] = { "editor-recommended-spells", function()
+      UI.Select("keys")
+      for _, b in ipairs(UI.panels.keys.cells or {}) do
+        if b:IsShown() and b.cell and b.cell.name and b.cell.name:find("^WBX K") then A.openEditor(UI.panels.keys, b.cell.name, b.cell.label); break end
+      end
+      A.showSection("spells")
+    end }
+    list[#list + 1] = { "dialog-confirm-over-editor", function() if not A.on() then A.confirm() end end,
+      function() if A.confirmFrame then A.confirmFrame:Hide() end if A.ef then A.ef:Hide() end end }
+    list[#list + 1] = { "menu-all-spells", function()
+      UI.Select("spells")
+      for _, b in ipairs(UI.panels.spells.cells or {}) do
+        if b:IsShown() and b.cell and b.cell.kind == "spell" then ns.Widgets.menu(b, ns.Book.menuFor(UI.panels.spells, b.cell)); break end
+      end
+    end, function() ns.Widgets.closeMenus() end }
+  end
   -- hover states (§2): a rail row and a dropdown item, drawn by our own enter handlers (the tooltip shows too)
   local function enter(f) local fn = f and f:GetScript("OnEnter"); if fn then fn(f) end end
   local function leave(f) local fn = f and f:GetScript("OnLeave"); if fn then fn(f) end end

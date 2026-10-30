@@ -127,7 +127,7 @@ do
   W.env.SlashCmdList.WOWBOXER("shots")
   for _ = 1, 60 do if #W.timers == 0 then break end W.flush() end
   local shots = ns.Core.db.shots
-  H.ok(shots and #shots.list == n and n >= 16, "shots: one record per screenshot (" .. n .. ")")
+  H.ok(shots and #shots.list == n and n >= 21, "shots: one record per screenshot (" .. n .. ")")
   local first = shots and shots.list[1]
   H.ok(first and first.name == "page-keys" and first.w == 2560 and first.r > first.l and first.bottom > first.top, "shots: window box in screen pixels")
   H.eq(W.calls.CreateMacro, nil, "shots: no macro written")

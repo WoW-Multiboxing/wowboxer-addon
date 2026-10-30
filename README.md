@@ -8,7 +8,7 @@ always one action on one character.
 ## What it does
 - **The book** – `/wbx` opens a spellbook with your macros: the recommended macros for your level, optional sequence macros
   (Off / Simple / Medium / Advanced), your own macros (built in the in-game editor) and squad macros (Follow, Assist, Focus,
-  pet macros). Bookmarks on the right: *My macros*, *All spells*, *My own macros*, *Talents*, *Setup*, *Squad*, *Share*.
+  pet macros). Pages in the left rail: *My macros*, *All spells*, *Macro editor*, *Talents*, *Squad*, *Automation*, *Setup*, *Share*.
   - **Drag** any macro (or any learned spell from *All spells*) onto any action button, or press **Place all**. Macros you
     moved stay where you put them. When WoWBoxer places macros, their icons fly to the buttons (can be turned off).
   - The line at the top always says the next thing to do, with the button that does it. A 3-step guide on a new

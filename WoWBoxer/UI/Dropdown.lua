@@ -95,6 +95,7 @@ local function listFrame()
   _G.WoWBoxerDropdownList = l
   table.insert(UISpecialFrames, "WoWBoxerDropdownList")
   W.listFrame = l
+  W.registerMenu(l)
   return l
 end
 
@@ -103,6 +104,7 @@ local function openList(dd)
   if l:IsShown() and l.owner == dd then l:Hide(); return end
   l:Hide()
   l.owner, l.values, l.offset = dd, dd.opts.values(), 0
+  l.anchor = dd
   local width = math.max(dd:GetWidth() or 100, 100)
   for _, v in ipairs(l.values) do width = math.max(width, W.measure(v[2], "GameFontHighlightSmall") + 34) end
   l.rowW = math.min(width, (UIParent:GetWidth() or 800) - 40)
@@ -234,7 +236,7 @@ W.SEQ_TIERS = {
   { "medium", "Medium", "The usual rotation for your level." },
   { "advanced", "Advanced", "More spells and dots – for experienced players." },
 }
-W.SEQ_CLASSES = "Every class has built-in sequence macros – make your own under My own macros."
+W.SEQ_CLASSES = "Every class has built-in sequence macros – make your own in the Macro editor."
 --- One sentence each: sequence keys vs priority keys (docs/sequences-all-classes.md §4).
 W.SEQ_KINDS = "Sequence macro: each press casts the next spell of a fixed order (DoTs first, then the filler). " ..
   "Priority macro: each press casts the first spell in the list that is ready (Execute, Revenge, Stormstrike …)."

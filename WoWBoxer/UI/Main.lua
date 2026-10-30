@@ -54,7 +54,7 @@ local function buildHeader(f)
   -- the window is dragged by its header
   hdr:EnableMouse(true)
   hdr:RegisterForDrag("LeftButton")
-  hdr:SetScript("OnDragStart", function() f:StartMoving() end)
+  hdr:SetScript("OnDragStart", function() W.closeMenus(); f:StartMoving() end)
   hdr:SetScript("OnDragStop", function() saveSpot(f) end)
   UI.header = hdr
 
@@ -223,6 +223,7 @@ function UI.Build()
   f:Hide()
   table.insert(UISpecialFrames, "WoWBoxerMainFrame")
   f:SetScript("OnShow", function() UI.Refresh() end)
+  f:SetScript("OnHide", function() W.closeMenus() end)
   buildHeader(f)
   buildRail(f)
   if ns.Community then ns.Community.attachRail(UI.rail, UI.meter) end
@@ -279,6 +280,7 @@ function UI.PanelSize()
 end
 
 function UI.Select(key)
+  W.closeMenus()
   if not (UI.panels and UI.panels[key]) then key = "keys" end
   UI.current = key
   local book = false
@@ -410,6 +412,7 @@ function UI.Popup(text, buttons)
     end
     W.primary(o.btns[1])
     UI.popup = o
+    W.dialog(o, "WoWBoxerPopup")
   end
   o.text:SetText(text)
   local prev
@@ -456,6 +459,7 @@ function UI.ShowOffer(ctx, sig)
     hit:SetAllPoints(o.text)
     W.tooltip(hit, function(GT) GT:AddLine(o.text:GetText() or "", 1, 0.82, 0); GT:AddLine(o.tip or "", 1, 1, 1, true) end)
     UI.offer = o
+    W.dialog(o, "WoWBoxerLevelUp")
   end
   local o = UI.offer
   o.sig = sig or ns.Core.pending(ctx)

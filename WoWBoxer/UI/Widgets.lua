@@ -564,6 +564,34 @@ function W.composite(parent, box, layer)
   function c.SetAlpha(_, a) for i = 1, 4 do c.parts[i]:SetAlpha(a) end end
   return c
 end
+--- Macro text for a preview box: lines longer than the box are broken after a , ] ; or space – never inside a word
+--- like "nodead" – and continue indented. Display only (the macro itself is unchanged). size = font size.
+function W.wrapMacro(text, width, size)
+  local per = math.max(12, math.floor((width or 300) / ((size or 10) * 0.56)))
+  local out = {}
+  for line in ((text or "") .. "\n"):gmatch("([^\n]*)\n") do
+    local lead = ""
+    while #lead + #line > per do
+      local room = per - #lead
+      local cut
+      for i = room, math.floor(room * 0.4), -1 do
+        local ch = line:sub(i, i)
+        if ch == "," or ch == "]" or ch == ";" or ch == " " then cut = i; break end
+      end
+      if not cut then -- no break point: cut, but never inside a UTF-8 letter
+        cut = room
+        while cut > 1 and line:byte(cut + 1) and line:byte(cut + 1) >= 128 and line:byte(cut + 1) < 192 do cut = cut - 1 end
+      end
+      out[#out + 1] = lead .. line:sub(1, cut)
+      line = line:sub(cut + 1):gsub("^ +", "")
+      lead = "  "
+    end
+    out[#out + 1] = lead .. line
+  end
+  if out[#out] == "" then out[#out] = nil end
+  return table.concat(out, "\n")
+end
+
 --- "|T…|t Immolate → |T…|t Shadow Bolt ×4": the steps of a sequence in cast order with small icons.
 function W.stepsText(steps, size)
   local out, i = {}, 1
@@ -585,7 +613,7 @@ function W.setIcon(tex, slugOrId)
   else tex:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark") end
 end
 
---- Tooltip helper.
+--- Tooltip helper. fn(GT, frame) fills the tooltip; returning false shows none.
 function W.tooltip(frame, fn)
   if frame.EnableMouse then frame:EnableMouse(true) end
   frame:SetScript("OnEnter", function(self)
@@ -593,7 +621,7 @@ function W.tooltip(frame, fn)
     if self.wbxHoverOn then self.wbxHoverOn(self) end
     local GT = _G.GameTooltip
     GT:SetOwner(self, "ANCHOR_RIGHT")
-    fn(GT, self)
+    if fn(GT, self) == false then GT:Hide(); return end
     GT:Show()
   end)
   frame:SetScript("OnLeave", function(self)
@@ -641,6 +669,77 @@ function W.hoverRow(b)
   end)
 end
 
+-- ------------------------------------------------------------------ menus: one at a time, never lingering
+-- docs/feedback-2026-10-30-editor.md §4. Every menu (right-click menu, dropdown list, minimap menu) registers here.
+-- A menu closes on a click anywhere else (also the world: GLOBAL_MOUSE_DOWN, or a full-screen catcher on a client
+-- without it), Esc (UISpecialFrames), a page or tab change, the window hiding or moving, entering combat, a mode
+-- switch, another menu or dialog opening, and the mouse being away from the menu and its anchor for 1.5 s.
+W.menus = {}
+W.MENU_AWAY = 1.5
+local menuWatch
+local function overMenu(m)
+  return (m.IsMouseOver and m:IsMouseOver()) or (m.anchor and m.anchor.IsMouseOver and m.anchor:IsMouseOver()) or false
+end
+function W.closeMenus(except)
+  for _, m in ipairs(W.menus) do if m ~= except and m:IsShown() then m:Hide() end end
+  if not except then
+    if _G.CloseDropDownMenus then pcall(_G.CloseDropDownMenus) end
+    local M = _G.Menu
+    if type(M) == "table" and M.GetManager then pcall(function() M.GetManager():CloseMenus() end) end
+  end
+end
+function W.registerMenu(m)
+  for _, x in ipairs(W.menus) do if x == m then return end end
+  W.menus[#W.menus + 1] = m
+  m:HookScript("OnShow", function(self) self.wbxAway = 0; W.closeMenus(self) end)
+  m:HookScript("OnUpdate", function(self, elapsed)
+    if overMenu(self) then self.wbxAway = 0
+    else
+      self.wbxAway = (self.wbxAway or 0) + (elapsed or 0)
+      if self.wbxAway >= W.MENU_AWAY then self:Hide() end
+    end
+  end)
+  if not menuWatch then
+    menuWatch = CreateFrame("Frame")
+    local ok = pcall(menuWatch.RegisterEvent, menuWatch, "GLOBAL_MOUSE_DOWN")
+    W.hasGlobalMouse = ok
+    menuWatch:RegisterEvent("PLAYER_REGEN_DISABLED")
+    menuWatch:SetScript("OnEvent", function(_, ev)
+      if ev == "PLAYER_REGEN_DISABLED" then W.closeMenus(); return end
+      for _, x in ipairs(W.menus) do if x:IsShown() and not overMenu(x) then x:Hide() end end
+    end)
+  end
+end
+
+-- ------------------------------------------------------------------ the dialog layer (§2: above the window and the editor)
+-- Every dialog (Advanced confirm, Reset, Edit text, keybind fix, level-up offer, copy boxes, Report) lives in
+-- FULLSCREEN_DIALOG, is raised when shown, and only one is open at a time. Esc closes the dialog only: while one is
+-- open, the main window leaves UISpecialFrames.
+W.dialogs = {}
+local MAIN = "WoWBoxerMainFrame"
+local function special(name, on)
+  local list = _G.UISpecialFrames
+  if not list then return end
+  for i = #list, 1, -1 do if list[i] == name then table.remove(list, i) end end
+  if on then list[#list + 1] = name end
+end
+local function anyDialog() for _, d in ipairs(W.dialogs) do if d:IsShown() then return true end end return false end
+function W.dialog(f, name)
+  if f.wbxDialog then return f end
+  f.wbxDialog = true
+  f:SetFrameStrata("FULLSCREEN_DIALOG")
+  if name then if not _G[name] then _G[name] = f end; special(name, true) end
+  W.dialogs[#W.dialogs + 1] = f
+  f:HookScript("OnShow", function(self)
+    for _, d in ipairs(W.dialogs) do if d ~= self and d:IsShown() then d:Hide() end end
+    if self.Raise then self:Raise() end
+    W.closeMenus()
+    special(MAIN, false)
+  end)
+  f:HookScript("OnHide", function() if not anyDialog() and _G[MAIN] then special(MAIN, true) end end)
+  return f
+end
+
 --- A small click menu at `anchor`: items = {{label, fn, tip?, disabled?}}. One menu at a time; Esc closes it.
 function W.menu(anchor, items)
   local m = W.menuFrame
@@ -654,6 +753,7 @@ function W.menu(anchor, items)
     _G.WoWBoxerMenu = m
     table.insert(UISpecialFrames, "WoWBoxerMenu")
     W.menuFrame = m
+    W.registerMenu(m)
   end
   if m:IsShown() and m.anchor == anchor then m:Hide(); return m end
   local width = 120
@@ -665,6 +765,12 @@ function W.menu(anchor, items)
       b:SetHeight(20)
       b.label = W.text(b, "GameFontHighlightSmall", nil, W.TEXT)
       W.hoverRow(b)
+      -- the row's own tip, read when hovered (a reused row never shows the tip of an earlier menu)
+      W.tooltip(b, function(GT, self)
+        if not self.tipText then return false end
+        GT:AddLine(self.label:GetText() or "", 1, 0.82, 0)
+        GT:AddLine(self.tipText, 1, 1, 1, true)
+      end)
       b.label:SetPoint("LEFT", 8, 0)
       b.label:SetPoint("RIGHT", -4, 0)
       m.rows[i] = b
@@ -676,7 +782,7 @@ function W.menu(anchor, items)
     b.label:SetTextColor(c[1], c[2], c[3])
     b.disabled = it[4] and true or nil
     b:SetScript("OnClick", function() if it[4] then return end m:Hide(); it[2]() end)
-    if it[3] then W.tip(b, it[1], it[3]) end
+    b.tipText = it[3]
     b:Show()
   end
   for i = #items + 1, #m.rows do m.rows[i]:Hide() end

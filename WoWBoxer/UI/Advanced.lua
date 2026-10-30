@@ -36,7 +36,7 @@ function A.attachSwitch(f)
   local seg = W.segmented(hdr, {
     { false, "Standard", "Standard mode: WoWBoxer's macros as they are. Your own changes stay active." },
     { true, "Advanced", "Advanced mode: change who each macro casts on and edit macro text. Asks first." },
-  }, function() return A.on() end, function(v) if v then if not A.on() then A.confirm() end else A.setMode(false) end end)
+  }, function() return A.on() end, function(v) if v then if not A.on() then A.confirm() end else A.leaveAdvanced() end end)
   UI.modeSeg = seg
   UI.modeStd, UI.modeAdv = seg.buttons[1], seg.buttons[2]
   -- Reset to default on every page (docs/feedback-2026-10-30-night.md §7)
@@ -80,6 +80,7 @@ function A.attachSwitch(f)
   c.cancel = W.button(c, "Cancel", 70, 24, function() c:Hide() end, "Stays in Standard mode.")
   c.cancel:SetPoint("RIGHT", c.go, "LEFT", -6, 0)
   A.confirmFrame = c
+  W.dialog(c, "WoWBoxerAdvancedConfirm")
 end
 function A.confirm()
   local c = A.confirmFrame
@@ -89,9 +90,24 @@ function A.confirm()
 end
 function A.refreshConfirm() local c = A.confirmFrame; c.go:SetEnabled(c.tick:GetChecked() and true or false) end
 function A.setMode(on)
+  W.closeMenus() -- a menu built for the other mode never stays open (§3)
   Core().db.settings.advanced = on and true or nil
   Core().log("info", on and "advanced mode on" or "standard mode")
   Core().changed()
+end
+--- Advanced → Standard (§2): never leave a half-advanced editor. An own macro stays open on its Spells tab (Standard
+--- can edit it); any other macro closes. Unsaved targeting first asks: keep editing, or discard and switch.
+function A.leaveAdvanced()
+  local f = A.ef
+  if not (f and f:IsShown()) then A.setMode(false); return end
+  local function go()
+    f.touched = false
+    if f.own then A.setMode(false); A.showSection("spells") else f:Hide(); A.setMode(false) end
+  end
+  if not f.touched then go(); return end
+  UI.Popup("Unsaved changes in the Macro editor.", {
+    { "Keep editing", function() end, "Stays in Advanced mode; the Macro editor stays open with your changes." },
+    { "Discard", go, "Drops the unsaved targeting changes and switches to Standard mode." } })
 end
 function A.refreshSwitch()
   if UI.modeSeg then UI.modeSeg.Refresh() end
@@ -330,7 +346,7 @@ local function editorFrame(parent)
     part(f.previewBox)
   end
   f.preview:SetJustifyV("TOP")
-  if f.preview.SetNonSpaceWrap then f.preview:SetNonSpaceWrap(true) end
+  if f.preview.SetNonSpaceWrap then f.preview:SetNonSpaceWrap(false) end -- W.wrapMacro breaks at , ] ; or spaces
   f.preview.wbxCopy = "data"
   part(f.preview)
   f.info = W.line(f, "GameFontHighlightSmall", nil, W.MUTED)
@@ -364,31 +380,62 @@ local function editorFrame(parent)
       b.line:SetHeight(2)
     end
   end
+  -- Targeting greyed in Standard (own macros): the reason next to the tabs, like the greyed menu item
+  f.tabNote = W.text(f, "GameFontHighlightSmall", 10, W.MUTED, "RIGHT")
+  f.tabNote:SetPoint("RIGHT", f.tabSpells, "LEFT", -8, 0)
+  f.tabNote:SetText("Advanced mode")
+  f.tabNote.wbxCopy = "status"
+  f.tabNote:Hide()
+  W.tip(f.tabTarget, "Targeting", function()
+    return (A.on() or not f.own) and "Who the macro casts on (drag and drop), options and the preview."
+      or "Advanced mode: turn on Advanced in the window header to choose who this macro casts on. In Standard, the target presets are on the Spells tab."
+  end)
   f.spellsBox = CreateFrame("Frame", nil, f)
   f.spellsBox:SetPoint("TOPLEFT", 0, -26)
   f.spellsBox:SetPoint("BOTTOMRIGHT", 0, 34)
   f.spellsBox:Hide()
+  -- Spells of a recommended macro: what it casts (WoWBoxer builds it for your level), read-only
+  f.spellsInfo = CreateFrame("Frame", nil, f)
+  f.spellsInfo:SetPoint("TOPLEFT", 0, -26)
+  f.spellsInfo:SetPoint("BOTTOMRIGHT", 0, 34)
+  f.spellsInfo:Hide()
+  f.spellsInfo.head = W.text(f.spellsInfo, "GameFontNormalSmall", 10, themed and { TH.rgb("gold") } or W.GOLD)
+  f.spellsInfo.head:SetPoint("TOPLEFT", 10, -6)
+  f.spellsInfo.head:SetText("What this macro casts")
+  f.spellsInfo.head.wbxCopy = "label"
+  f.spellsInfo.text = W.text(f.spellsInfo, "GameFontHighlight", 12, W.PARCHMENT)
+  f.spellsInfo.text:SetPoint("TOPLEFT", 10, -24)
+  f.spellsInfo.text:SetPoint("TOPRIGHT", -10, -24)
+  f.spellsInfo.text.wbxCopy = "data"
+  f.spellsInfo.hint = W.text(f.spellsInfo, "GameFontHighlightSmall", 11, W.MUTED)
+  f.spellsInfo.hint:SetPoint("TOPLEFT", f.spellsInfo.text, "BOTTOMLEFT", 0, -10)
+  f.spellsInfo.hint:SetPoint("RIGHT", -10, 0)
+  f.spellsInfo.hint:SetText("WoWBoxer picks these spells for your level and updates them when you level up. Choose who it casts on under Targeting.")
+  f.spellsInfo.hint.wbxCopy = "guide"
   f:SetScript("OnHide", function() local K = ns.KeyEditor.frame; if K then K:Hide(); K.draft = nil end end)
   return f
 end
 
 --- Show one section of the editor: "spells" (own macros) or "target" (targeting, options, preview).
+--- One tab bar for every macro and entry point: Spells · Targeting. Switching keeps the unsaved draft (the Spells
+--- draft and the targets live on while their section is hidden); Save and Cancel apply to both.
+--- Targeting needs Advanced mode for own macros (Standard: the presets on Spells); it is shown greyed then.
+function A.canTarget(f) return A.on() or not f.own end
 function A.showSection(which)
   local f = A.ef
   if not f then return end
-  if which == "target" and not f.name then which = "spells" end -- a new macro: its spells first
+  if which == "target" and not A.canTarget(f) then which = "spells" end
   f.section = which
   local spells = which == "spells"
-  f.spellsBox:SetShown(spells)
+  f.spellsBox:SetShown(spells and f.own ~= nil)
+  f.spellsInfo:SetShown(spells and f.own == nil)
   for _, x in ipairs(f.parts) do x:SetShown(not spells) end
-  f.editSpells:SetShown(not spells and f.own ~= nil)
-  if f.tabSpells.line then
-    for _, x in ipairs({ { f.tabSpells, spells }, { f.tabTarget, not spells } }) do
-      x[1].line:SetShown(x[2])
-      x[1]:SetNormalFontObject(TH.fontObject("bold", 12, x[2] and "uiGold" or "muted"))
-    end
-  else W.setSelected(f.tabSpells, spells); W.setSelected(f.tabTarget, not spells) end
-  f.tabTarget:SetEnabled(f.name ~= nil)
+  f.editSpells:Hide() -- the Spells tab does this now (one owner per control)
+  f.tabSpells:Show(); f.tabTarget:Show()
+  W.setSelected(f.tabSpells, spells); W.setSelected(f.tabTarget, not spells)
+  if f.tabSpells.line then f.tabSpells.line:SetShown(spells); f.tabTarget.line:SetShown(not spells) end
+  f.tabTarget:SetEnabled(A.canTarget(f))
+  f.tabNote:SetShown(not A.canTarget(f))
   A.refreshEditor()
 end
 
@@ -547,6 +594,7 @@ function A.openEditor(parent, name, label)
   if #names == 0 and d.seq and d.seq.spells then for _, n in ipairs(d.seq.spells) do names[#names + 1] = n end end
   if #names == 0 then names[1] = d.label end
   f.spells:SetText(kind .. ": " .. table.concat(names, " › "))
+  f.spellsInfo.text:SetText(kind .. ": " .. table.concat(names, " › "))
   f.title:SetText("Macro editor – " .. f.label)
   f:Show()
   -- own macros start on their spells (Standard: spells only; the presets are there); others on the targeting
@@ -563,8 +611,6 @@ end
 function A.refreshEditor()
   local f = A.ef
   if not (f and f:IsShown()) then return end
-  f.tabTarget:SetShown(A.on() or not f.own) -- Standard own macros: the presets in Spells are their targeting
-  f.tabSpells:SetShown(f.own ~= nil)
   f.back:SetShown(f.name ~= nil); f.text:SetShown(f.name ~= nil and A.on())
   if f.own then
     f.base = baseOf(f)
@@ -635,7 +681,7 @@ function A.refreshEditor()
   local body, missing = f.base, {}
   if ov then body, missing = O().apply(f.base, ov, f.ctx) end
   f.body = body
-  f.preview:SetText(body)
+  f.preview:SetText(W.wrapMacro(body, f.preview:GetWidth() or 560, 9))
   local ok, why = ns.Rules.validateMacro(f.name or "WBX C1", body)
   if f.own and body == "" then ok, why = true, nil end -- a new macro: its spells come first (the Spells section says so)
   local msg = #body .. "/255"
@@ -702,6 +748,7 @@ local function textFrame(parent)
     "Back to WoWBoxer's version: removes your text and unfreezes the macro.")
   f.back:SetPoint("BOTTOMLEFT", 12, 10)
   A.xf = f
+  W.dialog(f, "WoWBoxerTextDialog")
   return f
 end
 function A.openText(parent, name, label)
@@ -833,6 +880,7 @@ local function resetFrame()
   f.back = W.button(f, "Back", 60, 24, function() f.step = 1; A.refreshReset() end, "Back to the choices.")
   f.back:SetPoint("LEFT", f.cancel, "RIGHT", 6, 0)
   A.rf = f
+  W.dialog(f, "WoWBoxerResetDialog")
   return f
 end
 --- Open the Reset to default window (Setup button, /wbx reset all). It never resets by itself.

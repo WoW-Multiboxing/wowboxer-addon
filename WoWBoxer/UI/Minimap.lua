@@ -90,11 +90,13 @@ function MM.ShowMenu(anchor)
     table.insert(UISpecialFrames, "WoWBoxerMinimapMenu")
     _G.WoWBoxerMinimapMenu = m
     MM.menu = m
+    W.registerMenu(m)
   end
   local m = MM.menu
   if m:IsShown() then m:Hide(); return end
   m:ClearAllPoints()
   m:SetPoint("TOPRIGHT", anchor or UIParent, "BOTTOMLEFT", 0, 0)
+  m.anchor = anchor
   m:Show()
 end
 

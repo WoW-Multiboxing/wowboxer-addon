@@ -1379,7 +1379,7 @@ end
 for _, def in ipairs({
   { key = "keys", label = "My macros", icon = "INV_Misc_Book_09", tip = "Your recommended macros for this level. Drag them onto your action bars." },
   { key = "spells", label = "All spells", icon = "INV_Misc_Book_11", tip = "Every spell you know, then the ones you learn later. Drag one onto a bar to make it a macro." },
-  { key = "custom", label = "My own macros", icon = "Spell_ChargePositive", tip = "Your own sequence macros (up to 8)." },
+  { key = "custom", label = "Macro editor", icon = "Spell_ChargePositive", tip = "Your own macros (up to 8) and New macro: build a single spell, sequence or priority macro." },
 }) do
   UI.RegisterTab({ key = def.key, label = def.label, icon = def.icon, tip = def.tip, book = true,
     build = function(p) build(p, def.key) end, refresh = refresh })

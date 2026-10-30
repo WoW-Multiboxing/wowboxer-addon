@@ -10,7 +10,10 @@ local KE = {}
 ns.KeyEditor = KE
 
 local MAX_STEPS = 12
-local KINDS = { { "single", "Single spell" }, { "sequence", "Sequence (/castsequence)" }, { "priority", "Priority list" } }
+-- short labels (the dropdown never cuts them); what each kind does is in the tooltip
+local KINDS = { { "single", "Single spell", "One spell, cast on the target you choose." },
+  { "sequence", "Sequence", "/castsequence: each press casts the next step." },
+  { "priority", "Priority", "Each press casts the first spell that is ready." } }
 local AIMS = { { "harm", "Enemy" }, { "help", "Friendly" } }
 local RESETS = { { "combat", "Reset after combat" }, { "target/combat", "Reset on new target" }, { "combat/12", "Reset after 12 s" } }
 
@@ -153,7 +156,7 @@ function KE.Build(parent)
   f.fills = W.dropdown(f, { width = 110, values = function() local v = {}; for i = 1, 6 do v[#v + 1] = { i, "Filler × " .. i } end return v end,
     get = function() return f.draft and f.draft.fills end, set = function(v) f.draft.fills = v; KE.Refresh() end })
   f.fills:SetPoint("LEFT", f.reset, "RIGHT", 6, 0)
-  W.ddTip(f.kind, "Kind", "Sequence: each press casts the next step. Priority: each press casts the first step that is ready.")
+  W.ddTip(f.kind, "Kind", "Single spell: one spell. Sequence (/castsequence): each press casts the next step. Priority: each press casts the first step that is ready.")
   W.ddTip(f.aim, "Aim", "Who the macro casts on: an enemy (your or the leader's target) or a friend.")
   f.aim:Hide()
   f.preset = W.dropdown(f, { width = 130, values = function() return KE.presetValues() end,
@@ -267,17 +270,18 @@ function KE.Build(parent)
   -- the macro as WoW will run it: one command per line, wraps inside the box, grows downwards with a scroll bar
   local pv = W.box(f, 0.05, 0.04, 0.025, 0.95)
   pv:SetPoint("TOPLEFT", 10, -186)
-  pv:SetSize(312, 186)
+  pv:SetSize(312, 160) -- Paste… / Copy… sit under the box, next to the character count
   local MW = 312 - 12 - W.SCROLLBAR
-  local msf, mc = W.scroll(pv, MW, 186 - 12)
+  local msf, mc = W.scroll(pv, MW, 160 - 12)
   msf:SetPoint("TOPLEFT", 6, -6)
   f.macroSf, f.macroContent = msf, mc
   f.body = W.text(mc, "GameFontHighlightSmall", 10, { 0.72, 0.8, 0.62 })
   f.body:SetPoint("TOPLEFT", 0, 0)
   f.body:SetWidth(MW)
   f.body:SetJustifyV("TOP")
-  if f.body.SetNonSpaceWrap then f.body:SetNonSpaceWrap(true) end
+  if f.body.SetNonSpaceWrap then f.body:SetNonSpaceWrap(false) end -- lines are broken at , ] ; or spaces (W.wrapMacro)
   f.body.wbxCopy = "data"
+  f.bodyW = MW
   f.info = W.text(f, "GameFontHighlightSmall", nil, W.MUTED)
   f.info:SetPoint("TOPLEFT", pv, "BOTTOMLEFT", 2, -4)
   f.info.wbxCopy = "status"
@@ -325,14 +329,14 @@ function KE.Build(parent)
   f.paste = W.button(f, "Paste…", 70, 24, function()
     ns.CopyBox.ShowPaste(function(d) KE.usePasted(d) end)
   end, "Paste a macro someone gave you (a WoWBoxer macro or plain macro text). Only the spell names are used.")
-  f.paste:SetPoint("BOTTOMLEFT", 10, 8)
   f.copy = W.button(f, "Copy…", 70, 24, function()
     local _, m = Core().me()
     if not (m and f.draft) then return end
     local r = KE.preview(m, f.draft, ns.Compat.playerLevel())
     ns.CopyBox.ShowCopy("Copy \"" .. (f.draft.name or "My macro") .. "\"", r.macro, ns.Share.encodeKey(f.draft, m.cls))
   end, "Shows the macro text and a WoWBoxer macro, ready to copy and give to others.")
-  f.copy:SetPoint("LEFT", f.paste, "RIGHT", 6, 0)
+  f.copy:SetPoint("TOPRIGHT", pv, "BOTTOMRIGHT", 0, -4)
+  f.paste:ClearAllPoints(); f.paste:SetPoint("RIGHT", f.copy, "LEFT", -6, 0)
   f.delete:SetPoint("LEFT", f.copy, "RIGHT", 6, 0)
   -- the Macro editor's Save / Cancel / Edit macro… do this now (one window for every macro)
   f.save:SetScript("OnClick", function() ns.Advanced.saveEditor() end); f.save:Hide()
@@ -412,6 +416,7 @@ function KE.Open(parent, index)
   for i, s in ipairs(src and src.steps or {}) do f.draft.steps[i] = s end
   f.draft.preset = index and src and KE.presetOf(index, src.aim) or "enemy"
   f.choice:SetShown(f.index == nil) -- a new macro starts with the choice
+  f.orig = KE.sig(f.draft) -- unsaved changes = the draft differs from this
   f.name:SetText(f.draft.name)
   f.title:SetText(f.index and ("Edit own macro " .. f.index) or "New macro")
   f.delete:SetShown(f.index ~= nil)
@@ -438,6 +443,14 @@ function KE.commit()
   return idx
 end
 function KE.IsOpen() return KE.frame ~= nil and KE.frame:IsShown() end
+--- A draft as one string (to tell whether it changed).
+function KE.sig(d)
+  if not d then return "" end
+  return table.concat({ tostring(d.name), tostring(d.kind), tostring(d.aim), tostring(d.filler), tostring(d.fills), tostring(d.reset),
+    tostring(d.preset), table.concat(d.steps or {}, ";") }, "|")
+end
+--- Does the open draft have unsaved changes?
+function KE.dirty() local f = KE.frame; return f ~= nil and f.draft ~= nil and KE.sig(f.draft) ~= f.orig end
 
 function KE.Refresh()
   local f = KE.frame
@@ -482,7 +495,7 @@ function KE.Refresh()
   local r, warn = KE.preview(m, d, L)
   if r.kind == "empty" then f.body:SetText("|cff9d9d9dAdd spells|r"); f.info:SetText(""); f.infoTip = nil
   else
-    f.body:SetText(r.macro)
+    f.body:SetText(W.wrapMacro(r.macro, f.bodyW, 10))
     f.info:SetText((r.tooLong and "|cffff8a80" or "") .. #r.macro .. "/255" .. (r.tooLong and "|r" or ""))
     f.infoTip = #r.macro .. " of 255 characters." .. (r.compact and " Shortened to fit." or "") .. (r.tooLong and " Too long: remove a step." or "")
   end

@@ -131,7 +131,12 @@ H.ok(ns.Advanced.ef:IsShown() and (not ns.Advanced.ef.tabSpells:IsShown() or ns.
 ns.KeyEditor.Close()
 UI.modeStd:Click()
 UI.panels.custom.cells[1]:Click("LeftButton")
-H.ok(ns.Advanced.ef:IsShown() and not (ns.Advanced.ef.tabSpells:IsShown() and ns.Advanced.ef.tabTarget:IsShown()), "Standard: an own macro has no Targeting tab")
+do -- Standard: both tabs, Targeting greyed with "Advanced mode" (docs/feedback-2026-10-30-editor.md §1)
+  local ef = ns.Advanced.ef
+  H.ok(ef:IsShown() and ef.tabSpells:IsShown() and ef.tabTarget:IsShown(), "Standard: an own macro shows both tabs")
+  H.ok(not ef.tabTarget:IsEnabled() and ef.tabNote:IsShown() and ef.tabNote:GetText() == "Advanced mode", "Standard: Targeting greyed, \"Advanced mode\"")
+  H.eq(ef.section, "spells", "Standard: own macros stay on Spells")
+end
 ns.KeyEditor.Close()
 
 -- Reset to default

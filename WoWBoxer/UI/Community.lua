@@ -58,6 +58,7 @@ local function linkBox()
   _G.WoWBoxerLinkBox = f
   table.insert(UISpecialFrames, "WoWBoxerLinkBox")
   CM.box = f
+  W.dialog(f, "WoWBoxerLinkBox")
   return f
 end
 
@@ -150,6 +151,7 @@ local function reportFrame()
   _G.WoWBoxerReportFrame = f
   table.insert(UISpecialFrames, "WoWBoxerReportFrame")
   CM.rf = f
+  W.dialog(f, "WoWBoxerReportFrame")
   return f
 end
 function CM.reportHint()
