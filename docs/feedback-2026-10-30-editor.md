@@ -74,3 +74,18 @@ game, with a screenshot of each in `docs/screens/`:
 - Right-click, move the mouse away fast, click the world → the menu is gone.
 
 Also run `/wbx selftest`, and check that there are no Lua errors in the log (`tools/read_log.py`) on both clients.
+
+## 6. Rename "My own macros" to "Macro editor" (the owner, 15:17)
+
+- The left navigation item **My own macros** becomes **Macro editor**, everywhere players read it:
+  - the nav rail;
+  - the page title;
+  - tooltips;
+  - the first-run guide;
+  - the help "?" text;
+  - the README / store text;
+  - the next `docs/changes`.
+- The page itself works as today: your own macros C1–C8 and **New macro**.
+- Only the visible name changes. Internal keys (`custom`, `WBX C1`–`C8`) and saved data stay the same, so nothing is
+  lost.
+- Update `tests/test_words.lua` / UI string tests if they check the old label.
