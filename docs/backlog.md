@@ -1,10 +1,12 @@
 # WoWBoxer addon – backlog
 
-## The owner: TEST BUILD 0.13.0-test.1 (88e52ec) – restart WoW first (0.12.0 + the TEST BUILD label)
-1. `/wbx`: orange **TEST BUILD** next to "WoWBoxer"; hover it → `0.13.0-test.1 (88e52ec)`.
-2. Follower: Setup → **Apply** → "Clear target on click" OK, still OK after `/reload`.
-3. Paladin (Era): at login **Fix now** → key 3 works; right-click minimap → **First-run guide** starts at step 1.
-4. Header **Reset** → Action bars → type RESET: bars as before. `/reload`, tell Claude feedback or "ship it".
+## The owner: TEST BUILD 0.13.0-test.2 (55b5f53) – new look, steps 1–2 (theme + window shell). Restart WoW first
+1. `/wbx`: navy window with gold trim, "WoWBoxer" in Cinzel + orange TEST BUILD, pages in a rail on the left; drag it by the header.
+2. Click every rail entry, Standard/Advanced, Reset, **?**, ×: each opens, texts are readable (Era and Forever).
+3. In each client type `/wbx shots` and don't touch anything for ~25 s (it screenshots every page), then `/reload`.
+4. Tell Claude "shots done" + anything that looks wrong. (The pages themselves get the new layout in the next steps.)
+
+Still open from test 1 (same build, behaviour unchanged): follower Setup → Apply; Paladin **Fix now**; guide restart; header **Reset**.
 
 ## The owner: screenshots for the website (one client, any character, ~2 min)
 1. Log in, `/wbx`, then Print Screen on **My keys**, **All spells**, **Talents**, **Squad** and **Setup** (one each).
