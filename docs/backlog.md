@@ -1,7 +1,10 @@
 # WoWBoxer addon – backlog
 
-## The owner: v0.13.0 is live – one thing left for the website and CurseForge gallery
-1. In each client (Classic Era and Forever): `/wbx shots`, hands off ~30 s, then `/reload` and tell Claude "shots done".
+## The owner: in-game screenshots (Classic Era, windowed; Claude's watcher captures read-only until ~16:40)
+1. Out of combat in a quiet spot: `/wbx` → **My macros**, wait 3 s; then **Place all**, wait 3 s.
+2. Role dropdown → another role, wait 3 s (macros "changed"), set it back.
+3. Rail → **Squad**, **Setup**, **Automation** – 3 s on each.
+4. Rail → **Discord**, 3 s, Esc; rail → **Problem report**, 3 s, Close. Tell Claude "capture done".
 
 Still open from test 1 (same build, behaviour unchanged): follower Setup → Apply; Paladin **Fix now**; guide restart; header **Reset**.
 

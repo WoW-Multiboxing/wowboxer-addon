@@ -21,7 +21,7 @@ The character name in the header chip is blurred on every shot; squad names and 
 Each export is checked by eye before it is committed.
 
 ## The owner's checklist (one client: Classic Era, windowed; wait ~3 s after each step, hands off)
-1. Log in a character in a squad, out of combat, quiet spot. Tell Claude "capture ready" (Claude starts the watcher).
+1. Log in a character in a squad, out of combat, quiet spot (Claude's watcher is already running).
 2. `/wbx` → **My macros**. Then **Place all** (macros on your bars).
 3. Role dropdown → another role (macros show "changed"); after 3 s set it back.
 4. Rail → **Squad**, then **Setup**, then **Automation**.
