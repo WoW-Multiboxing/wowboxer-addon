@@ -115,4 +115,24 @@ for _, case in ipairs({ { "0.13.0-test.1 (abc1234)", true, "0.13.0-test.1" }, { 
   H.eq(ns.UI.testLabel and ns.UI.testLabel:GetText() or nil, isTest and "TEST BUILD" or nil, ver .. ": TEST BUILD label")
 end
 
+-- /wbx shots: every page and dialog once, one Screenshot() each, the window box saved; nothing written to the game
+do
+  local W = Mock.new(H, { name = "Dorin", class = "PALADIN", race = "Scourge", level = 12 })
+  local n = 0
+  W.env.Screenshot = function() n = n + 1 end
+  W.env.GetPhysicalScreenSize = function() return 2560, 1440 end
+  local ns = H.loadAddon({ env = W.env })
+  W.fire("ADDON_LOADED", "WoWBoxer"); W.fire("PLAYER_LOGIN")
+  W.flush()
+  W.env.SlashCmdList.WOWBOXER("shots")
+  for _ = 1, 60 do if #W.timers == 0 then break end W.flush() end
+  local shots = ns.Core.db.shots
+  H.ok(shots and #shots.list == n and n >= 11, "shots: one record per screenshot (" .. n .. ")")
+  local first = shots and shots.list[1]
+  H.ok(first and first.name == "page-keys" and first.w == 2560 and first.r > first.l and first.bottom > first.top, "shots: window box in screen pixels")
+  H.eq(W.calls.CreateMacro, nil, "shots: no macro written")
+  H.eq(W.calls.PlaceAction, nil, "shots: nothing placed")
+  H.ok(not (ns.Advanced.confirmFrame and ns.Advanced.confirmFrame:IsShown()) and not (ns.Advanced.rf and ns.Advanced.rf:IsShown()), "shots: dialogs closed again")
+end
+
 os.exit(H.report("diag") and 0 or 1)

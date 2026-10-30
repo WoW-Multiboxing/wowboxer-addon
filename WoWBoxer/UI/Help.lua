@@ -98,35 +98,38 @@ end
 -- ------------------------------------------------------------------ the "?" button
 -- A quest-giver "?" in a small round slot (dark disc + thin gold rim), like a quest you can turn in: everything stays
 -- inside its 24 x 24 box, so nothing runs over the window border; the first-visit pulse is the icon itself brightening.
-Help.ICON = "Interface\\GossipFrame\\ActiveQuestIcon" -- the yellow quest "?" (Classic Era and modern) [check in game]
-local DISC = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
+-- The war table look (docs/ui-redesign.md §3): a round 28-unit button, 1-unit gold ring, a Cinzel "?" in ui-gold.
+local TH = ns.Theme
+Help.ICON = TH.TEX .. "Question"
+local DISC = TH.TEX .. "Circle"
 function Help.attach(f)
-  local b = CreateFrame("Button", nil, f)
-  b:SetSize(24, 24)
-  b:SetPoint("TOPRIGHT", -38, -9)
+  local b = CreateFrame("Button", nil, ns.UI.header or f)
+  b:SetSize(28, 28)
+  if ns.UI.closeBtn then b:SetPoint("RIGHT", ns.UI.closeBtn, "LEFT", -6, 0) else b:SetPoint("TOPRIGHT", -38, -9) end
   b.rim = b:CreateTexture(nil, "BACKGROUND")
   b.rim:SetAllPoints()
-  b.rim:SetTexture(DISC)
-  b.rim:SetVertexColor(0.78, 0.6, 0.22, 1)
+  b.rim:SetTexture(TH.TEX .. "CircleRing")
+  b.rim:SetVertexColor(TH.rgb("gold"))
   b.bg = b:CreateTexture(nil, "BORDER")
-  b.bg:SetPoint("TOPLEFT", 2, -2)
-  b.bg:SetPoint("BOTTOMRIGHT", -2, 2)
+  b.bg:SetPoint("TOPLEFT", 1, -1)
+  b.bg:SetPoint("BOTTOMRIGHT", -1, 1)
   b.bg:SetTexture(DISC)
-  b.bg:SetVertexColor(0.1, 0.07, 0.03, 1)
+  b.bg:SetVertexColor(TH.rgb("panel2"))
   b.icon = b:CreateTexture(nil, "ARTWORK")
   b.icon:SetSize(16, 16)
   b.icon:SetPoint("CENTER", 0, 0)
   b.icon:SetTexture(Help.ICON)
+  b.icon:SetVertexColor(TH.rgb("uiGold"))
   b.glow = b:CreateTexture(nil, "OVERLAY")
   b.glow:SetAllPoints(b.icon)
   b.glow:SetTexture(Help.ICON)
   if b.glow.SetBlendMode then b.glow:SetBlendMode("ADD") end
   b.glow:Hide()
   local hl = b:CreateTexture(nil, "HIGHLIGHT")
-  hl:SetPoint("TOPLEFT", 2, -2)
-  hl:SetPoint("BOTTOMRIGHT", -2, 2)
+  hl:SetPoint("TOPLEFT", 1, -1)
+  hl:SetPoint("BOTTOMRIGHT", -1, 1)
   hl:SetTexture(DISC)
-  hl:SetVertexColor(1, 0.85, 0.4, 0.22)
+  hl:SetVertexColor(TH.rgb("panel3"))
   b:SetScript("OnMouseDown", function() b.icon:SetPoint("CENTER", 1, -1) end)
   b:SetScript("OnMouseUp", function() b.icon:SetPoint("CENTER", 0, 0) end)
   b:RegisterForClicks("LeftButtonUp", "RightButtonUp")

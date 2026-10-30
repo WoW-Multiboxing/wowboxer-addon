@@ -24,17 +24,19 @@ local function modal(parent, w, h)
 end
 
 function A.attachSwitch(f)
-  local std = W.button(f, "Standard", 72, 18, function() A.setMode(false) end, "Standard mode: WoWBoxer's macros as they are. Your own changes stay active.")
-  local adv = W.button(f, "Advanced", 72, 18, function() if not A.on() then A.confirm() end end,
-    "Advanced mode: change who each macro casts on and edit macro text. Asks first.")
-  std:SetPoint("TOPLEFT", 134, -12)
-  adv:SetPoint("LEFT", std, "RIGHT", 2, 0)
-  UI.modeStd, UI.modeAdv = std, adv
+  -- header, right side: [Standard | Advanced]  Reset  ?  x (docs/ui-redesign.md §3)
+  local hdr = UI.header or f
+  local seg = W.segmented(hdr, {
+    { false, "Standard", "Standard mode: WoWBoxer's macros as they are. Your own changes stay active." },
+    { true, "Advanced", "Advanced mode: change who each macro casts on and edit macro text. Asks first." },
+  }, function() return A.on() end, function(v) if v then if not A.on() then A.confirm() end else A.setMode(false) end end)
+  UI.modeSeg = seg
+  UI.modeStd, UI.modeAdv = seg.buttons[1], seg.buttons[2]
   -- Reset to default on every page (docs/feedback-2026-10-30-night.md §7)
-  local rs = W.button(f, "Reset", 56, 18, function() A.openReset() end, "Reset to default: back to how this character was before WoWBoxer (asks twice).")
-  rs:SetPoint("LEFT", adv, "RIGHT", 6, 0)
+  local rs = W.button(hdr, "Reset", 56, 24, function() A.openReset() end, "Reset to default: back to how this character was before WoWBoxer (asks twice).")
   UI.resetBtn = rs
-  if UI.whoHit then UI.whoHit:ClearAllPoints(); UI.whoHit:SetPoint("LEFT", rs, "RIGHT", 10, 0); UI.whoHit:SetPoint("RIGHT", f, "TOPRIGHT", -100, -21) end
+  if UI.helpBtn then rs:SetPoint("RIGHT", UI.helpBtn, "LEFT", -10, 0) else rs:SetPoint("RIGHT", hdr, "RIGHT", -86, 0) end
+  seg:SetPoint("RIGHT", rs, "LEFT", -10, 0)
   -- the confirm window (§1)
   local c = modal(f, 420, 200)
   c.title = W.text(c, "GameFontNormalLarge", 15, W.GOLD)
@@ -71,9 +73,7 @@ function A.setMode(on)
   Core().changed()
 end
 function A.refreshSwitch()
-  if not UI.modeStd then return end
-  local on = A.on()
-  if on then UI.modeAdv:LockHighlight(); UI.modeStd:UnlockHighlight() else UI.modeStd:LockHighlight(); UI.modeAdv:UnlockHighlight() end
+  if UI.modeSeg then UI.modeSeg.Refresh() end
 end
 
 -- ------------------------------------------------------------------ the Macro editor (docs/feedback-2026-10-29-late.md §3)
@@ -144,7 +144,7 @@ local function editorFrame(parent)
   f.parts = {} -- sections 2–4 (shown on the Targeting tab); section 1 for own macros is the spells box
   local function part(x) f.parts[#f.parts + 1] = x; return x end
   local function head(text, x, y)
-    local h = W.text(f, "GameFontNormalSmall", nil, W.GOLD)
+    local h = W.text(f, "GameFontNormalSmall", 10, W.GOLD)
     h:SetPoint("TOPLEFT", x, y)
     h:SetText(text)
     h.wbxCopy = "hint"
@@ -677,7 +677,8 @@ local function resetFrame()
     c.key = dft[1]
     c.sub = W.text(f, "GameFontHighlightSmall", nil, W.MUTED)
     c.sub:SetPoint("TOPLEFT", 40, -36 - (i - 1) * 40 - 20)
-    c.sub:SetWidth(466)
+    c.sub:SetWidth(470)
+    W.role(c.sub, "body", 10)
     c.sub:SetText(dft[3])
     c.sub.wbxCopy = "sentence"
     f.ticks[i] = c

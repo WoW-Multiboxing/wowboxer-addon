@@ -889,6 +889,7 @@ local HELP = {
   "/wbx show – list your macros and what would change",
   "/wbx cvars | /wbx cvars restore – apply recommended settings / put the old ones back",
   "/wbx selftest – write a diagnostic report to the saved variables",
+  "/wbx shots – screenshots of every WoWBoxer page (for the website; read-only)",
   "/wbx log [n] – show the last n log lines; /wbx debug – toggle debug messages",
 }
 function Core.slash(msg)
@@ -908,6 +909,7 @@ function Core.slash(msg)
     if ns.UI then ns.UI.Open() end
     local res = ns.Audit and ns.Audit.run()
     chat("Layout audit: " .. (res and #res or 0) .. " finding(s), saved for the next /reload.")
+  elseif cmd == "shots" then if ns.Shots then ns.Shots.run() end
   elseif cmd == "keys" then Core.openKeyBindings()
   elseif cmd == "guide" then if ns.Book then ns.Book.ShowGuide() end
   elseif cmd == "reset" and rest == "all" then
