@@ -59,6 +59,14 @@ jobs:
             gh release create "$TAG" "dist/WoWBoxer-$VER.zip" --title "WoWBoxer $VER" --notes-file dist/CHANGELOG.md \
               $( [[ "$VER" == *-* ]] && echo --prerelease )
           fi
+      - name: Website screenshots (site-screenshots.zip)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ls media/screenshots/*/manifest.json > /dev/null 2>&1; then
+            (cd media && zip -qr ../dist/site-screenshots.zip screenshots -x 'screenshots/shots.json')
+            gh release upload "$TAG" dist/site-screenshots.zip --clobber
+          else echo "no exported screenshots yet"; fi
       - name: CurseForge
         env:
           CF_API_KEY: ${{ secrets.CF_API_KEY }}

@@ -1,0 +1,17 @@
+{
+  "appVersion": "0.13.1",
+  "note": "Regions in design units of the WoWBoxer window (889 x 517, top-left = 0,0). blurScreen: fractions of the whole game window. source: the candidate chosen per flavour (dist/capture/<flavour>/NNN, never committed).",
+  "blurAlways": [[194, 13, 300, 40]],
+  "shots": [
+    { "id": "main", "title": "My macros", "alt": "WoWBoxer's My macros page: recommended spell macros as cards with their state, squad macros and the next step.", "crop": "frame", "source": {} },
+    { "id": "action-bars", "title": "Macros on your action bars", "alt": "WoWBoxer macros placed on the action bars, with the WoWBoxer window above them.", "crop": "bars",
+      "blurScreen": [[0.0, 0.55, 0.34, 0.93], [0.0, 0.0, 0.16, 0.1]], "source": {} },
+    { "id": "level-up", "title": "Update after a level-up", "alt": "WoWBoxer shows which macros changed and updates them with one click.", "crop": "frame", "source": {} },
+    { "id": "squad", "title": "Your squad", "alt": "WoWBoxer's Squad page: each character with class, role and place in the follow line.", "crop": "frame",
+      "blur": [[260, 95, 405, 322], [515, 95, 668, 322], [200, 436, 884, 468], [198, 62, 405, 88]], "source": {} },
+    { "id": "settings", "title": "Settings and game settings", "alt": "WoWBoxer's Setup page: bars, window, multibox checklist and recommended game settings.", "crop": "frame", "source": {} },
+    { "id": "automation", "title": "Automation", "alt": "WoWBoxer's Automation page: each automation as an ON/OFF switch, for your squad only.", "crop": "frame", "source": {} },
+    { "id": "community", "title": "Community links", "alt": "WoWBoxer's copy box with the Discord invite selected, ready for Ctrl+C.", "crop": "dialog", "source": {} },
+    { "id": "report", "title": "Report a problem", "alt": "WoWBoxer's Report a problem window: a report to copy into #setup-help, names left out.", "crop": "dialog", "source": {} }
+  ]
+}
