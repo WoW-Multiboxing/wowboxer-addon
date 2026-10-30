@@ -1,9 +1,29 @@
 # Releasing WoWBoxer
 
+## Test first, then live (the owner, 30 Oct 2026 – applies to every change from now on)
+Nothing goes live on CurseForge, Wago or the website until the owner has tested it in the game and said **"ship it"**.
+
+1. **Build:** work on `main` as usual, with all checks green. Commits and pushes are fine; **no version tag**.
+2. **Test build:** run `powershell -File tools/install.ps1`. The installed addon is a test build:
+   - its version reads `0.13.0-test.N (abc1234)`;
+   - the window title shows an orange **TEST BUILD** label, so the owner always knows which version he is testing.
+   Then write the in-game checklist (max 4 lines) at the top of `docs/backlog.md` and tell the owner what to test.
+3. **The owner tests** and answers with feedback or **"ship it"**. Feedback goes back to step 1 and the next test build
+   gets `-test.N+1`.
+4. **Release only after "ship it"** in the session:
+   - write `docs/changes/<version>.md`;
+   - tag `vX.Y.Z` and push the tag; the workflow uploads it to CurseForge as **Release**;
+   - update the website version (below) and the `[WS-E]` LOG block.
+5. **Optional public beta** for other players, only when the owner asks: tag `vX.Y.Z-beta.N`. It goes out as **Beta**,
+   which only players who chose Beta in their CurseForge app get.
+
+Release types (`tools/cf_upload.py`): a plain tag = **release**, `-beta`/`-rc` = **beta**, `-alpha` = **alpha**. The
+version number can stay 0.x until the owner calls it 1.0.
+
+## How a tag publishes
 A version tag does everything: `git tag v0.9.0 && git push origin v0.9.0` runs `.github/workflows/release.yml` –
 all checks, `tools/package.sh` (one `WoWBoxer/` folder, version stamped into the TOC, LICENSE.txt), a GitHub Release
-and the CurseForge upload (`tools/cf_upload.py`). `0.x` and `-rc` versions go out as **beta**, from `1.0.0` as
-**release**. Changelog: `docs/changes/<version>.md` (short, for players) or, without it, the commit subjects since
+and the CurseForge upload (`tools/cf_upload.py`). Release type: see "Test first" above. Changelog: `docs/changes/<version>.md` (short, for players) or, without it, the commit subjects since
 the last tag. To upload an existing tag again: Actions → release → Run workflow → tag.
 
 Game versions come from the TOC `## Interface:` list: 11509 → Classic Era 1.15.9, 16001 → Forever 1.60.1.
