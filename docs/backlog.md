@@ -1,5 +1,10 @@
 # WoWBoxer addon – backlog
 
+## The owner: TEST BUILD 0.14.0-test.1 (9b2134f) – Macro editor targets. `/reload` first (both clients)
+1. Advanced → right-click a heal macro → Edit macro…: COMMON/SQUAD/PARTY/+ RAID; wheel down to party4pet; click "+ RAID (80)", scroll to raid40pet, drag it into the right list → Save.
+2. `/wbx selftest`, then `/wbx shots` (~40 s, hands off), `/reload`.
+3. Tell Claude "done" (Claude crops the editor top/bottom shots into docs/screens/ and reads the selftest).
+
 ## The owner: in-game screenshots (Classic Era, windowed; Claude's watcher captures read-only until ~16:40)
 1. Out of combat in a quiet spot: `/wbx` → **My macros**, wait 3 s; then **Place all**, wait 3 s.
 2. Role dropdown → another role, wait 3 s (macros "changed"), set it back.
