@@ -27,8 +27,22 @@ local function plan()
       end
     end, function() if A.ef then A.ef:Hide() end end }
     list[#list + 1] = { "dialog-reset", function() A.openReset() end, function() if A.rf then A.rf:Hide() end end }
-    list[#list + 1] = { "dialog-advanced", function() if not A.on() then A.confirm() end end, function() if A.confirmFrame then A.confirmFrame:Hide() end end }
+    -- both states of the Advanced confirm (§2: off vs on); the tick changes nothing until "Turn on Advanced"
+    list[#list + 1] = { "dialog-advanced-off", function() if not A.on() then A.confirm() end end }
+    list[#list + 1] = { "dialog-advanced-on", function() local c = A.confirmFrame; if c and c:IsShown() then c.tick:Click() end end,
+      function() if A.confirmFrame then A.confirmFrame:Hide() end end }
   end
+  -- hover states (§2): a rail row and a dropdown item, drawn by our own enter handlers (the tooltip shows too)
+  local function enter(f) local fn = f and f:GetScript("OnEnter"); if fn then fn(f) end end
+  local function leave(f) local fn = f and f:GetScript("OnLeave"); if fn then fn(f) end end
+  list[#list + 1] = { "hover-nav", function() UI.Select("keys"); enter(UI.tabButtons.spells) end, function() leave(UI.tabButtons.spells) end }
+  list[#list + 1] = { "hover-dropdown", function()
+    UI.Select("keys")
+    local dd = UI.panels.keys.role
+    if dd and dd.open then dd.open() end
+    local L = ns.Widgets.listFrame
+    if L and L.rows[2] then enter(L.rows[2]) end
+  end, function() local L = ns.Widgets.listFrame; if L then if L.rows[2] then leave(L.rows[2]) end L:Hide() end end }
   return list
 end
 
