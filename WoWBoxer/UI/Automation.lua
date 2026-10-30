@@ -105,8 +105,11 @@ function tab.build(p)
   p.preset.wbxBig = true
   W.primary(p.preset)
   p.preset:SetPoint("BOTTOMLEFT", 0, 2)
+  p.defaults = W.button(p, "Default", 70, 24, function() AU().defaults(); ns.Core.log("info", "automation: default"); UI.Refresh() end,
+    "WoWBoxer's recommendation: everything on except Accept any quest, Abandon together and Restock reagents.")
+  p.defaults:SetPoint("LEFT", p.preset, "RIGHT", 8, 0)
   p.allOn = W.button(p, "All on", 70, 24, function() AU().setAll(true); UI.Refresh() end, "Turns every automation on.")
-  p.allOn:SetPoint("LEFT", p.preset, "RIGHT", 8, 0)
+  p.allOn:SetPoint("LEFT", p.defaults, "RIGHT", 6, 0)
   p.allOff = W.button(p, "All off", 70, 24, function() AU().setAll(false); UI.Refresh() end, "Turns every automation off.")
   p.allOff:SetPoint("LEFT", p.allOn, "RIGHT", 6, 0)
   AP.panel = p

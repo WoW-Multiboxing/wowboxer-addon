@@ -59,6 +59,9 @@ function AU.on(key)
 end
 function AU.set(key, v) opts()[key] = v and true or false end
 function AU.setAll(v) for _, o in ipairs(AU.OPTIONS) do AU.set(o[1], v) end end
+--- WoWBoxer's recommendation (the owner, 30 Oct 2026): everything on except these three.
+AU.RECOMMENDED_OFF = { abandon = true, questAny = true, restock = true }
+function AU.defaults() for _, o in ipairs(AU.OPTIONS) do AU.set(o[1], not AU.RECOMMENDED_OFF[o[1]]) end end
 function AU.preset() for _, o in ipairs(AU.OPTIONS) do AU.set(o[1], false) end for _, k in ipairs(AU.PRESET_LEVELLING) do AU.set(k, true) end AU.set("chat", true) end
 function AU.rewardRule() local r = db().autoReward; for _, x in ipairs(AU.REWARD_RULES) do if x == r then return r end end return "leader" end
 

@@ -312,4 +312,19 @@ do
   H.eq(ns.UI.current, "automation", "it opens the Automation bookmark")
 end
 
+
+-- Default: WoWBoxer's recommendation – everything on except Accept any quest, Abandon together, Restock reagents
+do
+  local W = Mock.new(H, { name = "Dorin", class = "PALADIN", race = "Scourge", level = 20 })
+  local ns = H.loadAddon({ env = W.env })
+  W.fire("ADDON_LOADED", "WoWBoxer"); W.fire("PLAYER_LOGIN")
+  ns.UI.Open("automation")
+  ns.UI.panels.automation.defaults:Click()
+  for _, o in ipairs(ns.Auto.OPTIONS) do
+    local want = not (o[1] == "abandon" or o[1] == "questAny" or o[1] == "restock")
+    H.eq(ns.Auto.on(o[1]) and true or false, want, "Default: " .. o[1] .. (want and " on" or " off"))
+  end
+  H.eq(W.calls.CreateMacro, nil, "Default writes nothing to the game")
+end
+
 os.exit(H.report("auto") and 0 or 1)
