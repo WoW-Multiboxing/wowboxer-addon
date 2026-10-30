@@ -75,6 +75,22 @@ Class colours stay the game's own: `RAID_CLASS_COLORS`, with the token values as
   - **Check it in the game:** take a screenshot of every dialog in both states (off/on, disabled/enabled), and add
     them to `docs/screens/`.
   - The mockup board "Advanced confirm – off vs on" shows both states.
+- **Hover and selected states (the owner, 13:17: "hovering the tabs on the left, you can't read the text"):**
+  - **Hover always makes things lighter, never darker, and never hides the text.**
+    - A nav item on hover: background #2b3550 (one step above panel-3), label in parchment #e9dfc4, icon edge gold.
+    - The selected item: panel-3 background, label in ui-gold, and a 2 px gold-hi marker on the left inside the item.
+    - Selected + hover: the same as selected, with background #2b3550.
+  - **Never** use Blizzard's default highlight texture (`UI-Common-MouseHilight`/additive glow) on our flat controls.
+    It washes out the label. Use our own flat highlight texture under the label (draw layer BACKGROUND/BORDER, never
+    ADD over the text).
+  - **The same rule for every hover state:**
+    - buttons: one step lighter, label unchanged;
+    - rows and cards: panel-2 → panel-3;
+    - dropdown items: #2b3550 + parchment;
+    - right-click menus;
+    - the macro cells in the book.
+  - **Labels stay readable in every state:** ≥4.5:1 against their own background (normal, hover, selected, pressed,
+    disabled). Add a tiny test that checks the theme's state colour pairs against that ratio.
 - **Spacing:** an 8 px grid. Window padding 16–22 px, card padding 8–12 px, gaps 8 px between cards and 14 px between
   sections.
 - **Icons:**
