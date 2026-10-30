@@ -7,6 +7,8 @@ local AP = {}
 ns.AutomationPage = AP
 local tab = { key = "automation", label = "Automation", icon = "Trade_Engineering",
   tip = "Squad automation: invites, quests, dialogs, resurrections, summons, the vendor – one tick each." }
+--- Rail state word: OFF while no automation beyond resurrections and summons is on.
+function tab.badge() if ns.Auto and not ns.Auto.anyOn() then return "OFF", "warn" end end
 
 local function AU() return ns.Auto end
 local function settings() return ns.Core.db.settings end

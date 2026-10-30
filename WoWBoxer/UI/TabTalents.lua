@@ -3,6 +3,11 @@
 local _, ns = ...
 local UI, W = ns.UI, ns.Widgets
 local tab = { key = "talents", label = "Talents", icon = "Ability_Marksmanship", tip = "The talent order of your guide and the next point to take." }
+--- Rail state word: talent points not spent yet ("1 POINT"), where the client can tell.
+function tab.badge(ctx)
+  local n = ctx and ctx.member and ns.Compat.unspentTalentPoints(ctx.member, ctx.level)
+  if n and n > 0 then return n .. (n == 1 and " POINT" or " POINTS"), "warn" end
+end
 local ROW_H = 20
 local OWN = "\1own" -- the build that came with the squad (m.build)
 local LEFT_W, LIST_W = 300, 322
