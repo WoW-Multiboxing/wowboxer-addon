@@ -310,7 +310,7 @@ local total, shown = 0, 0
 for _, screen in ipairs(Layout.MATRIX) do
   local probs = layoutPass(screen)
   total = total + #probs
-  for _, m in ipairs(probs) do if shown < 12 then shown = shown + 1; print("  " .. screen.name .. " " .. m) end end
+  for _, m in ipairs(probs) do if shown < (tonumber(os.getenv("WBX_LAYOUT_SHOW") or "") or 12) then shown = shown + 1; print("  " .. screen.name .. " " .. m) end end
 end
 H.eq(total, 0, "layout: no overlaps on " .. #Layout.MATRIX .. " screens")
 -- the worst case: long names, Classic Era, a wider real font, the biggest window scale on the smallest screen
@@ -320,7 +320,7 @@ for _, o in ipairs({
   { name = "Hunty", class = "HUNTER", level = 50, fontFactor = 0.62 },
 }) do
   local probs = layoutPass({ w = 835, h = 668 }, o)
-  for i, m in ipairs(probs) do if i <= 8 then print("  stress " .. o.class .. " " .. m) end end
+  for i, m in ipairs(probs) do if i <= (tonumber(os.getenv("WBX_LAYOUT_SHOW") or "") or 8) then print("  stress " .. o.class .. " " .. m) end end
   H.eq(#probs, 0, "layout stress " .. o.class .. " (font x" .. o.fontFactor .. ")")
 end
 

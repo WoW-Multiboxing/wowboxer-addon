@@ -469,7 +469,7 @@ SP.register({ key = "main", label = "Squad", tip = "Who plays together, who lead
     f.keys.ticks = {}
     for i = 1, #ns.Macros.SQUAD_KEYS do
       local c = W.check(f.keys, "Macro", function(self, v) if self.key then ns.Book.setSquadKey(self.key, v); SP.saved() end end)
-      c:SetPoint("TOPLEFT", 76 + ((i - 1) % 4) * 132, -((math.floor((i - 1) / 4)) * 22))
+      c:SetPoint("TOPLEFT", 92 + ((i - 1) % 4) * 136, -((math.floor((i - 1) / 4)) * 22))
       W.tip(c, function() return c.label:GetText() end, function() return c.key and ns.Book.helperShort(c.key) .. " Ticked: WoWBoxer makes this macro for this character." or "" end)
       f.keys.ticks[i] = c
     end

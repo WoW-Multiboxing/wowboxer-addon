@@ -186,12 +186,37 @@ function Mock.new(H, opts)
   function methods:SetText(t) self._text = t end
   function methods:GetText() return self._text end
   function methods:SetFormattedText(fmt, ...) self._text = string.format(fmt, ...) end
-  function methods:CreateFontString(name, _, template)
+  function methods:CreateFontString(name, layer, template)
     local fs = newFrame("FontString", name, self)
     fs._fontSize = W.FONT_SIZE[template or "GameFontNormal"] or 12
+    fs._layer, fs._template = layer or "ARTWORK", template
     return fs
   end
-  function methods:CreateTexture(name) return newFrame("Texture", name, self) end
+  -- frame levels and strata (the renderer's draw order)
+  function methods:SetFrameLevel(l) self._level = l end
+  function methods:GetFrameLevel()
+    if self._level then return self._level end
+    local p = self._parent
+    return (p and p.GetFrameLevel and p ~= self) and (p:GetFrameLevel() + 1) or 0
+  end
+  function methods:SetFrameStrata(s) self._strata = s end
+  function methods:GetFrameStrata() return self._strata or (self._parent and self._parent:GetFrameStrata()) or "MEDIUM" end
+  function methods:CreateTexture(name, layer, _, sub) local t = newFrame("Texture", name, self); t._layer, t._sub = layer, sub; return t end
+  function methods:CreateMaskTexture(name) local t = newFrame("MaskTexture", name, self); t._shown = false; return t end
+  function methods:AddMaskTexture(m) self._mask = m end
+  -- what the renderer (tests/render.lua) draws: colours, files, tints, texture coordinates, alpha
+  function methods:SetColorTexture(r, g, b, a) self._color = { r, g, b, a or 1 }; self._file = nil end
+  function methods:SetTexture(file) self._file = file; self._color = nil end
+  function methods:GetTexture() return self._file end
+  function methods:SetVertexColor(r, g, b, a) self._tint = { r, g, b, a or 1 } end
+  function methods:SetTexCoord(...) self._coords = { ... } end
+  function methods:SetAlpha(a) self._alpha = a end
+  function methods:GetAlpha() return self._alpha or 1 end
+  function methods:SetTextColor(r, g, b, a) self._textColor = { r, g, b, a or 1 } end
+  function methods:GetTextColor() local c = self._textColor or { 1, 1, 1, 1 }; return c[1], c[2], c[3], c[4] end
+  function methods:SetDrawLayer(layer, sub) self._layer, self._sub = layer, sub end
+  function methods:SetJustifyH(j) self._justifyH = j end
+  function methods:SetNormalFontObject(o) self._fontObject = o end
   function methods:GetName() return self._name end
   function methods:GetParent() return self._parent end
   function methods:SetParent(p) self._parent = p end
@@ -212,21 +237,21 @@ function Mock.new(H, opts)
     return t
   end
   local function chars(s) local n = 0; for _ in s:gmatch("[^\128-\191]") do n = n + 1 end return n end
-  function W.textWidth(t, size)
+  function W.textWidth(t, size, ratio)
     local w = 0
-    for line in (W.plain(t) .. "\n"):gmatch("([^\n]*)\n") do w = math.max(w, chars(line) * size * W.fontFactor) end
+    for line in (W.plain(t) .. "\n"):gmatch("([^\n]*)\n") do w = math.max(w, chars(line) * size * W.fontFactor * (ratio or 1)) end
     return w
   end
   --- Lines a text needs at `width` (word wrap like the client: break at spaces, long words are split).
-  function W.textLines(t, size, width)
+  function W.textLines(t, size, width, ratio)
     local n = 0
     for line in (W.plain(t) .. "\n"):gmatch("([^\n]*)\n") do
       if not width or width <= 0 then n = n + 1
       else
         local cur, count = 0, 1
-        local space = size * W.fontFactor
+        local space = size * W.fontFactor * (ratio or 1)
         for word in line:gmatch("%S+") do
-          local ww = chars(word) * size * W.fontFactor
+          local ww = chars(word) * size * W.fontFactor * (ratio or 1)
           if cur > 0 and cur + space + ww > width + 0.5 then count = count + 1; cur = 0 end
           if cur == 0 then
             while ww > width + 0.5 do count = count + 1; ww = ww - width end
@@ -239,13 +264,23 @@ function Mock.new(H, opts)
     return n
   end
   local function fontSize(f) return f._fontSize or 12 end
-  function methods:GetFont() return "Fonts\\FRIZQT__.TTF", fontSize(self), "" end
-  function methods:SetFont(_, size) if size then self._fontSize = size end return true end
-  function methods:SetFontObject(o) if type(o) == "table" and o._name and FONT_SIZE[o._name] then self._fontSize = FONT_SIZE[o._name] end end
+  -- width of each font relative to the game font (W.fontFactor): ours measured with fontTools, plus a margin
+  W.FONT_RATIO = { ["Inter-Regular"] = 1.0, ["Inter-SemiBold"] = 1.02, ["Cinzel-Bold"] = 1.3 }
+  local function ratioOf(file) for k, v in pairs(W.FONT_RATIO) do if file and file:find(k, 1, true) then return v end end return nil end
+  function methods:GetFont() return self._fontFile or "Fonts\FRIZQT__.TTF", fontSize(self), "" end
+  function methods:SetFont(file, size) if size then self._fontSize = size end self._fontFile = file; self._ratio = ratioOf(file); return true end
+  function methods:SetFontObject(o)
+    if type(o) == "table" and o._kind == "Font" then self._fontSize, self._fontFile, self._ratio = o._fontSize, o._fontFile, o._ratio
+    elseif type(o) == "table" and o._name and FONT_SIZE[o._name] then self._fontSize = FONT_SIZE[o._name] end
+  end
   function methods:SetMaxLines(n) self._maxLines = n end
-  function methods:GetStringWidth() return W.textWidth(self._text, fontSize(self)) end
-  function methods:GetUnboundedStringWidth() return W.textWidth(self._text, fontSize(self)) end
-  function methods:GetTextWidth() return W.textWidth(self._text, self._kind == "FontString" and fontSize(self) or 12) end
+  function methods:GetStringWidth() return W.textWidth(self._text, fontSize(self), self._ratio) end
+  function methods:GetUnboundedStringWidth() return W.textWidth(self._text, fontSize(self), self._ratio) end
+  function methods:GetTextWidth()
+    local o = self._kind ~= "FontString" and self._fontObject
+    if o then return W.textWidth(self._text, o._fontSize or 12, o._ratio) end
+    return W.textWidth(self._text, self._kind == "FontString" and fontSize(self) or 12, self._ratio)
+  end
   function methods:GetLineHeight() return fontSize(self) + 2 end
   function methods:SetPoint(point, a, b, c, d)
     self._points = self._points or {}
@@ -286,10 +321,10 @@ function Mock.new(H, opts)
   local function intrinsic(f, k, width)
     if f._kind == "FontString" then
       local size = fontSize(f) * k
-      local natural = W.textWidth(f._text, fontSize(f)) * k
+      local natural = W.textWidth(f._text, fontSize(f), f._ratio) * k
       local w = width or ((f._wSet and f._w > 0) and f._w * k) or natural
       local lines = 1
-      if f._wrap ~= false and (width or (f._wSet and f._w > 0)) then lines = W.textLines(f._text, fontSize(f), w / k) end
+      if f._wrap ~= false and (width or (f._wSet and f._w > 0)) then lines = W.textLines(f._text, fontSize(f), w / k, f._ratio) end
       if f._maxLines and f._maxLines > 0 then lines = math.min(lines, f._maxLines) end
       local h = (f._hSet and f._h > 0) and f._h * k or lines * (size + 2 * k)
       return w, h, lines
@@ -360,7 +395,7 @@ function Mock.new(H, opts)
   function methods:GetStringHeight()
     local r = rectOf(self)
     local w = r and (r[3] - r[1]) / factor(self) or nil
-    local lines = W.textLines(self._text, fontSize(self), (self._wrap ~= false) and w or nil)
+    local lines = W.textLines(self._text, fontSize(self), (self._wrap ~= false) and w or nil, self._ratio)
     if self._maxLines and self._maxLines > 0 then lines = math.min(lines, self._maxLines) end
     return lines * (fontSize(self) + 2)
   end
@@ -371,7 +406,7 @@ function Mock.new(H, opts)
     local w = (r[3] - r[1]) / k
     if W.textWidth(self._text, fontSize(self)) <= w + 0.5 then return false end
     if self._wrap == false then return true end
-    local need = W.textLines(self._text, fontSize(self), w) * (fontSize(self) + 2)
+    local need = W.textLines(self._text, fontSize(self), w, self._ratio) * (fontSize(self) + 2)
     return need > (r[4] - r[2]) / k + 0.5
   end
   function methods:SetChecked(v) self._checked = not not v end
@@ -452,6 +487,8 @@ function Mock.new(H, opts)
     for _, e in ipairs(f._menu) do if e.text == text then e.setSel(e.data) return true end end
     return false
   end
+  env.CreateFont = function(name) local o = newFrame("Font", name); o._fontSize = 12; return o end
+  env.STANDARD_TEXT_FONT = "Fonts\FRIZQT__.TTF"
   env.UIParent = newFrame("Frame", "UIParent")
   W.screen = opts.screen or { w = 1365, h = 768 }
   env.UIParent._w, env.UIParent._h = W.screen.w, W.screen.h

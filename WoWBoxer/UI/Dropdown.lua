@@ -1,7 +1,8 @@
 --[[ WoWBoxer – dropdowns (docs/squad-overhaul.md §2). One API for both clients:
-  - Forever (modern menu system): CreateFrame("DropdownButton", …, "WowStyle1DropdownTemplate") + SetupMenu with radios.
-  - Classic Era (or any client without it): our own list dropdown – a button with an arrow that opens one shared list
-    frame with radio rows; it closes on a choice, Esc or a click outside. Mouse only, no keyboard focus.
+  - The war table look (docs/ui-redesign.md §3): our own list dropdown on every client – a flat pill with a gold ▾
+    that opens one shared list frame with check rows; it closes on a choice, Esc or a click outside. Mouse only.
+  - Without the themed skins (W.themed): Forever's modern menu system (CreateFrame("DropdownButton", …,
+    "WowStyle1DropdownTemplate") + SetupMenu with radios) when it exists, else the same own list.
   Never UIDropDownMenu (deprecated in the modern UI and taint-prone).
   W.dropdown(parent, {width, values=fn -> {{value, label, tip?}}, get=fn, set=fn(value)}) returns a frame with
   Refresh(), select(value), step(±1), open() and isBlizzard. W.seqControl is the "Use sequence macros" box + tier. ]]
@@ -14,7 +15,7 @@ W.LIST_MAX = 16
 
 --- True when this client has the modern menu system. Probed once; tests set W.forceOwnDropdown.
 function W.hasBlizzardDropdown()
-  if W.forceOwnDropdown then return false end
+  if W.forceOwnDropdown or W.themed() then return false end
   if W._modernMenu == nil then
     W._modernMenu = false
     if type(_G.MenuUtil) == "table" then
@@ -41,6 +42,7 @@ local function listFrame()
   catcher._noHit = true
   catcher:Hide()
   local l = W.box(UIParent, 0.07, 0.055, 0.035, 0.98)
+  if W.themed() then ns.Theme.paint(l, "panel", "line") end
   l:SetFrameStrata("TOOLTIP")
   l:SetClampedToScreen(true)
   l:EnableMouse(true)
@@ -64,11 +66,12 @@ local function listFrame()
         b:SetHeight(W.LIST_ROW)
         local hl = b:CreateTexture(nil, "HIGHLIGHT")
         hl:SetAllPoints()
-        hl:SetColorTexture(1, 0.82, 0, 0.18)
+        hl:SetColorTexture(ns.Theme.rgb("panel3"))
         b.radio = b:CreateTexture(nil, "ARTWORK")
         b.radio:SetSize(16, 16)
         b.radio:SetPoint("LEFT", 2, 0)
-        b.radio:SetTexture("Interface\\Buttons\\UI-CheckBox-Check")
+        if W.themed() then b.radio:SetTexture(ns.Theme.TEX .. "Check"); b.radio:SetVertexColor(ns.Theme.rgb("uiGold"))
+        else b.radio:SetTexture("Interface\\Buttons\\UI-CheckBox-Check") end
         b.label = W.line(b, "GameFontHighlightSmall", nil, W.TEXT)
         b.label:SetPoint("LEFT", 22, 0)
         b.label:SetPoint("RIGHT", -4, 0)
@@ -134,22 +137,32 @@ function W.dropdown(parent, opts)
       end
     end)
   else
-    dd = W.frame("Button", parent, _G.BackdropTemplateMixin and "BackdropTemplate" or nil)
+    local themed = W.themed()
+    dd = W.frame("Button", parent, (not themed and _G.BackdropTemplateMixin) and "BackdropTemplate" or nil)
     dd:SetSize(width, W.DROPDOWN_H)
-    if dd.SetBackdrop then
-      dd:SetBackdrop(W.BACKDROP)
-      dd:SetBackdropColor(0.04, 0.03, 0.02, 0.95)
-      dd:SetBackdropBorderColor(0.54, 0.43, 0.2, 1)
+    if themed then
+      -- the pill: night-2, gold line border, radius 4, a gold ▾ on the right
+      ns.Theme.box(dd, "night2", "line", 4)
+      dd.arrow = ns.Theme.glyph(dd, "Chevron", 14, "gold")
+      dd.arrow:SetPoint("RIGHT", -8, 0)
+      local hl = ns.Theme.slice(dd, ns.Theme.TEX .. "Fill4", 4, "HIGHLIGHT")
+      for _, t in ipairs(hl) do t:SetVertexColor(ns.Theme.rgb("goldHi")); t:SetAlpha(0.08) end
+    else
+      if dd.SetBackdrop then
+        dd:SetBackdrop(W.BACKDROP)
+        dd:SetBackdropColor(0.04, 0.03, 0.02, 0.95)
+        dd:SetBackdropBorderColor(0.54, 0.43, 0.2, 1)
+      end
+      dd.arrow = dd:CreateTexture(nil, "ARTWORK")
+      dd.arrow:SetSize(16, 16)
+      dd.arrow:SetPoint("RIGHT", -4, 0)
+      dd.arrow:SetTexture("Interface\\ChatFrame\\UI-ChatIcon-ScrollDown-Up")
+      local hl = dd:CreateTexture(nil, "HIGHLIGHT")
+      hl:SetPoint("TOPLEFT", 3, -3)
+      hl:SetPoint("BOTTOMRIGHT", -3, 3)
+      hl:SetColorTexture(1, 0.82, 0, 0.12)
     end
-    dd.arrow = dd:CreateTexture(nil, "ARTWORK")
-    dd.arrow:SetSize(16, 16)
-    dd.arrow:SetPoint("RIGHT", -4, 0)
-    dd.arrow:SetTexture("Interface\\ChatFrame\\UI-ChatIcon-ScrollDown-Up")
-    local hl = dd:CreateTexture(nil, "HIGHLIGHT")
-    hl:SetPoint("TOPLEFT", 3, -3)
-    hl:SetPoint("BOTTOMRIGHT", -3, 3)
-    hl:SetColorTexture(1, 0.82, 0, 0.12)
-    dd.label = W.line(dd, "GameFontHighlightSmall", nil, W.TEXT)
+    dd.label = W.line(dd, "GameFontHighlight", 12, W.TEXT)
     dd.label:SetPoint("LEFT", 8, 0)
     dd.label:SetPoint("RIGHT", dd.arrow, "LEFT", -2, 0)
     dd:SetScript("OnClick", function(self) if self:IsEnabled() then openList(self) end end)

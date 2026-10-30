@@ -61,7 +61,7 @@ local function copyProblems(W, root, what)
           if rawget(f, "wbxName") then
             local r = W.rect(f)
             local width = r and (r[3] - r[1]) / W.factor(f) or nil
-            local need = W.textLines(f._text, f._fontSize or 12, width)
+            local need = W.textLines(f._text, f._fontSize or 12, width, f._ratio)
             local room = rawget(f, "_maxLines") or 1
             if f._wrap == false then room = 1 end
             if text:find("…", 1, true) or text:find("%.%.%.") or need > room then out[#out + 1] = what .. ": name cut off: \"" .. text .. "\"" end

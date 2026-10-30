@@ -76,12 +76,12 @@ function Layout.check(W, roots, opts)
               local k = W.factor(f)
               local size = (f._fontSize or 12)
               local width = (r[3] - r[1]) / k
-              local need = W.textLines(f._text, size, f._wrap ~= false and width or nil)
+              local need = W.textLines(f._text, size, f._wrap ~= false and width or nil, f._ratio)
               local room = math.floor(((r[4] - r[2]) / k + 0.5) / (size + 2) + 0.01)
               if f._wrap ~= false and need > room and (not f._maxLines or f._maxLines == 0 or f._maxLines > room) then
                 add("text cut off (" .. need .. " lines, room for " .. room .. "): " .. label(W, f))
               end
-              if f._wrap == false and not rawget(f, "wbxTrunc") and W.textWidth(f._text, size) > width + TOL then
+              if f._wrap == false and not rawget(f, "wbxTrunc") and W.textWidth(f._text, size, f._ratio) > width + TOL then
                 -- single line wider than its box: the client cuts it with "...". Allowed only when marked (fs.wbxTrunc = full text in a tooltip).
                 add("text truncated without a tooltip: " .. label(W, f))
               end
@@ -96,7 +96,8 @@ function Layout.check(W, roots, opts)
               local c = clip(W, f, r)
               if c then buttons[#buttons + 1] = { f = f, r = c } end
               if f._kind == "Button" and f._text and plain(W, f._text) ~= "" then
-                local tw = W.textWidth(f._text, 12) * W.factor(f)
+                local o = f._fontObject
+                local tw = W.textWidth(f._text, o and o._fontSize or 12, o and o._ratio) * W.factor(f)
                 if tw + 8 > r[3] - r[1] + TOL then add(string.format("button label wider than the button (%d > %d): %s", tw + 8, r[3] - r[1], label(W, f))) end
               end
             end

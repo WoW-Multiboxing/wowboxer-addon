@@ -116,9 +116,18 @@ do
   H.ok(found and found.body:find("!Auto Shot", 1, true) and found.body:find("/petattack", 1, true), "Hunter Shots key: pet + Auto Shot: " .. tostring(found and found.body))
 end
 
--- ------------------------------------------------------------------ Blizzard's dropdown when the client has it
+-- ------------------------------------------------------------------ the war table look: our pill on every client
+do
+  local _, ns = boot({ class = "PALADIN", level = 20, menu = true })
+  ns.UI.Open("keys")
+  local dd = ns.UI.panels.keys.role
+  H.ok(not dd.isBlizzard and dd.wbxBox ~= nil, "themed: own pill dropdown also where the menu system exists (docs/ui-redesign.md §3)")
+end
+
+-- ------------------------------------------------------------------ Blizzard's dropdown (old look only)
 do
   local W, ns = boot({ class = "PALADIN", level = 20, menu = true })
+  ns.Widgets.forceOldLook = true -- the menu system is only used without the war table skins
   local UI = ns.UI
   UI.Open("keys")
   local p = UI.panels.keys
