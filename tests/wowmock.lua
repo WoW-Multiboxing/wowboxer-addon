@@ -267,7 +267,7 @@ function Mock.new(H, opts)
   -- width of each font relative to the game font (W.fontFactor): ours measured with fontTools, plus a margin
   W.FONT_RATIO = { ["Inter-Regular"] = 1.0, ["Inter-SemiBold"] = 1.02, ["Cinzel-Bold"] = 1.3 }
   local function ratioOf(file) for k, v in pairs(W.FONT_RATIO) do if file and file:find(k, 1, true) then return v end end return nil end
-  function methods:GetFont() return self._fontFile or "Fonts\FRIZQT__.TTF", fontSize(self), "" end
+  function methods:GetFont() return self._fontFile or "Fonts\\FRIZQT__.TTF", fontSize(self), "" end
   function methods:SetFont(file, size) if size then self._fontSize = size end self._fontFile = file; self._ratio = ratioOf(file); return true end
   function methods:SetFontObject(o)
     if type(o) == "table" and o._kind == "Font" then self._fontSize, self._fontFile, self._ratio = o._fontSize, o._fontFile, o._ratio
@@ -488,7 +488,7 @@ function Mock.new(H, opts)
     return false
   end
   env.CreateFont = function(name) local o = newFrame("Font", name); o._fontSize = 12; return o end
-  env.STANDARD_TEXT_FONT = "Fonts\FRIZQT__.TTF"
+  env.STANDARD_TEXT_FONT = "Fonts\\FRIZQT__.TTF"
   env.UIParent = newFrame("Frame", "UIParent")
   W.screen = opts.screen or { w = 1365, h = 768 }
   env.UIParent._w, env.UIParent._h = W.screen.w, W.screen.h
