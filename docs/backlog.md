@@ -1,10 +1,7 @@
 # WoWBoxer addon – backlog
 
-## The owner: TEST BUILD 0.13.0-test.7 (7c18cb2) – new look + on/off, contrast, hover (§2). Restart WoW first
-1. Hover the left rail and a dropdown's items: lighter background, text stays readable; the selected page stays ui-gold.
-2. Automation: ON rows are green with the word ON, OFF rows flat grey with OFF; every button/tick/dropdown is easy to see.
-3. Standard | Advanced → Advanced: "Turn on Advanced" grey until you tick "I understand" (click the words), then red.
-4. Rail → Discord / `/wbx report` copy box works; then `/wbx shots` in each client (~30 s, hands off), `/reload`, "shots done".
+## The owner: v0.13.0 is live – one thing left for the website and CurseForge gallery
+1. In each client (Classic Era and Forever): `/wbx shots`, hands off ~30 s, then `/reload` and tell Claude "shots done".
 
 Still open from test 1 (same build, behaviour unchanged): follower Setup → Apply; Paladin **Fix now**; guide restart; header **Reset**.
 
