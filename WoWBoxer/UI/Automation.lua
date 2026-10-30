@@ -1,6 +1,6 @@
 --[[ WoWBoxer – the Automation bookmark (docs/automation-policy.md §2, docs/feedback-2026-10-30-night.md §5–§6): "Accept
   from" at the top (used by every accept), one tick per automation with one line about what it does, All on / All off,
-  the "Levelling squad" preset and the reward rule. Options live in WoWBoxerDB.settings.auto (account-wide). ]]
+  the "Default squad values" preset and the reward rule. Options live in WoWBoxerDB.settings.auto (account-wide). ]]
 local _, ns = ...
 local UI, W = ns.UI, ns.Widgets
 local AP = {}
@@ -100,7 +100,7 @@ function tab.build(p)
     get = function() return AU().rewardRule() end, set = function(v) settings().autoReward = v; UI.Refresh() end })
   p.reward:SetPoint("BOTTOMRIGHT", -2, 4)
   W.ddTip(p.reward, "Quest rewards", "When a quest offers a choice: the leader's pick, the best vendor value, or ask.")
-  p.preset = W.button(p, "Levelling squad", 130, 24, function() AU().preset(); ns.Core.log("info", "automation preset: levelling squad"); UI.Refresh() end,
+  p.preset = W.button(p, "Default squad values", 150, 24, function() AU().preset(); ns.Core.log("info", "automation preset: default squad values"); UI.Refresh() end,
     "Turns on invites, quests, quest sharing and turn-in, dialogs, resurrections, summons, role checks, selling junk and repairing.")
   p.preset.wbxBig = true
   W.primary(p.preset)

@@ -222,7 +222,7 @@ do
   f.preset:Click()
   local on = {}
   for _, c in ipairs(f.ticks) do if c:GetChecked() then on[#on + 1] = c.key end end
-  H.eq(table.concat(on, ","), "invite,quests,share,turnin,dialog,res,summon,rolecheck,sell,repair,chat", "Levelling squad preset")
+  H.eq(table.concat(on, ","), "invite,quests,share,turnin,dialog,res,summon,rolecheck,sell,repair,chat", "Default squad values preset")
   f.allOff:Click()
   for _, c in ipairs(f.ticks) do H.ok(not c:GetChecked(), "All off: " .. c.key) end
   f.allOn:Click()
@@ -293,12 +293,12 @@ do
   local W, ns = boot("Anna")
   local AU = ns.Auto
   H.ok(AU.nudge(), "automation off in a squad: the nudge")
-  H.ok(ns.UI.popup.text:GetText():find("Automation is off – turn on Levelling squad?", 1, true), "the question")
+  H.ok(ns.UI.popup.text:GetText():find("Automation is off – turn on Default squad values?", 1, true), "the question")
   local labels = {}
   for _, b in ipairs(ns.UI.popup.btns) do if b:IsShown() then labels[#labels + 1] = b:GetText() end end
   H.eq(table.concat(labels, ","), "Yes,Choose…,Not now", "Yes / Choose… / Not now")
   ns.UI.popup.btns[1]:Click()
-  H.ok(AU.on("quests") and AU.on("dialog"), "Yes: Levelling squad")
+  H.ok(AU.on("quests") and AU.on("dialog"), "Yes: Default squad values")
   H.ok(not AU.nudge(), "only once per character")
   local str = ns.Core.exportString()
   local res = ns.Share.import(str)

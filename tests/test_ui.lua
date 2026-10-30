@@ -60,7 +60,7 @@ for _, scenario in ipairs({
   local onBar = 0
   for slot = 1, 12 do if (W.slotMacroName(slot) or ""):sub(1, 3) == "WBX" then onBar = onBar + 1 end end
   H.ok(onBar > 0, tag .. "keys on action bar 1")
-  H.ok(anyText(W, "^Step 3 of 4") ~= nil and findButton(W, "Levelling squad") ~= nil, tag .. "guide step 3: automation")
+  H.ok(anyText(W, "^Step 3 of 4") ~= nil and findButton(W, "Default squad values") ~= nil, tag .. "guide step 3: automation")
   findButton(W, "Next"):Click()
   H.ok(anyText(W, "^Step 4 of 4") ~= nil, tag .. "guide step 4")
   findButton(W, "Close"):Click()

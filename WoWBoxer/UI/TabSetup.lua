@@ -163,6 +163,7 @@ function tab.refresh(p)
     r.mark:SetTextColor(col[1], col[2], col[3])
     r.fixFn = it.fix and it.fix.fn or false
     local tw = LEFT_W - 28 - 20
+    r.fix.wbxBig = (it.fix and it.fix.big) or nil -- a named preset may be 3 words (the page's big action)
     if it.fix then W.setLabel(r.fix, it.fix.label); r.fix:Show(); tw = tw - r.fix:GetWidth() - 6 else r.fix:Hide() end
     r.text:SetWidth(tw)
     r.text:SetText(it.text)

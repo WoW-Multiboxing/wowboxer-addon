@@ -521,8 +521,8 @@ function AU.nudge()
   local s = Core().me()
   if not cdb or cdb.autoNudged or AU.anyOn() or not (s and #s.members >= 2) or not (ns.UI and ns.UI.Popup) then return false end
   cdb.autoNudged = true
-  ns.UI.Popup("Automation is off – turn on Levelling squad? Invites, quests, dialogs, resurrections, summons and the vendor, for your squad only.", {
-    { "Yes", function() AU.preset(); Core().log("info", "automation: levelling squad (nudge)"); Core().changed() end, "Turns on the Levelling squad preset." },
+  ns.UI.Popup("Automation is off – turn on Default squad values? Invites, quests, dialogs, resurrections, summons and the vendor, for your squad only.", {
+    { "Yes", function() AU.preset(); Core().log("info", "automation: default squad values (nudge)"); Core().changed() end, "Turns on the Default squad values preset." },
     { "Choose…", function() ns.UI.Open("automation") end, "Opens the Automation page: one tick per automation." },
     { "Not now", function() end, "Does not ask again on this character. Automation is in the book." } })
   Core().log("info", "automation nudge shown")

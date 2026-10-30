@@ -71,8 +71,8 @@ function CL.items()
       heard == #s.members - 1 and "The team panel shows follow, target and mana. Display only." or "Clients without WoWBoxer (or not grouped yet) show 'no signal'.")
   end
   if ns.Auto and #s.members > 1 and not ns.Auto.anyOn() then
-    add(nil, "Automation is off", "Invites, quests, dialogs, summons and the vendor for your squad: turn on Levelling squad, or choose on the Automation page.",
-      { label = "Levelling squad", fn = function() ns.Auto.preset(); Core.log("info", "automation: levelling squad (checklist)"); Core.changed() end })
+    add(nil, "Automation is off", "Invites, quests, dialogs, summons and the vendor for your squad: turn on Default squad values, or choose on the Automation page.",
+      { label = "Default squad values", big = true, fn = function() ns.Auto.preset(); Core.log("info", "automation: default squad values (checklist)"); Core.changed() end })
   end
   local changes = 0
   for _, cv in ipairs(Core.cvarPlan(Core.cdb.importCVars)) do if cv.status == "change" then changes = changes + 1 end end

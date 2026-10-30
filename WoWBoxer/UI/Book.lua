@@ -1287,8 +1287,8 @@ function Book.buildGuide(p)
   g.back:SetPoint("BOTTOMLEFT", 16, 16)
   g.done = W.button(g, "Close", 90, 26, function() Book.closeGuide(p) end, "Closes the guide and shows your macros.")
   -- step 3: automation (docs/feedback-2026-10-30-night.md §6)
-  g.autoPreset = W.button(g, "Levelling squad", 130, 28, function()
-    if ns.Auto then ns.Auto.preset(); Core().log("info", "guide: automation preset levelling squad") end
+  g.autoPreset = W.button(g, "Default squad values", 150, 28, function()
+    if ns.Auto then ns.Auto.preset(); Core().log("info", "guide: automation preset default squad values") end
     g.step = 4; Core().cdb.guideStep = 4; UI.Refresh()
   end, "Turns on: accept invites, quests, quest sharing and turn-in, dialogs, resurrections, summons, role checks, selling junk and repairing – for your squad only.")
   g.autoPreset.wbxBig = true
@@ -1366,7 +1366,7 @@ function Book.refreshGuide(p, ctx)
     g.place:SetEnabled(not ns.Compat.inCombat())
   elseif g.step == 3 then
     g.title:SetText("Step 3 of 4 – Automation")
-    g.text:SetText("Pick Levelling squad, or choose each automation yourself.")
+    g.text:SetText("Pick Default squad values, or choose each automation yourself.")
     g.autoPreset:Show(); g.autoChoose:Show(); g.next:Show()
   else
     g.title:SetText("Step 4 of 4 – Done")
