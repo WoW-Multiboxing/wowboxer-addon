@@ -57,7 +57,9 @@ local function dump(name, roots)
         else
           if f._text and f._text ~= "" then
             it.k, it.text, it.size, it.font, it.color = "text", f._text, f._fontSize or 12, f._fontFile or "game", f._textColor
-            it.justify, it.wrap = f._justifyH or "CENTER", f._wrap ~= false
+            it.justify, it.wrap, it.justifyV = f._justifyH or "CENTER", f._wrap ~= false, f._justifyV or "MIDDLE"
+            -- a one-line text with a fixed width is cut with "…" in the game (W.line)
+            it.trunc = rawget(f, "wbxTrunc") and (f._wSet or #(f._points or {}) > 1) or nil
           end
         end
         if it.k then items[#items + 1] = it end

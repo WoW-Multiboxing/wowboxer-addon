@@ -123,7 +123,7 @@ local function railRow(rail, tab, i)
   end
   b.iconBox = CreateFrame("Frame", nil, b)
   b.iconBox:SetSize(22, 22)
-  b.iconBox:SetPoint("LEFT", 8, 0)
+  b.iconBox:SetPoint("LEFT", 6, 0)
   if themed then T.box(b.iconBox, "panel", "line", 4) end
   b.icon = b.iconBox:CreateTexture(nil, "ARTWORK")
   b.icon:SetPoint("TOPLEFT", 2, -2)
@@ -131,11 +131,11 @@ local function railRow(rail, tab, i)
   if b.icon.SetTexCoord then b.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) end
   W.setIcon(b.icon, tab.icon)
   b.badge = W.text(b, "GameFontNormalSmall", 10, W.ORANGE, "RIGHT")
-  b.badge:SetPoint("RIGHT", -8, 0)
+  b.badge:SetPoint("RIGHT", -6, 0)
   b.badge.wbxCopy = "status"
   b.label = W.line(b, "GameFontNormal", 13, W.TEXT)
-  b.label:SetPoint("LEFT", b.iconBox, "RIGHT", 10, 0)
-  b.label:SetPoint("RIGHT", b.badge, "LEFT", -4, 0)
+  b.label:SetPoint("LEFT", b.iconBox, "RIGHT", 8, 0)
+  b.label:SetPoint("RIGHT", b.badge, "LEFT", -2, 0)
   b.label:SetText(tab.label)
   b.label.wbxCopy = "label"
   -- selected: panel-3 fill, gold label and icon rim, a gold accent on the left

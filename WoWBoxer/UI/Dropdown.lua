@@ -235,6 +235,7 @@ W.SEQ_CLASSES = "Every class has built-in sequence macros – make your own unde
 W.SEQ_KINDS = "Sequence macro: each press casts the next spell of a fixed order (DoTs first, then the filler). " ..
   "Priority macro: each press casts the first spell in the list that is ready (Execute, Revenge, Stormstrike …)."
 local SEQ_LABEL = "Use sequence macros"
+local SEQ_LABEL_SHORT = "Sequence macros" -- next to the toggle switch (the war table look)
 --- opts: {member=fn -> m, set=fn(m, tier)? (default: m.seq = tier + Core.changed()), width (dropdown, default 100)}.
 --- A frame (check + tier dropdown, or a note for classes without sequences) with Refresh() and its own width.
 function W.seqControl(parent, opts)
@@ -243,7 +244,7 @@ function W.seqControl(parent, opts)
   local function set(m, tier)
     if opts.set then opts.set(m, tier) else m.seq = tier; ns.Core.log("info", "sequence macros " .. tier); ns.Core.changed() end
   end
-  f.check = W.check(f, SEQ_LABEL, function(_, v)
+  f.check = (W.themed() and W.toggle or W.check)(f, W.themed() and SEQ_LABEL_SHORT or SEQ_LABEL, function(_, v)
     local m = opts.member()
     if not m then return end
     if v then set(m, (m.seqTier and m.seqTier ~= "off") and m.seqTier or "simple")
@@ -271,7 +272,12 @@ function W.seqControl(parent, opts)
   f.noteHit = CreateFrame("Frame", nil, f)
   f.noteHit:SetAllPoints(f.note)
   W.tip(f.noteHit, SEQ_LABEL, W.SEQ_CLASSES)
-  f:SetSize(22 + 2 + W.measure(SEQ_LABEL, "GameFontHighlightSmall") + 6 + ddW, W.DROPDOWN_H)
+  if W.themed() then
+    ns.Theme.font(f.check.label, "body", 12)
+    f:SetSize(30 + 8 + W.measure(SEQ_LABEL_SHORT, "GameFontHighlight") + 6 + ddW, W.DROPDOWN_H)
+  else
+    f:SetSize(22 + 2 + W.measure(SEQ_LABEL, "GameFontHighlightSmall") + 6 + ddW, W.DROPDOWN_H)
+  end
   function f.Refresh()
     local m = opts.member()
     local ok = (m and ns.Engine.seqSupported(m.cls)) and true or false

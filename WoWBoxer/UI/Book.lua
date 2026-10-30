@@ -7,14 +7,17 @@
   character. ]]
 local _, ns = ...
 local UI, W = ns.UI, ns.Widgets
+local T = ns.Theme
 local Book = {}
 ns.Book = Book
 
-local PAGE_GAP = 16                       -- spine + margins between the two pages
-local CELL_W, CELL_H, PITCH = 158, 40, 44 -- spell buttons (37 px icon)
+-- the war table look (docs/ui-redesign.md §3): spells are cards (icon with a key chip, the name in the game font, the
+-- state as a coloured word under it), the next step is a banner card with the page's red primary button
+local PAGE_GAP = 16                       -- divider + margins between the two pages
+local CELL_W, CELL_H, PITCH = 158, 40, 44 -- spell cards (32 px icon)
 local HELP_W, HELP_H, HELP_PITCH = 160, 30, 32
 local RULE_H = 20
-local TOP_H, BOTTOM_H = 36, 30
+local TOP_H, BOTTOM_H = 46, 30            -- banner (40) + gap; pager / footer
 local function Core() return ns.Core end
 
 --- Width of one page, x of the right page, panel height (design units).
@@ -65,7 +68,7 @@ function Book.barStatus(it, b)
   if it.status == "create" then return { glow = true, dim = not placed, word = st[1], color = st[2] } end
   if it.status == "update" then return { dot = W.ORANGE, dim = not placed, word = st[1], color = st[2] } end
   if not placed then return { dim = true, word = "Not on a bar", color = W.ORANGE } end
-  return { word = "Up to date", color = W.GREEN }
+  return { word = "On bar", color = W.GREEN }
 end
 
 --- The leader's name as this member sees it ("the leader" when unknown or self).
@@ -648,23 +651,35 @@ local function makeCell(p, parent, small)
   b.small = small
   b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
   b:RegisterForDrag("LeftButton")
+  local themed = W.themed()
+  if themed then S = small and 24 or 32 end
+  if themed then T.box(b, "panel2", "lineSoft", 6) end
   b.slotBg = b:CreateTexture(nil, "BACKGROUND")
   b.slotBg:SetSize(S + 2, S + 2)
-  b.slotBg:SetPoint("LEFT", 2, 0)
-  b.slotBg:SetColorTexture(0, 0, 0, 0.55)
-  b.icon = W.icon(b, S, small)
+  b.slotBg:SetPoint("LEFT", themed and 3 or 2, 0)
+  b.slotBg:SetColorTexture(0, 0, 0, themed and 0 or 0.55)
+  b.icon = W.icon(b, S, small or themed)
   b.icon:SetPoint("CENTER", b.slotBg, "CENTER", 0, 0)
-  if small then b.icon.border:SetColorTexture(0.72, 0.74, 0.78, 1) end
+  if small and not themed then b.icon.border:SetColorTexture(0.72, 0.74, 0.78, 1) end
   b.multi = W.composite(b, b.icon)
   b.frame = b:CreateTexture(nil, "OVERLAY")
   b.frame:SetSize(S * 1.8, S * 1.8)
   b.frame:SetPoint("CENTER", b.slotBg, "CENTER", 0, 0)
   b.frame:SetTexture("Interface\\Buttons\\UI-Quickslot2")
-  if small then b.frame:Hide() end
-  -- the key on the icon, like an action bar hotkey (white, top-left)
-  b.hot = W.line(b, "NumberFontNormal", small and 9 or 10, { 1, 1, 1 })
-  b.hot:SetPoint("TOPLEFT", b.slotBg, "TOPLEFT", 2, -2)
-  b.hot:SetPoint("TOPRIGHT", b.slotBg, "TOPRIGHT", -2, -2)
+  if small or themed then b.frame:Hide(); b.frame.SetVertexColor = function() end; b.frame.SetAlpha = function() end end
+  -- the keybind: a small chip at the bottom right of the icon (themed), else white top-left like an action bar hotkey
+  b.hotBox = CreateFrame("Frame", nil, b)
+  b.hotBox:SetSize(16, 14)
+  if themed then
+    T.box(b.hotBox, "night", "line", 3)
+    b.hotBox:SetPoint("BOTTOMRIGHT", b.slotBg, "BOTTOMRIGHT", 3, -1)
+    b.hot = W.line(b.hotBox, "GameFontNormalSmall", small and 9 or 10, W.PARCHMENT, "CENTER")
+    b.hot:SetPoint("CENTER", 0, 0)
+  else
+    b.hot = W.line(b, "NumberFontNormal", small and 9 or 10, { 1, 1, 1 })
+    b.hot:SetPoint("TOPLEFT", b.slotBg, "TOPLEFT", 2, -2)
+    b.hot:SetPoint("TOPRIGHT", b.slotBg, "TOPRIGHT", -2, -2)
+  end
   b.hot.wbxCopy = "data"
   b.badge = W.text(b, "GameFontHighlightSmall", 8, { 0.85, 0.72, 1 })
   b.badge:SetPoint("BOTTOMLEFT", b.slotBg, "BOTTOMLEFT", 2, 2)
@@ -700,14 +715,25 @@ local function makeCell(p, parent, small)
   b.tint:SetAllPoints()
   b.tint:SetColorTexture(0.3, 0.36, 0.55, 0.16)
   b.tint:Hide()
-  b.sel = b:CreateTexture(nil, "BACKGROUND")
-  b.sel:SetAllPoints()
-  b.sel:SetColorTexture(1, 0.82, 0, 0.13)
-  local hl = b:CreateTexture(nil, "HIGHLIGHT")
-  hl:SetAllPoints()
-  hl:SetColorTexture(1, 1, 1, 0.07)
+  if themed then
+    -- selected: a gold rim on the card; hover: a soft gold wash
+    b.sel = CreateFrame("Frame", nil, b)
+    b.sel:SetAllPoints()
+    T.box(b.sel, "none", "gold", 6)
+    local hl = T.slice(b, T.TEX .. "Fill6", 6, "HIGHLIGHT")
+    for _, t in ipairs(hl) do t:SetVertexColor(T.rgb("goldHi")); t:SetAlpha(0.07) end
+    b.tint:SetColorTexture(T.rgb("panel3"))
+  else
+    b.sel = b:CreateTexture(nil, "BACKGROUND")
+    b.sel:SetAllPoints()
+    b.sel:SetColorTexture(1, 0.82, 0, 0.13)
+    local hl = b:CreateTexture(nil, "HIGHLIGHT")
+    hl:SetAllPoints()
+    hl:SetColorTexture(1, 1, 1, 0.07)
+  end
   if small then
-    b.name = W.text(b, "GameFontHighlight", 11, { 0.8, 0.8, 0.8 })
+    b.name = W.text(b, "GameFontHighlight", 11, themed and W.PARCHMENT or { 0.8, 0.8, 0.8 })
+    W.gameFont(b.name)
     b.name:SetPoint("LEFT", b.slotBg, "RIGHT", 6, 0)
     b.name:SetPoint("RIGHT", b, "RIGHT", -24, 0)
     -- squad keys: the player ticks which ones this character gets
@@ -718,7 +744,8 @@ local function makeCell(p, parent, small)
     W.tip(b.tick, "Squad macro", function() return (b.cell and b.cell.on) and "Ticked: WoWBoxer makes this macro. Untick to leave it out." or "Tick to make this macro." end)
     if b.name.SetMaxLines then b.name:SetMaxLines(1) end
   else
-    b.name = W.text(b, "GameFontNormal", nil, W.GOLD)
+    b.name = W.text(b, "GameFontNormal", nil, themed and W.PARCHMENT or W.GOLD)
+    W.gameFont(b.name) -- spell names keep the game font (every locale)
     b.name:SetWidth(CELL_W - S - 13)
     if b.name.SetMaxLines then b.name:SetMaxLines(2) end
     b.sub = W.line(b, "GameFontHighlightSmall", nil, W.MUTED)
@@ -754,6 +781,8 @@ local function paintCell(p, b, c)
   if c.icons then b.multi.set(c.icons, b.small and 26 or 35); b.icon:SetAlpha(0) else b.multi.Hide() end
   b.badge:SetText(c.badge or ""); b.badge:SetShown(c.badge ~= nil); b.badgeBg:SetShown(c.badge ~= nil)
   b.hot:SetText(c.hot or "")
+  b.hotBox:SetShown(not W.themed() or (c.hot or "") ~= "")
+  if W.themed() then b.hotBox:SetWidth(math.max(16, math.ceil((b.hot:GetStringWidth() or 8) + 8))) end
   b.name:SetText(c.label)
   local grey = b.small or st.off
   if b.icon.SetDesaturated then b.icon:SetDesaturated(grey and true or false) end
@@ -767,17 +796,22 @@ local function paintCell(p, b, c)
   if not b.small then
     if c.badge then b.frame:SetVertexColor(0.72, 0.55, 1) else b.frame:SetVertexColor(1, 1, 1) end
     b.frame:SetAlpha(st.dim and 0.35 or 1)
-    -- one line when the name needs two; the second line only when it adds something
+    -- one line when the name needs two; the second line only when it adds something. The war table look shows the
+    -- state there as a coloured word (§2: never colour alone); sequences and later spells keep their own line.
     local two = (b.name:GetStringWidth() or 0) > CELL_W - 48 + 0.5
-    local showSub = not two and (c.sub or "") ~= ""
-    b.sub:SetText(showSub and c.sub or "")
+    local subText, sc = c.sub, c.badge and { 0.85, 0.72, 1 } or st.subColor or W.MUTED
+    if W.themed() and not (c.d and c.d.steps and #c.d.steps > 1) and not (c.d and c.d.pending) and st.word then
+      subText = (c.item and c.item.status == "update") and "Changed · update" or st.word
+      sc = st.color or W.MUTED
+    end
+    local showSub = not two and (subText or "") ~= ""
+    b.sub:SetText(showSub and subText or "")
     b.sub:SetShown(showSub)
-    local sc = c.badge and { 0.85, 0.72, 1 } or st.subColor or W.MUTED
     b.sub:SetTextColor(sc[1], sc[2], sc[3])
     b.name:ClearAllPoints()
     if showSub then b.name:SetPoint("TOPLEFT", b.slotBg, "TOPRIGHT", 7, -2)
     else b.name:SetPoint("LEFT", b.slotBg, "RIGHT", 7, 0) end
-    local nc = st.locked and { 0.55, 0.56, 0.6 } or st.off and W.MUTED or W.GOLD
+    local nc = st.locked and { 0.55, 0.56, 0.6 } or st.off and W.MUTED or (W.themed() and W.PARCHMENT or W.GOLD)
     b.name:SetTextColor(nc[1], nc[2], nc[3])
   else
     b.icon.border:SetAlpha(st.dim and 0.35 or 1)
@@ -787,7 +821,7 @@ local function paintCell(p, b, c)
   end
   b.dot:SetShown(st.dot ~= nil)
   if st.dot then b.dot:SetVertexColor(st.dot[1], st.dot[2], st.dot[3]) end
-  b.glow:SetShown(st.glow and true or false)
+  b.glow:SetShown((st.glow and not W.themed()) and true or false) -- the war table look says "New macro" in words
   local id = c.name or nil
   b.sel:SetShown(p.mode == "keys" and id ~= nil and id == p.selected)
   b:Show()
@@ -797,14 +831,14 @@ end
 local function makeRule(parent, width)
   local r = CreateFrame("Frame", nil, parent)
   r:SetSize(width, RULE_H - 4)
-  r.text = W.text(r, "GameFontNormalSmall", nil, W.GOLD)
+  r.text = W.text(r, W.themed() and "GameFontNormalLarge" or "GameFontNormalSmall", W.themed() and 13 or nil, W.GOLD)
   r.text:SetPoint("LEFT", 0, 0)
   r.text.wbxCopy = "label"
   r.line = r:CreateTexture(nil, "ARTWORK")
   r.line:SetHeight(1)
-  r.line:SetPoint("LEFT", r.text, "RIGHT", 6, 0)
+  r.line:SetPoint("LEFT", r.text, "RIGHT", 8, 0)
   r.line:SetPoint("RIGHT", r, "RIGHT", 0, 0)
-  r.line:SetColorTexture(1, 0.82, 0, 0.35)
+  if W.themed() then r.line:SetColorTexture(T.rgb("lineSoft")) else r.line:SetColorTexture(1, 0.82, 0, 0.35) end
   r.wbxRule = true
   return r
 end
@@ -852,16 +886,28 @@ local function build(p, mode)
 
   -- banner (left page): the next step, ≤ 8 words, the sentence in the tooltip
   p.strip = W.box(p.left, 0.13, 0.17, 0.08, 0.95)
+  if W.themed() then T.paint(p.strip, nil, "line") end
   p.strip:SetPoint("TOPLEFT", 0, 0)
-  p.strip:SetSize(PW, 28)
-  p.stepBtn = W.button(p.strip, "Place all", 80, 22, function() if p.stepFn then p.stepFn() end end)
-  p.stepBtn:SetPoint("RIGHT", -3, 0)
+  p.strip:SetSize(PW, TOP_H - 6)
+  p.stepBtn = W.button(p.strip, "Place all", 80, 26, function() if p.stepFn then p.stepFn() end end)
+  W.primary(p.stepBtn)
+  p.stepBtn:SetPoint("RIGHT", -7, 0)
   W.tip(p.stepBtn, function() return p.stepBtn:GetText() end, function() return p.stepBtnTip end)
-  p.stepText = W.text(p.strip, "GameFontHighlight", nil, W.TEXT)
-  p.stepText:SetPoint("LEFT", 8, 0)
-  p.stepText:SetPoint("RIGHT", p.stepBtn, "LEFT", -6, 0)
+  -- a state mark (warn "!" while there is something to do, ok check when not), the step in bold + one muted line
+  p.stepMark = p.strip:CreateTexture(nil, "ARTWORK")
+  p.stepMark:SetTexture(T.TEX .. "CircleRing")
+  p.stepMark:SetSize(20, 20)
+  p.stepMark:SetPoint("LEFT", 10, 0)
+  p.stepMarkText = W.text(p.strip, "GameFontNormal", 12, W.ORANGE, "CENTER")
+  p.stepMarkText:SetPoint("CENTER", p.stepMark, "CENTER", 0, 0)
+  p.stepMarkText:SetText("!")
+  p.stepText = W.text(p.strip, "GameFontNormal", 12, W.PARCHMENT)
+  p.stepText:SetPoint("TOPLEFT", 40, -6)
   if p.stepText.SetMaxLines then p.stepText:SetMaxLines(1) end
   p.stepText.wbxCopy = "hint"
+  p.stepSub = W.line(p.strip, "GameFontHighlightSmall", 11, W.MUTED)
+  p.stepSub:SetPoint("BOTTOMLEFT", 40, 6)
+  p.stepSub.wbxCopy = "data" -- the step's tooltip text, cut to one line
   local stepHit = CreateFrame("Frame", nil, p.strip)
   stepHit:SetAllPoints(p.stepText)
   W.tooltip(stepHit, function(GT) GT:AddLine(p.stepText:GetText() or "", 1, 0.82, 0); if p.stepTip then GT:AddLine(p.stepTip, 1, 1, 1, true) end end)
@@ -912,13 +958,22 @@ local function build(p, mode)
     p.detDesc:SetWidth(PW)
     if p.detDesc.SetMaxLines then p.detDesc:SetMaxLines(2) end
     p.detDesc.wbxCopy = "sentence"
-    p.detMacro = W.text(p.det, "GameFontHighlightSmall", 9, { 0.6, 0.66, 0.52 })
-    p.detMacro:SetPoint("TOPLEFT", p.detDesc, "BOTTOMLEFT", 0, -5)
-    p.detMacro:SetPoint("BOTTOMRIGHT", p.det, "BOTTOMRIGHT", 0, 28)
+    p.detMacro = W.text(p.det, "GameFontHighlightSmall", 9, W.themed() and W.TEXT or { 0.6, 0.66, 0.52 })
+    W.gameFont(p.detMacro)
+    p.detMacro:SetPoint("TOPLEFT", p.detDesc, "BOTTOMLEFT", 6, -10)
+    p.detMacro:SetPoint("BOTTOMRIGHT", p.det, "BOTTOMRIGHT", -6, 34)
+    if W.themed() then
+      -- macro text in a tooltip-style box (§3)
+      p.detMacroBox = CreateFrame("Frame", nil, p.det)
+      p.detMacroBox:SetPoint("TOPLEFT", p.detMacro, "TOPLEFT", -6, 5)
+      p.detMacroBox:SetPoint("BOTTOMRIGHT", p.detMacro, "BOTTOMRIGHT", 6, -5)
+      T.box(p.detMacroBox, "ttBg", "ttEdge", 6)
+      p.detMacroBox:SetFrameLevel(math.max(0, (p.det:GetFrameLevel() or 1)))
+    end
     p.detMacro:SetJustifyV("TOP")
     if p.detMacro.SetNonSpaceWrap then p.detMacro:SetNonSpaceWrap(true) end
     p.detMacro.wbxCopy = "data"
-    p.bind = W.button(p.det, "Set keybind", 76, 22, function() if p.selected then p.capture:Start(p.selected, p.selLabel) end end,
+    p.bind = W.button(p.det, "Set keybind", 76, 24, function() if p.selected then p.capture:Start(p.selected, p.selLabel) end end,
       "Press a key to run this macro directly, also when it is not on a bar. Saved for this character only. Right-click a macro for more.")
     p.bind:SetPoint("BOTTOMLEFT", 0, 0)
     -- one Place button per page: the left page's spells, the right page's squad keys (same rules as Place all)
@@ -926,9 +981,11 @@ local function build(p, mode)
       "Creates or updates your spell and sequence macros and puts them on empty or WoWBoxer buttons (others only with Replace buttons in Setup). Macros you keep off your bars stay off.")
     p.placeLeft:SetPoint("BOTTOMLEFT", 32, 2)
     p.placeLeft.wbxBig = true
+    W.primary(p.placeLeft)
     p.placeRight = W.button(p.right, "Place squad macros", 120, 20, function() Core().sync({ replace = Core().cdb.replace, page = "squad" }) end,
       "Creates or updates your squad macros (Invite, Follow, Assist, pet macros …) and puts them on empty or WoWBoxer buttons. Macros you keep off your bars stay off.")
     p.placeRight.wbxBig = true -- the right page's one action (the owner's wording)
+    W.setStyle(p.placeRight, "raised")
     -- footer
     p.slots = W.text(p.right, "GameFontHighlightSmall", nil, W.MUTED, "RIGHT")
     p.slots:SetPoint("BOTTOMRIGHT", 0, 6)
@@ -1027,11 +1084,18 @@ local function refresh(p, ctx)
   local step = Book.nextStep(ctx, p.mode)
   p.stepText:SetText(step.text)
   p.stepTip = step.tip
+  p.stepSub:SetText(step.tip or "")
+  local todo = step.button ~= nil
+  p.stepMark:SetVertexColor(T.rgb(todo and "warn" or "ok"))
+  p.stepMarkText:SetText(todo and "!" or "✓")
+  p.stepMarkText:SetTextColor(T.rgb(todo and "warn" or "ok"))
   if step.button then
     W.setLabel(p.stepBtn, step.button[1]); p.stepBtnTip, p.stepFn = step.button[2], step.button[3]
     p.stepBtn:Show(); p.stepBtn:SetEnabled(not ns.Compat.inCombat())
   else p.stepBtn:Hide(); p.stepFn = nil end
-  p.stepText:SetPoint("RIGHT", step.button and p.stepBtn or p.strip, step.button and "LEFT" or "RIGHT", -6, 0)
+  local textW = math.max(40, (p.strip:GetWidth() or 300) - 48 - (step.button and (p.stepBtn:GetWidth() + 8) or 0))
+  p.stepText:SetWidth(textW)
+  p.stepSub:SetWidth(textW)
   for _, b in ipairs(p.cellPool) do b:Hide(); b.cell = nil end
   for _, r in ipairs(p.rules) do r:Hide() end
   for _, b in ipairs(p.helperPool or {}) do b:Hide(); b.cell = nil end
@@ -1066,8 +1130,10 @@ local function refresh(p, ctx)
     -- a spread of only future spells: the banner says what these are (it replaces the next step there)
     p.stepText:SetText("|cff9eaddbFuture spells – place them now|r")
     p.stepTip = "You learn these later: the level is under each spell. Drag one onto your bar now and set it up; the macro does nothing until you learn the spell, then it just works."
+    p.stepSub:SetText(p.stepTip)
     p.stepBtn:Hide(); p.stepFn = nil
-    p.stepText:SetPoint("RIGHT", p.strip, "RIGHT", -6, 0)
+    p.stepText:SetWidth(math.max(40, (p.strip:GetWidth() or 300) - 48))
+    p.stepSub:SetWidth(math.max(40, (p.strip:GetWidth() or 300) - 48))
   end
   local ci, ri = placePage(p, p.left, pages[first + 1], 1, 1)
   if perSpread == 2 then placePage(p, p.right, pages[first + 2], ci, ri) end
@@ -1122,6 +1188,9 @@ local function refresh(p, ctx)
       p.detMacro:SetText(sel.d and sel.d.body or "")
       local h = p.detMacro:GetHeight() or 0
       if p.detMacro.SetMaxLines then p.detMacro:SetMaxLines(math.max(1, math.floor((h + 0.5) / 11))) end
+      if p.detMacroBox then -- the tooltip-style box hugs the text
+        p.detMacroBox:SetPoint("BOTTOMRIGHT", p.detMacro, "TOPRIGHT", 6, -math.min(h, (p.detMacro:GetStringHeight() or h)) - 5)
+      end
       p.bind:SetEnabled(not ns.Compat.inCombat())
     end
     -- footer

@@ -76,7 +76,8 @@ do
   H.eq(chatCount(W, "changed at level"), 0, "reminders off: no chat line")
   ns.UI.Select("keys")
   local dots = 0
-  for _, b in ipairs(ns.UI.panels.keys.cells) do if b:IsShown() and (b.dot:IsShown() or b.glow:IsShown()) then dots = dots + 1 end end
+  for _, b in ipairs(ns.UI.panels.keys.cells) do local word = b.sub and b.sub:IsShown() and (b.sub:GetText() or "")
+    if b:IsShown() and (b.dot:IsShown() or b.glow:IsShown() or word == "New macro" or word == "Changed · update") then dots = dots + 1 end end
   H.ok(dots > 0, "the book still marks the changed keys (" .. dots .. ")")
   ns.UI.Select("setup")
   ns.UI.panels.setup.remind:Click()

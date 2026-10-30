@@ -100,7 +100,10 @@ def paint(doc, scale, out_path):
         w, h = box[2] - box[0], box[3] - box[1]
         if w <= 0 or h <= 0:
             continue
-        tile = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        pad = 0
+        if it["k"] == "text":
+            pad = 0 if it.get("trunc") else 300  # like the game: a free text runs past the estimate, W.line cuts with …
+        tile = Image.new("RGBA", (w + 2 * pad, h), (0, 0, 0, 0))
         if it["k"] == "tex":
             if it.get("color"):
                 tile.paste(rgba(it["color"], it["alpha"]), (0, 0, w, h))
@@ -130,24 +133,37 @@ def paint(doc, scale, out_path):
             size = max(6, round(it["size"] * scale))
             fnt = font(it.get("font"), size)
             base = rgba(it.get("color") or [1, 0.82, 0, 1], it["alpha"])
-            lines = wrap_lines(segments(it["text"], base), fnt, w if it.get("wrap") else None)
+            lines = wrap_lines(segments(it["text"], base), fnt, w * 1.15 if it.get("wrap") else None)
+            if it.get("trunc") and lines and sum(fnt.getlength(p) for p, _ in lines[0]) > w:
+                run, out = 0.0, []
+                for p_, col in lines[0]:
+                    for ch in p_:
+                        if run + fnt.getlength(ch + "…") > w:
+                            break
+                        out.append((ch, col)); run += fnt.getlength(ch)
+                lines = [out + [("…", base)]]
             lh = size + 2 * scale
-            y = (h - lh * len(lines)) / 2
+            jv = it.get("justifyV", "MIDDLE")
+            y = 0 if jv == "TOP" else (h - lh * len(lines) if jv == "BOTTOM" else (h - lh * len(lines)) / 2)
             d = ImageDraw.Draw(tile)
             for ln in lines:
                 lw = sum(fnt.getlength(p) for p, _ in ln)
-                x = 0 if it["justify"] == "LEFT" else (w - lw if it["justify"] == "RIGHT" else (w - lw) / 2)
+                x = pad + (0 if it["justify"] == "LEFT" else (w - lw if it["justify"] == "RIGHT" else (w - lw) / 2))
                 for p, col in ln:
                     d.text((x, y + lh / 2), p, fill=col, font=fnt, anchor="lm")
                     x += fnt.getlength(p)
                 y += lh
+        tw = tile.width
         if it.get("clip"):
             cl, cb, cr, ct = it["clip"]
             cbox = (round(cl * scale), round((sh - ct) * scale), round(cr * scale), round((sh - cb) * scale))
-            mask = Image.new("L", (w, h), 0)
-            ImageDraw.Draw(mask).rectangle((cbox[0] - box[0], cbox[1] - box[1], cbox[2] - box[0] - 1, cbox[3] - box[1] - 1), fill=255)
-            tile.putalpha(Image.composite(tile.getchannel("A"), Image.new("L", (w, h), 0), mask))
-        img.alpha_composite(tile, (box[0], box[1]))
+            mask = Image.new("L", (tw, h), 0)
+            ImageDraw.Draw(mask).rectangle((cbox[0] - box[0] + pad, cbox[1] - box[1], cbox[2] - box[0] + pad - 1, cbox[3] - box[1] - 1), fill=255)
+            tile.putalpha(Image.composite(tile.getchannel("A"), Image.new("L", (tw, h), 0), mask))
+        x0 = box[0] - pad
+        if x0 < 0:
+            tile = tile.crop((-x0, 0, tw, h)); x0 = 0
+        img.alpha_composite(tile, (x0, box[1]))
     img.convert("RGB").save(out_path)
 
 
