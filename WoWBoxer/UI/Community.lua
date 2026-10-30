@@ -7,7 +7,6 @@ local _, ns = ...
 local CM = {}
 ns.Community = CM
 local W, TH = ns.Widgets, ns.Theme
-local UI = ns.UI
 local function Core() return ns.Core end
 local function inCombat() return ns.Compat.inCombat() end
 
