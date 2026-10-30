@@ -7,7 +7,7 @@
   character. ]]
 local _, ns = ...
 local UI, W = ns.UI, ns.Widgets
-local T = ns.Theme
+local TH = ns.Theme
 local Book = {}
 ns.Book = Book
 
@@ -653,7 +653,7 @@ local function makeCell(p, parent, small)
   b:RegisterForDrag("LeftButton")
   local themed = W.themed()
   if themed then S = small and 24 or 32 end
-  if themed then T.box(b, "panel2", "lineSoft", 6) end
+  if themed then TH.box(b, "panel2", "lineSoft", 6) end
   b.slotBg = b:CreateTexture(nil, "BACKGROUND")
   b.slotBg:SetSize(S + 2, S + 2)
   b.slotBg:SetPoint("LEFT", themed and 3 or 2, 0)
@@ -671,7 +671,7 @@ local function makeCell(p, parent, small)
   b.hotBox = CreateFrame("Frame", nil, b)
   b.hotBox:SetSize(16, 14)
   if themed then
-    T.box(b.hotBox, "night", "line", 3)
+    TH.box(b.hotBox, "night", "line", 3)
     b.hotBox:SetPoint("BOTTOMRIGHT", b.slotBg, "BOTTOMRIGHT", 3, -1)
     b.hot = W.line(b.hotBox, "GameFontNormalSmall", small and 9 or 10, W.PARCHMENT, "CENTER")
     b.hot:SetPoint("CENTER", 0, 0)
@@ -719,10 +719,10 @@ local function makeCell(p, parent, small)
     -- selected: a gold rim on the card; hover: a soft gold wash
     b.sel = CreateFrame("Frame", nil, b)
     b.sel:SetAllPoints()
-    T.box(b.sel, "none", "gold", 6)
-    local hl = T.slice(b, T.TEX .. "Fill6", 6, "HIGHLIGHT")
-    for _, t in ipairs(hl) do t:SetVertexColor(T.rgb("goldHi")); t:SetAlpha(0.07) end
-    b.tint:SetColorTexture(T.rgb("panel3"))
+    TH.box(b.sel, "none", "gold", 6)
+    local hl = TH.slice(b, TH.TEX .. "Fill6", 6, "HIGHLIGHT")
+    for _, t in ipairs(hl) do t:SetVertexColor(TH.rgb("goldHi")); t:SetAlpha(0.07) end
+    b.tint:SetColorTexture(TH.rgb("panel3"))
   else
     b.sel = b:CreateTexture(nil, "BACKGROUND")
     b.sel:SetAllPoints()
@@ -838,7 +838,7 @@ local function makeRule(parent, width)
   r.line:SetHeight(1)
   r.line:SetPoint("LEFT", r.text, "RIGHT", 8, 0)
   r.line:SetPoint("RIGHT", r, "RIGHT", 0, 0)
-  if W.themed() then r.line:SetColorTexture(T.rgb("lineSoft")) else r.line:SetColorTexture(1, 0.82, 0, 0.35) end
+  if W.themed() then r.line:SetColorTexture(TH.rgb("lineSoft")) else r.line:SetColorTexture(1, 0.82, 0, 0.35) end
   r.wbxRule = true
   return r
 end
@@ -886,7 +886,7 @@ local function build(p, mode)
 
   -- banner (left page): the next step, ≤ 8 words, the sentence in the tooltip
   p.strip = W.box(p.left, 0.13, 0.17, 0.08, 0.95)
-  if W.themed() then T.paint(p.strip, nil, "line") end
+  if W.themed() then TH.paint(p.strip, nil, "line") end
   p.strip:SetPoint("TOPLEFT", 0, 0)
   p.strip:SetSize(PW, TOP_H - 6)
   p.stepBtn = W.button(p.strip, "Place all", 80, 26, function() if p.stepFn then p.stepFn() end end)
@@ -895,7 +895,7 @@ local function build(p, mode)
   W.tip(p.stepBtn, function() return p.stepBtn:GetText() end, function() return p.stepBtnTip end)
   -- a state mark (warn "!" while there is something to do, ok check when not), the step in bold + one muted line
   p.stepMark = p.strip:CreateTexture(nil, "ARTWORK")
-  p.stepMark:SetTexture(T.TEX .. "CircleRing")
+  p.stepMark:SetTexture(TH.TEX .. "CircleRing")
   p.stepMark:SetSize(20, 20)
   p.stepMark:SetPoint("LEFT", 10, 0)
   p.stepMarkText = W.text(p.strip, "GameFontNormal", 12, W.ORANGE, "CENTER")
@@ -967,7 +967,7 @@ local function build(p, mode)
       p.detMacroBox = CreateFrame("Frame", nil, p.det)
       p.detMacroBox:SetPoint("TOPLEFT", p.detMacro, "TOPLEFT", -6, 5)
       p.detMacroBox:SetPoint("BOTTOMRIGHT", p.detMacro, "BOTTOMRIGHT", 6, -5)
-      T.box(p.detMacroBox, "ttBg", "ttEdge", 6)
+      TH.box(p.detMacroBox, "ttBg", "ttEdge", 6)
       p.detMacroBox:SetFrameLevel(math.max(0, (p.det:GetFrameLevel() or 1)))
     end
     p.detMacro:SetJustifyV("TOP")
@@ -1086,9 +1086,9 @@ local function refresh(p, ctx)
   p.stepTip = step.tip
   p.stepSub:SetText(step.tip or "")
   local todo = step.button ~= nil
-  p.stepMark:SetVertexColor(T.rgb(todo and "warn" or "ok"))
+  p.stepMark:SetVertexColor(TH.rgb(todo and "warn" or "ok"))
   p.stepMarkText:SetText(todo and "!" or "✓")
-  p.stepMarkText:SetTextColor(T.rgb(todo and "warn" or "ok"))
+  p.stepMarkText:SetTextColor(TH.rgb(todo and "warn" or "ok"))
   if step.button then
     W.setLabel(p.stepBtn, step.button[1]); p.stepBtnTip, p.stepFn = step.button[2], step.button[3]
     p.stepBtn:Show(); p.stepBtn:SetEnabled(not ns.Compat.inCombat())
