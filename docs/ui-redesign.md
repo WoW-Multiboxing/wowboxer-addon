@@ -8,7 +8,8 @@ screens: My macros, Squad, Automation, Macro editor.
 
 - It is built on the WoWBoxer design system (artifact Dvayk234hxkHc8GYjaQpSe), the same look as wowboxer.com and the
   window app: a dark navy war table, gold trim and class colours.
-- **Do not start before the owner has approved the mockup.** He may ask for changes first.
+- **Approved by the owner (30 Oct, 13:12):** "way better, just like I envisioned it", with one change. On/off must be
+  much clearer, especially on the Automation page (see §2, "On and off"). The mockup's Automation board shows the fix.
 
 ## 1. What changes and what does not
 
@@ -53,6 +54,14 @@ Class colours stay the game's own: `RAID_CLASS_COLORS`, with the token values as
   - Both are SIL OFL fonts. Ship them as `.ttf` in `WoWBoxer/Media/Fonts/` together with their licence files.
   - Character names, spell names and chat-like text keep the **game font** (`GameFontNormal` family), so every locale
     and accented name renders. The website and window app already use Cinzel and Inter.
+- **On and off (the owner: "too dark, hard to see if it's on"):** every toggle must be readable at a glance, on all pages.
+  - **On:** a 46×24 px switch with a green track (#3f7a32, #8ccb7a edge) and a light knob on the right. The whole row
+    is lifted (panel-3, green-tinted border), the title is in parchment, and the word **ON** in green sits at the
+    right.
+  - **Off:** a dark track (#0f131c, #5c5648 edge) with a grey knob on the left. The row is flat (panel, line-soft),
+    the title is muted, and the word **OFF** in grey.
+  - Never colour alone; the word ON/OFF is always there. Tick boxes (squad macros, Reset ticks) are filled gold with a
+    dark ✓ when on, and empty with a 1 px gold edge when off.
 - **Spacing:** an 8 px grid. Window padding 16–22 px, card padding 8–12 px, gaps 8 px between cards and 14 px between
   sections.
 - **Icons:**
