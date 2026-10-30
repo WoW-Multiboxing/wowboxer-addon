@@ -1,6 +1,6 @@
 # WoWBoxer addon – backlog
 
-## The owner: TEST BUILD 0.13.0-test.4 (07d3fba) – new look (My macros, Squad, Automation, Macro editor) + Community/Report. Restart WoW first
+## The owner: TEST BUILD 0.13.0-test.5 (9331a64) – new look (My macros, Squad, Automation, Macro editor) + Community/Report. Restart WoW first
 1. `/wbx`: the four pages look like the mockup; drag a macro card to a bar, right-click one → Edit macro… → Save still work.
 2. Rail bottom → **Discord**: the link is selected – Ctrl+C, paste it in a browser; Esc closes. Same for `/wbx youtube`.
 3. `/wbx report`: type in "What happened?", Enter, **Select all**, Ctrl+C → paste in Notepad: no names unless ticked.
