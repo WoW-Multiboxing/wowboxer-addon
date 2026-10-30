@@ -12,8 +12,15 @@ local function O() return ns.Override end
 
 -- ------------------------------------------------------------------ the header switch + confirm
 function A.on() return Core().advanced() end
+local TH = ns.Theme
+--- A dialog in the window style (docs/ui-redesign.md §3): panel fill, gold line border.
+local function dialogLook(f)
+  if W.themed() then local sk = TH.paint(f, "panel", "line"); sk.alpha = 1; TH.paint(f, "panel") end -- opaque
+  return f
+end
+A.dialogLook = dialogLook
 local function modal(parent, w, h)
-  local f = W.box(parent, 0.11, 0.085, 0.05, 0.99)
+  local f = dialogLook(W.box(parent, 0.11, 0.085, 0.05, 0.99))
   f:SetSize(w, h)
   f:SetPoint("CENTER", 0, 0)
   f:SetFrameLevel((parent:GetFrameLevel() or 1) + 60)
@@ -134,24 +141,25 @@ local function editorFrame(parent)
     if f:GetParent() ~= parent then f:SetParent(parent); f:ClearAllPoints(); f:SetAllPoints(parent); f:SetFrameLevel((parent:GetFrameLevel() or 1) + 60) end
     return f
   end
-  f = W.box(parent, 0.11, 0.085, 0.05, 0.99)
+  f = dialogLook(W.box(parent, 0.11, 0.085, 0.05, 0.99))
   f:SetAllPoints(parent)
   f:SetFrameLevel((parent:GetFrameLevel() or 1) + 60)
   f:EnableMouse(true)
   f.wbxModal = true
   f:Hide()
   A.ef = f
+  local themed = W.themed()
   f.parts = {} -- sections 2–4 (shown on the Targeting tab); section 1 for own macros is the spells box
   local function part(x) f.parts[#f.parts + 1] = x; return x end
   local function head(text, x, y)
-    local h = W.text(f, "GameFontNormalSmall", 10, W.GOLD)
+    local h = W.text(f, "GameFontNormalSmall", 10, themed and { TH.rgb("gold") } or W.GOLD)
     h:SetPoint("TOPLEFT", x, y)
     h:SetText(text)
     h.wbxCopy = "hint"
     return part(h)
   end
-  f.title = W.text(f, "GameFontNormal", nil, W.GOLD)
-  f.title:SetPoint("TOPLEFT", 10, -8)
+  f.title = W.text(f, themed and "GameFontNormalLarge" or "GameFontNormal", themed and 14 or nil, W.GOLD)
+  f.title:SetPoint("TOPLEFT", 10, -7)
   f.title.wbxCopy = "data"
   -- 1 Spells
   head("1 Spells", 10, -28)
@@ -170,7 +178,8 @@ local function editorFrame(parent)
   f.avail:SetSize(268, 8 * A.ROW_H)
   f.availBg = f.avail:CreateTexture(nil, "BACKGROUND")
   f.availBg:SetAllPoints()
-  f.availBg:SetColorTexture(0, 0, 0, 0.25)
+  f.availBg:SetColorTexture(0, 0, 0, themed and 0 or 0.25)
+  if themed then TH.box(f.avail, "night2", "lineSoft", 6) end
   f.tiles = {}
   f.list = part(CreateFrame("Frame", nil, f))
   f.list:SetPoint("TOPLEFT", 290, -66)
@@ -178,7 +187,8 @@ local function editorFrame(parent)
   f.list:SetHeight(8 * A.ROW_H)
   f.listBg = f.list:CreateTexture(nil, "BACKGROUND")
   f.listBg:SetAllPoints()
-  f.listBg:SetColorTexture(0.2, 0.15, 0.05, 0.35)
+  f.listBg:SetColorTexture(0.2, 0.15, 0.05, themed and 0 or 0.35)
+  if themed then TH.box(f.list, "night2", "line", 6) end
   f.listHead = W.text(f, "GameFontNormalSmall", nil, W.GOLD)
   f.listHead:SetPoint("BOTTOMLEFT", f.list, "TOPLEFT", 0, 3)
   f.listHead:SetText("This macro tries, in order")
@@ -197,12 +207,21 @@ local function editorFrame(parent)
     r:RegisterForDrag("LeftButton")
     r.bg = r:CreateTexture(nil, "BACKGROUND")
     r.bg:SetAllPoints()
-    r.bg:SetColorTexture(0, 0, 0, i % 2 == 0 and 0.15 or 0.3)
+    r.bg:SetColorTexture(0, 0, 0, themed and 0 or (i % 2 == 0 and 0.15 or 0.3))
+    if themed then
+      -- a numbered row card (the order the macro tries)
+      TH.box(r, "panel3", "line", 4)
+      r.num = W.text(r, "GameFontNormalLarge", 11, { TH.rgb("gold") }, "CENTER")
+      r.num:SetPoint("LEFT", 2, 0)
+      r.num:SetWidth(14)
+      r.num:SetText(tostring(i))
+      r.num.wbxCopy = "data"
+    end
     r.icon = W.icon(r, 18)
-    r.icon:SetPoint("LEFT", 3, 0)
+    r.icon:SetPoint("LEFT", themed and 18 or 3, 0)
     r.name = W.line(r, "GameFontHighlightSmall", nil, W.TEXT)
-    r.name:SetPoint("LEFT", 25, 0)
-    r.name:SetWidth(170)
+    r.name:SetPoint("LEFT", themed and 40 or 25, 0)
+    r.name:SetWidth(themed and 155 or 170)
     r.name.wbxCopy = "data"
     r.aim = W.button(r, "Friendly", 62, 20, function()
       local t = f.targets[i]; if not t then return end
@@ -277,10 +296,20 @@ local function editorFrame(parent)
   -- 4 Preview
   local py = oy - 30
   head("4 Preview", 10, py)
-  f.preview = W.text(f, "GameFontHighlightSmall", 9, { 0.6, 0.66, 0.52 })
-  f.preview:SetPoint("TOPLEFT", 80, py)
-  f.preview:SetPoint("TOPRIGHT", -10, py)
-  f.preview:SetPoint("BOTTOM", f, "BOTTOM", 0, 52)
+  f.preview = W.text(f, "GameFontHighlightSmall", 9, themed and W.TEXT or { 0.6, 0.66, 0.52 })
+  W.gameFont(f.preview)
+  f.preview:SetPoint("TOPLEFT", themed and 86 or 80, py - (themed and 4 or 0))
+  f.preview:SetPoint("TOPRIGHT", themed and -16 or -10, py - (themed and 4 or 0))
+  f.preview:SetPoint("BOTTOM", f, "BOTTOM", 0, themed and 58 or 52)
+  if themed then
+    -- the macro text in a tooltip-style box (§3)
+    f.previewBox = CreateFrame("Frame", nil, f)
+    f.previewBox:SetPoint("TOPLEFT", f.preview, "TOPLEFT", -6, 5)
+    f.previewBox:SetPoint("BOTTOMRIGHT", f.preview, "BOTTOMRIGHT", 6, -5)
+    TH.box(f.previewBox, "ttBg", "ttEdge", 6)
+    f.previewBox:SetFrameLevel(f:GetFrameLevel() or 1)
+    part(f.previewBox)
+  end
   f.preview:SetJustifyV("TOP")
   if f.preview.SetNonSpaceWrap then f.preview:SetNonSpaceWrap(true) end
   f.preview.wbxCopy = "data"
@@ -290,12 +319,14 @@ local function editorFrame(parent)
   f.info:SetPoint("BOTTOMRIGHT", -10, 36)
   f.info.wbxCopy = "data"
   f.save = W.button(f, "Save", 70, 24, function() A.saveEditor() end, "Saves your targeting and options. Press Update macros afterwards to write the macro.")
+  W.primary(f.save)
   f.save:SetPoint("BOTTOMRIGHT", -10, 8)
   f.cancel = W.button(f, "Cancel", 70, 24, function() f:Hide() end, "Closes this. Nothing changes.")
   f.cancel:SetPoint("RIGHT", f.save, "LEFT", -6, 0)
   f.back = W.button(f, "WoWBoxer's version", 140, 24, function() Core().setOverride(f.name, nil); f:Hide() end,
     "Back to WoWBoxer's version: removes your targeting (and text) for this macro.")
   f.back:SetPoint("BOTTOMLEFT", 10, 8)
+  W.setStyle(f.back, "ghost")
   f.text = W.button(f, "Edit text", 80, 24, function() local n, l = f.name, f.label; f:Hide(); A.openText(parent, n, l) end,
     "The last resort: write the macro text yourself (checked live). The macro is then frozen on level-ups.")
   f.text:SetPoint("LEFT", f.back, "RIGHT", 6, 0)
@@ -304,6 +335,16 @@ local function editorFrame(parent)
   f.tabTarget:SetPoint("TOPRIGHT", -10, -4)
   f.tabSpells = W.button(f, "Spells", 64, 20, function() A.showSection("spells") end, "The spells of this macro: single spell, sequence or priority.")
   f.tabSpells:SetPoint("RIGHT", f.tabTarget, "LEFT", -4, 0)
+  if themed then
+    -- tabs with a gold underline (§3)
+    for _, b in ipairs({ f.tabSpells, f.tabTarget }) do
+      W.setStyle(b, "segment")
+      b.line = TH.fill(b, "gold", "ARTWORK")
+      b.line:SetPoint("BOTTOMLEFT", 6, 0)
+      b.line:SetPoint("BOTTOMRIGHT", -6, 0)
+      b.line:SetHeight(2)
+    end
+  end
   f.spellsBox = CreateFrame("Frame", nil, f)
   f.spellsBox:SetPoint("TOPLEFT", 0, -26)
   f.spellsBox:SetPoint("BOTTOMRIGHT", 0, 34)
@@ -322,7 +363,12 @@ function A.showSection(which)
   f.spellsBox:SetShown(spells)
   for _, x in ipairs(f.parts) do x:SetShown(not spells) end
   f.editSpells:SetShown(not spells and f.own ~= nil)
-  if spells then f.tabSpells:LockHighlight(); f.tabTarget:UnlockHighlight() else f.tabTarget:LockHighlight(); f.tabSpells:UnlockHighlight() end
+  if f.tabSpells.line then
+    for _, x in ipairs({ { f.tabSpells, spells }, { f.tabTarget, not spells } }) do
+      x[1].line:SetShown(x[2])
+      x[1]:SetNormalFontObject(TH.fontObject("bold", 12, x[2] and "uiGold" or "muted"))
+    end
+  elseif spells then f.tabSpells:LockHighlight(); f.tabTarget:UnlockHighlight() else f.tabTarget:LockHighlight(); f.tabSpells:UnlockHighlight() end
   f.tabTarget:SetEnabled(f.name ~= nil)
   A.refreshEditor()
 end
@@ -338,6 +384,7 @@ local function tile(f, i)
   local hl = t:CreateTexture(nil, "HIGHLIGHT")
   hl:SetAllPoints()
   hl:SetColorTexture(1, 0.82, 0, 0.15)
+  if W.themed() then TH.box(t, "panel2", "lineSoft", 4); hl:SetColorTexture(TH.rgb("panel3")) end
   t.icon = W.icon(t, 18)
   t.icon:SetPoint("LEFT", 2, 0)
   t.name = W.line(t, "GameFontHighlightSmall", nil, W.TEXT)
