@@ -11,8 +11,10 @@ local tab = { key = "squad", label = "Squad", icon = "Spell_Holy_PrayerOfFortitu
 local SP = { pages = {}, byKey = {} }
 ns.SquadPages = SP
 
+local T = ns.Theme
 local LIST_W = 648 -- + scrollbar
-local ROW_H, EDIT_H, ADD_H = 28, 58, 28
+-- the war table look: party-frame rows (class edge, class icon, name over "Class · level", the follow line labelled)
+local ROW_H, EDIT_H, ADD_H = W.themed() and 44 or 28, 58, 30
 local LIST_H = 252
 local TOP_H = 30
 local NEW, DEL = "\1new", "\1del"
@@ -268,19 +270,32 @@ end
 --- No squad, or only this character (and the player did not ask to add by name): the empty state.
 function SP.isEmpty(s, f) return (not s or #s.members <= 1) and not (f and f.forceList) end
 local function buildRow(f, parent)
+  local themed = W.themed()
   local r = CreateFrame("Button", nil, parent)
-  r:SetSize(LIST_W - 4, ROW_H - 2)
+  r:SetSize(LIST_W - 4, ROW_H - 4)
   r:RegisterForClicks("LeftButtonUp")
   r.bg = r:CreateTexture(nil, "BACKGROUND")
   r.bg:SetAllPoints()
-  local hl = r:CreateTexture(nil, "HIGHLIGHT")
-  hl:SetAllPoints()
-  hl:SetColorTexture(1, 1, 1, 0.05)
+  if themed then
+    T.box(r, "panel2", "lineSoft", 6)
+    r.bg:SetColorTexture(0, 0, 0, 0)
+    r.bg.SetColorTexture = function() end -- the card's paint shows me / editing
+    r.edge = r:CreateTexture(nil, "ARTWORK")
+    r.edge:SetPoint("TOPLEFT", 1, -6)
+    r.edge:SetPoint("BOTTOMLEFT", 1, 6)
+    r.edge:SetWidth(3)
+    local hl = T.slice(r, T.TEX .. "Fill6", 6, "HIGHLIGHT")
+    for _, t in ipairs(hl) do t:SetVertexColor(T.rgb("goldHi")); t:SetAlpha(0.06) end
+  else
+    local hl = r:CreateTexture(nil, "HIGHLIGHT")
+    hl:SetAllPoints()
+    hl:SetColorTexture(1, 1, 1, 0.05)
+  end
   r:SetScript("OnClick", function() if r.m then SP.editing = (SP.editing ~= r.m.id) and r.m.id or nil; UI.Refresh() end end)
   W.tip(r, function() return r.m and r.m.name or "" end, "Click to edit name, class, race, how it follows and sequence macros.")
   r.crown = CreateFrame("Button", nil, r)
   r.crown:SetSize(20, 20)
-  r.crown:SetPoint("LEFT", 4, 0)
+  r.crown:SetPoint("LEFT", themed and 10 or 4, 0)
   r.crown.tex = r.crown:CreateTexture(nil, "ARTWORK")
   r.crown.tex:SetAllPoints()
   r.crown.tex:SetTexture("Interface\\GroupFrame\\UI-Group-LeaderIcon")
@@ -290,28 +305,44 @@ local function buildRow(f, parent)
       or "Click to make this character the leader. The others follow and assist the leader."
   end)
   r.name = W.line(r, "GameFontNormal")
-  r.name:SetPoint("LEFT", 30, 0)
-  r.name:SetWidth(112)
   r.name.wbxCopy = "data"
   r.cls = W.line(r, "GameFontHighlightSmall", nil, W.MUTED)
-  r.cls:SetPoint("LEFT", 146, 0)
-  r.cls:SetWidth(62)
   r.cls.wbxCopy = "data"
+  if themed then
+    r.icon = W.icon(r, 26, true)
+    r.icon:SetPoint("LEFT", 36, 0)
+    W.gameFont(r.name, 13) -- character names keep the game font
+    r.name:SetPoint("TOPLEFT", 70, -6)
+    r.name:SetWidth(134)
+    r.cls:SetPoint("BOTTOMLEFT", 70, 6)
+    r.cls:SetWidth(134)
+  else
+    r.name:SetPoint("LEFT", 30, 0)
+    r.name:SetWidth(112)
+    r.cls:SetPoint("LEFT", 146, 0)
+    r.cls:SetWidth(62)
+  end
   r.role = W.dropdown(r, { width = 104, values = function() return r.m and SP.roleValues(r.m) or {} end,
     get = function() return r.m and r.m.role end, set = function(v) if r.m and S().setRole(r.m, v) then changed() end end })
   r.role:SetPoint("LEFT", 210, 0)
   W.ddTip(r.role, "Role", "Picks the recommended macros and talent guide of this character.")
   r.follows = W.line(r, "GameFontHighlightSmall", nil, W.TEXT)
-  r.follows:SetPoint("LEFT", 322, 0)
   r.follows:SetWidth(150)
   r.follows.wbxCopy = "data"
+  if themed then
+    r.followsHead = W.text(r, "GameFontNormalSmall", 9, W.MUTED)
+    r.followsHead:SetPoint("TOPLEFT", 322, -7)
+    r.followsHead:SetText("FOLLOW LINE")
+    r.followsHead.wbxCopy = "label"
+    r.follows:SetPoint("BOTTOMLEFT", 322, 7)
+  else r.follows:SetPoint("LEFT", 322, 0) end
   r.me = W.line(r, "GameFontNormalSmall", nil, W.GOLD)
   r.me:SetPoint("LEFT", 478, 0)
   r.me:SetWidth(110)
   r.me:SetText("This character")
   r.me.wbxCopy = "label"
   r.remove = W.button(r, "x", 24, 20, function() SP.remove(r.m) end, { "Remove", "Removes this character from the squad. Undo is next to Saved. Its macros in the game stay." })
-  r.remove:SetPoint("RIGHT", -4, 0)
+  r.remove:SetPoint("RIGHT", themed and -10 or -4, 0)
   return r
 end
 
@@ -320,7 +351,7 @@ local function buildEditor(f, parent)
   e:SetSize(LIST_W - 4, EDIT_H - 4)
   e.bg = e:CreateTexture(nil, "BACKGROUND")
   e.bg:SetAllPoints()
-  e.bg:SetColorTexture(1, 0.82, 0, 0.07)
+  if W.themed() then e.bg:SetColorTexture(0, 0, 0, 0); T.box(e, "panel3", "line", 6) else e.bg:SetColorTexture(1, 0.82, 0, 0.07) end
   local function m() return S().member(squad(), SP.editing) end
   local function lbl(text)
     local l = W.text(e, "GameFontNormalSmall", nil, W.GOLD)
@@ -457,6 +488,7 @@ SP.register({ key = "main", label = "Squad", tip = "Who plays together, who lead
     f.send = W.button(f.list, "Send to my other characters", 210, 26, function() if ns.Sync then ns.Sync.sendSquad(squad()) end end,
       { "Send to my other characters", "Offers this squad to your other clients in the party. Nothing changes there until you click Review and Import on that client. Then press Place all there." })
     f.send.wbxBig = true
+    W.primary(f.send)
     f.send:SetPoint("TOPRIGHT", f.list, "TOPRIGHT", 0, y)
     -- squad keys: the player ticks them; built from the squad (Invite by name, the rest through party units)
     f.keys = CreateFrame("Frame", nil, f.list)
@@ -480,10 +512,19 @@ SP.register({ key = "main", label = "Squad", tip = "Who plays together, who lead
     f.keys.update = W.button(f.keys, "Update macros", 100, 22, function() Core().sync({ replace = Core().cdb.replace }) end,
       "Creates or updates your squad macros (and any other changed macros) and puts new ones on your bars.")
     f.keys.update:SetPoint("TOPRIGHT", -20, -22)
+    W.setStyle(f.keys.update, "raised")
     f.lineText = W.line(f.list, "GameFontHighlightSmall", nil, W.TEXT)
-    f.lineText:SetPoint("TOPLEFT", 0, y - 34 - 52)
-    f.lineText:SetWidth(LIST_W)
+    f.lineText:SetPoint("TOPLEFT", W.themed() and 12 or 0, y - 34 - 52)
+    f.lineText:SetWidth(LIST_W - (W.themed() and 24 or 0))
     f.lineText.wbxCopy = "data"
+    if W.themed() then
+      -- the follow line as a night-2 strip (§3)
+      f.lineBox = CreateFrame("Frame", nil, f.list)
+      f.lineBox:SetPoint("TOPLEFT", f.lineText, "TOPLEFT", -12, 7)
+      f.lineBox:SetPoint("BOTTOMRIGHT", f.lineText, "BOTTOMRIGHT", 12, -7)
+      T.box(f.lineBox, "night2", "lineSoft", 6)
+      f.lineBox:SetFrameLevel(math.max(0, (f.list:GetFrameLevel() or 1)))
+    end
     local lineHit = CreateFrame("Frame", nil, f.list)
     lineHit:SetAllPoints(f.lineText)
     W.tip(lineHit, "Follow line", "Follow (line) on each character follows the one before it. Change the order with Up / Down in a row; your macros update.")
@@ -526,7 +567,13 @@ SP.register({ key = "main", label = "Squad", tip = "Who plays together, who lead
       r.m = m
       r.crown.tex:SetAlpha(m.leader and 1 or 0.18)
       r.name:SetText(W.hex(W.classColor(m.cls)) .. m.name .. "|r")
-      r.cls:SetText(D().classes[m.cls].n .. " ·")
+      if r.icon then
+        local cc = W.classColor(m.cls)
+        SP.setClassIcon(r.icon, m.cls)
+        r.edge:SetColorTexture(cc[1], cc[2], cc[3], 1)
+        r.cls:SetText(D().classes[m.cls].n .. (m.level and (" · level " .. m.level) or ""))
+        T.paint(r, m.id == SP.editing and "panel3" or "panel2", m.id == SP.editing and "gold" or (m == me and "line" or "lineSoft"))
+      else r.cls:SetText(D().classes[m.cls].n .. " ·") end
       r.role.Refresh()
       r.follows:SetText(SP.followsText(m, s))
       r.me:SetShown(m == me)
