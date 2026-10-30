@@ -1,10 +1,10 @@
 # WoWBoxer addon – backlog
 
-## The owner: in-game check of 0.12.0
-1. Follower: Setup → **Apply** → "Clear target on click" OK; `/reload` → still OK (Sticky Targeting unticked in Options).
-2. Paladin (Classic Era, Boxtester): at login **Fix now** → press 3: action button 3 works again (keybind 3).
-3. Right-click the minimap button → **First-run guide**: it starts at step 1 (also right-click on **?**).
-4. Header **Reset** → tick Action bars → type RESET: your bars are as before WoWBoxer. `/reload`, tell Claude "done".
+## The owner: TEST BUILD 0.13.0-test.1 (88e52ec) – restart WoW first (0.12.0 + the TEST BUILD label)
+1. `/wbx`: orange **TEST BUILD** next to "WoWBoxer"; hover it → `0.13.0-test.1 (88e52ec)`.
+2. Follower: Setup → **Apply** → "Clear target on click" OK, still OK after `/reload`.
+3. Paladin (Era): at login **Fix now** → key 3 works; right-click minimap → **First-run guide** starts at step 1.
+4. Header **Reset** → Action bars → type RESET: bars as before. `/reload`, tell Claude feedback or "ship it".
 
 ## The owner: screenshots for the website (one client, any character, ~2 min)
 1. Log in, `/wbx`, then Print Screen on **My keys**, **All spells**, **Talents**, **Squad** and **Setup** (one each).

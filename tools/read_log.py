@@ -68,6 +68,7 @@ def main():
             missing_api = sorted(k for k, v in (p.get("api") or {}).items() if v == "missing")
             print(f"-- {char}: {p.get('game')} toc {p.get('interface')} build {p.get('build')} spellbook={p.get('spellbook')}"
                   f" macros max {p.get('maxAccount')}/{p.get('maxCharacter')}")
+            print(f"   WoWBoxer {d.get('build') or '-'}")
             print(f"   missing API: {', '.join(missing_api) or '-'}")
             print(f"   player {d.get('player')}")
             if d.get("error"):
