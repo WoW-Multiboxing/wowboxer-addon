@@ -62,6 +62,19 @@ Class colours stay the game's own: `RAID_CLASS_COLORS`, with the token values as
     the title is muted, and the word **OFF** in grey.
   - Never colour alone; the word ON/OFF is always there. Tick boxes (squad macros, Reset ticks) are filled gold with a
     dark ✓ when on, and empty with a 1 px gold edge when off.
+- **Nothing too dark (the owner, 13:14: "the darkness makes some buttons hard to see", e.g. the "I understand" box and
+  the Turn on Advanced button):**
+  - **Every control must stand out from its background:** buttons, tick boxes, toggles, dropdowns.
+    - Its edge needs at least 3:1 contrast against the panel behind it, and its label at least 4.5:1.
+    - No control may be drawn in night / night-2 on a panel.
+    - Secondary buttons use panel-2 with a 45 % gold edge and parchment text.
+  - **Tick boxes:** 20 px, a 2 px gold-hi edge, filled gold-hi with a dark ✓ when ticked. The whole row ("I
+    understand") is clickable and lifts when ticked.
+  - **Disabled buttons:** panel-3 with a #5c5648 edge and muted text. Readable, clearly not clickable, never just
+    "darker". When the condition is met (e.g. "I understand" ticked) the button turns into the red primary.
+  - **Check it in the game:** take a screenshot of every dialog in both states (off/on, disabled/enabled), and add
+    them to `docs/screens/`.
+  - The mockup board "Advanced confirm – off vs on" shows both states.
 - **Spacing:** an 8 px grid. Window padding 16–22 px, card padding 8–12 px, gaps 8 px between cards and 14 px between
   sections.
 - **Icons:**
