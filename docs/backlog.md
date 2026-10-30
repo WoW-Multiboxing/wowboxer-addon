@@ -1,6 +1,6 @@
 # WoWBoxer addon – backlog
 
-## The owner: TEST BUILD 0.14.0-test.2 (5014832) – Macro editor fixes + "Macro editor" page. `/reload` in both clients
+## The owner: v0.14.0 is live – please still run these checks in the game (`/reload` in both clients)
 1. Rail → **Macro editor** → New macro → Single spell → add a spell → **Targeting** tab → drag a target in → Spells and back (both kept) → Save.
 2. Advanced on: right-click a recommended macro → Edit macro…: both tabs; then click **Standard** – "Unsaved changes" asks if you dragged a target.
 3. With the editor open click **Advanced**: "Turn on Advanced mode?" is on top; Esc closes only it. Right-click a spell, click the world: the menu is gone.
