@@ -1,10 +1,10 @@
 # WoWBoxer addon – backlog
 
-## The owner: TEST BUILD 0.13.0-test.5 (9331a64) – new look (My macros, Squad, Automation, Macro editor) + Community/Report. Restart WoW first
-1. `/wbx`: the four pages look like the mockup; drag a macro card to a bar, right-click one → Edit macro… → Save still work.
-2. Rail bottom → **Discord**: the link is selected – Ctrl+C, paste it in a browser; Esc closes. Same for `/wbx youtube`.
-3. `/wbx report`: type in "What happened?", Enter, **Select all**, Ctrl+C → paste in Notepad: no names unless ticked.
-4. In each client `/wbx shots` (~25 s, hands off), then `/reload`; tell Claude "shots done" + anything odd.
+## The owner: TEST BUILD 0.13.0-test.7 (7c18cb2) – new look + on/off, contrast, hover (§2). Restart WoW first
+1. Hover the left rail and a dropdown's items: lighter background, text stays readable; the selected page stays ui-gold.
+2. Automation: ON rows are green with the word ON, OFF rows flat grey with OFF; every button/tick/dropdown is easy to see.
+3. Standard | Advanced → Advanced: "Turn on Advanced" grey until you tick "I understand" (click the words), then red.
+4. Rail → Discord / `/wbx report` copy box works; then `/wbx shots` in each client (~30 s, hands off), `/reload`, "shots done".
 
 Still open from test 1 (same build, behaviour unchanged): follower Setup → Apply; Paladin **Fix now**; guide restart; header **Reset**.
 
