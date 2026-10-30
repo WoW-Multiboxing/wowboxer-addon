@@ -57,7 +57,7 @@ jobs:
           VER="${TAG#v}"
           if gh release view "$TAG" > /dev/null 2>&1; then echo "release $TAG exists"; else
             gh release create "$TAG" "dist/WoWBoxer-$VER.zip" --title "WoWBoxer $VER" --notes-file dist/CHANGELOG.md \
-              $( [[ "$VER" == 0.* || "$VER" == *-* ]] && echo --prerelease )
+              $( [[ "$VER" == *-* ]] && echo --prerelease )
           fi
       - name: CurseForge
         env:

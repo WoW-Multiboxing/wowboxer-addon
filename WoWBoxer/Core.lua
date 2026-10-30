@@ -10,6 +10,21 @@ local S, C, M, B, R, Sh, K = ns.State, ns.Compat, ns.Macros, ns.Bars, ns.Rules, 
 Core.VERSION = "0.1.0"
 Core.LOG_MAX = 400
 
+--- The version stamped into the installed TOC: "0.12.0" (tagged release), "0.13.0-test.1 (abc1234)" (local test
+--- build from tools/install.ps1), or nil in a source checkout (unstamped) and the simulator.
+function Core.addonVersion()
+  local get = (_G.C_AddOns and _G.C_AddOns.GetAddOnMetadata) or _G.GetAddOnMetadata
+  local ok, v = false, nil
+  if get then ok, v = pcall(get, ADDON or "WoWBoxer", "Version") end
+  if not ok or type(v) ~= "string" or v == "" or v:find("@", 1, true) then return nil end
+  return v:sub(1, 40)
+end
+--- True only for a local test build ("-test.N" in the version); a tagged release never has it.
+function Core.isTestBuild()
+  local v = Core.addonVersion()
+  return v ~= nil and v:find("-test.", 1, true) ~= nil
+end
+
 -- ------------------------------------------------------------------ chat + log
 local function chat(msg)
   local f = _G.DEFAULT_CHAT_FRAME
@@ -751,7 +766,7 @@ end
 function Core.selftest(quiet)
   C.invalidateSpellbook()
   local db = Core.db
-  local r = { at = time and time() or 0, version = Core.VERSION, probe = C.probe(), player = Core.playerInfo() }
+  local r = { at = time and time() or 0, version = Core.VERSION, build = Core.addonVersion(), probe = C.probe(), player = Core.playerInfo() }
   local ctx, why = Core.compute()
   if ctx then
     r.member = { name = ctx.member.name, cls = ctx.member.cls, role = ctx.member.role, leader = ctx.member.leader, unit = ctx.member.unit, seq = ctx.member.seq }

@@ -57,11 +57,10 @@ function TM.collect()
 end
 
 -- ------------------------------------------------------------------ my readiness + version (Squad pages)
---- The WoWBoxer version of this client ("dev-1a2b3c4" from the installed TOC, else Core.VERSION).
+--- The WoWBoxer version of this client ("0.13.0-test.1" from the installed TOC without the " (sha)", else Core.VERSION).
 function TM.version()
-  local get = (G.C_AddOns and G.C_AddOns.GetAddOnMetadata) or G.GetAddOnMetadata
-  local v = get and select(2, pcall(get, "WoWBoxer", "Version"))
-  if type(v) ~= "string" or not v:match("^[%w%.%-]+$") or v:find("@", 1, true) then v = ns.Core.VERSION end
+  local v = (ns.Core.addonVersion() or ""):match("^[%w%.%-]+")
+  if not v then v = ns.Core.VERSION end
   return v:sub(1, 20)
 end
 --- R|version|keys to update|unit ok (1/0/2 unknown)|follow+assist on bars (1/0)|settings to change

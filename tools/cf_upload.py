@@ -28,8 +28,16 @@ def version_name(iface):
 
 
 def release_type(ver):
-    """0.x and pre-release tags (1.0.0-rc1) go out as beta, everything else as release."""
-    return "beta" if ver.startswith("0.") or "-" in ver else "release"
+    """Plain tags (0.13.0, 1.0.0) are a release, -beta/-rc a beta, -alpha an alpha (docs/release.md). Local test
+    builds (-test.N) and unknown suffixes are never uploaded."""
+    if "-" not in ver:
+        return "release"
+    suffix = ver.split("-", 1)[1].lower()
+    if suffix.startswith(("beta", "rc")):
+        return "beta"
+    if suffix.startswith("alpha"):
+        return "alpha"
+    sys.exit("refusing to upload %s: only plain, -beta, -rc and -alpha tags go to CurseForge" % ver)
 
 
 def request(path, key, data=None, headers=None):
@@ -95,7 +103,15 @@ def main():
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "--selftest":
         assert version_name(11509) == "1.15.9" and version_name(16001) == "1.60.1" and version_name(120105) == "12.1.5"
-        assert release_type("0.9.0") == "beta" and release_type("1.0.0-rc1") == "beta" and release_type("1.0.0") == "release"
+        assert release_type("0.13.0") == "release" and release_type("1.0.0") == "release"
+        assert release_type("0.13.0-beta.1") == "beta" and release_type("1.0.0-rc1") == "beta"
+        assert release_type("0.13.0-alpha.2") == "alpha"
+        for bad in ("0.13.0-test.1", "0.13.0-dev"):
+            try:
+                release_type(bad)
+                raise AssertionError("uploaded " + bad)
+            except SystemExit:
+                pass
         assert interfaces() == [16001, 11509], interfaces()
         print("cf_upload selftest ok")
     else:

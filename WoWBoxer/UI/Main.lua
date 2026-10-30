@@ -81,6 +81,15 @@ function UI.Build()
   local title = W.text(f, "GameFontNormalLarge", 16, W.GOLD)
   title:SetPoint("TOPLEFT", 42, -14)
   title:SetText("WoWBoxer")
+  -- local test build (tools/install.ps1): an orange label so the owner always knows which build he is testing
+  if ns.Core.isTestBuild() then
+    UI.testLabel = W.text(f, "GameFontNormalSmall", nil, { 1, 0.5, 0.1 })
+    UI.testLabel:SetPoint("LEFT", title, "RIGHT", 8, 0)
+    UI.testLabel:SetText("TEST BUILD")
+    local testHit = CreateFrame("Frame", nil, f)
+    testHit:SetAllPoints(UI.testLabel)
+    W.tip(testHit, "Test build", ns.Core.addonVersion() .. " - a local build for testing, not a release.")
+  end
   local close = W.frame("Button", f, "UIPanelCloseButton")
   close:SetSize(28, 28)
   close:SetPoint("TOPRIGHT", -4, -4)

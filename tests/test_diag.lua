@@ -95,4 +95,24 @@ do
   H.eq(W.calls.CreateMacro, nil, "nothing written")
 end
 
+-- test builds (tools/install.ps1): the stamped version reaches the diagnose and the team message, the window shows an
+-- orange TEST BUILD label; a tagged release and an unstamped checkout never show it
+for _, case in ipairs({ { "0.13.0-test.1 (abc1234)", true, "0.13.0-test.1" }, { "0.12.0", false, "0.12.0" },
+                        { "@project-version@", false, nil } }) do
+  local ver, isTest, short = case[1], case[2], case[3]
+  local W = Mock.new(H, { name = "Dorin", class = "PALADIN", race = "Scourge", level = 12 })
+  W.env.GetAddOnMetadata = function(addon, field) if field == "Version" then return ver end end
+  local ns = H.loadAddon({ env = W.env })
+  W.fire("ADDON_LOADED", "WoWBoxer")
+  W.fire("PLAYER_LOGIN")
+  H.eq(ns.Core.isTestBuild(), isTest, ver .. ": isTestBuild")
+  H.eq(ns.Core.addonVersion(), short and ver or nil, ver .. ": addonVersion")
+  H.eq(ns.Team.version(), short or ns.Core.VERSION, ver .. ": team version has no sha")
+  local timers = W.timers; W.timers = {}
+  for _, fn in ipairs(timers) do fn() end
+  H.eq(ns.Core.db.diag["Dorin-Realm"].build, short and ver or nil, ver .. ": diagnose has the build")
+  ns.UI.Open("keys")
+  H.eq(ns.UI.testLabel and ns.UI.testLabel:GetText() or nil, isTest and "TEST BUILD" or nil, ver .. ": TEST BUILD label")
+end
+
 os.exit(H.report("diag") and 0 or 1)
