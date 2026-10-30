@@ -17,7 +17,15 @@ local function S() return ns.State end
 
 O.MAX_TARGETS = 8
 O.KINDS = { "mouseover", "target", "leader", "leadertarget", "member", "mypet", "unit", "focus", "targettarget", "player" }
-O.RAW_UNITS = { "party1", "party2", "party3", "party4", "party1pet", "party2pet", "party3pet", "party4pet" }
+-- raw units: party1–4 and their pets (a party is you + party1–4: there is no party5), then raid1–40 and their pets.
+-- A macro with a raid unit still works in a party: [@raidN] simply does not exist there and the macro goes on.
+O.PARTY_UNITS = { "party1", "party2", "party3", "party4", "party1pet", "party2pet", "party3pet", "party4pet" }
+O.RAID_UNITS = {}
+for i = 1, 40 do O.RAID_UNITS[#O.RAID_UNITS + 1] = "raid" .. i end
+for i = 1, 40 do O.RAID_UNITS[#O.RAID_UNITS + 1] = "raid" .. i .. "pet" end
+O.RAW_UNITS = {}
+for _, u in ipairs(O.PARTY_UNITS) do O.RAW_UNITS[#O.RAW_UNITS + 1] = u end
+for _, u in ipairs(O.RAID_UNITS) do O.RAW_UNITS[#O.RAW_UNITS + 1] = u end
 O.MODS = { "shift", "ctrl", "alt" }
 O.RESETS = { "combat", "target", "combat/target", "12", "combat/12" }
 local function contains(t, v) for _, x in ipairs(t) do if x == v then return true end end return false end
@@ -302,21 +310,60 @@ function O.fromBody(body, ctx)
   return out
 end
 
---- Add-target choices for this client: {{label, target}} (mouseover, target, leader, leader's target, each member and
---- pet with its unit here, my pet, raw party units, focus, target of target, myself).
-function O.choices(ctx, help)
-  local v = {}
-  local function add(t) t.help = help; t.nodead = true; v[#v + 1] = { O.label(t, ctx) .. ((O.unitFor(t, ctx) and (" (" .. O.unitFor(t, ctx) .. ")")) or " (not in party)"), t } end
-  add({ who = "mouseover" }); add({ who = "target" })
-  if ctx.me and not ctx.me.leader then add({ who = "leader" }); add({ who = "leadertarget" }) end
+--- What a target is, in a few words (the tile's tooltip): "Mouseover – whoever your mouse is over".
+O.ABOUT = { mouseover = "whoever your mouse is over", target = "what you have targeted", leader = "the squad's leader",
+  leadertarget = "what the leader has targeted", focus = "the unit you set as focus", targettarget = "your target's target",
+  player = "you", mypet = "your own pet" }
+function O.about(t, ctx)
+  if t.who == "member" then return t.pet and ("the pet of " .. t.name) or ("your squad member " .. t.name) end
+  if t.who == "unit" then
+    local n, pet = smatch(t.unit, "^%a+(%d+)(p?e?t?)$")
+    local kind = smatch(t.unit, "^raid") and "raid member " or "party member "
+    return (pet == "pet" and ("the pet of " .. kind) or kind) .. (n or "")
+  end
+  return O.ABOUT[t.who] or ""
+end
+
+--- Add-target choices for this client, grouped (docs: Macro editor → Targeting):
+--- {{key, title, tip, folded, items = {{label, target}}}} – Common, Squad, Party, Raid (folded).
+function O.groups(ctx, help)
+  local function item(t)
+    t.help = help; t.nodead = true
+    local u, label = O.unitFor(t, ctx), O.label(t, ctx)
+    local text = label
+    if not u then text = label .. " (not in party)"
+    elseif slower(u) ~= slower(label) and u ~= "" then
+      text = label .. (sfind(label, "(", 1, true) and (" · " .. u) or (" (" .. u .. ")")) -- "Dorin (leader) · player"
+    end
+    return { text, t }
+  end
+  local common = {}
+  for _, w in ipairs({ "mouseover", "target", "leader", "leadertarget", "focus", "targettarget", "player", "mypet" }) do
+    common[#common + 1] = item({ who = w })
+  end
+  local squad = {}
   for _, m in ipairs(ctx.squad and ctx.squad.members or {}) do
-    if m ~= ctx.me then add({ who = "member", name = m.name }) end
-    if m.cls == "hunter" or m.cls == "warlock" then
-      if m == ctx.me then add({ who = "mypet" }) else add({ who = "member", name = m.name, pet = true }) end
+    if m ~= ctx.me then
+      squad[#squad + 1] = item({ who = "member", name = m.name })
+      if m.cls == "hunter" or m.cls == "warlock" then squad[#squad + 1] = item({ who = "member", name = m.name, pet = true }) end
     end
   end
-  add({ who = "focus" }); add({ who = "targettarget" }); add({ who = "player" })
-  for _, u in ipairs(O.RAW_UNITS) do add({ who = "unit", unit = u }) end -- raw units last (for people who know them)
+  local party, raid = {}, {}
+  for _, u in ipairs(O.PARTY_UNITS) do party[#party + 1] = item({ who = "unit", unit = u }) end
+  for _, u in ipairs(O.RAID_UNITS) do raid[#raid + 1] = item({ who = "unit", unit = u }) end
+  local out = {
+    { key = "common", title = "Common", tip = "Who your macro aims at, wherever you play.", items = common },
+    { key = "squad", title = "Squad", tip = "Your squad members (and their pets) with their unit on this client.", items = squad },
+    { key = "party", title = "Party", tip = "A party is you + party1–4 (there is no party5: you are \"player\").", items = party },
+    { key = "raid", title = "Raid", tip = "raid1–40 and their pets, for squads of 6 or more. In a party a raid unit is simply skipped.", items = raid, folded = true },
+  }
+  if #squad == 0 then table.remove(out, 2) end
+  return out
+end
+--- The same choices as one flat list {{label, target}} (the order of the groups).
+function O.choices(ctx, help)
+  local v = {}
+  for _, g in ipairs(O.groups(ctx, help)) do for _, it in ipairs(g.items) do v[#v + 1] = it end end
   return v
 end
 

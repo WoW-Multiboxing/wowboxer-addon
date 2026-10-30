@@ -25,7 +25,21 @@ local function plan()
       for _, b in ipairs(kp.cells or {}) do
         if b:IsShown() and b.cell and b.cell.name then A.openTargeting(kp, b.cell.name, b.cell.label); return end
       end
-    end, function() if A.ef then A.ef:Hide() end end }
+    end }
+    -- the Available targets list scrolled to the top, then (Raid unfolded) to the bottom
+    list[#list + 1] = { "dialog-macro-editor-targets-top", function()
+      local f = A.ef
+      if f and f:IsShown() and f.availSF then f.availSF:SetVerticalScroll(0) end
+    end }
+    list[#list + 1] = { "dialog-macro-editor-targets-bottom", function()
+      local f = A.ef
+      if f and f:IsShown() and f.availSF then
+        f.raidOpen = true; A.refreshEditor()
+        local range = f.availSF.GetVerticalScrollRange and f.availSF:GetVerticalScrollRange() or 0
+        f.availSF:SetVerticalScroll(range)
+        if f.availSF.ScrollBar and f.availSF.ScrollBar.SetValue then f.availSF.ScrollBar:SetValue(range) end
+      end
+    end, function() local f = A.ef; if f then f.raidOpen = nil; f:Hide() end end }
     list[#list + 1] = { "dialog-reset", function() A.openReset() end, function() if A.rf then A.rf:Hide() end end }
     -- both states of the Advanced confirm (§2: off vs on); the tick changes nothing until "Turn on Advanced"
     list[#list + 1] = { "dialog-advanced-off", function() if not A.on() then A.confirm() end end }

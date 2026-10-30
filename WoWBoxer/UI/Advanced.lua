@@ -194,6 +194,11 @@ local function editorFrame(parent)
   f.availBg:SetAllPoints()
   f.availBg:SetColorTexture(0, 0, 0, themed and 0 or 0.25)
   if themed then TH.box(f.avail, "night2", "lineSoft", 6) end
+  -- every target, grouped (Common · Squad · Party · Raid), scrolling with the mouse wheel and the flat bar
+  f.availSF, f.availContent = W.scroll(f.avail, 268 - 8 - W.SCROLLBAR + 8, 8 * A.ROW_H - 8)
+  f.availSF:SetPoint("TOPLEFT", 4, -4)
+  f.availW = 268 - 8 - W.SCROLLBAR + 8
+  f.heads = {}
   f.tiles = {}
   f.list = part(CreateFrame("Frame", nil, f))
   f.list:SetPoint("TOPLEFT", 290, -66)
@@ -391,9 +396,8 @@ end
 local function tile(f, i)
   local t = f.tiles[i]
   if t then return t end
-  t = CreateFrame("Button", nil, f.avail)
+  t = CreateFrame("Button", nil, f.availContent)
   t:SetSize(132, A.ROW_H - 2)
-  t:SetPoint("TOPLEFT", ((i - 1) % 2) * 134, -math.floor((i - 1) / 2) * A.ROW_H)
   t:RegisterForDrag("LeftButton")
   if W.themed() then
     TH.box(t, "panel2", "lineSoft", 4)
@@ -414,13 +418,31 @@ local function tile(f, i)
   t:SetScript("OnClick", function() if t.target then A.insert(t.target, #f.targets + 1) end end)
   W.tooltip(t, function(GT)
     if not t.target then return end
-    GT:AddLine(t.full or "", 1, 0.82, 0)
+    GT:AddLine(t.full or "", 1, 0.82, 0) -- the whole label, also when the tile cuts it
+    local about = O().about(t.target, f.ctx)
+    if about ~= "" then GT:AddLine(O().label(t.target, f.ctx) .. " – " .. about, 1, 1, 1, true) end
     GT:AddLine(O().cond(t.target, f.ctx) or "Not in your party here", 0.56, 0.85, 0.45)
     GT:AddLine("Drag into the list on the right (or click to add it last)", 0.66, 0.6, 0.49, true)
   end)
   f.tiles[i] = t
   return t
 end
+
+--- A small group heading in the available-targets list (Raid: a click folds / unfolds it).
+local function heading(f, i)
+  local h = f.heads[i]
+  if h then return h end
+  h = CreateFrame("Button", nil, f.availContent)
+  h:SetHeight(16)
+  h.text = W.text(h, "GameFontNormalSmall", 10, W.themed() and { TH.rgb("gold") } or W.GOLD)
+  h.text:SetPoint("LEFT", 2, 0)
+  h.text.wbxCopy = "label"
+  h:SetScript("OnClick", function(self) if self.key == "raid" then f.raidOpen = not f.raidOpen; A.refreshEditor() end end)
+  W.tooltip(h, function(GT) GT:AddLine(h.title or "", 1, 0.82, 0); if h.tip then GT:AddLine(h.tip, 1, 1, 1, true) end end)
+  f.heads[i] = h
+  return h
+end
+A.heading = heading
 
 local function copy(t) local c = {}; for k, v in pairs(t) do c[k] = v end return c end
 function A.insert(t, at)
@@ -548,19 +570,50 @@ function A.refreshEditor()
     f.base = baseOf(f)
     f.help = f.base:find("help", 1, true) and true or (f.base:find("harm", 1, true) and false or nil)
   end
-  -- available targets: everything this client can use (the leader's client gets every member and pet too)
-  local choices = O().choices(f.ctx, f.help)
-  for i, c in ipairs(choices) do
-    local t = tile(f, i)
-    t.target = c[2]
-    t.full = c[1]
-    t.name:SetText(c[1])
-    A.iconOf(t.icon, c[2], f.ctx)
-    local ok = O().unitFor(c[2], f.ctx) ~= nil
-    t.name:SetTextColor(ok and 1 or 0.55, ok and 1 or 0.55, ok and 1 or 0.55)
-    t:SetShown(i <= 16)
+  -- available targets: every target this client can use, in groups (Common, Squad, Party, Raid folded); Common and
+  -- Squad tiles take the full width (long names), Party and Raid two columns; the list scrolls
+  local W2, pitch = f.availW, A.ROW_H
+  local half = math.floor((W2 - 4) / 2)
+  local y, ti, hi = 0, 0, 0
+  f.groups = O().groups(f.ctx, f.help)
+  for _, g in ipairs(f.groups) do
+    hi = hi + 1
+    local h = heading(f, hi)
+    h.key, h.title, h.tip = g.key, g.title, g.tip
+    local open = not g.folded or f.raidOpen
+    h.text:SetText(g.folded and ((open and "– " or "+ ") .. g.title:upper() .. " (" .. #g.items .. ")") or g.title:upper())
+    if g.folded then h.tip = g.tip .. (open and " Click to fold." or " Click to show.") end
+    h:ClearAllPoints(); h:SetPoint("TOPLEFT", 0, -y); h:SetWidth(W2)
+    h:Show()
+    g.open = open
+    y = y + 18
+    if open then
+      local wide = g.key == "common" or g.key == "squad"
+      for k, c in ipairs(g.items) do
+        ti = ti + 1
+        local t = tile(f, ti)
+        t.target, t.full, t.group = c[2], c[1], g.key
+        t.name:SetText(c[1])
+        A.iconOf(t.icon, c[2], f.ctx)
+        local ok = O().unitFor(c[2], f.ctx) ~= nil
+        t.name:SetTextColor(ok and 1 or 0.55, ok and 1 or 0.55, ok and 1 or 0.55)
+        t:ClearAllPoints()
+        if wide then
+          t:SetSize(W2, pitch - 2); t:SetPoint("TOPLEFT", 0, -y); y = y + pitch
+        else
+          local col = (k - 1) % 2
+          t:SetSize(half, pitch - 2); t:SetPoint("TOPLEFT", col * (half + 4), -y)
+          if col == 1 or k == #g.items then y = y + pitch end
+        end
+        t:Show()
+      end
+    end
+    y = y + 4
   end
-  for i = #choices + 1, #f.tiles do f.tiles[i]:Hide() end
+  for i = ti + 1, #f.tiles do f.tiles[i]:Hide(); f.tiles[i].target = nil end
+  for i = hi + 1, #f.heads do f.heads[i]:Hide() end
+  f.availContent:SetHeight(math.max(10, y))
+  W.tidyScroll(f.availSF, y)
   for i, r in ipairs(f.rows) do
     local t = f.targets[i]
     r:SetShown(t ~= nil)

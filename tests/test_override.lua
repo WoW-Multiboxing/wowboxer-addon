@@ -48,7 +48,12 @@ H.eq(cond({ who = "focus", help = true, nodead = true }), "[@focus,help,nodead]"
 H.eq(cond({ who = "targettarget", nodead = true }), "[@targettarget,nodead]", "target of target")
 H.eq(cond({ who = "player", help = true }), "[@player,help]", "myself")
 H.eq(O.meaning({ who = "member", name = "Bo", pet = true, help = true, nodead = true }, ctx), "Casts on Bo's pet when it exists, is friendly and is alive", "hover meaning")
-H.eq(O.clean({ targets = { { who = "member", name = "" }, { who = "evil" }, { who = "unit", unit = "raid1" } } }), nil, "bad targets are dropped")
+H.eq(O.clean({ targets = { { who = "member", name = "" }, { who = "evil" }, { who = "unit", unit = "raid41" }, { who = "unit", unit = "boss1" } } }), nil, "bad targets are dropped")
+-- raid units: raid1–40 and their pets are allowed (a macro with them still works in a party: the unit is skipped)
+H.eq(#O.RAW_UNITS, 8 + 80, "8 party units + 80 raid units")
+H.eq(O.clean({ targets = { { who = "unit", unit = "raid40pet" } } }).targets[1].unit, "raid40pet", "raid40pet is kept")
+H.eq(cond({ who = "unit", unit = "raid12", help = true, nodead = true }), "[@raid12,help,nodead]", "raid unit conditional")
+H.eq(#O.checkConditionals("/cast [@raid40pet,help,nodead][@party4pet,help][@player] Heal"), 0, "raid and party pets pass the conditional check")
 
 -- Also heal Bo's pet: after the leader, one click
 H.ok(Core.alsoHeal(NAME, "Bo"), "Also heal Bo's pet")
