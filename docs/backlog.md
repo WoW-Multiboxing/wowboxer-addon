@@ -1,9 +1,10 @@
 # WoWBoxer addon – backlog
 
-## The owner: TEST BUILD 0.14.0-test.1 (9b2134f) – Macro editor targets. `/reload` first (both clients)
-1. Advanced → right-click a heal macro → Edit macro…: COMMON/SQUAD/PARTY/+ RAID; wheel down to party4pet; click "+ RAID (80)", scroll to raid40pet, drag it into the right list → Save.
-2. `/wbx selftest`, then `/wbx shots` (~40 s, hands off), `/reload`.
-3. Tell Claude "done" (Claude crops the editor top/bottom shots into docs/screens/ and reads the selftest).
+## The owner: TEST BUILD 0.14.0-test.2 (5014832) – Macro editor fixes + "Macro editor" page. `/reload` in both clients
+1. Rail → **Macro editor** → New macro → Single spell → add a spell → **Targeting** tab → drag a target in → Spells and back (both kept) → Save.
+2. Advanced on: right-click a recommended macro → Edit macro…: both tabs; then click **Standard** – "Unsaved changes" asks if you dragged a target.
+3. With the editor open click **Advanced**: "Turn on Advanced mode?" is on top; Esc closes only it. Right-click a spell, click the world: the menu is gone.
+4. `/wbx selftest`, `/wbx shots` (~60 s, hands off), `/reload`, tell Claude "done" (Claude reads the log for errors and crops the shots).
 
 ## The owner: in-game screenshots (Classic Era, windowed; Claude's watcher captures read-only until ~16:40)
 1. Out of combat in a quiet spot: `/wbx` → **My macros**, wait 3 s; then **Place all**, wait 3 s.
