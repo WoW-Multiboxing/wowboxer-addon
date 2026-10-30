@@ -21,7 +21,61 @@ T.C = {
   ok = hex("#8ccb7a"), warn = hex("#e6b455"), no = hex("#e37a7e"), horde = hex("#b3262b"),
   ttBg = hex("#090b16"), ttEdge = hex("#8e8e8e"), black = hex("#000000"), none = { 0, 0, 0, 0 },
   hp = hex("#3fae49"), mana = hex("#2f6bd8"), test = hex("#ff8019"),
+  -- "Nothing too dark" (§2): a control's edge needs 3:1 against its panel. Gold at 45 % (the spec's first value) gives
+  -- only 2.4:1 on panel/panel-2, so control edges use gold at 60 % (3.2–3.4:1).
+  ctrlEdge = hex("#c9a24a", 0.6),
+  disEdge = hex("#5c5648"),             -- disabled buttons: readable, clearly not clickable
+  -- "On and off" (§2): green ON, flat grey OFF, always with the word
+  onTrack = hex("#3f7a32"), onEdge = hex("#8ccb7a"), onKnob = hex("#e9f7e2"), onLine = hex("#8ccb7a", 0.55),
+  offTrack = hex("#0f131c"), offEdge = hex("#7a7262"), offKnob = hex("#6f6858"), offWord = hex("#8a8372"),
+  -- hover and selected (§2 "Hover and selected states"): one step lighter, never darker, never over the text
+  hover = hex("#2b3550"),
+  -- the red primary: ui-gold on #b3262b is 4.45:1, so its label is a lighter gold (5.0:1; 4.6:1 on the hover red)
+  primaryText = hex("#ffe066"), hordeHi = hex("#bd2a2f"), hordeLo = hex("#9a1f24"),
 }
+
+--- Background and label of every control state ({bg token, label token}). The skins paint from this table, and
+--- tests/test_theme.lua checks every pair against 4.5:1 – so a new state colour cannot make a label unreadable.
+T.STATES = {
+  nav = { normal = { "night2", "text" }, hover = { "hover", "parchment" }, selected = { "panel3", "uiGold" }, selectedHover = { "hover", "uiGold" } },
+  secondary = { normal = { "panel2", "parchment" }, hover = { "panel3", "parchment" }, pressed = { "hover", "parchment" }, disabled = { "panel3", "muted" },
+    selected = { "panel3", "uiGold" }, selectedHover = { "hover", "uiGold" } },
+  primary = { normal = { "horde", "primaryText" }, hover = { "hordeHi", "primaryText" }, pressed = { "hordeLo", "primaryText" }, disabled = { "panel3", "muted" },
+    selected = { "horde", "primaryText" }, selectedHover = { "hordeHi", "primaryText" } },
+  raised = { normal = { "panel3", "uiGold" }, hover = { "hover", "uiGold" }, pressed = { "hover", "uiGold" }, disabled = { "panel3", "muted" },
+    selected = { "hover", "uiGold" }, selectedHover = { "hover", "uiGold" } },
+  ghost = { normal = { "panel", "goldHi" }, hover = { "panel2", "goldHi" }, pressed = { "panel3", "goldHi" }, disabled = { "panel", "muted" },
+    selected = { "panel3", "uiGold" }, selectedHover = { "hover", "uiGold" } },
+  segment = { normal = { "panel2", "muted" }, hover = { "panel3", "text" }, pressed = { "hover", "text" }, disabled = { "panel2", "muted" },
+    selected = { "panel3", "uiGold" }, selectedHover = { "hover", "uiGold" } },
+  card = { normal = { "panel2", "parchment" }, hover = { "panel3", "parchment" }, selected = { "panel3", "parchment" }, selectedHover = { "hover", "parchment" } },
+  menu = { normal = { "panel", "text" }, hover = { "hover", "parchment" }, disabled = { "panel", "muted" } },
+  dropdown = { normal = { "panel2", "parchment" }, hover = { "panel3", "parchment" }, disabled = { "panel3", "muted" } },
+  toggleRow = { on = { "panel3", "parchment" }, off = { "panel", "muted" } },
+  tick = { normal = { "panel2", "parchment" }, ticked = { "panel3", "parchment" } },
+}
+--- The state of a control: "disabled", "pressed", "selectedHover", "selected", "hover" or "normal".
+function T.stateOf(disabled, pressed, selected, hover)
+  if disabled then return "disabled" end
+  if pressed then return "pressed" end
+  if selected then return hover and "selectedHover" or "selected" end
+  return hover and "hover" or "normal"
+end
+--- {bg, label} of a kind in a state (falls back to normal).
+function T.state(kind, state)
+  local k = T.STATES[kind] or T.STATES.secondary
+  return k[state] or k.normal
+end
+--- WCAG contrast of two tokens (the label rule's check; tests use it).
+function T.contrast(a, b)
+  local function lum(c)
+    local function ch(x) if x <= 0.03928 then return x / 12.92 end return ((x + 0.055) / 1.055) ^ 2.4 end
+    return 0.2126 * ch(c[1]) + 0.7152 * ch(c[2]) + 0.0722 * ch(c[3])
+  end
+  local la, lb = lum(T.C[a]), lum(T.C[b])
+  if la < lb then la, lb = lb, la end
+  return (la + 0.05) / (lb + 0.05)
+end
 function T.rgb(name) local c = T.C[name] or T.C.text; return c[1], c[2], c[3], c[4] end
 --- "|cffxxxxxx" for a token (inline colour in a text).
 function T.code(name) local c = T.C[name] or T.C.text; return string.format("|cff%02x%02x%02x", c[1] * 255, c[2] * 255, c[3] * 255) end

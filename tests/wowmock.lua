@@ -215,6 +215,7 @@ function Mock.new(H, opts)
   function methods:SetTextColor(r, g, b, a) self._textColor = { r, g, b, a or 1 } end
   function methods:GetTextColor() local c = self._textColor or { 1, 1, 1, 1 }; return c[1], c[2], c[3], c[4] end
   function methods:SetDrawLayer(layer, sub) self._layer, self._sub = layer, sub end
+  function methods:SetBlendMode(m) self._blend = m end
   function methods:SetJustifyH(j) self._justifyH = j end
   function methods:SetJustifyV(j) self._justifyV = j end
   function methods:SetNormalFontObject(o) self._fontObject = o end

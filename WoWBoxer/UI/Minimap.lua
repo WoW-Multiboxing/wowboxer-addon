@@ -71,6 +71,7 @@ MM.MENU = ITEMS
 function MM.ShowMenu(anchor)
   if not MM.menu then
     local m = W.box(UIParent, 0.07, 0.055, 0.035, 0.97)
+    if W.themed() then ns.Theme.paint(m, "panel", "line") end
     m:SetFrameStrata("DIALOG")
     m:SetClampedToScreen(true)
     m:SetSize(190, 12 + #ITEMS * 22)
@@ -78,12 +79,11 @@ function MM.ShowMenu(anchor)
       local b = CreateFrame("Button", nil, m)
       b:SetSize(176, 20)
       b:SetPoint("TOPLEFT", 7, -6 - (i - 1) * 22)
-      local hl = b:CreateTexture(nil, "HIGHLIGHT")
-      hl:SetAllPoints()
-      hl:SetColorTexture(1, 0.82, 0, 0.18)
       local t = W.text(b, "GameFontHighlightSmall", nil, i == #ITEMS and W.MUTED or W.TEXT)
       t:SetPoint("LEFT", 6, 0)
       t:SetText(it[1])
+      b.label = t
+      W.hoverRow(b)
       b:SetScript("OnClick", function() m:Hide(); it[2]() end)
     end
     m:Hide()

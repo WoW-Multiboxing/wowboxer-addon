@@ -123,13 +123,10 @@ function Help.attach(f)
   b.glow = b:CreateTexture(nil, "OVERLAY")
   b.glow:SetAllPoints(b.icon)
   b.glow:SetTexture(Help.ICON)
-  if b.glow.SetBlendMode then b.glow:SetBlendMode("ADD") end
+  b.glow:SetVertexColor(TH.rgb("parchment")) -- the first-visit pulse: a lighter "?", never an additive wash
   b.glow:Hide()
-  local hl = b:CreateTexture(nil, "HIGHLIGHT")
-  hl:SetPoint("TOPLEFT", 1, -1)
-  hl:SetPoint("BOTTOMRIGHT", -1, 1)
-  hl:SetTexture(DISC)
-  hl:SetVertexColor(TH.rgb("panel3"))
+  W.onHover(b, function(self) self.bg:SetVertexColor(TH.rgb("hover")); self.rim:SetVertexColor(TH.rgb("goldHi")) end,
+    function(self) self.bg:SetVertexColor(TH.rgb("panel2")); self.rim:SetVertexColor(TH.rgb("gold")) end)
   b:SetScript("OnMouseDown", function() b.icon:SetPoint("CENTER", 1, -1) end)
   b:SetScript("OnMouseUp", function() b.icon:SetPoint("CENTER", 0, 0) end)
   b:RegisterForClicks("LeftButtonUp", "RightButtonUp")

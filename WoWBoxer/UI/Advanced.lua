@@ -45,7 +45,7 @@ function A.attachSwitch(f)
   if UI.helpBtn then rs:SetPoint("RIGHT", UI.helpBtn, "LEFT", -10, 0) else rs:SetPoint("RIGHT", hdr, "RIGHT", -86, 0) end
   seg:SetPoint("RIGHT", rs, "LEFT", -10, 0)
   -- the confirm window (§1)
-  local c = modal(f, 420, 200)
+  local c = modal(f, 420, W.themed() and 226 or 200)
   c.title = W.text(c, "GameFontNormalLarge", 15, W.GOLD)
   c.title:SetPoint("TOPLEFT", 16, -14)
   c.title:SetText("Turn on Advanced mode?")
@@ -58,11 +58,25 @@ function A.attachSwitch(f)
     "You can undo any change with \"Back to WoWBoxer's version\" on each macro, or Reset to default in Setup.")
   c.text.wbxCopy = "guide"
   c.tick = W.check(c, "I understand", function() A.refreshConfirm() end)
-  c.tick:SetPoint("BOTTOMLEFT", 12, 44)
+  if W.themed() then
+    -- the whole row is the tick: a card that lifts when ticked (§2, board "Advanced confirm – off vs on")
+    c.tickRow = CreateFrame("Frame", nil, c)
+    c.tickRow:SetPoint("BOTTOMLEFT", 12, 44)
+    c.tickRow:SetPoint("BOTTOMRIGHT", -12, 44)
+    c.tickRow:SetHeight(32)
+    c.tick:SetParent(c.tickRow)
+    c.tick:SetPoint("LEFT", c.tickRow, "LEFT", 8, 0)
+    W.role(c.tick.label, "bold", 12)
+    c.tick.label:SetTextColor(TH.rgb("parchment"))
+    W.tickRow(c.tick, c.tickRow)
+  else
+    c.tick:SetPoint("BOTTOMLEFT", 12, 44)
+  end
   c.go = W.button(c, "Turn on Advanced", 130, 24, function() if c.tick:GetChecked() then c:Hide(); A.setMode(true) end end,
     "Shows the advanced controls. Nothing changes in your macros until you change one.")
   c.go:SetPoint("BOTTOMRIGHT", -12, 12)
   c.go.wbxBig = true
+  W.primary(c.go) -- disabled: grey panel-3 with a grey edge; ticked: the red primary
   c.cancel = W.button(c, "Cancel", 70, 24, function() c:Hide() end, "Stays in Standard mode.")
   c.cancel:SetPoint("RIGHT", c.go, "LEFT", -6, 0)
   A.confirmFrame = c
@@ -368,7 +382,7 @@ function A.showSection(which)
       x[1].line:SetShown(x[2])
       x[1]:SetNormalFontObject(TH.fontObject("bold", 12, x[2] and "uiGold" or "muted"))
     end
-  elseif spells then f.tabSpells:LockHighlight(); f.tabTarget:UnlockHighlight() else f.tabTarget:LockHighlight(); f.tabSpells:UnlockHighlight() end
+  else W.setSelected(f.tabSpells, spells); W.setSelected(f.tabTarget, not spells) end
   f.tabTarget:SetEnabled(f.name ~= nil)
   A.refreshEditor()
 end
@@ -381,10 +395,14 @@ local function tile(f, i)
   t:SetSize(132, A.ROW_H - 2)
   t:SetPoint("TOPLEFT", ((i - 1) % 2) * 134, -math.floor((i - 1) / 2) * A.ROW_H)
   t:RegisterForDrag("LeftButton")
-  local hl = t:CreateTexture(nil, "HIGHLIGHT")
-  hl:SetAllPoints()
-  hl:SetColorTexture(1, 0.82, 0, 0.15)
-  if W.themed() then TH.box(t, "panel2", "lineSoft", 4); hl:SetColorTexture(TH.rgb("panel3")) end
+  if W.themed() then
+    TH.box(t, "panel2", "lineSoft", 4)
+    W.onHover(t, function(self) TH.paint(self, "panel3", "line") end, function(self) TH.paint(self, "panel2", "lineSoft") end)
+  else
+    local hl = t:CreateTexture(nil, "HIGHLIGHT")
+    hl:SetAllPoints()
+    hl:SetColorTexture(1, 0.82, 0, 0.15)
+  end
   t.icon = W.icon(t, 18)
   t.icon:SetPoint("LEFT", 2, 0)
   t.name = W.line(t, "GameFontHighlightSmall", nil, W.TEXT)

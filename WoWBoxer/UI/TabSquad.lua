@@ -284,8 +284,11 @@ local function buildRow(f, parent)
     r.edge:SetPoint("TOPLEFT", 1, -6)
     r.edge:SetPoint("BOTTOMLEFT", 1, 6)
     r.edge:SetWidth(3)
-    local hl = T.slice(r, T.TEX .. "Fill6", 6, "HIGHLIGHT")
-    for _, t in ipairs(hl) do t:SetVertexColor(T.rgb("goldHi")); t:SetAlpha(0.06) end
+    r.wbxPaint = function(self)
+      local pair = T.state("card", T.stateOf(false, false, self.m and self.m.id == SP.editing, self.wbxHovering))
+      T.paint(self, pair[1])
+    end
+    W.onHover(r, r.wbxPaint, r.wbxPaint)
   else
     local hl = r:CreateTexture(nil, "HIGHLIGHT")
     hl:SetAllPoints()
@@ -572,7 +575,8 @@ SP.register({ key = "main", label = "Squad", tip = "Who plays together, who lead
         SP.setClassIcon(r.icon, m.cls)
         r.edge:SetColorTexture(cc[1], cc[2], cc[3], 1)
         r.cls:SetText(D().classes[m.cls].n .. (m.level and (" · level " .. m.level) or ""))
-        T.paint(r, m.id == SP.editing and "panel3" or "panel2", m.id == SP.editing and "gold" or (m == me and "line" or "lineSoft"))
+        T.paint(r, nil, m.id == SP.editing and "gold" or (m == me and "line" or "lineSoft"))
+        r.wbxPaint(r)
       else r.cls:SetText(D().classes[m.cls].n .. " ·") end
       r.role.Refresh()
       r.follows:SetText(SP.followsText(m, s))

@@ -58,12 +58,19 @@ function tab.build(p)
       c:SetPoint("LEFT", card, "LEFT", 10, 0)
       c.card = card
       c.label:ClearAllPoints()
-      c.label:SetPoint("TOPLEFT", card, "TOPLEFT", 50, -4)
+      c.label:SetPoint("TOPLEFT", card, "TOPLEFT", 66, -4)
       ns.Theme.font(c.label, "bold", 12)
-      c.label:SetTextColor(ns.Theme.rgb("parchment"))
+      c.label:SetWordWrap(false); if c.label.SetMaxLines then c.label:SetMaxLines(1) end
+      c.label.wbxTrunc = true
+      c.label:SetWidth(222)
       c.line = W.line(card, "GameFontHighlightSmall", 10, W.MUTED)
-      c.line:SetPoint("BOTTOMLEFT", card, "BOTTOMLEFT", 50, 5)
-      c.line:SetWidth(270)
+      c.line:SetPoint("BOTTOMLEFT", card, "BOTTOMLEFT", 66, 5)
+      c.line:SetWidth(222)
+      -- ON / OFF at the right of the card; the card lifts while ON (§2 "On and off")
+      c.word:ClearAllPoints()
+      c.word:SetPoint("RIGHT", card, "RIGHT", -10, 0)
+      c.wbxRow = card
+      c.wbxPaint(c)
     else
       c = W.check(p, o[2], onClick)
       c:SetPoint("TOPLEFT", -2 + col * 336, -34 - row * 38)
@@ -76,12 +83,12 @@ function tab.build(p)
     W.tip(c, o[2], o[3])
     if AU().ACCEPTS[o[1]] then
       -- Advanced: this row's own "Accept from"
-      c.own = W.dropdown(p, { width = 110,
+      c.own = W.dropdown(p, { width = themed and 84 or 110,
         values = function() local v = { { "default", "Like the top" } }; for _, f in ipairs(AU().FROM) do if f[1] ~= "everyone" then v[#v + 1] = { f[1], f[2] } end end return v end,
         get = function() local t = settings().acceptOverride; return (type(t) == "table" and t[o[1]]) or "default" end,
         set = function(v) settings().acceptOverride = type(settings().acceptOverride) == "table" and settings().acceptOverride or {}
           settings().acceptOverride[o[1]] = v ~= "default" and v or nil; UI.Refresh() end })
-      if themed then c.own:SetPoint("RIGHT", c.card, "RIGHT", -6, 0)
+      if themed then c.own:SetPoint("RIGHT", c.card, "RIGHT", -38, 0)
       else c.own:SetPoint("TOPLEFT", 200 + col * 336, -34 - row * 38 - 14) end
       W.ddTip(c.own, "Accept from (this one)", "Advanced: this automation uses its own choice instead of the one at the top.")
     end
@@ -116,9 +123,8 @@ function tab.refresh(p)
     if AU().ACCEPTS[c.key] then text = "Accepts from: " .. AU().FROM_SHORT[AU().acceptFrom(c.key)] .. " · " .. text end
     c.line:SetText(text)
     if c.own then c.own:SetShown(adv and true or false); c.own.Refresh() end
-    if c.card then c.line:SetWidth((c.own and adv) and 154 or 270)
+    if c.card then c.line:SetWidth((c.own and adv) and 132 or 222); c.label:SetWidth((c.own and adv) and 132 or 222)
     else c.line:SetWidth((c.own and adv) and 170 or 306) end
-    if c.card then ns.Theme.paint(c.card, nil, c:GetChecked() and "line" or "lineSoft") end
   end
 end
 

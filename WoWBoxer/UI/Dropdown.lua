@@ -64,9 +64,6 @@ local function listFrame()
       if not b then
         b = CreateFrame("Button", nil, l)
         b:SetHeight(W.LIST_ROW)
-        local hl = b:CreateTexture(nil, "HIGHLIGHT")
-        hl:SetAllPoints()
-        hl:SetColorTexture(ns.Theme.rgb("panel3"))
         b.radio = b:CreateTexture(nil, "ARTWORK")
         b.radio:SetSize(16, 16)
         b.radio:SetPoint("LEFT", 2, 0)
@@ -75,6 +72,7 @@ local function listFrame()
         b.label = W.line(b, "GameFontHighlightSmall", nil, W.TEXT)
         b.label:SetPoint("LEFT", 22, 0)
         b.label:SetPoint("RIGHT", -4, 0)
+        W.hoverRow(b)
         b:SetScript("OnClick", function(self) local o = l.owner; l:Hide(); if o then o.select(self.value) end end)
         W.tooltip(b, function(GT, self)
           GT:AddLine(self.text or "", 1, 0.82, 0)
@@ -142,11 +140,15 @@ function W.dropdown(parent, opts)
     dd:SetSize(width, W.DROPDOWN_H)
     if themed then
       -- the pill: night-2, gold line border, radius 4, a gold ▾ on the right
-      ns.Theme.box(dd, "night2", "line", 4)
+      ns.Theme.box(dd, "panel2", "ctrlEdge", 4) -- a control: never night on a panel (§2)
       dd.arrow = ns.Theme.glyph(dd, "Chevron", 14, "gold")
       dd.arrow:SetPoint("RIGHT", -8, 0)
-      local hl = ns.Theme.slice(dd, ns.Theme.TEX .. "Fill4", 4, "HIGHLIGHT")
-      for _, t in ipairs(hl) do t:SetVertexColor(ns.Theme.rgb("goldHi")); t:SetAlpha(0.08) end
+      local function paint(self)
+        local pair = ns.Theme.state("dropdown", ns.Theme.stateOf(not self:IsEnabled(), false, false, self.wbxHovering))
+        ns.Theme.paint(self, pair[1], self:IsEnabled() and "ctrlEdge" or "disEdge")
+      end
+      dd.wbxPaint = paint
+      W.onHover(dd, paint, paint)
     else
       if dd.SetBackdrop then
         dd:SetBackdrop(W.BACKDROP)
@@ -162,15 +164,16 @@ function W.dropdown(parent, opts)
       hl:SetPoint("BOTTOMRIGHT", -3, 3)
       hl:SetColorTexture(1, 0.82, 0, 0.12)
     end
-    dd.label = W.line(dd, "GameFontHighlight", 12, W.TEXT)
+    dd.label = W.line(dd, "GameFontHighlight", 12, W.themed() and W.PARCHMENT or W.TEXT)
     dd.label:SetPoint("LEFT", 8, 0)
     dd.label:SetPoint("RIGHT", dd.arrow, "LEFT", -2, 0)
     dd:SetScript("OnClick", function(self) if self:IsEnabled() then openList(self) end end)
     local enable = dd.SetEnabled
     dd.SetEnabled = function(self, v)
       enable(self, v)
-      local c = v and W.TEXT or W.MUTED
+      local c = v and (W.themed() and W.PARCHMENT or W.TEXT) or W.MUTED
       self.label:SetTextColor(c[1], c[2], c[3])
+      if self.wbxPaint then self.wbxPaint(self) end
       if self.arrow.SetDesaturated then self.arrow:SetDesaturated(not v) end
     end
   end
@@ -212,8 +215,9 @@ function W.ddTip(dd, title, text)
     GT:Show()
   end
   local function hide() _G.GameTooltip:Hide() end
-  if dd.isBlizzard then dd:HookScript("OnEnter", show); dd:HookScript("OnLeave", hide)
-  else dd:SetScript("OnEnter", show); dd:SetScript("OnLeave", hide) end
+  -- hook, never replace: the menu's own scripts and our hover paint stay
+  if dd:GetScript("OnEnter") then dd:HookScript("OnEnter", show) else dd:SetScript("OnEnter", show) end
+  if dd:GetScript("OnLeave") then dd:HookScript("OnLeave", hide) else dd:SetScript("OnLeave", hide) end
 end
 
 --- Label + dropdown in one: returns the label (anchor the dropdown to it with "LEFT", label, "RIGHT").
@@ -274,7 +278,8 @@ function W.seqControl(parent, opts)
   W.tip(f.noteHit, SEQ_LABEL, W.SEQ_CLASSES)
   if W.themed() then
     ns.Theme.font(f.check.label, "body", 12)
-    f:SetSize(30 + 8 + W.measure(SEQ_LABEL_SHORT, "GameFontHighlight") + 6 + ddW, W.DROPDOWN_H)
+    f.check.word:Hide() -- the tier dropdown says it; the switch alone shows on / off here
+    f:SetSize(46 + 8 + W.measure(SEQ_LABEL_SHORT, "GameFontHighlight") + 6 + ddW, W.DROPDOWN_H)
   else
     f:SetSize(22 + 2 + W.measure(SEQ_LABEL, "GameFontHighlightSmall") + 6 + ddW, W.DROPDOWN_H)
   end

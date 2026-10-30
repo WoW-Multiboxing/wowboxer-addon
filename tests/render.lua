@@ -98,3 +98,15 @@ end
 local CM = ns.Community
 CM.ShowLink("discord"); dump("community-link", { CM.box }); CM.box:Hide()
 CM.ShowReport(); dump("community-report", { CM.rf }); CM.rf:Hide()
+-- hover and on/off states (docs/ui-redesign.md §2)
+UI.Select("keys")
+local row = UI.tabButtons.spells
+row._scripts.OnEnter(row); dump("hover-nav", { UI.frame }); row._scripts.OnLeave(row)
+local kp2 = UI.panels.keys
+kp2.role.open()
+local L = ns.Widgets.listFrame
+if L and L.rows[2] then L.rows[2]._scripts.OnEnter(L.rows[2]) end
+dump("hover-dropdown", { UI.frame, L }); L:Hide()
+A.confirm(); dump("dialog-advanced-off", { UI.frame })
+A.confirmFrame.tick:Click(); dump("dialog-advanced-on", { UI.frame }); A.confirmFrame:Hide()
+ns.Auto.set("invite", true); ns.Auto.set("quests", true); UI.Select("automation"); dump("page-automation-on", { UI.frame })

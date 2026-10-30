@@ -697,7 +697,7 @@ local function makeCell(p, parent, small)
   b.glow:SetSize(S * 1.95, S * 1.95)
   b.glow:SetPoint("CENTER", b.slotBg, "CENTER", 0, 0)
   b.glow:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
-  if b.glow.SetBlendMode then b.glow:SetBlendMode("ADD") end
+  if b.glow.SetBlendMode and not W.themed() then b.glow:SetBlendMode("ADD") end -- no additive glow in the new look
   b.glow:SetVertexColor(1, 0.9, 0.5, 0.95)
   -- a later-level spell: a padlock on the icon and a cool tint behind the button
   -- "edited": the player's own targeting or text (Advanced mode); bottom-right of the icon, the lock wins there
@@ -720,9 +720,17 @@ local function makeCell(p, parent, small)
     b.sel = CreateFrame("Frame", nil, b)
     b.sel:SetAllPoints()
     TH.box(b.sel, "none", "gold", 6)
-    local hl = TH.slice(b, TH.TEX .. "Fill6", 6, "HIGHLIGHT")
-    for _, t in ipairs(hl) do t:SetVertexColor(TH.rgb("goldHi")); t:SetAlpha(0.07) end
     b.tint:SetColorTexture(TH.rgb("panel3"))
+    local function paint(self)
+      local pair = TH.state("card", TH.stateOf(false, false, self.sel:IsShown(), self.wbxHovering))
+      TH.paint(self, pair[1])
+    end
+    b.wbxPaint = paint
+    W.onHover(b, paint, paint)
+    local show = b.sel.Show
+    b.sel.Show = function(self) show(self); paint(b) end
+    local hide = b.sel.Hide
+    b.sel.Hide = function(self) hide(self); paint(b) end
   else
     b.sel = b:CreateTexture(nil, "BACKGROUND")
     b.sel:SetAllPoints()

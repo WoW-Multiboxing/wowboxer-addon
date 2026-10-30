@@ -50,7 +50,8 @@ function W.box(parent, r, g, b, a)
   if W.themed() then
     local f = CreateFrame("Frame", nil, parent)
     local dark = ((r or 0.07) + (g or 0.055) + (b or 0.035)) / 3 < 0.05
-    T.box(f, dark and "night2" or "panel2", "lineSoft", 6, a or 1)
+    -- 0.9 and up was meant as "solid" in the old look: draw it fully opaque (nothing bleeds through a dialog)
+    T.box(f, dark and "night2" or "panel2", "lineSoft", 6, (a and a < 0.9) and a or 1)
     return f
   end
   local f = W.frame("Frame", parent, _G.BackdropTemplateMixin and "BackdropTemplate" or nil)
@@ -141,85 +142,138 @@ function W.setLabel(b, label)
   b:SetWidth(math.max(b.minWidth or 0, math.ceil(tw + 24)))
 end
 
+-- ------------------------------------------------------------------ hover (§2 "Hover and selected states")
+--- Hover without Blizzard's highlight: on(self) / off(self) run when the mouse enters / leaves, and paint a flat
+--- background UNDER the label (never a HIGHLIGHT-layer wash or an additive glow over the text). W.tooltip keeps them.
+function W.onHover(f, on, off)
+  f.wbxHoverOn, f.wbxHoverOff = on, off
+  for _, ev in ipairs({ { "OnEnter", true }, { "OnLeave", false } }) do
+    local fn = function(self) self.wbxHovering = ev[2]; local h = ev[2] and self.wbxHoverOn or self.wbxHoverOff; if h then h(self) end end
+    if f:GetScript(ev[1]) then f:HookScript(ev[1], fn) else f:SetScript(ev[1], fn) end
+  end
+end
+
 -- ------------------------------------------------------------------ button styles (§2: one red primary per page)
--- secondary: gold outline · primary: horde red, Cinzel · raised: panel-3 with a gold-lo border · ghost: text only
--- (a link) · segment: one part of a segmented control · nav: a row of the left rail. Hover = a soft wash in the
--- HIGHLIGHT layer (no script is taken from the page); LockHighlight keeps it on.
+-- secondary: panel-2 with a gold edge · primary: horde red, Cinzel · raised: panel-3 with a gold-lo border · ghost:
+-- text only (a link) · segment: one part of a segmented control. Each paints its background and label from
+-- T.STATES (normal, hover, pressed, selected, disabled); LockHighlight = selected.
 local STYLE = {
-  secondary = { fill = "none", border = "line", role = "bold", size = 12, color = "text", hi = "uiGold" },
-  primary = { fill = "horde", border = "goldLo", role = "heading", size = 13, color = "uiGold", hi = "parchment" },
-  raised = { fill = "panel3", border = "goldLo", role = "bold", size = 12, color = "uiGold", hi = "parchment" },
-  ghost = { fill = "none", border = "none", role = "bold", size = 12, color = "goldHi", hi = "uiGold" },
-  segment = { fill = "none", border = "none", role = "bold", size = 12, color = "muted", hi = "text" },
-  nav = { fill = "none", border = "none", role = "bold", size = 13, color = "text", hi = "uiGold" },
+  secondary = { fill = "panel2", border = "ctrlEdge", role = "bold", size = 12 },
+  primary = { fill = "horde", border = "goldLo", role = "heading", size = 13 },
+  raised = { fill = "panel3", border = "goldLo", role = "bold", size = 12 },
+  ghost = { fill = "none", border = "none", role = "bold", size = 12 },
+  segment = { fill = "none", border = "none", role = "bold", size = 12 },
 }
 W.STYLE = STYLE
-function W.setStyle(b, style)
-  local st = STYLE[style] or STYLE.secondary
-  b.wbxStyle = style
-  if not (W.themed() and b.wbxSkinned) then return b end
-  T.box(b, st.fill, st.border, 4)
+--- Paint a skinned button for its state (T.STATES[style]): disabled = panel-3, a grey edge, muted text ("readable,
+--- clearly not clickable, never just darker"); hover one step lighter; pressed one more; selected panel-3 + ui-gold.
+local function paintState(b)
+  if not (b.wbxSkinned and b.wbxStyle) then return end
+  local st = STYLE[b.wbxStyle] or STYLE.secondary
+  local off = b.IsEnabled and not b:IsEnabled()
+  local state = T.stateOf(off, b.wbxPressed and b.wbxHovering, b.wbxSelected, b.wbxHovering)
+  local pair = T.state(b.wbxStyle, state)
+  local fill = pair[1]
+  if state == "normal" and st.fill == "none" then fill = "none" end -- ghosts and segments stay flat until hovered
+  local border = st.border
+  if off and border ~= "none" then border = "disEdge" end
+  if b.wbxSelected and b.wbxStyle == "secondary" then border = "goldHi" end
+  T.box(b, fill, border, 4)
   if b.SetNormalFontObject then
-    b:SetNormalFontObject(T.fontObject(st.role, st.size, st.color))
-    b:SetHighlightFontObject(T.fontObject(st.role, st.size, st.hi))
+    local o = T.fontObject(st.role, st.size, pair[2])
+    b:SetNormalFontObject(o)
+    b:SetHighlightFontObject(o)
     b:SetDisabledFontObject(T.fontObject(st.role, st.size, "muted"))
   end
+end
+W.paintState = paintState
+function W.setStyle(b, style)
+  b.wbxStyle = style
+  if not (W.themed() and b.wbxSkinned) then return b end
+  paintState(b)
   if b.GetText and b:GetText() and b.minWidth then W.setLabel(b, b:GetText()) end
   return b
 end
 --- The page's one primary action (red, Cinzel).
 function W.primary(b) return W.setStyle(b, "primary") end
-local function hover(b, token, alpha)
-  local hl = T.slice(b, T.TEX .. "Fill4", 4, "HIGHLIGHT")
-  for _, t in ipairs(hl) do t:SetVertexColor(T.rgb(token)); t:SetAlpha(alpha or 1) end
-  b.wbxHover = hl
+--- Selected (a segment, a chosen option): panel-3 + ui-gold. Works on any button; the old look uses LockHighlight.
+function W.setSelected(b, on)
+  if b.wbxSkinned then b.wbxSelected = on and true or nil; paintState(b)
+  elseif on then b:LockHighlight() else b:UnlockHighlight() end
 end
+--- Repaint when the page enables, disables or locks the button (the client has no style hook for it).
+local function followState(b)
+  for _, m in ipairs({ "Enable", "Disable", "SetEnabled" }) do
+    local orig = b[m]
+    if orig then b[m] = function(self, ...) orig(self, ...); paintState(self) end end
+  end
+  b.LockHighlight = function(self) self.wbxSelected = true; paintState(self) end
+  b.UnlockHighlight = function(self) self.wbxSelected = nil; paintState(self) end
+  W.onHover(b, paintState, paintState)
+  b:HookScript("OnMouseDown", function(self) self.wbxPressed = true; paintState(self) end)
+  b:HookScript("OnMouseUp", function(self) self.wbxPressed = nil; paintState(self) end)
+end
+W.followEnabled = followState
 SKIN.UIPanelButtonTemplate = function(b)
   b.wbxSkinned = true
-  hover(b, "goldHi", 0.12)
   if b.SetPushedTextOffset then b:SetPushedTextOffset(0, -1) end
+  followState(b)
   W.setStyle(b, "secondary")
 end
 SKIN.UIPanelCloseButton = function(b)
   b.wbxSkinned = true
   b:SetSize(28, 28)
+  T.box(b, "none", "none", 4)
   b.glyph = T.glyph(b, "Close", 16, "muted")
   b.glyph:SetPoint("CENTER")
-  hover(b, "panel3")
+  W.onHover(b, function(self) T.paint(self, "hover"); self.glyph:SetVertexColor(T.rgb("parchment")) end,
+    function(self) T.paint(self, "none"); self.glyph:SetVertexColor(T.rgb("muted")) end)
   W.tip(b, "Close", "Closes this window.")
 end
--- check box: a 16-unit dark box with a gold rim inside the 22 x 22 click area; checked = a gold check mark
+-- tick box (§2 "Nothing too dark"): 20 units, a 2-unit gold-hi edge; ticked = filled gold-hi with a dark check.
+-- The edge is a gold-hi square with the panel-2 inside inset by 2; ticked hides the inside.
 SKIN.UICheckButtonTemplate = function(c)
   c.wbxSkinned = true
   c:SetSize(22, 22)
-  local box = CreateFrame("Frame", nil, c)
-  box:SetSize(16, 16)
-  box:SetPoint("CENTER")
-  T.box(box, "night2", "gold", 3)
-  c.wbxBoxFrame = box
-  local tick = T.glyph(c, "Check", 16, "uiGold", "OVERLAY")
+  c.edge = c:CreateTexture(nil, "BORDER")
+  c.edge:SetTexture(T.TEX .. "Fill4")
+  c.edge:SetSize(20, 20)
+  c.edge:SetPoint("CENTER")
+  c.inside = c:CreateTexture(nil, "ARTWORK")
+  c.inside:SetTexture(T.TEX .. "Fill3")
+  c.inside:SetSize(16, 16)
+  c.inside:SetPoint("CENTER")
+  local tick = T.glyph(c, "Check", 16, "night", "OVERLAY")
   tick:SetPoint("CENTER")
   c:SetCheckedTexture(tick)
-  local dis = T.glyph(c, "Check", 16, "muted", "OVERLAY")
+  local dis = T.glyph(c, "Check", 16, "panel3", "OVERLAY")
   dis:SetPoint("CENTER")
   if c.SetDisabledCheckedTexture then c:SetDisabledCheckedTexture(dis) end
-  local hl = c:CreateTexture(nil, "HIGHLIGHT")
-  hl:SetTexture(T.TEX .. "Ring3")
-  hl:SetSize(16, 16)
-  hl:SetPoint("CENTER")
-  hl:SetVertexColor(T.rgb("goldHi"))
-  c:SetHighlightTexture(hl)
+  local function paint(self)
+    local on, ok = self:GetChecked() and true or false, not (self.IsEnabled and not self:IsEnabled())
+    self.edge:SetVertexColor(T.rgb(ok and (self.wbxHovering and "parchment" or "goldHi") or "disEdge"))
+    self.inside:SetVertexColor(T.rgb(on and (ok and "goldHi" or "disEdge") or "panel2"))
+    if self.wbxRow then T.paint(self.wbxRow, on and "panel3" or "panel2", on and "onLine" or "ctrlEdge") end
+  end
+  c.wbxPaint = paint
+  for _, m in ipairs({ "SetChecked", "Enable", "Disable", "SetEnabled" }) do
+    local orig = c[m]
+    if orig then c[m] = function(self, ...) orig(self, ...); paint(self) end end
+  end
+  c:HookScript("OnClick", paint)
+  W.onHover(c, paint, paint)
+  paint(c)
 end
 -- input box: a night-2 well with a gold rim that brightens while typing
 SKIN.InputBoxTemplate = function(eb)
   eb.wbxSkinned = true
-  T.box(eb, "night2", "line", 4)
+  T.box(eb, "night2", "ctrlEdge", 4)
   eb:SetFontObject(T.fontObject("body", 12, "parchment"))
   if eb.SetTextInsets then eb:SetTextInsets(8, 8, 0, 0) end
   eb:SetAutoFocus(false)
   eb:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
   eb:HookScript("OnEditFocusGained", function(self) T.paint(self, nil, "goldHi") end)
-  eb:HookScript("OnEditFocusLost", function(self) T.paint(self, nil, "line") end)
+  eb:HookScript("OnEditFocusLost", function(self) T.paint(self, nil, "ctrlEdge") end)
 end
 -- scroll frame: mouse wheel + a thin gold bar in the 24 units right of the frame (W.SCROLLBAR)
 SKIN.UIPanelScrollFrameTemplate = function(sf)
@@ -289,33 +343,53 @@ function W.check(parent, label, onClick)
   t:SetPoint("LEFT", c, "RIGHT", 2, 0)
   t:SetText(label)
   c.label = t
-  if onClick then c:SetScript("OnClick", function(self) onClick(self, self:GetChecked() and true or false) end) end
+  if onClick then c:SetScript("OnClick", function(self) onClick(self, self:GetChecked() and true or false); if self.wbxPaint then self.wbxPaint(self) end end) end
+  -- the label is part of the click area: click the words, not only the box
+  if c.wbxSkinned and c.SetHitRectInsets then c:SetHitRectInsets(0, -math.ceil((t:GetStringWidth() or 0) + 4), 0, 0) end
   return c
 end
+--- Make a tick box's row a card that lifts when ticked ("I understand", §2): the row is panel-2 with a gold edge,
+--- ticked = panel-3 with a green edge. The row is the given frame (already placed around the box and its label).
+function W.tickRow(c, row)
+  if not (W.themed() and c.wbxPaint) then return end
+  T.box(row, "panel2", "ctrlEdge", 6)
+  c.wbxRow = row
+  c.wbxPaint(c)
+end
 
---- On/off switch (a 30 x 16 track with a knob) + label; same API as W.check (GetChecked/SetChecked, onClick(self, on)).
+--- On/off switch (§2 "On and off"): a 46 x 24 track – ON green with a light knob on the right, OFF dark with a grey
+--- knob on the left – + label + the word ON / OFF (c.word, never colour alone). Same API as W.check
+--- (GetChecked/SetChecked, onClick(self, on)). c.wbxRow (optional): a card that lifts while ON.
 function W.toggle(parent, label, onClick)
   if not W.themed() then return W.check(parent, label, onClick) end
   local c = CreateFrame("CheckButton", nil, parent)
-  c:SetSize(30, 16)
+  c:SetSize(46, 24)
   c.wbxSkinned, c.wbxToggle = true, true
-  T.box(c, "panel3", "line", 8)
+  T.box(c, "offTrack", "offEdge", 10)
   c.knob = c:CreateTexture(nil, "ARTWORK")
-  c.knob:SetTexture(T.TEX .. "Fill6")
-  c.knob:SetSize(12, 12)
-  local function paint(self)
-    local on = self:GetChecked() and true or false
-    T.paint(self, on and "gold" or "panel3", on and "gold" or "line")
-    self.knob:ClearAllPoints()
-    self.knob:SetPoint(on and "RIGHT" or "LEFT", on and -2 or 2, 0)
-    self.knob:SetVertexColor(T.rgb(on and "night" or "muted"))
-  end
-  local set = c.SetChecked
-  c.SetChecked = function(self, v) set(self, v); paint(self) end
+  c.knob:SetTexture(T.TEX .. "Circle")
+  c.knob:SetSize(16, 16)
   local t = W.text(c, "GameFontHighlight")
   t:SetPoint("LEFT", c, "RIGHT", 8, 0)
   t:SetText(label)
   c.label = t
+  c.word = W.text(c, "GameFontNormalSmall", 11, nil, "RIGHT")
+  c.word:SetPoint("LEFT", t, "RIGHT", 8, 0)
+  c.word.wbxCopy = "status"
+  local function paint(self)
+    local on = self:GetChecked() and true or false
+    T.paint(self, on and "onTrack" or "offTrack", on and "onEdge" or "offEdge")
+    self.knob:ClearAllPoints()
+    self.knob:SetPoint(on and "RIGHT" or "LEFT", on and -4 or 4, 0)
+    self.knob:SetVertexColor(T.rgb(on and "onKnob" or "offKnob"))
+    self.word:SetText(on and "ON" or "OFF")
+    self.word:SetTextColor(T.rgb(on and "ok" or "offWord"))
+    self.label:SetTextColor(T.rgb(on and "parchment" or "muted"))
+    if self.wbxRow then T.paint(self.wbxRow, on and "panel3" or "panel", on and "onLine" or "lineSoft") end
+  end
+  c.wbxPaint = paint
+  local set = c.SetChecked
+  c.SetChecked = function(self, v) set(self, v); paint(self) end
   c:SetScript("OnClick", function(self) paint(self); if onClick then onClick(self, self:GetChecked() and true or false) end end)
   paint(c)
   return c
@@ -325,7 +399,7 @@ end
 function W.segmented(parent, items, get, set, size)
   local g = CreateFrame("Frame", nil, parent)
   g:SetHeight((size or 12) + 12)
-  if W.themed() then T.box(g, "night2", "lineSoft", 4) end
+  if W.themed() then T.box(g, "panel2", "ctrlEdge", 4) end
   g.buttons = {}
   local x = 2
   for i, it in ipairs(items) do
@@ -339,13 +413,7 @@ function W.segmented(parent, items, get, set, size)
   g:SetWidth(x)
   function g.Refresh()
     local cur = get()
-    for _, b in ipairs(g.buttons) do
-      local on = b.value == cur
-      if W.themed() then
-        T.paint(b, on and "panel3" or "none", "none")
-        if b.SetNormalFontObject then b:SetNormalFontObject(T.fontObject("bold", size or 12, on and "uiGold" or "muted")) end
-      elseif on then b:LockHighlight() else b:UnlockHighlight() end
-    end
+    for _, b in ipairs(g.buttons) do W.setSelected(b, b.value == cur) end
   end
   g.Refresh()
   return g
@@ -521,12 +589,18 @@ end
 function W.tooltip(frame, fn)
   if frame.EnableMouse then frame:EnableMouse(true) end
   frame:SetScript("OnEnter", function(self)
+    self.wbxHovering = true
+    if self.wbxHoverOn then self.wbxHoverOn(self) end
     local GT = _G.GameTooltip
     GT:SetOwner(self, "ANCHOR_RIGHT")
     fn(GT, self)
     GT:Show()
   end)
-  frame:SetScript("OnLeave", function() _G.GameTooltip:Hide() end)
+  frame:SetScript("OnLeave", function(self)
+    self.wbxHovering = nil
+    if self.wbxHoverOff then self.wbxHoverOff(self) end
+    _G.GameTooltip:Hide()
+  end)
 end
 
 function W.classColor(cls)
@@ -548,6 +622,23 @@ function W.pool(content, make)
     return r
   end
   return p
+end
+
+--- A menu / list row's hover: a flat #2b3550 background under the label, the label parchment (disabled rows stay
+--- muted). b.label is the row's text; b.disabled marks a greyed row.
+function W.hoverRow(b)
+  b.hoverBg = b:CreateTexture(nil, "BACKGROUND")
+  b.hoverBg:SetAllPoints()
+  if W.themed() then b.hoverBg:SetColorTexture(T.rgb("hover")) else b.hoverBg:SetColorTexture(1, 0.82, 0, 0.18) end
+  b.hoverBg:Hide()
+  W.onHover(b, function(self)
+    if self.disabled then return end
+    self.hoverBg:Show()
+    if W.themed() and self.label then self.label:SetTextColor(T.rgb("parchment")) end
+  end, function(self)
+    self.hoverBg:Hide()
+    if W.themed() and self.label then local c = self.disabled and W.MUTED or W.TEXT; self.label:SetTextColor(c[1], c[2], c[3]) end
+  end)
 end
 
 --- A small click menu at `anchor`: items = {{label, fn, tip?, disabled?}}. One menu at a time; Esc closes it.
@@ -572,10 +663,8 @@ function W.menu(anchor, items)
     if not b then
       b = CreateFrame("Button", nil, m)
       b:SetHeight(20)
-      local hl = b:CreateTexture(nil, "HIGHLIGHT")
-      hl:SetAllPoints()
-      hl:SetColorTexture(T.rgb("panel3"))
       b.label = W.text(b, "GameFontHighlightSmall", nil, W.TEXT)
+      W.hoverRow(b)
       b.label:SetPoint("LEFT", 8, 0)
       b.label:SetPoint("RIGHT", -4, 0)
       m.rows[i] = b

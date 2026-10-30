@@ -116,11 +116,7 @@ local function railRow(rail, tab, i)
   local b = CreateFrame("Button", nil, rail)
   b:SetSize(UI.RAIL_W - 20, 30)
   b:SetPoint("TOPLEFT", 10, -12 - (i - 1) * 32)
-  if themed then
-    T.box(b, "none", "none", 4)
-    local hl = T.slice(b, T.TEX .. "Fill4", 4, "HIGHLIGHT")
-    for _, t in ipairs(hl) do t:SetVertexColor(T.rgb("panel2")) end
-  end
+  if themed then T.box(b, "none", "none", 4) end
   b.iconBox = CreateFrame("Frame", nil, b)
   b.iconBox:SetSize(22, 22)
   b.iconBox:SetPoint("LEFT", 6, 0)
@@ -138,12 +134,14 @@ local function railRow(rail, tab, i)
   b.label:SetPoint("RIGHT", b.badge, "LEFT", -2, 0)
   b.label:SetText(tab.label)
   b.label.wbxCopy = "label"
-  -- selected: panel-3 fill, gold label and icon rim, a gold accent on the left
-  b.sel = T.fill(b, "gold", "ARTWORK")
-  b.sel:SetSize(2, 16)
-  b.sel:SetPoint("LEFT", 0, 0)
+  -- selected: panel-3, ui-gold label, a 2-unit gold-hi marker on the left; hover: #2b3550, parchment, gold icon edge
+  b.sel = T.fill(b, "goldHi", "ARTWORK")
+  b.sel:SetPoint("TOPLEFT", 0, -4)
+  b.sel:SetPoint("BOTTOMLEFT", 0, 4)
+  b.sel:SetWidth(2)
   b:SetScript("OnClick", function() UI.Select(tab.key) end)
   W.tip(b, tab.label, tab.tip)
+  W.onHover(b, UI.PaintNav, UI.PaintNav)
   b.wbxLabel = tab.label
   return b
 end
@@ -263,6 +261,18 @@ function UI.Build()
   return f
 end
 
+--- One rail row in its state (T.STATES.nav): normal, hover, selected, selected + hover.
+function UI.PaintNav(b)
+  local state = T.stateOf(false, false, b.wbxSelected, b.wbxHovering)
+  local pair = T.state("nav", state)
+  b.sel:SetShown(b.wbxSelected and true or false)
+  if b.wbxBox then
+    T.paint(b, state == "normal" and "none" or pair[1])
+    T.paint(b.iconBox, nil, (b.wbxSelected or b.wbxHovering) and "gold" or "line")
+  end
+  b.label:SetTextColor(T.rgb(pair[2]))
+end
+
 --- Size of the panel area a tab gets (design units).
 function UI.PanelSize()
   return UI.WIDTH - PAGE_L + PAGE_R - 20, UI.HEIGHT + PAGE_T - PAGE_B - 16
@@ -277,14 +287,7 @@ function UI.Select(key)
   for k, p in pairs(UI.panels or {}) do
     if k == key then p:Show() else p:Hide() end
     local b = UI.tabButtons[k]
-    if b then
-      b.sel:SetShown(k == key)
-      if b.wbxBox then
-        T.paint(b, k == key and "panel3" or "none")
-        T.paint(b.iconBox, nil, k == key and "gold" or "line")
-      end
-      b.label:SetTextColor(T.rgb(k == key and "uiGold" or "text"))
-    end
+    if b then b.wbxSelected = (k == key) or nil; UI.PaintNav(b) end
   end
   UI.Refresh()
 end
