@@ -463,8 +463,13 @@ do
 end
 do
   local W, ns = boot({ name = "Era", class = "PRIEST", race = "Scourge", level = 20, toc = 11509, spellbookStyle = "classic" })
+  -- Classic Era has its own talent trees since 0.15: the read-back compares through GetTalentInfo
+  W.env.GetNumTalentTabs = function() return 3 end
+  W.env.GetNumTalents = function(t) return t == 2 and 1 or 0 end
+  W.env.GetTalentInfo = function(t, i) return "Improved Renew", 136081, 1, 2, 2, 3 end
   ns.UI.Open("talents")
-  H.ok((ns.UI.panels.talents.readback._text or ""):find("Compared on WoW: Forever only") ~= nil, "Era: read-back explained, not faked")
+  local rb = ns.UI.panels.talents.readback._text or ""
+  H.ok(rb:find("In game: 2/11", 1, true) ~= nil and not rb:find("Forever only", 1, true), "Era: read-back with Era's own trees: " .. rb)
 end
 
 -- ------------------------------------------------------------------ custom key editor

@@ -102,8 +102,9 @@ local function buildHeader(f)
   tagHit:SetAllPoints(UI.tag)
   local function isTbc() return ns.Compat.game() == "tbc" end
   W.tip(tagHit, function() return isTbc() and "TBC Anniversary" or "Classic Era" end, function()
-    if isTbc() then return "This client is TBC Anniversary. Your macros come from the spells in your spellbook; talent guides and sequence macros for TBC are coming." end
-    return "This client is Classic Era. WoWBoxer uses WoW: Forever data; spells and talents can differ here."
+    if isTbc() then return "This client is TBC Anniversary. WoWBoxer uses TBC's own talents and spells; your macros come from the spells in your spellbook." end
+    if ns.Compat.game() == "era" then return "This client is Classic Era. WoWBoxer uses Classic Era's own talents, spells and trainer levels." end
+    return "WoWBoxer does not know this client and uses WoW: Forever data; spells and talents can differ here."
   end)
   UI.tagHit = tagHit
 
@@ -322,8 +323,8 @@ function UI.RefreshNow()
   end
   local game = ns.Compat.game()
   local era, tbc = game ~= "forever" and game ~= "tbc", game == "tbc"
-  tip[#tip + 1] = tbc and "TBC Anniversary: macros from your spellbook; guides and sequence macros are coming"
-    or (era and "Classic Era client, WoW: Forever data" or "WoW: Forever")
+  tip[#tip + 1] = tbc and "TBC Anniversary: macros from your spellbook, TBC data"
+    or (era and (game == "era" and "Classic Era client, Classic Era data" or "Unknown client, WoW: Forever data") or "WoW: Forever")
   UI.whoTip = tip
   UI.tag:SetText(tbc and "TBC" or (era and "ERA" or ""))
   UI.tagHit:SetShown(era or tbc)

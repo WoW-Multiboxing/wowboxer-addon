@@ -1,16 +1,17 @@
 --[[ WoWBoxer – Classic Era: the hand-written macro data of this game (the addon is the source of truth,
   docs/multi-flavor-plan.md §0). Loads on every client but only fills ns.Data on Classic Era.
-  Same as Forever until the Era data pipeline (plan step 3); protected by tests/golden/era.json.
-  sequences: the built-in sequence keys per class and role (_all = every role). Each def has the tiers simple / medium /
-  advanced; a step is a spell name or a list of alternatives (first learned wins); k: 'dot' | 'cd' | 'hot' | 'nuke'. ]]
+  Its own data since plan step 3: talent trees, spell ranks, trainer levels and icons from the client's tables
+  (Data/Era/, tools/fetch_client.py era); macro rules, recommended macros and starter builds in datasrc/era/.
+  sequences: the built-in sequence macros per class and role (_all = every role), tiers simple / medium / advanced;
+  a step is a spell name or a list of alternatives (first learned wins); k: 'dot' | 'cd' | 'hot' | 'nuke'.
+  Protected by tests/golden/era.json. ]]
 local _, ns = ...
 if ns.dataGame ~= "era" then return end
 local D = ns.Data
--- Era still uses the Forever talent trees and Wowhead links until its own data (plan step 3).
 
 --- The game's rules: max level, talent points at max level, the Wowhead path of talent links, and whether the live
---- spellbook alone decides which spells a character has (true where the data has no trainer levels for this game).
-D.game = { key = "era", name = "Classic Era", maxLevel = 60, maxPoints = 51, wowhead = "forever", wowheadName = "WoW Forever", liveSpells = false }
+--- spellbook alone decides which spells a character has.
+D.game = { key = "era", name = "Classic Era", maxLevel = 60, maxPoints = 51, wowhead = "classic", liveSpells = false }
 
 D.sequences = {
   warlock = {
@@ -19,7 +20,7 @@ D.sequences = {
         tiers = {
           simple = { steps = { { s = "Immolate", k = "dot" } }, filler = { "Shadow Bolt" } },
           medium = { steps = { { s = "Corruption", k = "dot" }, { s = "Immolate", k = "dot" } }, filler = { "Shadow Bolt" } },
-          advanced = { steps = { { s = "Bane of Agony", k = "dot" }, { s = "Corruption", k = "dot" }, { s = "Siphon Life", k = "dot" }, { s = "Immolate", k = "dot" } }, filler = { "Shadow Bolt" } } } } } },
+          advanced = { steps = { { s = "Curse of Agony", k = "dot" }, { s = "Corruption", k = "dot" }, { s = "Siphon Life", k = "dot" }, { s = "Immolate", k = "dot" } }, filler = { "Shadow Bolt" } } } } } },
   priest = {
     _all = {
       { id = "dps", label = "Damage", kind = "sequence", aim = "harm",
@@ -34,17 +35,17 @@ D.sequences = {
           advanced = { steps = { { s = "Renew", k = "hot" } }, filler = { "Greater Heal", "Heal", "Lesser Heal" } } } } } },
   paladin = {
     tank = {
-      { id = "dps", label = "Threat", kind = "priority", aim = "melee", tip = "Holy Strike",
+      { id = "dps", label = "Threat", kind = "priority", aim = "melee", tip = "Judgement",
         tiers = {
-          simple = { steps = { "Holy Strike", "Judgement" } },
-          medium = { steps = { { s = "Holy Shield", self = true }, "Hammer of the Righteous", "Holy Strike", "Judgement" } },
-          advanced = { steps = { { s = "Holy Shield", self = true }, "Hammer of the Righteous", "Holy Strike", "Judgement", { s = "Consecration", self = true } } } } } },
+          simple = { steps = { { s = "Holy Shield", self = true }, "Judgement" } },
+          medium = { steps = { { s = "Holy Shield", self = true }, "Judgement", { s = "Consecration", self = true } } },
+          advanced = { steps = { { s = "Holy Shield", self = true }, "Hammer of Wrath", "Judgement", { s = "Consecration", self = true } } } } } },
     _all = {
-      { id = "dps", label = "Damage", kind = "priority", aim = "melee", tip = "Holy Strike",
+      { id = "dps", label = "Damage", kind = "priority", aim = "melee", tip = "Judgement",
         tiers = {
-          simple = { steps = { "Holy Strike", "Judgement" } },
-          medium = { steps = { "Hammer of Wrath", "Holy Strike", "Judgement" } },
-          advanced = { steps = { "Hammer of Wrath", "Exorcism", "Holy Strike", "Judgement", { s = "Consecration", self = true } } } } } } },
+          simple = { steps = { "Judgement" } },
+          medium = { steps = { "Hammer of Wrath", "Judgement" } },
+          advanced = { steps = { "Hammer of Wrath", "Exorcism", "Judgement", { s = "Consecration", self = true } } } } } } },
   warrior = {
     tank = {
       { id = "dps", label = "Threat", kind = "priority", aim = "melee", tip = "Sunder Armor",
@@ -56,8 +57,8 @@ D.sequences = {
       { id = "dps", label = "Damage", kind = "priority", aim = "melee", tip = "Mortal Strike",
         tiers = {
           simple = { steps = { "Execute", "Overpower", { "Mortal Strike", "Bloodthirst" } } },
-          medium = { steps = { "Execute", "Overpower", { "Mortal Strike", "Bloodthirst" }, "Victory Rush" } },
-          advanced = { steps = { "Execute", "Overpower", { "Mortal Strike", "Bloodthirst" }, { s = "Whirlwind", self = true }, "Victory Rush", "Slam" } } } } } },
+          medium = { steps = { "Execute", "Overpower", { "Mortal Strike", "Bloodthirst" }, { s = "Whirlwind", self = true } } },
+          advanced = { steps = { "Execute", "Overpower", { "Mortal Strike", "Bloodthirst" }, { s = "Whirlwind", self = true }, "Slam" } } } } } },
   rogue = {
     _all = {
       { id = "dps", label = "Combo", kind = "sequence", aim = "harm", startattack = true, allowDup = true,
@@ -76,22 +77,22 @@ D.sequences = {
     _all = {
       { id = "dps", label = "Damage", kind = "sequence", aim = "harm",
         tiers = {
-          simple = { steps = { { s = "Fire Blast", k = "cd" } }, filler = { "Frostfire Bolt", "Frostbolt", "Fireball" } },
-          medium = { steps = { { s = "Fire Blast", k = "cd" }, { s = "Arcane Wrath", k = "cd" } }, filler = { "Frostfire Bolt", "Frostbolt", "Fireball" } },
-          advanced = { steps = { { s = "Pyroblast" }, { s = "Fire Blast", k = "cd" }, { s = "Arcane Wrath", k = "cd" } }, filler = { "Frostfire Bolt", "Frostbolt", "Fireball" } } } } } },
+          simple = { steps = { { s = "Fire Blast", k = "cd" } }, filler = { "Frostbolt", "Fireball" } },
+          medium = { steps = { { s = "Fire Blast", k = "cd" }, { s = "Cone of Cold", k = "cd" } }, filler = { "Frostbolt", "Fireball" } },
+          advanced = { steps = { { s = "Pyroblast" }, { s = "Fire Blast", k = "cd" }, { s = "Cone of Cold", k = "cd" } }, filler = { "Frostbolt", "Fireball" } } } } } },
   shaman = {
     melee = {
       { id = "dps", label = "Damage", kind = "priority", aim = "melee", tip = "Stormstrike",
         tiers = {
           simple = { steps = { "Stormstrike", "Earth Shock" } },
           medium = { steps = { "Stormstrike", { "Flame Shock", "Earth Shock" } } },
-          advanced = { steps = { "Stormstrike", { "Flame Shock", "Earth Shock" }, { s = "Fire Nova", self = true } } } } } },
+          advanced = { steps = { "Stormstrike", { "Flame Shock", "Earth Shock" }, { s = "Fire Nova Totem", self = true } } } } } },
     healer = {
       { id = "heal", label = "Heal", kind = "sequence", aim = "help", reset = "combat/12", fixedFill = 2,
         tiers = {
-          simple = { steps = { { s = "Riptide", k = "hot" } }, filler = { "Healing Wave" } },
-          medium = { steps = { { s = "Riptide", k = "hot" } }, filler = { "Healing Wave" } },
-          advanced = { steps = { { s = "Riptide", k = "hot" }, { s = "Chain Heal" } }, filler = { "Healing Wave" } } } },
+          simple = { steps = { { s = "Lesser Healing Wave" } }, filler = { "Healing Wave" } },
+          medium = { steps = { { s = "Lesser Healing Wave" } }, filler = { "Healing Wave" } },
+          advanced = { steps = { { s = "Lesser Healing Wave" }, { s = "Chain Heal" } }, filler = { "Healing Wave" } } } },
       { id = "dps", label = "Damage", kind = "sequence", aim = "harm",
         tiers = {
           simple = { steps = { { s = "Flame Shock", k = "dot" } }, filler = { "Lightning Bolt" } },
@@ -101,15 +102,15 @@ D.sequences = {
       { id = "dps", label = "Damage", kind = "sequence", aim = "harm",
         tiers = {
           simple = { steps = { { s = "Flame Shock", k = "dot" } }, filler = { "Lightning Bolt" } },
-          medium = { steps = { { s = "Flame Shock", k = "dot" }, { s = "Lava Burst", k = "cd" } }, filler = { "Lightning Bolt" } },
-          advanced = { steps = { { s = "Flame Shock", k = "dot" }, { s = "Lava Burst", k = "cd" }, { s = "Chain Lightning", k = "cd" } }, filler = { "Lightning Bolt" } } } } } },
+          medium = { steps = { { s = "Flame Shock", k = "dot" }, { s = "Chain Lightning", k = "cd" } }, filler = { "Lightning Bolt" } },
+          advanced = { steps = { { s = "Flame Shock", k = "dot" }, { s = "Chain Lightning", k = "cd" } }, filler = { "Lightning Bolt" } } } } } },
   druid = {
     tank = {
-      { id = "dps", label = "Threat", kind = "priority", aim = "melee", tip = "Swipe",
+      { id = "dps", label = "Threat", kind = "priority", aim = "melee", tip = "Maul",
         tiers = {
-          simple = { steps = { "Primal Bite", "Swipe" } },
-          medium = { steps = { "Primal Bite", { "Lacerate", "Swipe" } } },
-          advanced = { steps = { "Primal Bite", { "Lacerate", "Swipe" } } } } } },
+          simple = { steps = { "Maul" } },
+          medium = { steps = { "Swipe", "Maul" } },
+          advanced = { steps = { { s = "Demoralizing Roar", self = true }, "Swipe", "Maul" } } } } },
     melee = {
       { id = "dps", label = "Combo", kind = "sequence", aim = "harm", startattack = true, allowDup = true,
         tiers = {
@@ -122,7 +123,7 @@ D.sequences = {
         tiers = {
           simple = { steps = { { s = "Rejuvenation", k = "hot" } }, filler = { "Healing Touch" } },
           medium = { steps = { { s = "Rejuvenation", k = "hot" }, { s = "Regrowth", k = "hot" } }, filler = { "Healing Touch" } },
-          advanced = { steps = { { s = "Rejuvenation", k = "hot" }, { s = "Wild Growth", k = "cd" }, { s = "Regrowth", k = "hot" } }, filler = { "Healing Touch" } } } },
+          advanced = { steps = { { s = "Rejuvenation", k = "hot" }, { s = "Swiftmend", k = "cd" }, { s = "Regrowth", k = "hot" } }, filler = { "Healing Touch" } } } },
       { id = "dps", label = "Damage", kind = "sequence", aim = "harm",
         tiers = {
           simple = { steps = { { s = "Moonfire", k = "dot" } }, filler = { "Wrath" } },

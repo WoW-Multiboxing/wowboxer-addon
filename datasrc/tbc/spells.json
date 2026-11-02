@@ -1,0 +1,669 @@
+{
+ "_about": "TBC Anniversary macro rules (hand-written, the addon is the source of truth). core: the recommended macros per class and role (slot i = WBX K<i>; a list = the last learned one wins, so list them from low to high). renames: a TBC spell that takes the rules of a seed spell with another name. new: TBC spells the seed does not have, with the engine's action type (who the macro aims at) and category; form = the shapeshift the spell needs. Levels, ranks, icons and talent/trainer come from the client tables. lock = only for one faction or some races.",
+ "core": {
+  "warrior": {
+   "tank": [
+    "Heroic Strike",
+    [
+     "Sunder Armor",
+     "Devastate"
+    ],
+    "Revenge",
+    "Shield Slam",
+    "Thunder Clap",
+    "Taunt",
+    "Battle Shout",
+    "Shield Block"
+   ],
+   "melee": [
+    "Heroic Strike",
+    "Rend",
+    [
+     "Bloodthirst",
+     "Mortal Strike"
+    ],
+    "Overpower",
+    "Execute",
+    "Battle Shout",
+    "Charge",
+    [
+     "Whirlwind",
+     "Victory Rush"
+    ]
+   ]
+  },
+  "paladin": {
+   "tank": [
+    "Judgement",
+    [
+     "Seal of Righteousness",
+     "Seal of Corruption",
+     "Seal of Vengeance"
+    ],
+    "Righteous Fury",
+    "Consecration",
+    "Holy Shield",
+    "Avenger's Shield",
+    "Righteous Defense"
+   ],
+   "healer": [
+    "Holy Light",
+    "Flash of Light",
+    "Holy Shock",
+    "Judgement",
+    [
+     "Seal of Righteousness",
+     "Seal of Wisdom"
+    ],
+    "Cleanse"
+   ],
+   "melee": [
+    "Judgement",
+    [
+     "Seal of Righteousness",
+     "Seal of the Martyr",
+     "Seal of Blood",
+     "Seal of Command"
+    ],
+    "Crusader Strike",
+    "Consecration",
+    "Exorcism",
+    "Hammer of Wrath"
+   ]
+  },
+  "hunter": {
+   "ranged": [
+    "Auto Shot",
+    "Hunter's Mark",
+    "Serpent Sting",
+    "Arcane Shot",
+    [
+     "Aimed Shot",
+     "Steady Shot"
+    ],
+    "Multi-Shot",
+    "Raptor Strike",
+    "Mend Pet"
+   ]
+  },
+  "rogue": {
+   "melee": [
+    "Sinister Strike",
+    "Eviscerate",
+    "Slice and Dice",
+    [
+     "Backstab",
+     "Mutilate"
+    ],
+    "Hemorrhage",
+    "Kick",
+    "Envenom",
+    "Shiv"
+   ]
+  },
+  "priest": {
+   "healer": [
+    "Smite",
+    [
+     "Lesser Heal",
+     "Heal",
+     "Greater Heal"
+    ],
+    "Flash Heal",
+    "Renew",
+    "Power Word: Shield",
+    "Prayer of Mending",
+    "Circle of Healing"
+   ],
+   "ranged": [
+    "Smite",
+    "Shadow Word: Pain",
+    "Mind Blast",
+    "Mind Flay",
+    "Power Word: Shield",
+    "Vampiric Touch",
+    "Shadow Word: Death"
+   ]
+  },
+  "shaman": {
+   "healer": [
+    "Healing Wave",
+    "Lesser Healing Wave",
+    "Chain Heal",
+    "Earth Shield",
+    "Earth Shock",
+    "Water Shield",
+    "Lightning Bolt"
+   ],
+   "melee": [
+    "Stormstrike",
+    "Earth Shock",
+    "Flame Shock",
+    [
+     "Rockbiter Weapon",
+     "Flametongue Weapon",
+     "Windfury Weapon"
+    ],
+    "Lightning Bolt",
+    [
+     "Lightning Shield",
+     "Water Shield"
+    ],
+    "Shamanistic Rage"
+   ],
+   "ranged": [
+    "Lightning Bolt",
+    "Chain Lightning",
+    "Earth Shock",
+    "Flame Shock",
+    [
+     "Lightning Shield",
+     "Water Shield"
+    ],
+    "Totem of Wrath"
+   ]
+  },
+  "mage": {
+   "ranged": [
+    "Frostbolt",
+    "Fireball",
+    "Fire Blast",
+    "Arcane Missiles",
+    "Frost Nova",
+    "Ice Lance",
+    "Arcane Blast",
+    "Pyroblast"
+   ]
+  },
+  "warlock": {
+   "ranged": [
+    "Shadow Bolt",
+    "Corruption",
+    "Curse of Agony",
+    "Immolate",
+    "Life Tap",
+    [
+     "Summon Imp",
+     "Summon Voidwalker",
+     "Summon Felguard"
+    ],
+    "Unstable Affliction",
+    "Incinerate"
+   ]
+  },
+  "druid": {
+   "tank": [
+    [
+     "Bear Form",
+     "Dire Bear Form"
+    ],
+    "Maul",
+    "Swipe",
+    "Lacerate",
+    "Demoralizing Roar",
+    "Growl",
+    "Mangle (Bear)",
+    "Faerie Fire (Feral)"
+   ],
+   "melee": [
+    "Cat Form",
+    [
+     "Claw",
+     "Mangle (Cat)"
+    ],
+    "Rake",
+    "Shred",
+    "Rip",
+    "Ferocious Bite",
+    "Tiger's Fury"
+   ],
+   "healer": [
+    "Healing Touch",
+    "Rejuvenation",
+    "Regrowth",
+    "Swiftmend",
+    "Lifebloom",
+    "Wrath"
+   ],
+   "ranged": [
+    "Wrath",
+    "Moonfire",
+    "Starfire",
+    "Insect Swarm",
+    "Moonkin Form",
+    "Hurricane"
+   ]
+  }
+ },
+ "renames": {
+  "warlock": {
+   "Curse of Agony": "Bane of Agony",
+   "Curse of Doom": "Bane of Doom"
+  }
+ },
+ "new": {
+  "warrior": {
+   "Devastate": {
+    "action": "melee",
+    "category": "Damage"
+   },
+   "Intervene": {
+    "action": "friendlymain",
+    "category": "Defense"
+   },
+   "Spell Reflection": {
+    "action": "self",
+    "category": "Defense"
+   },
+   "Commanding Shout": {
+    "action": "self",
+    "category": "Buff"
+   },
+   "Rampage": {
+    "action": "self",
+    "category": "Buff"
+   }
+  },
+  "paladin": {
+   "Crusader Strike": {
+    "action": "melee",
+    "category": "Damage"
+   },
+   "Avenger's Shield": {
+    "action": "ranged",
+    "category": "Damage"
+   },
+   "Righteous Defense": {
+    "action": "friendlymain",
+    "category": "Defense"
+   },
+   "Seal of Vengeance": {
+    "action": "self",
+    "category": "Buff",
+    "lock": {
+     "faction": "alliance"
+    }
+   },
+   "Seal of Corruption": {
+    "action": "self",
+    "category": "Buff",
+    "lock": {
+     "faction": "horde"
+    }
+   },
+   "Seal of Blood": {
+    "action": "self",
+    "category": "Buff",
+    "lock": {
+     "faction": "horde"
+    }
+   },
+   "Seal of the Martyr": {
+    "action": "self",
+    "category": "Buff",
+    "lock": {
+     "faction": "alliance"
+    }
+   },
+   "Avenging Wrath": {
+    "action": "self",
+    "category": "Buff"
+   },
+   "Crusader Aura": {
+    "action": "self",
+    "category": "Buff"
+   },
+   "Sanctity Aura": {
+    "action": "self",
+    "category": "Buff"
+   },
+   "Turn Evil": {
+    "action": "hostile",
+    "category": "Control"
+   },
+   "Blessing of Salvation": {
+    "action": "friendlyself",
+    "category": "Buff"
+   },
+   "Blessing of Sanctuary": {
+    "action": "friendlyself",
+    "category": "Buff"
+   },
+   "Greater Blessing of Salvation": {
+    "action": "friendlyself",
+    "category": "Buff"
+   },
+   "Greater Blessing of Sanctuary": {
+    "action": "friendlyself",
+    "category": "Buff"
+   }
+  },
+  "hunter": {
+   "Steady Shot": {
+    "action": "petattack",
+    "category": "Damage"
+   },
+   "Kill Command": {
+    "action": "petattack",
+    "category": "Damage"
+   },
+   "Silencing Shot": {
+    "action": "hostile",
+    "category": "Control"
+   },
+   "Wyvern Sting": {
+    "action": "hostile",
+    "category": "Control"
+   },
+   "Misdirection": {
+    "action": "friendlymain",
+    "category": "Utility"
+   },
+   "Snake Trap": {
+    "action": "ground",
+    "category": "Control"
+   },
+   "Aspect of the Viper": {
+    "action": "self",
+    "category": "Buff"
+   },
+   "The Beast Within": {
+    "action": "self",
+    "category": "Buff"
+   }
+  },
+  "rogue": {
+   "Shiv": {
+    "action": "melee",
+    "category": "Damage"
+   },
+   "Envenom": {
+    "action": "melee",
+    "category": "Damage"
+   },
+   "Deadly Throw": {
+    "action": "ranged",
+    "category": "Damage"
+   },
+   "Shadowstep": {
+    "action": "hostile",
+    "category": "Utility"
+   },
+   "Cloak of Shadows": {
+    "action": "self",
+    "category": "Defense"
+   }
+  },
+  "priest": {
+   "Circle of Healing": {
+    "action": "friendlymain",
+    "category": "Heal"
+   },
+   "Vampiric Touch": {
+    "action": "ranged",
+    "category": "Damage"
+   },
+   "Pain Suppression": {
+    "action": "friendlymain",
+    "category": "Defense"
+   },
+   "Mass Dispel": {
+    "action": "ground",
+    "category": "Utility"
+   },
+   "Shadowfiend": {
+    "action": "ranged",
+    "category": "Utility"
+   },
+   "Chastise": {
+    "action": "ranged",
+    "category": "Damage",
+    "lock": {
+     "races": [
+      "dwarf",
+      "draenei"
+     ]
+    }
+   },
+   "Starshards": {
+    "action": "ranged",
+    "category": "Damage",
+    "lock": {
+     "races": [
+      "nightelf"
+     ]
+    }
+   },
+   "Hex of Weakness": {
+    "action": "ranged",
+    "category": "Debuff",
+    "lock": {
+     "races": [
+      "troll"
+     ]
+    }
+   },
+   "Desperate Prayer": {
+    "action": "self",
+    "category": "Heal",
+    "lock": {
+     "races": [
+      "human",
+      "dwarf"
+     ]
+    }
+   },
+   "Consume Magic": {
+    "action": "self",
+    "category": "Utility",
+    "lock": {
+     "races": [
+      "bloodelf"
+     ]
+    }
+   },
+   "Symbol of Hope": {
+    "action": "self",
+    "category": "Utility",
+    "lock": {
+     "races": [
+      "draenei"
+     ]
+    }
+   },
+   "Elune's Grace": {
+    "action": "self",
+    "category": "Defense",
+    "lock": {
+     "races": [
+      "nightelf"
+     ]
+    }
+   },
+   "Feedback": {
+    "action": "self",
+    "category": "Defense",
+    "lock": {
+     "races": [
+      "human"
+     ]
+    }
+   },
+   "Shadowguard": {
+    "action": "self",
+    "category": "Buff",
+    "lock": {
+     "races": [
+      "troll"
+     ]
+    }
+   }
+  },
+  "shaman": {
+   "Earth Shield": {
+    "action": "friendlymain",
+    "category": "Heal"
+   },
+   "Shamanistic Rage": {
+    "action": "self",
+    "category": "Defense"
+   },
+   "Bloodlust": {
+    "action": "self",
+    "category": "Buff",
+    "lock": {
+     "faction": "horde"
+    }
+   },
+   "Heroism": {
+    "action": "self",
+    "category": "Buff",
+    "lock": {
+     "faction": "alliance"
+    }
+   },
+   "Totem of Wrath": {
+    "action": "self",
+    "category": "Totem"
+   },
+   "Wrath of Air Totem": {
+    "action": "self",
+    "category": "Totem"
+   },
+   "Earth Elemental Totem": {
+    "action": "self",
+    "category": "Totem"
+   },
+   "Fire Elemental Totem": {
+    "action": "self",
+    "category": "Totem"
+   },
+   "Fire Nova Totem": {
+    "action": "self",
+    "category": "Totem"
+   },
+   "Tranquil Air Totem": {
+    "action": "self",
+    "category": "Totem"
+   }
+  },
+  "mage": {
+   "Molten Armor": {
+    "action": "self",
+    "category": "Buff"
+   },
+   "Spellsteal": {
+    "action": "hostile",
+    "category": "Utility"
+   },
+   "Invisibility": {
+    "action": "self",
+    "category": "Defense"
+   },
+   "Dragon's Breath": {
+    "action": "self",
+    "category": "Damage"
+   },
+   "Slow": {
+    "action": "hostile",
+    "category": "Control"
+   },
+   "Icy Veins": {
+    "action": "self",
+    "category": "Buff"
+   },
+   "Summon Water Elemental": {
+    "action": "self",
+    "category": "Pet"
+   },
+   "Conjure Mana Emerald": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Ritual of Refreshment": {
+    "action": "self",
+    "category": "Utility"
+   }
+  },
+  "warlock": {
+   "Unstable Affliction": {
+    "action": "petattack",
+    "category": "Damage"
+   },
+   "Seed of Corruption": {
+    "action": "petattack",
+    "category": "Damage"
+   },
+   "Shadowfury": {
+    "action": "ground",
+    "category": "Control"
+   },
+   "Fel Armor": {
+    "action": "self",
+    "category": "Buff"
+   },
+   "Summon Felguard": {
+    "action": "self",
+    "category": "Pet"
+   },
+   "Soulshatter": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Ritual of Souls": {
+    "action": "self",
+    "category": "Utility"
+   }
+  },
+  "druid": {
+   "Mangle (Cat)": {
+    "action": "melee",
+    "category": "Damage",
+    "form": "Cat Form"
+   },
+   "Mangle (Bear)": {
+    "action": "melee",
+    "category": "Damage",
+    "form": "Bear Form"
+   },
+   "Maim": {
+    "action": "melee",
+    "category": "Control",
+    "form": "Cat Form"
+   },
+   "Tiger's Fury": {
+    "action": "self",
+    "category": "Buff",
+    "form": "Cat Form"
+   },
+   "Faerie Fire (Feral)": {
+    "action": "ranged",
+    "category": "Debuff"
+   },
+   "Lifebloom": {
+    "action": "friendlymain",
+    "category": "Heal"
+   },
+   "Cyclone": {
+    "action": "hostile",
+    "category": "Control"
+   },
+   "Force of Nature": {
+    "action": "self",
+    "category": "Pet"
+   },
+   "Tree of Life": {
+    "action": "self",
+    "category": "Buff"
+   },
+   "Flight Form": {
+    "action": "self",
+    "category": "Mount"
+   },
+   "Swift Flight Form": {
+    "action": "self",
+    "category": "Mount"
+   }
+  }
+ }
+}

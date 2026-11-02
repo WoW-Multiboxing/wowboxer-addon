@@ -86,3 +86,21 @@ from the data pipeline above.
 | 4. TBC tuning: sequences per class (Steady Shot, Mangle, Shaman shocks …), default guides per spec, new races | medium (2–3 sessions + testing) | Same quality as Forever |
 
 Steps 1+2 are enough to answer the Discord question within days. Steps 3–4 can follow while Forever is the priority.
+
+## Status (2 Nov 2026, evening)
+
+- **Phase A done** (merged): per-game data folders, shared engine, golden snapshots, SavedVariables test, backup in
+  `tools/install.ps1`.
+- **Steps 1–4 built** (branch `multi-game`, test build 0.15.0-test.3, not released before "ship it"):
+  - Data pipeline: `tools/fetch_client.py tbc|era` reads Blizzard's client tables of the builds on the owner's PC
+    (wago.tools DB2) into `datasrc/<game>/blizzard-<build>.json`: talent trees, class spell ranks, trainer levels, icons.
+    Season of Discovery runes (AcquireMethod 3, "Engrave …") are left out of Era.
+  - Hand-written per game in `datasrc/<game>/`: `races.json` (races, class choices, racials), `spells.json` (recommended
+    macros per class/role, renamed spells, macro rules for spells the seed lacks, faction/race locks), `guides.json`
+    (WoWBoxer starter build per class and role; the generator checks every point).
+  - `Games/<Game>.lua`: per-game rules (`D.game`) and the sequence tables with each game's spells.
+  - Both talent orders checked against Wowhead's calculator data (all 27 trees per game match).
+  - Saved data: talent plans, guides and races that the new Era trees can't hold are cleaned for use; the originals
+    are kept unchanged in `WoWBoxerDB.legacy` (written once).
+- **Still open:** default guides are WoWBoxer starter builds, not researched leveling guides – replace them with real
+  guide orders when there is time; per-rank cast/cooldown numbers for TBC-only spells use defaults.

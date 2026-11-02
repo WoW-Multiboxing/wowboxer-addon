@@ -1,0 +1,324 @@
+{
+ "_about": "Classic Era macro rules (hand-written, the addon is the source of truth). core: the recommended macros per class and role (slot i = WBX K<i>; a list = the last learned one wins, so list them from low to high). renames: an Era spell that takes the rules of a seed spell with another name (WoW Forever renamed it). new: Era spells the seed does not have. Levels, ranks, icons and talent/trainer come from the client tables (Season of Discovery runes are left out). lock = only for one faction or some races.",
+ "core": {
+  "warrior": {
+   "tank": [
+    "Heroic Strike",
+    "Sunder Armor",
+    "Revenge",
+    "Shield Slam",
+    "Thunder Clap",
+    "Taunt",
+    "Battle Shout",
+    "Shield Block"
+   ],
+   "melee": [
+    "Heroic Strike",
+    "Rend",
+    [
+     "Bloodthirst",
+     "Mortal Strike"
+    ],
+    "Overpower",
+    "Execute",
+    "Battle Shout",
+    "Charge",
+    "Whirlwind"
+   ]
+  },
+  "paladin": {
+   "tank": [
+    "Judgement",
+    "Seal of Righteousness",
+    "Righteous Fury",
+    "Consecration",
+    "Holy Shield",
+    "Blessing of Sanctuary",
+    "Devotion Aura"
+   ],
+   "healer": [
+    "Holy Light",
+    "Flash of Light",
+    "Holy Shock",
+    "Judgement",
+    [
+     "Seal of Righteousness",
+     "Seal of Wisdom"
+    ],
+    "Cleanse"
+   ],
+   "melee": [
+    "Judgement",
+    [
+     "Seal of Righteousness",
+     "Seal of Command"
+    ],
+    "Seal of the Crusader",
+    "Consecration",
+    "Exorcism",
+    "Hammer of Wrath"
+   ]
+  },
+  "hunter": {
+   "ranged": [
+    "Auto Shot",
+    "Hunter's Mark",
+    "Serpent Sting",
+    "Arcane Shot",
+    "Aimed Shot",
+    "Multi-Shot",
+    "Raptor Strike",
+    "Mend Pet"
+   ]
+  },
+  "rogue": {
+   "melee": [
+    "Sinister Strike",
+    "Eviscerate",
+    "Slice and Dice",
+    "Backstab",
+    "Hemorrhage",
+    "Kick"
+   ]
+  },
+  "priest": {
+   "healer": [
+    "Smite",
+    [
+     "Lesser Heal",
+     "Heal",
+     "Greater Heal"
+    ],
+    "Flash Heal",
+    "Renew",
+    "Power Word: Shield"
+   ],
+   "ranged": [
+    "Smite",
+    "Shadow Word: Pain",
+    "Mind Blast",
+    "Mind Flay",
+    "Power Word: Shield",
+    "Renew"
+   ]
+  },
+  "shaman": {
+   "healer": [
+    "Healing Wave",
+    "Lesser Healing Wave",
+    "Chain Heal",
+    "Earth Shock",
+    "Lightning Shield",
+    "Lightning Bolt"
+   ],
+   "melee": [
+    "Stormstrike",
+    "Earth Shock",
+    "Flame Shock",
+    [
+     "Rockbiter Weapon",
+     "Flametongue Weapon",
+     "Windfury Weapon"
+    ],
+    "Lightning Bolt",
+    "Lightning Shield"
+   ],
+   "ranged": [
+    "Lightning Bolt",
+    "Chain Lightning",
+    "Earth Shock",
+    "Flame Shock",
+    "Lightning Shield",
+    "Elemental Mastery"
+   ]
+  },
+  "mage": {
+   "ranged": [
+    "Frostbolt",
+    "Fireball",
+    "Fire Blast",
+    "Arcane Missiles",
+    "Frost Nova",
+    "Cone of Cold",
+    "Arcane Explosion",
+    "Pyroblast"
+   ]
+  },
+  "warlock": {
+   "ranged": [
+    "Shadow Bolt",
+    "Corruption",
+    "Curse of Agony",
+    "Immolate",
+    "Life Tap",
+    [
+     "Summon Imp",
+     "Summon Voidwalker"
+    ],
+    "Siphon Life",
+    "Drain Life"
+   ]
+  },
+  "druid": {
+   "tank": [
+    [
+     "Bear Form",
+     "Dire Bear Form"
+    ],
+    "Maul",
+    "Swipe",
+    "Demoralizing Roar",
+    "Growl",
+    "Faerie Fire (Feral)"
+   ],
+   "melee": [
+    "Cat Form",
+    "Claw",
+    "Rake",
+    "Shred",
+    "Rip",
+    "Ferocious Bite",
+    "Tiger's Fury"
+   ],
+   "healer": [
+    "Healing Touch",
+    "Rejuvenation",
+    "Regrowth",
+    "Swiftmend",
+    "Wrath"
+   ],
+   "ranged": [
+    "Wrath",
+    "Moonfire",
+    "Starfire",
+    "Insect Swarm",
+    "Moonkin Form",
+    "Hurricane"
+   ]
+  }
+ },
+ "renames": {
+  "warlock": {
+   "Curse of Agony": "Bane of Agony",
+   "Curse of Doom": "Bane of Doom"
+  }
+ },
+ "new": {
+  "paladin": {
+   "Blessing of Salvation": {
+    "action": "friendlyself",
+    "category": "Buff"
+   },
+   "Blessing of Sanctuary": {
+    "action": "friendlyself",
+    "category": "Buff"
+   },
+   "Greater Blessing of Salvation": {
+    "action": "friendlyself",
+    "category": "Buff"
+   },
+   "Greater Blessing of Sanctuary": {
+    "action": "friendlyself",
+    "category": "Buff"
+   },
+   "Sanctity Aura": {
+    "action": "self",
+    "category": "Buff"
+   }
+  },
+  "hunter": {
+   "Wyvern Sting": {
+    "action": "hostile",
+    "category": "Control"
+   }
+  },
+  "priest": {
+   "Starshards": {
+    "action": "ranged",
+    "category": "Damage",
+    "lock": {
+     "races": [
+      "nightelf"
+     ]
+    }
+   },
+   "Hex of Weakness": {
+    "action": "ranged",
+    "category": "Debuff",
+    "lock": {
+     "races": [
+      "troll"
+     ]
+    }
+   },
+   "Desperate Prayer": {
+    "action": "self",
+    "category": "Heal",
+    "lock": {
+     "races": [
+      "human",
+      "dwarf"
+     ]
+    }
+   },
+   "Elune's Grace": {
+    "action": "self",
+    "category": "Defense",
+    "lock": {
+     "races": [
+      "nightelf"
+     ]
+    }
+   },
+   "Feedback": {
+    "action": "self",
+    "category": "Defense",
+    "lock": {
+     "races": [
+      "human"
+     ]
+    }
+   },
+   "Shadowguard": {
+    "action": "self",
+    "category": "Buff",
+    "lock": {
+     "races": [
+      "troll"
+     ]
+    }
+   }
+  },
+  "shaman": {
+   "Fire Nova Totem": {
+    "action": "self",
+    "category": "Totem"
+   },
+   "Tranquil Air Totem": {
+    "action": "self",
+    "category": "Totem"
+   }
+  },
+  "warlock": {
+   "Curse of Shadow": {
+    "action": "petattack",
+    "category": "Debuff"
+   },
+   "Curse of Idiocy": {
+    "action": "petattack",
+    "category": "Debuff"
+   }
+  },
+  "druid": {
+   "Faerie Fire (Feral)": {
+    "action": "ranged",
+    "category": "Debuff"
+   },
+   "Tiger's Fury": {
+    "action": "self",
+    "category": "Buff",
+    "form": "Cat Form"
+   }
+  }
+ }
+}

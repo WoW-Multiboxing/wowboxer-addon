@@ -338,10 +338,67 @@ function S.cleanBuilds(t)
   return out
 end
 
+-- ------------------------------------------------------------------ talent plans this game's trees can't hold
+-- Saved data is never thrown away (docs/multi-flavor-plan.md §0, rule 3). When a game gets its own talent trees
+-- (Classic Era and TBC since 0.15: before, they used Forever's), cleaning drops talents, guides and races that do not
+-- exist there (an Undead Paladin is a Forever character). The originals go to WoWBoxerDB.legacy once, unchanged, so nothing the player made is lost.
+local function plain(v, depth)
+  if type(v) ~= "table" or (depth or 0) > 6 then return v end
+  local o = {}
+  for k, x in pairs(v) do if type(k) == "string" or type(k) == "number" then o[k] = plain(x, (depth or 0) + 1) end end
+  return o
+end
+local function sameList(a, b)
+  a, b = type(a) == "table" and a or {}, type(b) == "table" and b or {}
+  if #a ~= #b then return false end
+  for i = 1, #a do if a[i] ~= b[i] then return false end end
+  return true
+end
+local function talentSnapshot(db)
+  local snap = { builds = {}, members = {} }
+  for cls, list in pairs(type(db.builds) == "table" and db.builds or {}) do
+    for _, b in ipairs(type(list) == "table" and list or {}) do
+      if type(b) == "table" and type(b.id) == "string" then snap.builds[b.id] = { cls = cls, raw = plain(b) } end
+    end
+  end
+  for _, s in ipairs(type(db.squads) == "table" and db.squads or {}) do
+    for _, m in ipairs(type(s) == "table" and type(s.members) == "table" and s.members or {}) do
+      if type(m) == "table" and type(m.id) == "string" then snap.members[m.id] = { guide = m.guide, build = plain(m.build), cls = m.cls, race = m.race, name = m.name } end
+    end
+  end
+  return snap
+end
+--- Keep the originals of talent plans that cleaning changed (once per id; never overwritten).
+function S.keepLegacy(db, snap)
+  local L = type(db.legacy) == "table" and db.legacy or nil
+  local function bucket()
+    if not L then L = { note = "Talent plans saved before this game had its own talent trees (kept unchanged by WoWBoxer).", game = ns.dataGame,
+      at = time and time() or 0, builds = {}, members = {} } end
+    L.builds, L.members = L.builds or {}, L.members or {}
+    return L
+  end
+  local now = {}
+  for _, list in pairs(db.builds) do for _, b in ipairs(list) do now[b.id] = b end end
+  for id, x in pairs(snap.builds) do
+    local b = now[id]
+    if (not b or not sameList(b.order, x.raw.order)) and not (L and L.builds and L.builds[id]) then bucket().builds[id] = x.raw end
+  end
+  for _, s in ipairs(db.squads) do
+    for _, m in ipairs(s.members) do
+      local x = snap.members[m.id]
+      if x and (m.guide ~= x.guide or m.race ~= x.race or not sameList(m.build, x.build)) and not (L and L.members and L.members[m.id]) then
+        bucket().members[m.id] = x
+      end
+    end
+  end
+  db.legacy = L
+end
+
 function S.initDB(db, cdb)
   db = type(db) == "table" and db or {}
   cdb = type(cdb) == "table" and cdb or {}
   db.v = 1
+  local snap = talentSnapshot(db)
   -- builds first: a member's guide may be one of them ("u…")
   db.builds = S.cleanBuilds(db.builds)
   K.setBuilds(db.builds)
@@ -350,6 +407,7 @@ function S.initDB(db, cdb)
     for i, s in ipairs(db.squads) do if i <= 30 then squads[#squads + 1] = S.newSquad(s) end end
   end
   db.squads = squads
+  S.keepLegacy(db, snap)
   local activeOk = false
   for _, s in ipairs(squads) do if s.id == db.active then activeOk = true end end
   if not activeOk then db.active = squads[1] and squads[1].id or nil end

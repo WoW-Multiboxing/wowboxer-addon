@@ -40,8 +40,13 @@ do
     local rows = 0
     for _, n in ipairs(T.nodes) do if n.r > rows then rows = n.r end end
     H.ok(#T.trees == 3 and #T.nodes >= 60 and rows == 9, cls .. ": three TBC trees, nine rows (" .. #T.nodes .. " talents)")
-    H.eq(#ns.Kit.dataGuidesOf(cls), 0, cls .. ": no talent guides yet (coming)")
-    H.ok(not E.seqSupported(cls), cls .. ": no built-in sequence keys yet (coming)")
+    local gs = ns.Kit.dataGuidesOf(cls)
+    H.ok(#gs >= 1 and #gs[1].order == 61 and not E.validateOrder(T, gs[1].order), cls .. ": WoWBoxer starter builds with all 61 points, legal")
+    for _, role in ipairs(D.classes[cls].roles) do
+      local g = ns.Kit.guide(cls, ns.Kit.defaultGuideFor(cls, role))
+      H.ok(g ~= nil and #g.order == 61, cls .. "/" .. role .. ": a default guide for the role")
+    end
+    H.ok(E.seqSupported(cls), cls .. ": built-in sequence macros")
   end
   -- a 41-point talent (row 9) is legal once 40 points are in the tree
   local T = ns.Kit.tree("mage")
@@ -92,11 +97,11 @@ for _, sc in ipairs({
   H.ok(diag and diag.probe and diag.probe.game == "tbc", tag .. "selftest written (game tbc)")
   local e = errors(ns)
   H.eq(#e, 0, tag .. "no errors in the log: " .. table.concat(e, " | "))
-  -- talents page: no guides yet → "coming", no error
+  -- talents page: the role's starter build, Blizzard credit, no error
   UI.Select("talents")
-  local coming = false
-  for _, f in ipairs(W.frames) do if type(f._text) == "string" and f._text:find("coming", 1, true) and f:IsVisible() then coming = true end end
-  H.ok(coming, tag .. "Talents page says guides are coming")
+  local p = UI.panels.talents
+  H.ok((p.kind._text or ""):find("Guide's final build", 1, true) ~= nil, tag .. "Talents page shows the starter build: " .. tostring(p.kind._text))
+  H.ok((p.source._text or ""):find("Blizzard client tables", 1, true) ~= nil, tag .. "Blizzard credit on the Talents page")
 end
 
 -- ------------------------------------------------------------------ Wowhead /tbc/ talent links

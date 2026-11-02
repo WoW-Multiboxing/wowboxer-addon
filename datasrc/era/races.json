@@ -1,0 +1,237 @@
+{
+ "_about": "Classic Era races, class choices and racials (hand-written, the addon is the source of truth). tools/fetch_client.py era checks every spellId against the client's spell names of build 1.15.9.70576. Passives are listed for the Spells page only; they never get a macro.",
+ "races": [
+  {
+   "k": "human",
+   "n": "Human",
+   "f": "alliance",
+   "c": [
+    "warrior",
+    "paladin",
+    "rogue",
+    "priest",
+    "mage",
+    "warlock"
+   ]
+  },
+  {
+   "k": "dwarf",
+   "n": "Dwarf",
+   "f": "alliance",
+   "c": [
+    "warrior",
+    "paladin",
+    "hunter",
+    "rogue",
+    "priest"
+   ]
+  },
+  {
+   "k": "nightelf",
+   "n": "Night Elf",
+   "f": "alliance",
+   "c": [
+    "warrior",
+    "hunter",
+    "rogue",
+    "priest",
+    "druid"
+   ]
+  },
+  {
+   "k": "gnome",
+   "n": "Gnome",
+   "f": "alliance",
+   "c": [
+    "warrior",
+    "rogue",
+    "mage",
+    "warlock"
+   ]
+  },
+  {
+   "k": "orc",
+   "n": "Orc",
+   "f": "horde",
+   "c": [
+    "warrior",
+    "hunter",
+    "rogue",
+    "shaman",
+    "warlock"
+   ]
+  },
+  {
+   "k": "undead",
+   "n": "Undead",
+   "f": "horde",
+   "c": [
+    "warrior",
+    "rogue",
+    "priest",
+    "mage",
+    "warlock"
+   ]
+  },
+  {
+   "k": "tauren",
+   "n": "Tauren",
+   "f": "horde",
+   "c": [
+    "warrior",
+    "hunter",
+    "shaman",
+    "druid"
+   ]
+  },
+  {
+   "k": "troll",
+   "n": "Troll",
+   "f": "horde",
+   "c": [
+    "warrior",
+    "hunter",
+    "rogue",
+    "priest",
+    "shaman",
+    "mage"
+   ]
+  }
+ ],
+ "racials": {
+  "human": {
+   "name": "Human",
+   "faction": "alliance",
+   "racials": [
+    {
+     "id": "racial-human-perception",
+     "name": "Perception",
+     "spellId": 20600
+    },
+    {
+     "id": "racial-human-the-human-spirit",
+     "name": "The Human Spirit",
+     "spellId": 20598,
+     "passive": true
+    }
+   ]
+  },
+  "dwarf": {
+   "name": "Dwarf",
+   "faction": "alliance",
+   "racials": [
+    {
+     "id": "racial-dwarf-stoneform",
+     "name": "Stoneform",
+     "spellId": 20594
+    },
+    {
+     "id": "racial-dwarf-find-treasure",
+     "name": "Find Treasure",
+     "spellId": 2481
+    }
+   ]
+  },
+  "nightelf": {
+   "name": "Night Elf",
+   "faction": "alliance",
+   "racials": [
+    {
+     "id": "racial-nightelf-shadowmeld",
+     "name": "Shadowmeld",
+     "spellId": 20580
+    },
+    {
+     "id": "racial-nightelf-quickness",
+     "name": "Quickness",
+     "spellId": 20582,
+     "passive": true
+    }
+   ]
+  },
+  "gnome": {
+   "name": "Gnome",
+   "faction": "alliance",
+   "racials": [
+    {
+     "id": "racial-gnome-escape-artist",
+     "name": "Escape Artist",
+     "spellId": 20589
+    },
+    {
+     "id": "racial-gnome-expansive-mind",
+     "name": "Expansive Mind",
+     "spellId": 20591,
+     "passive": true
+    }
+   ]
+  },
+  "orc": {
+   "name": "Orc",
+   "faction": "horde",
+   "racials": [
+    {
+     "id": "racial-orc-blood-fury",
+     "name": "Blood Fury",
+     "spellId": 20572
+    },
+    {
+     "id": "racial-orc-hardiness",
+     "name": "Hardiness",
+     "spellId": 20573,
+     "passive": true
+    }
+   ]
+  },
+  "undead": {
+   "name": "Undead",
+   "faction": "horde",
+   "racials": [
+    {
+     "id": "racial-undead-will-of-the-forsaken",
+     "name": "Will of the Forsaken",
+     "spellId": 7744
+    },
+    {
+     "id": "racial-undead-cannibalize",
+     "name": "Cannibalize",
+     "spellId": 20577
+    }
+   ]
+  },
+  "tauren": {
+   "name": "Tauren",
+   "faction": "horde",
+   "racials": [
+    {
+     "id": "racial-tauren-war-stomp",
+     "name": "War Stomp",
+     "spellId": 20549
+    },
+    {
+     "id": "racial-tauren-endurance",
+     "name": "Endurance",
+     "spellId": 20550,
+     "passive": true
+    }
+   ]
+  },
+  "troll": {
+   "name": "Troll",
+   "faction": "horde",
+   "racials": [
+    {
+     "id": "racial-troll-berserking",
+     "name": "Berserking",
+     "spellId": 20554
+    },
+    {
+     "id": "racial-troll-regeneration",
+     "name": "Regeneration",
+     "spellId": 20555,
+     "passive": true
+    }
+   ]
+  }
+ }
+}

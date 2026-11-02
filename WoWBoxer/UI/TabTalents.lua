@@ -287,7 +287,7 @@ end
 --- Forever's trees), so talents spent in the game can be compared with the plan.
 function tab.treesMatch()
   local g = ns.Data.game
-  if g and g.key == "tbc" then return ns.Compat.game() == "tbc" end
+  if g and (g.key == "tbc" or g.key == "era") then return ns.Compat.game() == g.key end
   return ns.Compat.isForever()
 end
 --- Talent guides of this game are not written yet (TBC, plan step 4): one plain line instead of an empty list.
@@ -298,7 +298,7 @@ end
 --- The talent data credit of this game (exact wording for Forever and Era: Zephras CC BY 4.0).
 function tab.creditText()
   local g = ns.Data.game
-  if g and g.key == "tbc" then return "Talent data: Blizzard client tables (build " .. tostring(ns.Data.meta.build) .. "). Names (c) Blizzard Entertainment." end
+  if g and (g.key == "tbc" or g.key == "era") then return "Talent data: Blizzard client tables (build " .. tostring(ns.Data.meta.build) .. "). Names (c) Blizzard Entertainment." end
   return "Talent data: Zephras (zephras.com), CC BY 4.0, changed by WoWBoxer; The Forever Era"
 end
 --- The level "Plan ahead" looks to (default: 5 levels on, at most the max level).

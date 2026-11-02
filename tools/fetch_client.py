@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
-"""TBC Anniversary game data from Blizzard's own client tables (DB2), as published per build on wago.tools
-(docs/multi-flavor-plan.md, "Where the data comes from"). Writes datasrc/tbc/blizzard-<build>.json:
+"""Game data (TBC Anniversary, Classic Era) from Blizzard's own client tables (DB2), as published per build on wago.tools
+(docs/multi-flavor-plan.md, "Where the data comes from"). Writes datasrc/<game>/blizzard-<build>.json:
   trees[cls]   = [{n, f}] in the client's tab order (TalentTab.OrderIndex), f = icon file ID
   talents[cls] = [{k, n, t, r, c, m, f, ranks, req}] (t = tree index 0-2, r/c = 1-based row/column like the Forever
                  data, m = max rank, ranks = spell ID per rank, req = key of the prerequisite talent or null)
   spells[cls]  = {name: [[spellId, level], ...]} class abilities from the class skill lines (no pets), ranks by level
-  racials      = {spellId: {n, f}} for the ids listed in datasrc/tbc/races.json
+  icons[cls]   = {name: icon file ID of the first rank}
+  racials      = {spellId: {n, f}} for the ids listed in datasrc/<game>/races.json
+Classic Era: Season of Discovery runs on the same client; its rune spells (AcquireMethod 3) are left out.
 Only facts of the game (names, positions, ranks, levels, icon IDs); names (c) Blizzard Entertainment.
-Usage: python tools/fetch_tbc.py [--cache DIR]   (downloads the CSVs, or reads DIR/<Table>.csv when present)
+Usage: python tools/fetch_client.py tbc|era [--cache DIR]   (downloads the CSVs, or reads DIR/<Table>.csv when present)
 """
 import csv
 import io
@@ -17,9 +19,9 @@ import re
 import sys
 import urllib.request
 
-BUILD = '2.5.6.70577'
+GAMES = {'tbc': '2.5.6.70577', 'era': '1.15.9.70576'}  # the builds on the owner's PC (2 Nov 2026)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT = os.path.join(ROOT, 'datasrc', 'tbc', 'blizzard-%s.json' % BUILD)
+BUILD = None
 TABLES = ['Talent', 'TalentTab', 'SpellName', 'SpellMisc', 'SkillLine', 'SkillLineAbility', 'SkillRaceClassInfo', 'SpellLevels']
 CLASS_BIT = {'warrior': 1, 'paladin': 2, 'hunter': 4, 'rogue': 8, 'priest': 16, 'shaman': 64, 'mage': 128, 'warlock': 256, 'druid': 1024}
 ORDER = ['warrior', 'paladin', 'hunter', 'rogue', 'priest', 'shaman', 'mage', 'warlock', 'druid']
@@ -44,6 +46,10 @@ def slug(s):
 
 
 def main(argv):
+    global BUILD
+    game = argv[0] if argv and argv[0] in GAMES else sys.exit('usage: fetch_client.py tbc|era [--cache DIR]')
+    BUILD = GAMES[game]
+    OUT = os.path.join(ROOT, 'datasrc', game, 'blizzard-%s.json' % BUILD)
     cache = argv[argv.index('--cache') + 1] if '--cache' in argv else None
     T = {n: table(n, cache) for n in TABLES}
     name = {int(r['ID']): r['Name_lang'] for r in T['SpellName']}
@@ -98,15 +104,18 @@ def main(argv):
             line = int(r['SkillLine'])
             if line in classLines and cls in lineClass.get(line, ()):
                 cm = int(r['ClassMask'] or 0)
+                if r['AcquireMethod'] == '3':
+                    continue  # Season of Discovery runes (Classic Era client)
                 if cm and not (cm & CLASS_BIT[cls]):
                     continue
                 sid = int(r['Spell'])
                 n = name.get(sid)
-                if n:
+                if n and not n.startswith('Engrave '):
                     sp.setdefault(n, set()).add((sid, level.get(sid, 0)))
         out['spells'][cls] = {n: sorted(v, key=lambda x: (x[1], x[0])) for n, v in sorted(sp.items())}
+        out.setdefault('icons', {})[cls] = {n: icon.get(sorted(v, key=lambda x: (x[1], x[0]))[0][0]) for n, v in sorted(sp.items())}
     # ---- racials named in races.json
-    races = json.load(open(os.path.join(ROOT, 'datasrc', 'tbc', 'races.json'), encoding='utf-8'))
+    races = json.load(open(os.path.join(ROOT, 'datasrc', game, 'races.json'), encoding='utf-8'))
     for r in races['racials'].values():
         for x in r['racials']:
             sid = x['spellId']
