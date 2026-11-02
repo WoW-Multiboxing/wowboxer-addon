@@ -3,6 +3,31 @@
 A Discord user asked for a TBC Anniversary version. The owner's PC already has the TBC Anniversary client: the
 `_anniversary_` folder, build 2.5.6.70577, so interface **20506**.
 
+## 0. Decision (the owner, 2 Nov 2026, 17:12): the addon is the source of truth, macros per game
+
+- **What changes:**
+  - Macro data and rules are owned by the addon repo, no longer by the (parked) web companion.
+  - Each game gets its **own** recommended macros, sequences, spells, talents, races and guides.
+  - The engine stays shared.
+- **"Don't destroy anything" – the safety rules for this work:**
+  1. **Snapshot first.**
+     - Before moving any file, export today's Forever output for every class × role × level × tier × unit
+       (leader, party1–4, focus) into `tests/golden/forever.json`.
+     - Export Classic Era's current output too, to `tests/golden/era.json`.
+     - After the restructure both must match **byte for byte**. Existing Forever and Era players get exactly the
+       same macros.
+  2. **Branch.** Do the restructure on a branch `multi-game`. Merge to main only when every test is green and the owner
+     has tested the test build.
+  3. **Saved data is untouched.**
+     - Squads, overrides, own macros, keybind memory and bar snapshots keep their format.
+     - If a field must be added, the old data still loads, and a test loads a saved file from today's version.
+  4. **Back up before testing.** `tools/install.ps1` copies the owner's `WTF\Account\*\SavedVariables\WoWBoxer.lua`
+     (all clients) to `backup\<date>\` before installing a test build, and says where.
+  5. **Nothing goes live** until the owner says "ship it". Forever keeps working at every step.
+- **Text for `02_Spec/Decisions.md` (for G):** "2 Nov 2026 – The addon is the source of truth for macro data and
+  rules; the web companion is parked. Data is per game (Forever / Classic Era / TBC Anniversary), the engine shared.
+  Forever output is protected by a golden snapshot."
+
 ## Best practice: one repo, one download, files per game
 
 - **One repository and one CurseForge/Wago project.** The same zip is uploaded and tagged for all three game versions.
@@ -48,8 +73,8 @@ A Discord user asked for a TBC Anniversary version. The owner's PC already has t
    - one default build per spec, written as Wowhead TBC links and converted by the existing importer;
    - players can import their own (the importer gets the `/tbc/` and `/classic/` token tables).
 
-Hard rule 6 (the companion is the source of truth) stays for **Forever**. For Era and TBC the addon's own data
-pipeline is the source. Record that decision in `02_Spec/Decisions.md` (G).
+The addon is the source of truth for all three games (§0). Forever starts from the frozen companion seed; Era and TBC
+from the data pipeline above.
 
 ## Work estimate (Claude Code sessions plus the owner's test time)
 
