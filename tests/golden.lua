@@ -172,7 +172,7 @@ end
 function G.path(H, game) return H.root .. "/tests/golden/" .. game .. ".json" end
 
 -- ------------------------------------------------------------------ CLI: --write
-if arg and arg[0] and arg[0]:match("golden%.lua$") then
+if arg and arg[0] and (arg[0]:match("[/\\]golden%.lua$") or arg[0] == "golden.lua") then
   local H = dofile(dir .. "/harness.lua")
   local Mock = dofile(dir .. "/wowmock.lua")
   local only = arg[2]

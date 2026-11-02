@@ -11,13 +11,7 @@ local G = _G
 function C.interface() local _, _, _, toc = GetBuildInfo(); return tonumber(toc) or 0 end
 function C.buildString() local v, b = GetBuildInfo(); return tostring(v) .. "." .. tostring(b) end
 --- "forever" | "era" | "tbc" | "other"
-function C.game()
-  local toc = C.interface()
-  if toc >= 16000 and toc < 20000 then return "forever" end
-  if toc >= 11000 and toc < 12000 then return "era" end
-  if toc >= 20000 and toc < 30000 then return "tbc" end
-  return "other"
-end
+function C.game() return ns.gameOf(C.interface()) end
 function C.isForever() return C.game() == "forever" end
 
 -- ------------------------------------------------------------------ secret values (Forever / Midnight API)

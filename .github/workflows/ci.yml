@@ -25,9 +25,9 @@ jobs:
         run: python3 tools/lint51.py
       - name: luacheck
         run: luacheck WoWBoxer tests
-      - name: Export parity vectors from the companion's JavaScript
+      - name: Export test vectors from the companion seed (locale, share tests)
         run: node tools/export_vectors.js
       - name: Share-string reference tests (JS)
         run: if [ -f share/test.js ]; then node share/test.js; fi
-      - name: Lua tests (parity, mocks, UI smoke)
+      - name: Lua tests (golden snapshot, saved data, mocks, UI smoke)
         run: LUA=${{ matrix.lua }} tests/run_all.sh

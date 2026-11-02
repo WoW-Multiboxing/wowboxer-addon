@@ -17,7 +17,7 @@ local function allowed(s)
 end
 local files = {}
 for _, f in ipairs(H.tocFiles()) do
-  if f:match("%.lua$") and not f:match("^Data/") and f ~= "Engine.lua" then files[#files + 1] = f end
+  if f:match("%.lua$") and not f:match("^Data/") and not f:match("^Games/") and f ~= "Engine.lua" then files[#files + 1] = f end
 end
 local bad = {}
 for _, f in ipairs(files) do

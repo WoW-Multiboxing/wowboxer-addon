@@ -13,17 +13,32 @@
 ## X-Website: https://github.com/WoW-Multiboxing/wowboxer-addon
 ## X-Credits: Talent data: Zephras (zephras.com, CC BY 4.0) + The Forever Era. World of Warcraft names and icons (c) Blizzard Entertainment.
 
-Data\Common.lua
-Data\Class_warrior.lua
-Data\Class_paladin.lua
-Data\Class_hunter.lua
-Data\Class_rogue.lua
-Data\Class_priest.lua
-Data\Class_shaman.lua
-Data\Class_mage.lua
-Data\Class_warlock.lua
-Data\Class_druid.lua
-Data\WowheadOrder.lua
+# Which game is running: decides whose data below fills ns.Data (each data file returns at once on another game)
+Game.lua
+Data\Forever\Common.lua
+Data\Forever\Class_warrior.lua
+Data\Forever\Class_paladin.lua
+Data\Forever\Class_hunter.lua
+Data\Forever\Class_rogue.lua
+Data\Forever\Class_priest.lua
+Data\Forever\Class_shaman.lua
+Data\Forever\Class_mage.lua
+Data\Forever\Class_warlock.lua
+Data\Forever\Class_druid.lua
+Data\Forever\WowheadOrder.lua
+Games\Forever.lua
+Data\Era\Common.lua
+Data\Era\Class_warrior.lua
+Data\Era\Class_paladin.lua
+Data\Era\Class_hunter.lua
+Data\Era\Class_rogue.lua
+Data\Era\Class_priest.lua
+Data\Era\Class_shaman.lua
+Data\Era\Class_mage.lua
+Data\Era\Class_warlock.lua
+Data\Era\Class_druid.lua
+Data\Era\WowheadOrder.lua
+Games\Era.lua
 Engine.lua
 Kit.lua
 Wowhead.lua

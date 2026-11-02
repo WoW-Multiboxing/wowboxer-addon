@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /* Exports test vectors from the companion's own JavaScript (vendor/companion/engine.js + kit functions extracted from
-   app.js). tests/parity.lua runs the Lua port on the same inputs and requires identical output.
+   app.js). Used by tests/test_locale.lua and tests/test_share.lua (the companion parity test was replaced by
+   tests/test_golden.lua on 2 Nov 2026: the addon is the source of truth).
    Usage: node tools/export_vectors.js [--quick]   (writes tests/vectors/*.json) */
 'use strict';
 const fs = require('fs');

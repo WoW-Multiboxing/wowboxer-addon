@@ -2,7 +2,7 @@
   Lua port of the companion's per-character helpers in app.js (racialsOf, spellsOf, learned, coreList, kitLists, seqOf,
   seqPlan, defaultGuideFor). A "member" is the companion's member object:
     {id, name, cls, race, role, level, leader, unit, talented, build={talent keys}, guide, seq, seqTarget, customSeq, pins}
-  Parity with app.js is tested in tests/parity.lua. Addon-only additions (stable key slots, helper macros) are at the end. ]]
+  Its output is locked per game by tests/test_golden.lua (tests/golden/). Addon-only additions (stable key slots, helper macros) are at the end. ]]
 local _, ns = ...
 local K = {}
 ns.Kit = K
