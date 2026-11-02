@@ -18,7 +18,7 @@ Nothing goes live on CurseForge, Wago or the website until the owner has tested 
    which only players who chose Beta in their CurseForge app get.
 
 Release types (`tools/cf_upload.py`): a plain tag = **release**, `-beta`/`-rc` = **beta**, `-alpha` = **alpha**. The
-version number can stay 0.x until the owner calls it 1.0.
+version number went to 1.0.0 on 2 Nov 2026 (the owner: "the actual version that we're going live with").
 
 ## How a tag publishes
 A version tag does everything: `git tag v0.9.0 && git push origin v0.9.0` runs `.github/workflows/release.yml` –
@@ -26,7 +26,8 @@ all checks, `tools/package.sh` (one `WoWBoxer/` folder, version stamped into the
 and the CurseForge upload (`tools/cf_upload.py`). Release type: see "Test first" above. Changelog: `docs/changes/<version>.md` (short, for players) or, without it, the commit subjects since
 the last tag. To upload an existing tag again: Actions → release → Run workflow → tag.
 
-Game versions come from the TOC `## Interface:` list: 11509 → Classic Era 1.15.9, 16001 → Forever 1.60.1.
+Game versions come from the TOC `## Interface:` list: 11509 → Classic Era 1.15.9, 16001 → Forever 1.60.1,
+20506 → TBC Anniversary 2.5.6 (since 1.0.0).
 CurseForge knows both (checked 2026-10-28: 1.60.1 = id 17053, 1.15.9 = id 16630). Project ID 1771228.
 
 ## Last step of every release: the version on the website (the owner, 2026-10-29)
