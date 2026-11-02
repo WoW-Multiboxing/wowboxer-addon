@@ -1,5 +1,6 @@
 # Install a local TEST BUILD: copy the WoWBoxer addon folder into the AddOns folder of every installed client
-# (Classic Era, Forever). Only replaces Interface\AddOns\WoWBoxer; never touches other addons, WTF or the game.
+# (Classic Era, Forever). Only replaces Interface\AddOns\WoWBoxer; never touches other addons or the game. First it
+# copies every WoWBoxer.lua SavedVariables file of every client to backup\<date>\ (WTF itself is only read).
 #   powershell -ExecutionPolicy Bypass -File tools\install.ps1 [-Clients _classic_era_,_forever_] [-WowRoot "..."]
 #                                                              [-Next 0.13.0] [-TestN 1]
 # The installed TOC gets the version "<next>-test.N (<short sha>)", e.g. "0.13.0-test.1 (a64a7eb)"; the addon then
@@ -45,6 +46,24 @@ elseif ($state.next -ne $Next) { $n = 1 }
 elseif ($state.key -eq $key) { $n = [int]$state.n }
 else { $n = [int]$state.n + 1 }
 $version = "$Next-test.$n ($build)"
+
+# --- back up the saved data first (docs/multi-flavor-plan.md §0, rule 4): every WoWBoxer.lua SavedVariables file of
+# every client (account and per character), also clients this run does not install to. Copies only; never deletes.
+$stamp = Get-Date -Format 'yyyy-MM-dd_HHmmss'
+$backup = Join-Path $repo "backup\$stamp"
+$saved = @(Get-ChildItem -Path $WowRoot -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+  $acct = Join-Path $_.FullName 'WTF\Account'
+  if (Test-Path $acct) { Get-ChildItem -Path $acct -Recurse -File -Filter 'WoWBoxer.lua' -ErrorAction SilentlyContinue |
+    Where-Object { $_.Directory.Name -eq 'SavedVariables' } }
+})
+foreach ($f in $saved) {
+  $rel = $f.FullName.Substring($WowRoot.TrimEnd('\').Length + 1)
+  $dst = Join-Path $backup $rel
+  New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dst) | Out-Null
+  Copy-Item -LiteralPath $f.FullName -Destination $dst
+}
+if ($saved.Count -gt 0) { Write-Host "backed up $($saved.Count) WoWBoxer.lua SavedVariables file(s) to $backup" }
+else { Write-Host "no WoWBoxer.lua SavedVariables found under $WowRoot (nothing to back up)" }
 
 $installed = 0
 foreach ($c in $Clients) {
