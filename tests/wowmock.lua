@@ -89,7 +89,11 @@ function Mock.new(H, opts)
   function W.slotMacroName(slot) local a = W.actions[slot]; return a and a.kind == "macro" and a.ref.name or nil end
 
   -- ---------------------------------------------------------------- game, units, combat
-  env.GetBuildInfo = function() return W.toc >= 16000 and "1.60.1" or "1.15.9", W.toc >= 16000 and "70532" or "70576", "Oct 1 2026", W.toc end
+  -- version and build of each client on the owner's PC: Forever 1.60.1, Classic Era 1.15.9, TBC Anniversary 2.5.6
+  env.GetBuildInfo = function()
+    if W.toc >= 20000 and W.toc < 30000 then return "2.5.6", "70577", "Oct 1 2026", W.toc end
+    return W.toc >= 16000 and "1.60.1" or "1.15.9", W.toc >= 16000 and "70532" or "70576", "Oct 1 2026", W.toc
+  end
   env.GetLocale = function() return "enUS" end
   env.GetRealmName = function() return "Realm" end
   env.InCombatLockdown = function() return W.combat end

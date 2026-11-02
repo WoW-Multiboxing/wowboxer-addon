@@ -173,7 +173,7 @@ end
 --- The next level at which the member learns something new at the trainer: level, {names} (or nil).
 function SQ.nextTrainer(m)
   local K = ns.Kit
-  for L = (m.level or 1) + 1, 60 do
+  for L = (m.level or 1) + 1, ns.Engine.maxLevel() do
     local names = {}
     for _, s in ipairs(K.spellsOf(m)) do
       if s.gate ~= "talent" and s.gate ~= "racial" and s.action ~= "passive" then

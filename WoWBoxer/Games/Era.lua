@@ -6,6 +6,11 @@
 local _, ns = ...
 if ns.dataGame ~= "era" then return end
 local D = ns.Data
+-- Era still uses the Forever talent trees and Wowhead links until its own data (plan step 3).
+
+--- The game's rules: max level, talent points at max level, the Wowhead path of talent links, and whether the live
+--- spellbook alone decides which spells a character has (true where the data has no trainer levels for this game).
+D.game = { key = "era", name = "Classic Era", maxLevel = 60, maxPoints = 51, wowhead = "forever", wowheadName = "WoW Forever", liveSpells = false }
 
 D.sequences = {
   warlock = {

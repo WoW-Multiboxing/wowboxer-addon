@@ -1,4 +1,4 @@
-## Interface: 16001, 11509
+## Interface: 16001, 11509, 20506
 ## Title: WoWBoxer
 ## Notes: Multiboxing in the game: squad setup, talents, recommended macros and sequence keys per level, action bars, settings and addon checks. One key press = one action on one character.
 ## Author: WoWBoxer (WoW-Multiboxing)
@@ -39,6 +39,18 @@ Data\Era\Class_warlock.lua
 Data\Era\Class_druid.lua
 Data\Era\WowheadOrder.lua
 Games\Era.lua
+Data\TBC\Common.lua
+Data\TBC\Class_warrior.lua
+Data\TBC\Class_paladin.lua
+Data\TBC\Class_hunter.lua
+Data\TBC\Class_rogue.lua
+Data\TBC\Class_priest.lua
+Data\TBC\Class_shaman.lua
+Data\TBC\Class_mage.lua
+Data\TBC\Class_warlock.lua
+Data\TBC\Class_druid.lua
+Data\TBC\WowheadOrder.lua
+Games\TBC.lua
 Engine.lua
 Kit.lua
 Wowhead.lua

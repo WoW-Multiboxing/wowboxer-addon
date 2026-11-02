@@ -161,7 +161,8 @@ function M.localize(body, map)
   return table.concat(out, "\n")
 end
 
-M.CAP = 60 -- the highest level any spell in the data unlocks at
+--- The highest level any spell in the data unlocks at (the game's max level: 60, TBC 70).
+function M.cap() return E.maxLevel() end
 
 --- Whether spell s is usable by member m at level L: nil = known now, "trainer" = learnable now but not in the
 --- spellbook, a number = the level it unlocks at, false = never (a talent outside the plan, or past the cap).
@@ -169,8 +170,8 @@ function M.pendingOf(m, s, L, live)
   local known = live and live(s.name, s)
   if known then return nil end
   if K.learned(m, s, L) then return live and "trainer" or nil end
-  if s.gate ~= "talent" then return s.level <= M.CAP and s.level or false end
-  for lv = math.max(L + 1, s.level), M.CAP do if K.learned(m, s, lv) then return lv end end -- when the plan takes the talent
+  if s.gate ~= "talent" then return s.level <= M.cap() and s.level or false end
+  for lv = math.max(L + 1, s.level), M.cap() do if K.learned(m, s, lv) then return lv end end -- when the plan takes the talent
   return false
 end
 

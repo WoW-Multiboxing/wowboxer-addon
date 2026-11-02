@@ -4,7 +4,7 @@
   sequence tables) is in Data/<Game>/ and Games/<Game>.lua. tests/test_golden.lua locks its output per game.
 
   Talent rules (Forever, build 1.60.1.70450/70532):
-    - one talent point per level 10–60 (51 total); Legacy perk "Talented" rank r moves the first point to level 10-r;
+    - one talent point per level 10–60 (51 total; TBC: 10–70, 61 – per game, E.maxPoints()); Legacy perk "Talented" rank r moves the first point to level 10-r;
     - row N of a tree opens after (N-1)*5 points in that tree;
     - a talent at the end of an arrow needs the talent at the arrow's start at full rank.
   Macro rules (manual multiboxing, one key press = one action on one character):
@@ -22,9 +22,12 @@ local floor, ceil, max, min = math.floor, math.ceil, math.max, math.min
 local tinsert, tconcat, tremove = table.insert, table.concat, table.remove
 local sfind, ssub, sformat, smatch = string.find, string.sub, string.format, string.match
 
-local MAX_POINTS = 51
 local MACRO_LIMIT = 255
-E.MAX_POINTS, E.MACRO_LIMIT = MAX_POINTS, MACRO_LIMIT
+E.MACRO_LIMIT = MACRO_LIMIT
+--- Per game (ns.Data.game from Games/<Game>.lua): talent points at max level and the max level. Forever/Era 51 at 60.
+local function MAXP() local g = ns.Data and ns.Data.game; return (g and g.maxPoints) or 51 end
+function E.maxPoints() return MAXP() end
+function E.maxLevel() local g = ns.Data and ns.Data.game; return (g and g.maxLevel) or 60 end
 
 -- ------------------------------------------------------------------ small helpers (JS semantics)
 local function jsround(x) return floor(x + 0.5) end
@@ -50,7 +53,7 @@ E.contains, E.slice = contains, slice
 function E.firstPointLevel(talented) return 10 - max(0, min(5, trunc(talented))) end
 function E.pointsAt(level, talented)
   local n = level - E.firstPointLevel(talented) + 1
-  return max(0, min(MAX_POINTS, n))
+  return max(0, min(MAXP(), n))
 end
 function E.levelForPoint(index, talented) return E.firstPointLevel(talented) + index end -- index 0-based
 function E.levelForPoints(n, talented) if n <= 0 then return 1 end return E.firstPointLevel(talented) + n - 1 end
@@ -100,7 +103,7 @@ function E.addBlocker(T, counts, key, cap)
   if not n then return { code = "unknown", text = "Unknown talent" } end
   local have = counts[key] or 0
   if have >= n.m then return { code = "max", text = n.n .. " is already at max rank" } end
-  local lim = cap == nil and MAX_POINTS or cap
+  local lim = cap == nil and MAXP() or cap
   if E.total(counts) >= lim then return { code = "points", text = "No talent points left" } end
   local need, spent = (n.r - 1) * 5, E.treePoints(T, counts)[n.t + 1]
   if spent < need then
@@ -116,7 +119,7 @@ end
 
 --- Is a final allocation legal (independent of order)? Returns nil or a reason.
 function E.stateBlocker(T, counts)
-  if E.total(counts) > MAX_POINTS then return "More than " .. MAX_POINTS .. " points" end
+  if E.total(counts) > MAXP() then return "More than " .. MAXP() .. " points" end
   for _, k in ipairs(countKeys(counts)) do
     local v = counts[k]
     if v and v ~= 0 then

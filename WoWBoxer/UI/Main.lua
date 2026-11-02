@@ -100,7 +100,11 @@ local function buildHeader(f)
   UI.tag.wbxCopy = "status"
   local tagHit = CreateFrame("Frame", nil, hdr)
   tagHit:SetAllPoints(UI.tag)
-  W.tip(tagHit, "Classic Era", "This client is Classic Era. WoWBoxer uses WoW: Forever data; spells and talents can differ here.")
+  local function isTbc() return ns.Compat.game() == "tbc" end
+  W.tip(tagHit, function() return isTbc() and "TBC Anniversary" or "Classic Era" end, function()
+    if isTbc() then return "This client is TBC Anniversary. Your macros come from the spells in your spellbook; talent guides and sequence macros for TBC are coming." end
+    return "This client is Classic Era. WoWBoxer uses WoW: Forever data; spells and talents can differ here."
+  end)
   UI.tagHit = tagHit
 
   local close = W.frame("Button", hdr, "UIPanelCloseButton")
@@ -316,11 +320,13 @@ function UI.RefreshNow()
     if not m.leader then tip[#tip + 1] = "Follows " .. (L and L.name or "the leader") .. " (" .. m.unit .. ")" end
     tip[#tip + 1] = "Squad: " .. s.name .. " (" .. #s.members .. ")"
   end
-  local era = ns.Compat.game() ~= "forever"
-  tip[#tip + 1] = era and "Classic Era client, WoW: Forever data" or "WoW: Forever"
+  local game = ns.Compat.game()
+  local era, tbc = game ~= "forever" and game ~= "tbc", game == "tbc"
+  tip[#tip + 1] = tbc and "TBC Anniversary: macros from your spellbook; guides and sequence macros are coming"
+    or (era and "Classic Era client, WoW: Forever data" or "WoW: Forever")
   UI.whoTip = tip
-  UI.tag:SetText(era and "ERA" or "")
-  UI.tagHit:SetShown(era)
+  UI.tag:SetText(tbc and "TBC" or (era and "ERA" or ""))
+  UI.tagHit:SetShown(era or tbc)
   UI.who:SetText(line)
   if UI.whoDot then
     local c = W.classColor(info.cls)

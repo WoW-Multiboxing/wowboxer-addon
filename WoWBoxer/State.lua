@@ -32,7 +32,7 @@ local function safeId(v, p)
   return S.uid(p)
 end
 S.safeId = safeId
-local function clampLvl(v) v = tonumber(v); if not v or v ~= v then return 1 end; return max(1, min(60, floor(v + 0.5))) end
+local function clampLvl(v) v = tonumber(v); if not v or v ~= v then return 1 end; return max(1, min(E.maxLevel(), floor(v + 0.5))) end
 local function clampT(v) v = tonumber(v); if not v or v ~= v then return 0 end; return max(0, min(5, floor(v + 0.5))) end
 S.clampLvl, S.clampT = clampLvl, clampT
 
@@ -48,7 +48,7 @@ function S.sanitizeOrder(cls, order)
   local T = K.tree(cls)
   if type(order) ~= "table" or not T then return {} end
   local o = {}
-  for _, k in ipairs(order) do if type(k) == "string" and T.byKey[k] and #o < 51 then o[#o + 1] = k end end
+  for _, k in ipairs(order) do if type(k) == "string" and T.byKey[k] and #o < E.maxPoints() then o[#o + 1] = k end end
   if not E.validateOrder(T, o) then return o end
   local rest, out, c = E.slice(o), {}, E.newCounts()
   local progress = true

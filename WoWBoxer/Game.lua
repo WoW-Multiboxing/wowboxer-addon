@@ -17,6 +17,6 @@ end
 
 local _, _, _, toc = GetBuildInfo()
 ns.game = ns.gameOf(toc)
---- Whose data loads: Classic Era its own; every other client the Forever data (today's behaviour).
-ns.dataGame = ns.game == "era" and "era" or "forever"
+--- Whose data loads: Classic Era and TBC their own; every other client the Forever data.
+ns.dataGame = (ns.game == "era" or ns.game == "tbc") and ns.game or "forever"
 ns.Data = ns.Data or {}

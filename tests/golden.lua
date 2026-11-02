@@ -16,6 +16,7 @@ local dir = (arg and arg[0] and arg[0]:match("^(.*)/[^/]+$")) or "tests"
 G.GAMES = {
   forever = { toc = 16001, gameType = "forever", maxLevel = 60 },
   era = { toc = 11509, gameType = "vanilla", maxLevel = 60 },
+  tbc = { toc = 20506, gameType = "tbc", maxLevel = 70 },
 }
 
 -- ------------------------------------------------------------------ canonical JSON
@@ -177,7 +178,7 @@ if arg and arg[0] and (arg[0]:match("[/\\]golden%.lua$") or arg[0] == "golden.lu
   local Mock = dofile(dir .. "/wowmock.lua")
   local only = arg[2]
   if arg[1] == "--write" then
-    for _, game in ipairs({ "forever", "era" }) do
+    for _, game in ipairs({ "forever", "era", "tbc" }) do
       if not only or only == game then
         local txt = G.build(H, Mock, game)
         local fh = assert(io.open(G.path(H, game), "wb")); fh:write(txt); fh:close()
@@ -185,7 +186,7 @@ if arg and arg[0] and (arg[0]:match("[/\\]golden%.lua$") or arg[0] == "golden.lu
       end
     end
   else
-    print("usage: lua tests/golden.lua --write [forever|era]")
+    print("usage: lua tests/golden.lua --write [forever|era|tbc]")
   end
 end
 

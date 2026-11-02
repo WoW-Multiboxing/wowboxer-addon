@@ -92,6 +92,12 @@ function K.buildHas(m, talentKey, level)
   return (c[talentKey] or 0) > 0
 end
 function K.learned(m, s, level) return s.level <= level and (s.gate ~= "talent" or K.buildHas(m, s.talent, level)) end
+--- Can member m use spell s at level L? In game (live = the spellbook check): on a game whose data says liveSpells
+--- (TBC: plan step 2) the spellbook alone decides; elsewhere the data must say learned AND the spellbook must have it.
+function K.usable(m, s, L, live)
+  if live and D().game and D().game.liveSpells then return live(s.name, s) and true or false end
+  return K.learned(m, s, L) and (not live or live(s.name, s)) and true or false
+end
 
 -- ------------------------------------------------------------------ everyday kit
 --- The companion's "primary keys" for class + role at level L (highest learned alternative wins).
@@ -182,10 +188,7 @@ function K.seqHas(m, L, live)
   local all = K.spellsOf(m)
   return function(name)
     for _, s in ipairs(all) do
-      if s.name == name and K.learned(m, s, L) then
-        if live and not live(name, s) then return nil end
-        return s
-      end
+      if s.name == name and K.usable(m, s, L, live) then return s end
     end
     return nil
   end
@@ -205,7 +208,7 @@ function K.seqOn(m) return m ~= nil and ((m.seq and m.seq ~= "off" and E.seqSupp
 --- Level bands in which the sequence macros stay the same: {{from, to, list}}
 function K.seqPlan(m)
   local out, prev = {}, nil
-  for L = 1, 60 do
+  for L = 1, E.maxLevel() do
     local list = K.seqOf(m, L)
     local parts = {}
     for i, x in ipairs(list) do parts[i] = x.macro end
@@ -265,7 +268,7 @@ end
 function K.kitSlots(m, L, live)
   local have = {}
   for _, s in ipairs(K.spellsOf(m)) do
-    if K.learned(m, s, L) and (not live or live(s.name, s)) then have[#have + 1] = s end
+    if K.usable(m, s, L, live) then have[#have + 1] = s end
   end
   local items = (D().core[m.cls] or {})[m.role] or {}
   local out, used = {}, {}

@@ -5,7 +5,7 @@ Usage: python3 tools/cf_upload.py dist/WoWBoxer-<ver>.zip <ver> [changelog.md]
 Env:   CF_API_KEY (secret), CF_PROJECT_ID (repo variable). Without them it prints "skip" and exits 0.
        CF_GAME_VERSIONS optional: comma-separated CurseForge game version IDs, overrides the lookup.
 
-Game versions come from the TOC's "## Interface:" list (11509 -> 1.15.9, 16001 -> 1.60.1). Interfaces CurseForge does
+Game versions come from the TOC's "## Interface:" list (11509 -> 1.15.9, 16001 -> 1.60.1, 20506 -> 2.5.6 TBC Anniversary). Interfaces CurseForge does
 not know yet are reported and left out; with none found it fails. Standard library only.
 """
 import json, os, re, sys, urllib.request, uuid
@@ -103,6 +103,7 @@ def main():
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "--selftest":
         assert version_name(11509) == "1.15.9" and version_name(16001) == "1.60.1" and version_name(120105) == "12.1.5"
+        assert version_name(20506) == "2.5.6"
         assert release_type("0.13.0") == "release" and release_type("1.0.0") == "release"
         assert release_type("0.13.0-beta.1") == "beta" and release_type("1.0.0-rc1") == "beta"
         assert release_type("0.13.0-alpha.2") == "alpha"
@@ -112,7 +113,7 @@ if __name__ == "__main__":
                 raise AssertionError("uploaded " + bad)
             except SystemExit:
                 pass
-        assert interfaces() == [16001, 11509], interfaces()
+        assert interfaces() == [16001, 11509, 20506], interfaces()
         print("cf_upload selftest ok")
     else:
         main()

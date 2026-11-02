@@ -237,6 +237,14 @@ W.SEQ_TIERS = {
   { "advanced", "Advanced", "More spells and dots – for experienced players." },
 }
 W.SEQ_CLASSES = "Every class has built-in sequence macros – make your own in the Macro editor."
+--- No built-in sequence macros in this game's data yet (TBC: plan step 4).
+function W.seqComing() return next(ns.Engine.seqTable()) == nil end
+function W.seqMissingText()
+  if W.seqComing() then
+    return "Sequence macros for " .. ((ns.Data.game and ns.Data.game.name) or "this game") .. " are coming. Your own macros (My macros) work already."
+  end
+  return W.SEQ_CLASSES
+end
 --- One sentence each: sequence keys vs priority keys (docs/sequences-all-classes.md §4).
 W.SEQ_KINDS = "Sequence macro: each press casts the next spell of a fixed order (DoTs first, then the filler). " ..
   "Priority macro: each press casts the first spell in the list that is ready (Execute, Revenge, Stormstrike …)."
@@ -262,7 +270,7 @@ function W.seqControl(parent, opts)
   f.check:SetPoint("LEFT", 0, 0)
   W.tip(f.check, SEQ_LABEL, function()
     local m = opts.member()
-    if m and not ns.Engine.seqSupported(m.cls) then return W.SEQ_CLASSES end
+    if m and not ns.Engine.seqSupported(m.cls) then return W.seqMissingText() end
     return "Adds a macro that casts your rotation. " .. W.SEQ_KINDS .. " One press is still one spell on one character."
   end)
   f.tier = W.dropdown(f, { width = ddW,
@@ -277,7 +285,7 @@ function W.seqControl(parent, opts)
   f.note:SetText("Not for this class")
   f.noteHit = CreateFrame("Frame", nil, f)
   f.noteHit:SetAllPoints(f.note)
-  W.tip(f.noteHit, SEQ_LABEL, W.SEQ_CLASSES)
+  W.tip(f.noteHit, SEQ_LABEL, function() return W.seqMissingText() end)
   if W.themed() then
     ns.Theme.font(f.check.label, "body", 12)
     f.check.word:Hide() -- the tier dropdown says it; the switch alone shows on / off here
@@ -293,6 +301,7 @@ function W.seqControl(parent, opts)
     local c = ok and W.TEXT or W.MUTED
     f.check.label:SetTextColor(c[1], c[2], c[3])
     f.tier:SetShown(ok); f.note:SetShown(not ok); f.noteHit:SetShown(not ok)
+    if not ok then f.note:SetText(W.seqComing() and "Coming for this game" or "Not for this class") end
     if ok then f.tier.Refresh(); f.tier:SetEnabled(m.seq ~= "off") end
   end
   return f

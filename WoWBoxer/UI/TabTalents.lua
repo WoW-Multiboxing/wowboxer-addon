@@ -36,7 +36,7 @@ function tab.build(p)
   W.ddTip(p.guide, "Guide", "The talent guide WoWBoxer follows for this character. * = recommended for your role. Each guide shows its source and type when you hover it in the list.")
   -- Import a Wowhead link, copy one, rename / delete your own build
   p.importBtn = W.button(p, "Import", 70, 22, function() tab.openImport(p) end,
-    "Paste a Wowhead WoW Forever talent link and save it as your own build. It only changes WoWBoxer's plan: you still spend the points in the game's talent window.")
+    "Paste a Wowhead " .. ns.Wowhead.gameName() .. " talent link and save it as your own build. It only changes WoWBoxer's plan: you still spend the points in the game's talent window.")
   p.importBtn:SetPoint("TOPRIGHT", p, "TOPRIGHT", -4, -2)
   p.linkBtn = W.button(p, "Wowhead link", 100, 22, function() tab.copyLink() end, "Shows this guide or build as a Wowhead talent link to copy (Ctrl+C) and open on Wowhead.")
   p.linkBtn:SetPoint("RIGHT", p.importBtn, "LEFT", -6, 0)
@@ -112,8 +112,9 @@ function tab.build(p)
   p.ahead = W.dropdown(p, { width = 120,
     values = function()
       local v, L = {}, ns.Compat.playerLevel()
-      for _, x in ipairs({ L + 1, L + 2, L + 5, L + 10 }) do if x <= 60 then v[#v + 1] = { x, "Plan to " .. x } end end
-      if L < 60 then v[#v + 1] = { 60, "Plan to 60" } end
+      local top = ns.Engine.maxLevel()
+      for _, x in ipairs({ L + 1, L + 2, L + 5, L + 10 }) do if x <= top then v[#v + 1] = { x, "Plan to " .. x } end end
+      if L < top then v[#v + 1] = { top, "Plan to " .. top } end
       return v
     end,
     get = function() return tab.planTo() end,
@@ -168,7 +169,7 @@ end
 local CLASS_N = function(c) return ns.Data.classes[c] and ns.Data.classes[c].n or c end
 --- The preview lines for a link: text, warnings (orange), result.
 function tab.preview(link)
-  if not link or link:match("^%s*$") then return "Paste a Wowhead talent link (WoW Forever).", "", nil end
+  if not link or link:match("^%s*$") then return "Paste a Wowhead talent link (" .. ns.Wowhead.gameName() .. ").", "", nil end
   local r = ns.Wowhead.import(link)
   if r.error then return "|cffff8a80" .. r.error .. "|r", "", nil end
   local E = ns.Engine
@@ -208,7 +209,7 @@ local function importFrame(p)
   f.link:SetMaxLetters(ns.Wowhead.MAX_LINK + 20)
   f.link:SetScript("OnTextChanged", function() tab.refreshImport(p) end)
   f.link:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
-  W.tip(f.link, "Wowhead link", "Paste (Ctrl+V) a link from Wowhead's WoW Forever talent calculator. WoWBoxer only reads it – nothing in it is run.")
+  W.tip(f.link, "Wowhead link", "Paste (Ctrl+V) a link from Wowhead's " .. ns.Wowhead.gameName() .. " talent calculator. WoWBoxer only reads it – nothing in it is run.")
   f.info = W.text(f, "GameFontHighlight", nil, W.TEXT)
   f.info:SetPoint("TOPLEFT", 16, -96)
   f.info:SetPoint("TOPRIGHT", -16, -96)
@@ -282,11 +283,29 @@ function tab.guideTip(g)
   if g.note and g.note ~= "" then parts[#parts + 1] = g.note end
   return table.concat(parts, " ")
 end
---- The level "Plan ahead" looks to (default: 5 levels on, at most 60).
+--- True when the talent trees in the data are this client's own (Forever on Forever, TBC on TBC; Era still has
+--- Forever's trees), so talents spent in the game can be compared with the plan.
+function tab.treesMatch()
+  local g = ns.Data.game
+  if g and g.key == "tbc" then return ns.Compat.game() == "tbc" end
+  return ns.Compat.isForever()
+end
+--- Talent guides of this game are not written yet (TBC, plan step 4): one plain line instead of an empty list.
+function tab.comingText()
+  local name = ns.Data.game and ns.Data.game.name or "this game"
+  return "Talent guides for " .. name .. " are coming. Meanwhile import a Wowhead link (Import) or follow your own plan."
+end
+--- The talent data credit of this game (exact wording for Forever and Era: Zephras CC BY 4.0).
+function tab.creditText()
+  local g = ns.Data.game
+  if g and g.key == "tbc" then return "Talent data: Blizzard client tables (build " .. tostring(ns.Data.meta.build) .. "). Names (c) Blizzard Entertainment." end
+  return "Talent data: Zephras (zephras.com), CC BY 4.0, changed by WoWBoxer; The Forever Era"
+end
+--- The level "Plan ahead" looks to (default: 5 levels on, at most the max level).
 function tab.planTo()
   local L = ns.Compat.playerLevel()
   local v = tonumber(ns.Core.cdb.planTo)
-  if not v or v <= L then v = math.min(60, L + 5) end
+  if not v or v <= L then v = math.min(ns.Engine.maxLevel(), L + 5) end
   return v
 end
 --- {points, text} for the guide's points after level `from` up to level `to`.
@@ -314,9 +333,10 @@ function tab.refresh(p)
   local order, kind = K.plan(m)
   local g = K.guide(m.cls, m.guide)
   local level = ns.Compat.playerLevel()
-  local warn = ns.Compat.isForever() and "" or "|cffd9b36c(WoW: Forever talents – this client differs)|r "
+  local warn = tab.treesMatch() and "" or "|cffd9b36c(WoW: Forever talents – this client differs)|r "
   if kind == "build" then p.kind:SetText(warn .. (m.buildName or "Your own build") .. " (" .. #order .. " points, from your squad)")
   elseif g and g.user then p.kind:SetText(warn .. "Your build · " .. (KIND_SHORT[g.kind] or g.kind))
+  elseif not g and #K.dataGuidesOf(m.cls) == 0 then p.kind:SetText(tab.comingText())
   else p.kind:SetText(warn .. (g and (KIND[g.kind] or g.kind) or "No guide")) end
   local cur = tab.current()
   local mine = cur ~= nil and cur.user == true
@@ -350,8 +370,8 @@ function tab.refresh(p)
   if g and kind == "guide" then
     local src = g.source or {}
     p.source:SetText("Source: " .. (src.site or "?") .. (src.author and (", " .. src.author) or "") .. (src.updated and (" (" .. src.updated .. ")") or "") ..
-      "\nTalent data: Zephras (zephras.com), CC BY 4.0, changed by WoWBoxer; The Forever Era")
-  else p.source:SetText("Talent data: Zephras (zephras.com), CC BY 4.0, changed by WoWBoxer; The Forever Era") end
+      "\n" .. tab.creditText())
+  else p.source:SetText(tab.creditText()) end
   p.prio:SetText(g and g.kind == "priorities" and g.priorities and g.priorities:sub(1, 600) or "")
   p.readback:SetText(tab.readbackText(m, level))
   p.ahead.Refresh()
@@ -391,7 +411,7 @@ end
 --- One or two lines comparing the talents spent in game with the plan (Forever only: other clients have other trees).
 function tab.readbackText(m, level)
   local C = ns.Compat
-  if not C.isForever() then return "|cffa89a7eCompared on WoW: Forever only|r" end
+  if not tab.treesMatch() then return "|cffa89a7eCompared on WoW: Forever only|r" end
   local ranks, src = C.talentRanks()
   if not ranks then return "|cffa89a7eCan't read talents here (" .. tostring(src) .. ")|r" end
   local st = ns.Kit.talentStatus(m, ranks, level)

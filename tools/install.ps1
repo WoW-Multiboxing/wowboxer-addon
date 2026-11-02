@@ -1,7 +1,7 @@
 # Install a local TEST BUILD: copy the WoWBoxer addon folder into the AddOns folder of every installed client
-# (Classic Era, Forever). Only replaces Interface\AddOns\WoWBoxer; never touches other addons or the game. First it
+# (Classic Era, Forever, TBC Anniversary). Only replaces Interface\AddOns\WoWBoxer; never touches other addons or the game. First it
 # copies every WoWBoxer.lua SavedVariables file of every client to backup\<date>\ (WTF itself is only read).
-#   powershell -ExecutionPolicy Bypass -File tools\install.ps1 [-Clients _classic_era_,_forever_] [-WowRoot "..."]
+#   powershell -ExecutionPolicy Bypass -File tools\install.ps1 [-Clients _classic_era_,_forever_,_anniversary_] [-WowRoot "..."]
 #                                                              [-Next 0.13.0] [-TestN 1]
 # The installed TOC gets the version "<next>-test.N (<short sha>)", e.g. "0.13.0-test.1 (a64a7eb)"; the addon then
 # shows an orange TEST BUILD label in its window title (docs/release.md, "Test first, then live").
@@ -9,7 +9,7 @@
 #   N       counts test builds since that tag: a new commit (or new uncommitted changes) gives N+1, installing the
 #           same build again keeps N, a new tag starts at 1 again. Kept in tools\.testbuild (not in git), or -TestN.
 param(
-  [string[]]$Clients = @('_classic_era_', '_forever_'),
+  [string[]]$Clients = @('_classic_era_', '_forever_', '_anniversary_'),
   [string]$WowRoot = 'C:\Program Files (x86)\World of Warcraft',
   [string]$Next = '',
   [int]$TestN = 0

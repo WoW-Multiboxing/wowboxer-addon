@@ -17,6 +17,9 @@ WH.MAX_LINK = 300
 
 local function D() return ns.Data end
 local function data() return D().wowhead end
+--- The game's part of a Wowhead link ("forever", "tbc") and its name for messages.
+function WH.path() return (D().game and D().game.wowhead) or "forever" end
+function WH.gameName() local g = D().game; return (g and (g.wowheadName or g.name)) or "WoW Forever" end
 
 --- name|tree -> WoWBoxer node, and Wowhead (tree, index) -> {w = Wowhead entry, n = WoWBoxer node or nil}
 local function maps(cls)
@@ -45,7 +48,8 @@ function WH.import(link)
     hash = rest
   end
   if not (D().talents[cls] and data().trees[cls]) then return { error = "Unknown class \"" .. cls .. "\"" } end
-  if not sfind(s, "/forever/", 1, true) then return { error = "This is not a WoW Forever link (look for /forever/ in it)" } end
+  local path = WH.path()
+  if not sfind(s, "/" .. path .. "/", 1, true) then return { error = "This is not a " .. WH.gameName() .. " link (look for /" .. path .. "/ in it)" } end
   local warn = {}
   local T = ns.Kit.tree(cls)
   local node = maps(cls)
@@ -118,10 +122,11 @@ function WH.import(link)
     order = {}
     for _, w in ipairs(want) do for _ = 1, w.n do order[#order + 1] = w.key end end
   end
-  if #order > 51 then
-    warn[#warn + 1] = "More than 51 points – cut to 51"
+  local maxP = E.maxPoints()
+  if #order > maxP then
+    warn[#warn + 1] = "More than " .. maxP .. " points – cut to " .. maxP
     local cut = {}
-    for i = 1, 51 do cut[i] = order[i] end
+    for i = 1, maxP do cut[i] = order[i] end
     order = cut
   end
   if #order == 0 then return { error = "The link has no talent points" } end
@@ -177,7 +182,7 @@ function WH.encode(cls, order, talented, compress)
       ord[#ord + 1] = ssub(one, x.i, x.i); seen[k] = true; j = j + 1
     end
   end
-  return "https://www.wowhead.com/forever/talent-calc/" .. cls .. "/" .. data().hashVersion .. pts .. "_t" .. (talented or 0) .. "/" .. table.concat(ord)
+  return "https://www.wowhead.com/" .. WH.path() .. "/talent-calc/" .. cls .. "/" .. data().hashVersion .. pts .. "_t" .. (talented or 0) .. "/" .. table.concat(ord)
 end
 
 return WH

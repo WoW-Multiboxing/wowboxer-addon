@@ -7,6 +7,10 @@ local _, ns = ...
 if ns.dataGame ~= "forever" then return end
 local D = ns.Data
 
+--- The game's rules: max level, talent points at max level, the Wowhead path of talent links, and whether the live
+--- spellbook alone decides which spells a character has (true where the data has no trainer levels for this game).
+D.game = { key = "forever", name = "WoW Forever", maxLevel = 60, maxPoints = 51, wowhead = "forever", liveSpells = false }
+
 D.sequences = {
   warlock = {
     _all = {
