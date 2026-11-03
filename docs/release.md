@@ -57,6 +57,13 @@ canonical URLs with `\` on Windows only; Vercel's build on Linux is the gate.)
    token, variable `CF_PROJECT_ID` = the project ID.
    Then tell Claude "CurseForge ready" – Claude tags the release.
 
+## Wago Addons (created 3 Nov 2026)
+- Project "WoWBoxer - Multibox Companion", **project ID `rNkgpzNa`**, owner WoW-Multiboxing (GitHub sign-in),
+  created as a Custom Addon: no repo link, uploads go through the API from the release workflow.
+- GitHub: secret `WAGO_API_TOKEN` (API key from addons.wago.io/account/apikeys), variable `WAGO_PROJECT_ID` = `rNkgpzNa`.
+- TOC: `## X-Wago-ID: rNkgpzNa`. Game versions: Wago's keys forever 1.60.1, classic 1.15.9, bc 2.5.6 (list at
+  https://addons.wago.io/api/data/game).
+
 ## Project page text
 
 **Summary** (≤ 100 characters): Multiboxing in the game: the right keys for every character, role and level.
