@@ -70,6 +70,9 @@ canonical URLs with `\` on Windows only; Vercel's build on Linux is the gate.)
 - Manual run (Actions → release → Run workflow): `curseforge` on/off (off for a tag already on CurseForge) and
   `wago` = upload / dry-run / skip. The upload scripts come from the workflow's commit, so older tags work too.
   CI runs a Wago dry run on every push (selftests + `--dry-run` on a packaged zip, no upload).
+- **Live since 3 Nov 2026:** v1.0.0 (already on CurseForge) uploaded once via Run workflow (tag v1.0.0, curseforge
+  off, wago upload; run 41666187120, after dry run 41665510973). addons.wago.io/addons/rNkgpzNa shows 1.0.0 stable for
+  Forever 1.60.1, Classic 1.15.9 and TBC (bc) 2.5.6. From the next tag on, every release goes to both automatically.
 
 ## Project page text
 
