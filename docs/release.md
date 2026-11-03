@@ -22,8 +22,8 @@ version number went to 1.0.0 on 2 Nov 2026 (the owner: "the actual version that 
 
 ## How a tag publishes
 A version tag does everything: `git tag v0.9.0 && git push origin v0.9.0` runs `.github/workflows/release.yml` –
-all checks, `tools/package.sh` (one `WoWBoxer/` folder, version stamped into the TOC, LICENSE.txt), a GitHub Release
-and the CurseForge upload (`tools/cf_upload.py`). Release type: see "Test first" above. Changelog: `docs/changes/<version>.md` (short, for players) or, without it, the commit subjects since
+all checks, `tools/package.sh` (one `WoWBoxer/` folder, version stamped into the TOC, LICENSE.txt), a GitHub Release,
+the CurseForge upload (`tools/cf_upload.py`) and the Wago upload (`tools/wago_upload.py`, see "Wago Addons"). Release type: see "Test first" above. Changelog: `docs/changes/<version>.md` (short, for players) or, without it, the commit subjects since
 the last tag. To upload an existing tag again: Actions → release → Run workflow → tag.
 
 Game versions come from the TOC `## Interface:` list: 11509 → Classic Era 1.15.9, 16001 → Forever 1.60.1,
@@ -63,6 +63,13 @@ canonical URLs with `\` on Windows only; Vercel's build on Linux is the gate.)
 - GitHub: secret `WAGO_API_TOKEN` (API key from addons.wago.io/account/apikeys), variable `WAGO_PROJECT_ID` = `rNkgpzNa`.
 - TOC: `## X-Wago-ID: rNkgpzNa`. Game versions: Wago's keys forever 1.60.1, classic 1.15.9, bc 2.5.6 (list at
   https://addons.wago.io/api/data/game).
+- Upload: `tools/wago_upload.py`, the last step of `release.yml` (after CurseForge). It sends the same zip with
+  label = version, stability from the tag (same rule as CurseForge: plain = stable, -beta/-rc = beta, -alpha = alpha),
+  the changelog and the game versions from the zip's TOC `## Interface:` list, each checked against Wago's patch list.
+  Without the secret/variable it prints "skip"; the step has `continue-on-error`, so Wago can never fail a release.
+- Manual run (Actions → release → Run workflow): `curseforge` on/off (off for a tag already on CurseForge) and
+  `wago` = upload / dry-run / skip. The upload scripts come from the workflow's commit, so older tags work too.
+  CI runs a Wago dry run on every push (selftests + `--dry-run` on a packaged zip, no upload).
 
 ## Project page text
 

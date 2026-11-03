@@ -2,7 +2,9 @@ name: release
 # Runs when a version tag is pushed (git tag v0.9.0 && git push origin v0.9.0), or by hand for an existing tag
 # (Actions -> release -> Run workflow, e.g. to upload to CurseForge after the project was set up). Same checks as CI,
 # then the zip from tools/package.sh goes on a GitHub Release and to CurseForge (tools/cf_upload.py; skipped until the
-# CF_API_KEY secret and the CF_PROJECT_ID variable exist - see docs/release.md).
+# CF_API_KEY secret and the CF_PROJECT_ID variable exist - see docs/release.md), then to Wago Addons
+# (tools/wago_upload.py; skipped without WAGO_API_TOKEN / WAGO_PROJECT_ID, never fails the run). A manual run can skip
+# CurseForge (an existing tag that is already there) and run Wago as upload, dry-run or skip.
 on:
   push:
     tags: ["v*"]
@@ -11,6 +13,15 @@ on:
       tag:
         description: "Existing tag to release, e.g. v0.9.0"
         required: true
+      curseforge:
+        description: "Upload to CurseForge (off for a tag that is already there)"
+        type: boolean
+        default: true
+      wago:
+        description: "Wago Addons"
+        type: choice
+        options: [upload, dry-run, skip]
+        default: upload
 permissions:
   contents: write
 jobs:
@@ -23,6 +34,12 @@ jobs:
         with:
           ref: ${{ inputs.tag || github.ref }}
           fetch-depth: 0
+      # the upload scripts come from the workflow's own commit, so an older tag can go to Wago too
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: .release-tools
+          sparse-checkout: tools
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -40,6 +57,7 @@ jobs:
           node share/test.js          # writes the fixtures tests/test_share.lua reads
           LUA=lua5.1 tests/run_all.sh
           python3 tools/cf_upload.py --selftest
+          [ ! -f tools/wago_upload.py ] || python3 tools/wago_upload.py --selftest
       - name: Package
         run: |
           VER="${TAG#v}"
@@ -68,8 +86,17 @@ jobs:
             gh release upload "$TAG" dist/site-screenshots.zip --clobber
           else echo "no exported screenshots yet"; fi
       - name: CurseForge
+        if: github.event_name == 'push' || inputs.curseforge
         env:
           CF_API_KEY: ${{ secrets.CF_API_KEY }}
           CF_PROJECT_ID: ${{ vars.CF_PROJECT_ID }}
           CF_GAME_VERSIONS: ${{ vars.CF_GAME_VERSIONS }}
         run: python3 tools/cf_upload.py "dist/WoWBoxer-${TAG#v}.zip" "${TAG#v}" dist/CHANGELOG.md
+      - name: Wago Addons
+        if: inputs.wago != 'skip'
+        continue-on-error: true
+        env:
+          WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
+          WAGO_PROJECT_ID: ${{ vars.WAGO_PROJECT_ID }}
+          DRY: ${{ inputs.wago == 'dry-run' && '--dry-run' || '' }}
+        run: python3 .release-tools/tools/wago_upload.py $DRY "dist/WoWBoxer-${TAG#v}.zip" "${TAG#v}" dist/CHANGELOG.md

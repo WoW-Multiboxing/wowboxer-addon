@@ -31,3 +31,10 @@ jobs:
         run: if [ -f share/test.js ]; then node share/test.js; fi
       - name: Lua tests (golden snapshot, saved data, mocks, UI smoke)
         run: LUA=${{ matrix.lua }} tests/run_all.sh
+      - name: Upload scripts (selftests + Wago dry run on a packaged zip, no upload)
+        if: matrix.lua == 'lua5.1'
+        run: |
+          python3 tools/cf_upload.py --selftest
+          python3 tools/wago_upload.py --selftest
+          bash tools/package.sh 0.0.0-beta.ci
+          python3 tools/wago_upload.py --dry-run dist/WoWBoxer-0.0.0-beta.ci.zip 0.0.0-beta.ci

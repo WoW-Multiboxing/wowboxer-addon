@@ -11,6 +11,7 @@
 ## AddonCompartmentFuncOnLeave: WoWBoxer_OnAddonCompartmentLeave
 ## X-License: MIT
 ## X-Website: https://github.com/WoW-Multiboxing/wowboxer-addon
+## X-Wago-ID: rNkgpzNa
 ## X-Credits: Talent data: Zephras (zephras.com, CC BY 4.0) + The Forever Era. World of Warcraft names and icons (c) Blizzard Entertainment.
 
 # Which game is running: decides whose data below fills ns.Data (each data file returns at once on another game)
