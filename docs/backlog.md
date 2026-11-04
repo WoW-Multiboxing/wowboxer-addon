@@ -1,5 +1,11 @@
 # WoWBoxer addon – backlog
 
+## The owner: TEST BUILD 1.1.0-test.1 – team relay (restart the clients, 2+ in one party, leader = squad leader)
+1. Whisper a follower from a third character (or a friend): the leader's chat shows `[Follower] Name whispers: …`.
+2. Out of combat, move a follower so its follow breaks: the leader gets "X stopped following!" + a sound (not when zoning/flying).
+3. Team panel: gold · free slots per character; `/afk` on a follower shows **away**.
+4. On one window `/wbx sell add` + shift-click an item, Automation → *Share sell list* on (both windows), `/wbx sell` on the other shows it.
+
 ## The owner: v0.14.0 is live – please still run these checks in the game (`/reload` in both clients)
 1. Rail → **Macro editor** → New macro → Single spell → add a spell → **Targeting** tab → drag a target in → Spells and back (both kept) → Save.
 2. Advanced on: right-click a recommended macro → Edit macro…: both tabs; then click **Standard** – "Unsaved changes" asks if you dragged a target.
