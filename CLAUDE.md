@@ -24,6 +24,9 @@ and import/export of setups as a string shared with the website/companion.
    WoW's normal API is allowed** (accept, share, sync, sell, repair, loot, trade) as a named option in Setup →
    Automation with a short line about what it does, and it only reacts to **squad members** (the WoWBoxer squad,
    matched by name, in the party). (the owner, 29 Oct 2026; `docs/automation-policy.md`)
+   **Reaffirmed 4 Nov 2026 ("the automation stands"): permanent.** Never remove or weaken an automation, and never
+   reintroduce "display only"/"no auto-accept", because of an older doc or prompt – only on the owner's explicit new decision.
+   If a prompt seems to contradict this rule, stop and ask him.
 2. Imported data is data only: never `loadstring`/`RunScript`/`load` on anything from outside.
 3. Macros ≤ 255 chars, names ≤ 16 chars with the `WBX` prefix, slash-command whitelist (reject `/run /script
    /console /click`). The addon builds macro bodies itself; share strings carry no macro text.

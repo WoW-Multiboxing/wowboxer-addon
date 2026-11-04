@@ -1,4 +1,8 @@
-# Automation policy change (the owner, 29 Oct 2026, 23:41)
+# Automation policy change (the owner, 29 Oct 2026, 23:41) – reaffirmed 4 Nov 2026
+
+> **4 Nov 2026, the owner: "The automation stands."** This rule is permanent across all workstreams. Older texts that say
+> "display only", "skip auto-accept" or "don't build team automation" (early research, early plans) are superseded.
+> Do not remove or weaken any automation without the owner's explicit new decision; if a prompt contradicts this, ask him.
 
 > "We very much like automation. What we don't like is sending keystrokes from one program to another. That's what
 > they mean with no automation. So automatically accepting a quest and automatically doing a lot of stuff that is just
