@@ -1,7 +1,8 @@
 --[[ WoWBoxer – team status between your own clients (display only).
   Each client tells the party its own state: level, mana (10 % steps), following or not, its target's GUID and whether
-  it is in combat. Every client shows the squad in a small panel and points out problems: "not following",
-  "other target" (a follower hits something else than the leader), "low mana", "no signal".
+  it is in combat, plus (message X) its gold and free bag slots. Every client shows the squad in a small panel and
+  points out problems: "not following", "other target" (a follower hits something else than the leader), "low mana",
+  "bags full", "away" (AFK/DND, read from the party unit), "no signal".
   Hard rule: these messages are only DISPLAYED. Nothing a message says ever makes this client act (no targeting,
   following, casting or key presses) – the player still presses every key himself.
   Traffic: one short addon message on change, at most one per MIN_GAP seconds, plus a heartbeat. Silent when solo,
@@ -16,6 +17,8 @@ TM.HEARTBEAT = 15    -- resend the same state this often so others know we are s
 TM.STALE = 40        -- no message for this long = "no signal"
 TM.LOW_MANA = 20
 TM.peers = {}
+TM.extras = {}       -- name:lower() -> {gold, free, slots, at} from X messages
+TM.BAGS_FULL = 2     -- free slots at or below this = "bags full"
 
 local G = _G
 local function Core() return ns.Core end
@@ -84,6 +87,48 @@ function TM.decode(text)
   return { level = tonumber(lvl), mana = tonumber(mana), follow = tonumber(follow), combat = tonumber(combat), target = target }
 end
 
+-- ------------------------------------------------------------------ gold and bags: X|gold|free|slots
+local function freeSlots()
+  local CC = G.C_Container
+  local nslots = (CC and CC.GetContainerNumSlots) or G.GetContainerNumSlots
+  local nfree = (CC and CC.GetContainerNumFreeSlots) or G.GetContainerNumFreeSlots
+  if not (nslots and nfree) then return nil, nil end
+  local free, total = 0, 0
+  for bag = 0, 4 do
+    local okS, n = pcall(nslots, bag)
+    local okF, fr, kind = pcall(nfree, bag)
+    if okS and okF and type(n) == "number" and type(fr) == "number" and (kind == nil or kind == 0) then
+      total, free = total + n, free + fr     -- normal bags only (not quivers, soul bags, herb bags)
+    end
+  end
+  return free, total
+end
+function TM.collectExtra()
+  local money = tonumber(safeCall(G.GetMoney)) or 0
+  local free, total = freeSlots()
+  return { gold = math.floor(money / 10000), free = free or -1, slots = total or -1 }
+end
+function TM.encodeExtra(x) return table.concat({ "X", math.min(x.gold, 9999999), x.free, x.slots }, "|") end
+function TM.decodeExtra(text)
+  if type(text) ~= "string" or #text > 40 then return nil end
+  local gold, free, slots = text:match("^X|(%d+)|(%-?%d+)|(%-?%d+)$")
+  if not gold then return nil end
+  return { gold = tonumber(gold), free = tonumber(free), slots = tonumber(slots) }
+end
+function TM.sendExtra(force)
+  if not TM.active() then return false end
+  local msg = TM.encodeExtra(TM.collectExtra())
+  local t = now()
+  if not force and msg == TM.lastExtra and t - (TM.lastExtraAt or -1e9) < TM.HEARTBEAT then return false end
+  if not force and t - (TM.lastExtraAt or -1e9) < TM.MIN_GAP then return false end
+  local CI = G.C_ChatInfo
+  local send = (CI and CI.SendAddonMessage) or G.SendAddonMessage
+  if not send then return false end
+  local ok = pcall(send, TM.PREFIX, msg, channel())
+  if ok then TM.lastExtra, TM.lastExtraAt = msg, t end
+  return ok
+end
+
 -- ------------------------------------------------------------------ sending (throttled)
 function TM.send(force)
   if not TM.active() then return false end
@@ -114,6 +159,13 @@ function TM.sendReady(force)
   return sent
 end
 
+--- Bag and money changes come in bursts (looting, selling): one X message after MIN_GAP.
+function TM.scheduleExtra()
+  if TM.pendingExtra then return end
+  TM.pendingExtra = true
+  local function run() TM.pendingExtra = false; TM.sendExtra(); if ns.TeamFrame then ns.TeamFrame.Refresh() end end
+  if G.C_Timer and G.C_Timer.After then G.C_Timer.After(TM.MIN_GAP, run) else run() end
+end
 --- Coalesce bursts (power updates, target changes) into one message after MIN_GAP.
 function TM.schedule()
   if TM.pending then return end
@@ -137,6 +189,14 @@ function TM.receive(prefix, text, _, sender)
     local p = TM.peers[name:lower()] or { name = name, level = 0, mana = -1, follow = 0, combat = 0, target = "-" }
     p.ready, p.version, p.at, p.name = r, r.version, now(), name
     TM.peers[name:lower()] = p
+    TM.changed()
+    return
+  end
+  if kind == "X|" then
+    local x = TM.decodeExtra(text)
+    if not x then return end
+    x.at = now()
+    TM.extras[name:lower()] = x
     TM.changed()
     return
   end
@@ -188,7 +248,15 @@ function TM.rows()
         st.target ~= "?" and st.target ~= lst.target then flags[#flags + 1] = { st.target == "-" and "no target" or "other target", "warn" } end
       if st.mana >= 0 and st.mana <= TM.LOW_MANA then flags[#flags + 1] = { "low mana", "bad" } end
     end
-    rows[#rows + 1] = { name = m.name, cls = m.cls, me = m == me, leader = m.leader, st = st, flags = flags }
+    -- gold / bags (mine live, others from their X message) and away (AFK/DND straight from the unit)
+    local x = m == me and TM.collectExtra() or TM.extras[m.name:lower()]
+    if x and m ~= me and t - (x.at or 0) > TM.STALE then x = nil end
+    if x and x.free >= 0 and x.slots > 0 and x.free <= TM.BAGS_FULL then flags[#flags + 1] = { "bags full", "warn" } end
+    local unit = m == me and "player" or ns.Squad.unitOf(m.name)
+    if unit and ((G.UnitIsAFK and C().safe(G.UnitIsAFK(unit))) or (G.UnitIsDND and C().safe(G.UnitIsDND(unit)))) then
+      table.insert(flags, 1, { "away", "muted" })
+    end
+    rows[#rows + 1] = { name = m.name, cls = m.cls, me = m == me, leader = m.leader, st = st, flags = flags, extra = x }
   end
   return rows
 end
@@ -202,12 +270,14 @@ function TM.Init()
   local regp = (CI and CI.RegisterAddonMessagePrefix) or G.RegisterAddonMessagePrefix
   if regp then pcall(regp, TM.PREFIX) end
   for _, ev in ipairs({ "CHAT_MSG_ADDON", "AUTOFOLLOW_BEGIN", "AUTOFOLLOW_END", "PLAYER_TARGET_CHANGED", "UNIT_POWER_UPDATE",
-    "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED", "GROUP_ROSTER_UPDATE", "PLAYER_LEVEL_UP" }) do reg(ev) end
+    "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED", "GROUP_ROSTER_UPDATE", "PLAYER_LEVEL_UP", "PLAYER_MONEY", "BAG_UPDATE",
+    "PLAYER_FLAGS_CHANGED" }) do reg(ev) end
   TM.heartbeat()
 end
 function TM.heartbeat()
   TM.send()
   TM.sendReady()
+  TM.sendExtra()
   if ns.TeamFrame then ns.TeamFrame.Refresh() end
   if G.C_Timer and G.C_Timer.After then G.C_Timer.After(TM.HEARTBEAT, TM.heartbeat) end
 end
@@ -217,6 +287,8 @@ f:SetScript("OnEvent", function(_, event, a, b, c, d)
   elseif event == "AUTOFOLLOW_END" then TM.following = false
   elseif event == "UNIT_POWER_UPDATE" and a ~= "player" then return end
   if event == "GROUP_ROSTER_UPDATE" and ns.TeamFrame then ns.TeamFrame.Refresh() end
+  if event == "PLAYER_FLAGS_CHANGED" then TM.changed(); return end
+  if event == "PLAYER_MONEY" or event == "BAG_UPDATE" then TM.scheduleExtra(); return end
   TM.schedule()
 end)
 

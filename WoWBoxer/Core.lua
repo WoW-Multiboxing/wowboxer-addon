@@ -887,6 +887,7 @@ local HELP = {
   "/wbx bars – list where each macro is and its keybind",
   "/wbx keys – open the game's key bindings (Quick Keybind mode where available)",
   "/wbx team on|off – team status panel (display only: follow, target, mana of your other clients)",
+  "/wbx sell [add|remove] [item] – your sell list (sold with Sell junk; shared with Share sell list)",
   "/wbx scale 0.9 – window size (0.7–1.3); /wbx reset – window back to the middle; /wbx reset all – Reset to default…",
   "/wbx show – list your macros and what would change",
   "/wbx cvars | /wbx cvars restore – apply recommended settings / put the old ones back",
@@ -909,6 +910,7 @@ function Core.slash(msg)
   elseif cmd == "discord" or cmd == "youtube" or cmd == "website" then if ns.Community then ns.Community.ShowLink(cmd) end
   elseif cmd == "report" then if ns.Community then ns.Community.ShowReport() end
   elseif cmd == "sync" then Core.sync({ replace = rest == "replace" })
+  elseif cmd == "sell" then if ns.Relay then ns.Relay.slash(rest) end
   elseif cmd == "team" then
     local on = rest == "on" or (rest == "" and Core.db.settings.team == false)
     if rest == "off" then on = false end
@@ -998,6 +1000,7 @@ function Core.onEvent(event, ...)
     if ns.SeqStrip and ns.SeqStrip.Init then ns.SeqStrip.Init() end
     if ns.Sync and ns.Sync.Init then ns.Sync.Init() end
     if ns.Auto and ns.Auto.Init then ns.Auto.Init() end
+    if ns.Relay and ns.Relay.Init then ns.Relay.Init() end
     if C_Timer and C_Timer.After then C_Timer.After(3, function() Core.checkOffer("login") end) end
     if C_Timer and C_Timer.After then C_Timer.After(6, function() local ok, err = pcall(Core.loginChecks); if not ok then Core.log("error", "login checks: " .. tostring(err)) end end) end
     -- read-only diagnose a few seconds after login, so a /reload is enough to see how the addon behaves in this client

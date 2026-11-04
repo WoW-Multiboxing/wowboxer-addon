@@ -222,7 +222,7 @@ do
   f.preset:Click()
   local on = {}
   for _, c in ipairs(f.ticks) do if c:GetChecked() then on[#on + 1] = c.key end end
-  H.eq(table.concat(on, ","), "invite,quests,share,turnin,dialog,res,summon,rolecheck,sell,repair,chat", "Default squad values preset")
+  H.eq(table.concat(on, ","), "invite,quests,share,turnin,dialog,res,summon,rolecheck,sell,repair,shareSell,whispers,followWarn,chat", "Default squad values preset")
   f.allOff:Click()
   for _, c in ipairs(f.ticks) do H.ok(not c:GetChecked(), "All off: " .. c.key) end
   f.allOn:Click()

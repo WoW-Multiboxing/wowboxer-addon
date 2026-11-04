@@ -1,5 +1,6 @@
 --[[ WoWBoxer – small team panel (display only): one line per squad character with mana and problems from
-  ns.Team ("not following", "other target", "low mana", "no signal"). Shown while in a group with a squad of 2+
+  ns.Team ("not following", "other target", "low mana", "bags full", "away", "no signal") and each character's gold
+  and free bag slots. Shown while in a group with a squad of 2+
   characters; movable (position saved); /wbx team on|off. It has no buttons that act on other characters. ]]
 local _, ns = ...
 local W = ns.Widgets
@@ -7,6 +8,7 @@ local TF = {}
 ns.TeamFrame = TF
 
 local ROW_H = 16
+TF.WIDTH = 300
 local COLORS = { warn = W.ORANGE, bad = W.RED, muted = W.MUTED }
 
 local function settings() return ns.Core.db and ns.Core.db.settings or {} end
@@ -14,7 +16,7 @@ local function settings() return ns.Core.db and ns.Core.db.settings or {} end
 function TF.Build()
   if TF.frame then return TF.frame end
   local f = W.box(UIParent, 0.07, 0.055, 0.035, 0.85)
-  f:SetSize(230, 30)
+  f:SetSize(TF.WIDTH, 30)
   f:SetFrameStrata("MEDIUM")
   f:SetClampedToScreen(true)
   f:EnableMouse(true)
@@ -34,7 +36,7 @@ function TF.Build()
   f.title:SetText("WoWBoxer team")
   W.tooltip(f, function(GT)
     GT:AddLine("WoWBoxer team", 1, 0.82, 0)
-    GT:AddLine("What your other clients report. Display only: it never acts for you. Drag to move; /wbx team off hides it.", 1, 1, 1, true)
+    GT:AddLine("What your other clients report: mana, gold and free bag slots, and problems. Display only: it never acts for you. Drag to move; /wbx team off hides it.", 1, 1, 1, true)
   end)
   f.rows = {}
   f:Hide()
@@ -46,7 +48,7 @@ local function row(f, i)
   local r = f.rows[i]
   if r then return r end
   r = CreateFrame("Frame", nil, f)
-  r:SetSize(214, ROW_H)
+  r:SetSize(TF.WIDTH - 16, ROW_H)
   r:SetPoint("TOPLEFT", 8, -22 - (i - 1) * ROW_H)
   r.name = W.text(r, "GameFontHighlightSmall")
   r.name:SetPoint("LEFT", 0, 0)
@@ -55,12 +57,23 @@ local function row(f, i)
   r.mana = W.text(r, "GameFontHighlightSmall", nil, W.BLUE, "RIGHT")
   r.mana:SetPoint("LEFT", 80, 0)
   r.mana:SetWidth(34)
+  r.bags = W.text(r, "GameFontHighlightSmall", nil, W.TEXT, "RIGHT")
+  r.bags:SetPoint("LEFT", 116, 0)
+  r.bags:SetWidth(66)
   r.flags = W.text(r, "GameFontHighlightSmall", nil, W.MUTED)
-  r.flags:SetPoint("LEFT", 120, 0)
+  r.flags:SetPoint("LEFT", 188, 0)
   r.flags:SetWidth(96)
   if r.flags.SetWordWrap then r.flags:SetWordWrap(false) end
   f.rows[i] = r
   return r
+end
+
+--- "123g · 8" = gold and free bag slots (empty when unknown).
+function TF.bagsText(x)
+  if not x then return "" end
+  local g = "|cffffd100" .. (x.gold or 0) .. "g|r"
+  if (x.free or -1) < 0 then return g end
+  return g .. " · " .. x.free
 end
 
 function TF.Refresh()
@@ -75,6 +88,7 @@ function TF.Refresh()
     r:Show()
     r.name:SetText(W.hex(W.classColor(x.cls)) .. x.name .. "|r" .. (x.leader and " |cffffd100*|r" or ""))
     r.mana:SetText(x.st and x.st.mana >= 0 and (x.st.mana .. "%") or "")
+    r.bags:SetText(TF.bagsText(x.extra))
     local parts = {}
     for _, fl in ipairs(x.flags) do parts[#parts + 1] = W.hex(COLORS[fl[2]] or W.TEXT) .. fl[1] .. "|r" end
     r.flags:SetText(#parts > 0 and table.concat(parts, ", ") or "|cff8fbf6aok|r")

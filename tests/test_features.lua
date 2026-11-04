@@ -588,7 +588,9 @@ do
   B.targetGUID = "Creature-0-1-2-3-333-CCCC"; TB.send()
   H.eq(#B.sent, 0, "throttled within MIN_GAP")
   B.flush()
-  H.ok(#B.sent <= 1, "one coalesced message later")
+  local team = 0
+  for _, m in ipairs(B.sent) do if m.prefix == "WBX1" and m.msg:sub(1, 2) == "S|" then team = team + 1 end end
+  H.ok(team <= 1, "one coalesced message later")   -- status (S) only: the heartbeat's R/X and the relay's follow report are their own messages
   B.sent = {}
   -- unchanged state: nothing until the heartbeat
   B.now = 110; TB.send(); B.sent = {}

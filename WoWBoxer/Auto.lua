@@ -19,7 +19,8 @@ local function C() return ns.Compat end
 local function now() return (G.GetTime and G.GetTime()) or 0 end
 
 -- ------------------------------------------------------------------ options
---- {key, label, tip, default}. Labels ≤ 3 words; the tip is the one line about what it does.
+--- {key, label, tip, default, display}. Labels ≤ 3 words; the tip is the one line about what it does. display = only
+--- shows something (Relay.lua), so it does not count as "automation on" for the nudge and the OFF badge.
 AU.OPTIONS = {
   { "invite", "Accept invites", "Accepts a group invite from a squad member." },
   { "autoInvite", "Invite the squad", "Leader: invites squad members who are not in the group (now and then, while you lead)." },
@@ -32,14 +33,18 @@ AU.OPTIONS = {
   { "res", "Accept resurrection", "Accepts a resurrection from a squad member.", true },
   { "summon", "Accept summons", "Accepts a summon from a squad member.", true },
   { "rolecheck", "Accept role checks", "Accepts the group's role check when the group leader is in your squad." },
-  { "sell", "Sell junk", "Sells grey items (and your sell list) at every merchant." },
+  { "sell", "Sell junk", "Sells grey items and your sell list (/wbx sell) at a merchant you open." },
   { "repair", "Repair", "Repairs everything at a merchant that can repair, keeping at least the gold floor." },
   { "restock", "Restock reagents", "Buys your class reagents (candles, symbols, ankhs, powders, ammo you use) up to a set amount." },
+  { "shareSell", "Share sell list", "Keeps the sell list the same on every squad window (/wbx sell add [item]); each sells at its own merchant." },
+  { "whispers", "Forward whispers", "Followers' whispers show in the leader's chat; GM whispers are tagged, with a sound.", true, true },
+  { "followWarn", "Follow warning", "Warning and sound on the leader when a follower stops following (not in combat, zoning, death, flights).", true, true },
   { "chat", "Chat line", "Writes one chat line for each automatic action." },
 }
 AU.BY_KEY = {}
 for _, o in ipairs(AU.OPTIONS) do AU.BY_KEY[o[1]] = o end
-AU.PRESET_LEVELLING = { "invite", "quests", "share", "turnin", "dialog", "res", "summon", "rolecheck", "sell", "repair" }
+AU.PRESET_LEVELLING = { "invite", "quests", "share", "turnin", "dialog", "res", "summon", "rolecheck", "sell", "repair", "shareSell",
+  "whispers", "followWarn" }
 AU.REWARD_RULES = { "leader", "value", "ask" }
 AU.GOLD_FLOOR = 10000     -- copper kept when repairing (1 gold)
 AU.TAXI_LIMIT = 20000     -- a synced flight costs at most 2 gold
@@ -512,7 +517,7 @@ end
 -- ------------------------------------------------------------------ the nudge (once per character, §6)
 --- Is any automation on (beyond resurrections and summons, which are on by default)?
 function AU.anyOn()
-  for _, o in ipairs(AU.OPTIONS) do if o[1] ~= "res" and o[1] ~= "summon" and o[1] ~= "chat" and AU.on(o[1]) then return true end end
+  for _, o in ipairs(AU.OPTIONS) do if o[1] ~= "res" and o[1] ~= "summon" and o[1] ~= "chat" and not o[5] and AU.on(o[1]) then return true end end
   return false
 end
 --- At login, in a squad of two or more with automation off: ask once on this character.

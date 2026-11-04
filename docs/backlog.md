@@ -50,6 +50,22 @@ minimap button, much more drag & drop of macros onto the action bars.
 - [x] 7. Reset in the header; cdb.barOriginal; restores bars, keybinds, CVars; deletes WBX macros; lists what it could not restore.
 - [ ] In game: Settings.OpenToCategory id on Era/Forever [AFKLAR]; Sticky Targeting through Settings on Forever.
 
+## Team relay from the Mama-forever comparison (a community member, 4 Nov 2026) – in 1.1.0-test
+- [x] Whispers on other windows shown in the leader's chat; GM/Blizzard whispers tagged + sound (`Relay.lua`, option *Forward whispers*).
+- [x] "Away" marker per squad member on the team panel (AFK/DND from the party unit).
+- [x] Loud follow-broke warning on the leader: raid warning + sound, out of combat; not after a loading screen, while dead or on a flight (option *Follow warning*).
+- [x] Gold and free bag slots per character on the team panel (`X` message), "bags full" at ≤ 2 free.
+- [x] Shared sell list (`/wbx sell add|remove|clear`, option *Share sell list*): newest list wins; each window sells only at a merchant it opens.
+
+### Next candidates (allowed under hard rules 1 + 5; not built yet)
+- [ ] **One-option NPC dialog:** when a gossip window has a single option (or a single quest), pick it on the window
+      that opened the NPC – an option in Setup → Automation, never logout/delete/unlearn (reuse `AU.NEVER`).
+- [ ] **Same popup on every window:** when the leader answers a popup, followers that have the same popup open answer
+      it the same way (like Follow dialogs). Allow-list of popup names (e.g. bind at the inn, ready check, loot
+      bind confirm); never release spirit, delete, destroy or anything that costs gold above a limit. Squad only.
+- [ ] **Profession mats in trade:** opening a trade with a squad member fills in the mats their professions use
+      (automation-policy §2 P2 "Trade fill"; six stacks a trade).
+
 ## Automation policy (docs/automation-policy.md, the owner 2026-10-29 23:41)
 - [x] CLAUDE.md hard rules 1 + 5 replaced (no input broadcasting; addon automation via WoW's API as squad-only options);
       lint51 allows the automation API only in Auto.lua.
