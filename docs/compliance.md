@@ -1,6 +1,10 @@
 # Compliance review: which features make another character act (4 Nov 2026)
 
-**Status: PROPOSAL – waiting for the owner's decision. Nothing has been removed yet.**
+**Decision (the owner, 4 Nov 2026): the 29 Oct automation policy stands – "we can automate anything except sending key
+strokes". Nothing below is removed.** X1–X10 stay as named, squad-only options in Setup → Automation (CLAUDE.md hard
+rules 1 and 5, `docs/automation-policy.md`). The display-only rule in `01_Research/platform/04-addon.md` §4 is
+superseded by that policy. This review stays as the inventory of which options act on another character's behalf,
+so player texts can say so plainly.
 
 ## Why this review
 A community member compared WoWBoxer with Mama-forever and listed as "already in WoWBoxer": accept/share/abandon
@@ -66,7 +70,7 @@ trigger.
   client changes anything.
 - The session card after login.
 
-## What removing X1–X10 touches
+## What removing X1–X10 would have touched (not done)
 - `Auto.lua`:
   - drop the handlers and the `D`, `QA` and `QR` message kinds (`QL` stays, as a filter);
   - drop the timer;
@@ -86,7 +90,7 @@ trigger.
 - CLAUDE.md hard rules 1 and 5 go back to: "cross-client messages are data for display; they never make a character
   act", and `docs/automation-policy.md` gets a superseded note.
 
-## Reasoning (to keep if the owner confirms)
+## Reasoning for the rejected proposal (kept for the record)
 - Blizzard's line is input broadcasting. The vaguer "anything used to automate or streamline multiboxing" is where
   X1–X10 sit: one player action fans out into actions on several characters. "One key press = one action on one
   character" is only true if the addon does not add actions on top.
