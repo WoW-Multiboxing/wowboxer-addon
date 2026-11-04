@@ -81,5 +81,5 @@ The addon writes a read-only diagnose ~5 s after login (`WoWBoxerDB.diag`) and a
 - Autonomous: never involve the owner in anything Claude can do or test itself. When his hands are needed in the game
   (log in, `/reload`, click Apply), give ONE short numbered checklist.
 - Code, UI and comments in English; Lua 5.1 only; no libraries (no Ace) unless decided in the plan.
-- Commit and push in small steps (gh account `WoW-Multiboxing`, git identity 348792173+WoW-Multiboxing@users.noreply.github.com).
+- Commit and push in small steps (gh account `WoW-Multiboxing`, git identity `WoW-Multiboxing <348792173+WoW-Multiboxing@users.noreply.github.com>`; never a personal address).
 - Finish each session with a `[WS-E]` block in the project's `LOG.md` and update row E in `00_Workstreams.md`.
