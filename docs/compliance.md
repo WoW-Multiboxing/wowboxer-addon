@@ -1,100 +1,73 @@
-# Compliance review: which features make another character act (4 Nov 2026)
+# Compliance: what WoWBoxer automates, what it never does, and why
 
-**Decision (the owner, 4 Nov 2026): the 29 Oct automation policy stands – "we can automate anything except sending key
-strokes". Nothing below is removed.** X1–X10 stay as named, squad-only options in Setup → Automation (CLAUDE.md hard
-rules 1 and 5, `docs/automation-policy.md`). The display-only rule in `01_Research/platform/04-addon.md` §4 is
-superseded by that policy. This review stays as the inventory of which options act on another character's behalf,
-so player texts can say so plainly.
+Policy: CLAUDE.md hard rules 1–6 and `docs/automation-policy.md` (the owner, 29 Oct 2026; confirmed 4 Nov 2026: "we can
+automate anything except sending key strokes").
 
-## Why this review
-A community member compared WoWBoxer with Mama-forever and listed as "already in WoWBoxer": accept/share/abandon
-quests together, accept invites, follow dialogs (copying the leader's gossip, quest and flight choice), and accept
-resurrection/summons on by default.
+## Blizzard's line
+Blizzard's multiboxing rules (news post Nov 2020, forum update May 2021, Support article 24258) say:
+- Multiboxing is allowed.
+- **Input broadcasting** is banned: software or hardware that sends one key press or click to several game clients.
+- So is anything that plays the game for you without a key press. WoW enforces this itself: casting, targeting,
+  moving, following and interacting with an NPC are **protected** or need a **hardware event**. An addon cannot do
+  them without the player's own key press on that client.
 
-The question: does any feature let **one character's action, or an addon message, make another character act**?
+Addons may use the rest of WoW's addon API. That includes accepting popups, choosing dialog options, selling,
+repairing and addon-to-addon messages (`C_ChatInfo.SendAddonMessage`). Multibox addons (EMA, Jamba, MAMA, Multibox
+Follower Helper) have done this for years.
 
-Two documents disagree on the answer:
+## What WoWBoxer never does
+- **No input broadcasting.** Nothing outside WoW sends keys or clicks to the game. WoWBoxer is an addon. It has no
+  program that runs next to WoW and never talks to other windows. (The WoWBoxer window app places windows and sends
+  no input either.)
+- **One key press = one action on one character.**
+  - Every **cast, target, move, follow and NPC interaction** comes from the player's own key press on that character.
+  - WoWBoxer only builds the macros (`/cast`, `/assist`, `/follow` …) and the player presses them.
+  - The addon never calls a protected or hardware-event function from a script (`CastSpell`, `TargetUnit`,
+    `FollowUnit`, `InteractUnit` …) and never tries to get around those checks.
+- **No hidden code.**
+  - Imported strings and addon messages are data only. They are never run (`loadstring`/`RunScript` are banned and
+    `tools/lint51.py` checks for them).
+  - Macros never contain `/run`, `/script`, `/console` or `/click`.
+- **No writes behind your back.** Macros, action bars, key bindings and settings change only after a click, and never
+  in combat.
+- **No strangers.** Every automation reacts only to the characters of your WoWBoxer squad, matched by name and in
+  your party. The Accept-from setting can widen the accepts to friends and guild, or everyone after a warning.
 
-| Source | Says |
-|---|---|
-| `01_Research/platform/04-addon.md` §4 (Oct 2026) | Cross-client messages are for display only, never to trigger actions. Skip EMA-style auto-accept quests, auto-taxi and follow strobing. Reason: Blizzard bans "anything used to automate or streamline multiboxing in any way", and that wording is vague. |
-| `docs/automation-policy.md` (the owner, 29 Oct 2026) and CLAUDE.md hard rules 1 + 5 today | Addon automation through WoW's normal API is allowed (accept, share, sync, sell, repair, loot, trade), for squad members only. Addon messages may trigger it. |
+## What WoWBoxer automates (Setup → Automation)
+Only resurrection and summons are on before the player chooses; the presets (*Default squad values*, *Recommended*) turn
+the others on in one click.
+Each item is a named option with a one-line explanation and can be turned off. Holding **Shift** skips it once, and
+every automatic action is logged.
 
-The request of 4 Nov goes back to the research rule. This review lists what that would change.
-
-## The test
-A feature is **per-window** (keep) when it acts only on the window where the player just did something themselves:
-they opened that merchant, that quest giver, that NPC.
-
-A feature is **cross-character** (remove, or turn into display / a click on that window) when the trigger comes from
-outside this window. The trigger can be:
-- another character's action (an invite, res, summon, quest share, role check, the leader's dialog pick);
-- an addon message;
-- a timer.
-
-Using another client's data **only as a filter or display** (for example "the leader also has this quest") is not a
-trigger.
-
-## Inventory (`WoWBoxer/Auto.lua`; Sync.lua and Team.lua are display/offer only)
-
-### Cross-character: another character or a message makes this one act
-
-| # | Option (key) | Default | Trigger → action on this character | Proposal |
-|---|---|---|---|---|
-| X1 | Follow dialogs (`dialog`) | on in preset + recommended | Leader picks gossip / quest from list / **flight** → message `D` → follower calls `SelectOption` / `SelectAvailableQuest` / **`TakeTaxiNode`** (the follower flies) | **Remove the action.** Display only: the follower's open NPC window highlights the leader's pick ("Leader picked: Ironforge"); the player clicks it. |
-| X2 | Abandon together (`abandon`) | off | Leader abandons → message `QA` → follower `AbandonQuest` | **Remove.** Replace with a chat line on the follower: "Leader abandoned X". |
-| X3 | Turn in quests, reward rule "leader's choice" (`turnin` + `autoReward=leader`) | turn-in on in preset | Leader takes a reward → message `QR` → follower `GetQuestReward(i)` | **Remove the message trigger.** The follower's reward window shows "Leader took: X"; the player clicks. The rule "best vendor value" stays (per-window). |
-| X4 | Accept quests (`quests`), quest **shared** by another player | on in preset | Leader's share pops up `QUEST_DETAIL` on the follower → `AcceptQuest` | **Remove for shares** (detect: `UnitIsPlayer("npc")`). Keep it when this window opened the quest giver itself (P2). |
-| X5 | Accept quests, escort / group start (`QUEST_ACCEPT_CONFIRM`) | on in preset | Another player starts an escort → `ConfirmAcceptQuest` | **Remove.** |
-| X6 | Accept invites (`invite`) | on in preset | Another player invites → `AcceptGroup` | **Remove.** Blizzard's popup stays; the player clicks Accept. Optional: flash/sound "Invite from squad member X". |
-| X7 | Invite the squad (`autoInvite`) | on in recommended | **30 s timer**, no key press → `InviteUnit` | **Remove.** The existing Invite key (one press = one invite round) stays. |
-| X8 | Accept resurrection (`res`) | **on by default** | Another player casts a res → `AcceptResurrect` | **Remove.** |
-| X9 | Accept summons (`summon`) | **on by default** | Another player summons → `ConfirmSummon` (this character teleports) | **Remove.** |
-| X10 | Accept role checks (`rolecheck`) | on in preset | Group leader queues → `CompleteLFGRoleCheck` | **Remove.** |
-
-### Per-window: acts only where the player did something on this window (keep)
-
-| # | Option | What it does |
+| Option | What it does | On without a choice? |
 |---|---|---|
-| P1 | Turn in quests (`turnin`) | This window opened the quest giver → `CompleteQuest`; reward when there is one choice or by "best vendor value". |
-| P2 | Accept quests (`quests` / `questAny`) at a quest giver **this window opened** | `AcceptQuest`. The leader's quest list (message `QL`) is only a filter: no message, no accept. |
-| P3 | Share quests (`share`) | The leader accepts a quest with their own click; their own client then shares it. Followers get Blizzard's normal popup and click it (after X4). |
-| P4 | Sell junk (`sell`) + sell list | This window opened a merchant → sells its own greys / list items. |
-| P5 | Repair (`repair`) | Same merchant, with a gold floor. |
-| P6 | Restock reagents (`restock`) | Same merchant. |
-| P7 | Chat line (`chat`) | Display. |
+| Accept invites | Accepts a group invite from a squad member. | no |
+| Invite the squad | Leader: invites squad members who are not in the group. | no |
+| Accept quests / Accept any quest | Accepts quests the leader has (or every quest) when the quest window opens. | no |
+| Share quests | Leader: shares every quest you accept. | no |
+| Turn in quests | Completes finished quests at the quest giver; picks the reward by rule (leader's choice, best vendor value, or ask). | no |
+| Abandon together | When the leader abandons a quest, followers drop it too (never a completed quest). | no |
+| Follow dialogs | Picks the leader's dialog, quest or flight choice when the follower has the **same NPC window open**. The follower opened that NPC with their own key press. Never syncs logout, delete, unlearn and similar options, or flights over 2 gold. | no |
+| Accept resurrection / summons | From squad members. | **yes** |
+| Accept role checks | When the group leader is in your squad. | no |
+| Sell junk, Repair, Restock reagents | At a merchant that window opened. Repair keeps a gold floor. | no |
 
-### Display / offer only (no change)
-- **Team panel** (`Team.lua`, prefix `WBX1`): level, mana, follow, target, combat – shown, never acted on.
-- **Squad sync** (`Sync.lua`): squad, preset and guide offers show *Review / Apply / Ignore*. Only the click on that
-  client changes anything.
-- The session card after login.
+Display only (never acted on): the team panel (level, mana, follow, target, combat), squad sync offers
+(Review / Apply / Ignore, which act only on a click on that client), and the session card.
 
-## What removing X1–X10 would have touched (not done)
-- `Auto.lua`:
-  - drop the handlers and the `D`, `QA` and `QR` message kinds (`QL` stays, as a filter);
-  - drop the timer;
-  - add the `UnitIsPlayer("npc")` share check.
-- Setup → Automation:
-  - remove the options;
-  - remove the "Accept from" choice (it only serves the accepts);
-  - update the "Default squad values" preset, the recommended set and the login nudge text.
-- Saved data: the old option keys stay in `WoWBoxerDB` untouched but are ignored (`tests/test_savedvars.lua` must
-  still pass). Share strings: `AU.import` already drops unknown keys.
-- Tests: `tests/test_auto.lua` (most of it).
-- Player texts:
-  - CurseForge and Wago description ("automates invites, quests, dialogs …");
-  - in-game help;
-  - README;
-  - wowboxer.com/addon/ and the guides (workstream F/D).
-- CLAUDE.md hard rules 1 and 5 go back to: "cross-client messages are data for display; they never make a character
-  act", and `docs/automation-policy.md` gets a superseded note.
+## Why this stays inside the rules
+1. **The trigger is never an input sent to the game.** Everything above runs inside one client through WoW's normal
+   addon API, the same as any quest or vendor addon a solo player uses.
+2. **Playing still takes a key press per character.** Fighting, healing, moving, following and talking to NPCs all
+   need the player on that window. Automation removes popups and menus. It never moves a character or casts a spell.
+3. **The game's own protection holds.** WoW blocks protected calls from addons, and WoWBoxer does not try to get
+   around that. When a client does not allow a call without a key press, the automation just does nothing.
+   [AFKLAR: `InviteUnit`, `TakeTaxiNode` and `AcceptQuest` without a key press on Forever – checked in the launch test,
+   probe results in the diagnose.]
+4. **It is visible and optional.** Every automation is named, off for strangers, can be switched off, and is logged.
+   The player texts (CurseForge, Wago, website, README) say plainly what it does.
 
-## Reasoning for the rejected proposal (kept for the record)
-- Blizzard's line is input broadcasting. The vaguer "anything used to automate or streamline multiboxing" is where
-  X1–X10 sit: one player action fans out into actions on several characters. "One key press = one action on one
-  character" is only true if the addon does not add actions on top.
-- Per-window conveniences (P1–P6) behave like any solo-player addon (auto-sell, auto-repair, quest auto-accept at an
-  NPC you opened). They don't depend on having other characters.
-- Display and offers keep most of the value (you see what the leader did; one click on that window does it) without
-  the fan-out.
+## Kept for the record
+On 4 Nov 2026 a request to strip cross-character automation (based on the older display-only note in
+`01_Research/platform/04-addon.md` §4) was reviewed and **cancelled by the owner**. The older note is superseded by the 29
+Oct policy.
