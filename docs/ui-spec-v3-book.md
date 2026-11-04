@@ -62,7 +62,7 @@ be a visual distinction between the spells you actually use and the helper spell
   any "…" truncation of a spell or helper name, a header occupying a grid cell, text crossing the book's spine.
 - Keep the resolution/scale overlap matrix green.
 
-## Key editor ("Edit own key", the owner 23:39, screenshot `docs/research/2026-10-27-key-editor-screenshot.png`)
+## Key editor ("Edit own key", the owner 23:39)
 - **Bug: the macro text runs off to the right** ("[@mouseover,harm,nodead][@party1target,harm,nodead][…") instead of
   wrapping. The macro box must **wrap inside its width and grow downwards**, with a scroll bar when needed (multi-line
   EditBox/FontString with its width set to the box's inner width – a width of 0 inside a ScrollFrame is the usual cause –
