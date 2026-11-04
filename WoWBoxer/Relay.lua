@@ -138,7 +138,7 @@ local function clean(name)
   return name
 end
 --- Replace the list (from an edit here or a newer list from the squad).
-function RL.setSellList(list, at, quiet)
+function RL.setSellList(list, at, noSend)
   local out, seen = {}, {}
   for _, n in ipairs(list or {}) do
     local c = clean(n)
@@ -146,7 +146,7 @@ function RL.setSellList(list, at, quiet)
   end
   local s = settings()
   s.sellList, s.sellListAt = out, at or stamp()
-  if not quiet then RL.sendSellList() end
+  if not noSend then RL.sendSellList() end
   return out
 end
 function RL.addSell(name)
