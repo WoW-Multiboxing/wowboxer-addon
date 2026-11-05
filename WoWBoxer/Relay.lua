@@ -116,7 +116,7 @@ function RL.warn(text)
   RL.lastWarn = text
 end
 function RL.sound()
-  if not G.PlaySound then return end
+  if not G.PlaySound or not AU().on("warnSound") then return end
   local kit = G.SOUNDKIT and G.SOUNDKIT.RAID_WARNING or 8959
   pcall(G.PlaySound, kit, "Master")
 end

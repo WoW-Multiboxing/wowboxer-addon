@@ -220,11 +220,24 @@ do
   ns.UI.Open("setup")
   ns.UI.panels.setup.autoBtn:Click()
   local f = ns.AutomationPage.frame
-  H.ok(f:IsShown() and #f.ticks == #ns.Auto.OPTIONS and ns.UI.current == "automation", "the Automation bookmark: one tick per option")
+  local subs = 0
+  for _, o in ipairs(ns.Auto.OPTIONS) do if o[6] then subs = subs + 1 end end
+  H.ok(f:IsShown() and #f.ticks == #ns.Auto.OPTIONS - subs and ns.UI.current == "automation", "the Automation bookmark: one tick per option (Warning sound inside Follow warning)")
   f.preset:Click()
   local on = {}
-  for _, c in ipairs(f.ticks) do if c:GetChecked() then on[#on + 1] = c.key end end
-  H.eq(table.concat(on, ","), "invite,quests,share,turnin,dialog,res,summon,rolecheck,sell,repair,shareSell,whispers,followWarn,chat", "Default squad values preset")
+  for _, c in ipairs(f.ticks) do
+    if c:GetChecked() then on[#on + 1] = c.key end
+    if c.sub and ns.Auto.on(c.sub.key) then on[#on + 1] = c.sub.key end
+  end
+  -- the Sound button inside the Follow warning card
+  local fw
+  for _, c in ipairs(f.ticks) do if c.key == "followWarn" then fw = c end end
+  H.ok(fw and fw.sub and fw.sub:GetText():find("Sound on", 1, true), "Follow warning card: Sound on button")
+  fw.sub:Click()
+  H.ok(not ns.Auto.on("warnSound") and fw.sub:GetText():find("Sound off", 1, true), "the button turns the sound off, warning stays on")
+  H.ok(ns.Auto.on("followWarn"), "Follow warning still on")
+  fw.sub:Click()
+  H.eq(table.concat(on, ","), "invite,quests,share,turnin,dialog,res,summon,rolecheck,sell,repair,shareSell,whispers,followWarn,warnSound,chat", "Default squad values preset")
   f.allOff:Click()
   for _, c in ipairs(f.ticks) do H.ok(not c:GetChecked(), "All off: " .. c.key) end
   f.allOn:Click()
@@ -327,6 +340,64 @@ do
     H.eq(ns.Auto.on(o[1]) and true or false, want, "Default: " .. o[1] .. (want and " on" or " off"))
   end
   H.eq(W.calls.CreateMacro, nil, "Default writes nothing to the game")
+end
+
+
+-- ------------------------------------------------------------------ leader takes every quest a quest giver offers
+do
+  local W, ns = boot("Dorin")
+  local AU = ns.Auto
+  AU.set("quests", true)
+  W.env.UnitName = (function(orig) return function(u) if u == "npc" then return "Marshal" end return orig(u) end end)(W.env.UnitName)
+  W.env.GetQuestID = function() return 41 end
+  W.env.GetTitleText = function() return "Wolves" end
+  reset(W); W.fire("QUEST_DETAIL")
+  H.ok(did(W, "AcceptQuest"), "leader: a quest window opens -> accepted")
+  W.fire("QUEST_FINISHED")
+  W.mods.shift = true; reset(W); W.fire("QUEST_DETAIL"); W.mods.shift = false
+  H.eq(did(W, "AcceptQuest"), nil, "leader: Shift held -> skipped")
+  -- modern gossip: the first quest, then the next one when the list comes back, never the same twice
+  local avail = { { questID = 41, title = "Wolves" }, { questID = 42, title = "Bears" } }
+  local picked = {}
+  W.env.C_GossipInfo = { GetAvailableQuests = function() return avail end, SelectAvailableQuest = function(id) picked[#picked + 1] = id end,
+    GetOptions = function() return {} end }
+  W.fire("GOSSIP_SHOW")
+  H.eq(table.concat(picked, ","), "41", "leader: gossip -> opens the first quest")
+  W.fire("GOSSIP_SHOW")
+  H.eq(table.concat(picked, ","), "41,42", "leader: list again -> the next quest")
+  W.fire("GOSSIP_SHOW")
+  H.eq(#picked, 2, "leader: every quest tried once")
+  AU.set("quests", false)
+  AU.picked.npc = nil; W.fire("GOSSIP_SHOW")
+  H.eq(#picked, 2, "Accept quests off: nothing")
+  AU.set("quests", true)
+  -- Classic gossip
+  W.env.C_GossipInfo = nil
+  local cpick = {}
+  W.env.GetNumGossipAvailableQuests = function() return 2 end
+  W.env.GetGossipAvailableQuests = function() return "Wolves", 5, false, 0, false, false, false, "Bears", 6, false, 0, false, false, false end
+  W.env.SelectGossipAvailableQuest = function(i) cpick[#cpick + 1] = i; return true end
+  AU.picked.npc = nil
+  W.fire("GOSSIP_SHOW")
+  H.eq(table.concat(cpick, ","), "1", "Classic gossip: the first quest")
+  -- quest greeting (an NPC with only quests)
+  local gpick = {}
+  W.env.GetNumAvailableQuests = function() return 1 end
+  W.env.GetAvailableTitle = function() return "Kobolds" end
+  W.env.SelectAvailableQuest = function(i) gpick[#gpick + 1] = i; return true end
+  AU.picked.npc = nil
+  W.fire("QUEST_GREETING")
+  H.eq(table.concat(gpick, ","), "1", "quest greeting: the quest is opened")
+end
+-- a follower never picks from the list by itself (it accepts what the leader has)
+do
+  local W, ns = boot("Anna")
+  ns.Auto.set("quests", true)
+  local picked = {}
+  W.env.C_GossipInfo = { GetAvailableQuests = function() return { { questID = 41, title = "Wolves" } } end, SelectAvailableQuest = function(id) picked[#picked + 1] = id end,
+    GetOptions = function() return {} end }
+  W.fire("GOSSIP_SHOW")
+  H.eq(#picked, 0, "follower: no picking from the NPC list")
 end
 
 os.exit(H.report("auto") and 0 or 1)

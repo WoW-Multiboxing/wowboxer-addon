@@ -43,9 +43,11 @@ function tab.build(p)
   fl:SetPoint("TOPRIGHT", p, "TOPRIGHT", -200, -6)
   W.ddTip(p.from, "Accept from", "Who the accepting automations react to: your WoWBoxer squad in your party (safest), also your friends and guild, or everyone.")
   p.ticks = {}
-  local per = math.ceil(#AU().OPTIONS / 2)
+  local shown, subs = {}, {}
+  for _, o in ipairs(AU().OPTIONS) do if o[6] then subs[o[6]] = o else shown[#shown + 1] = o end end
+  local per = math.ceil(#shown / 2)
   local themed = W.themed()
-  for i, o in ipairs(AU().OPTIONS) do
+  for i, o in ipairs(shown) do
     local col, row = math.floor((i - 1) / per), (i - 1) % per
     local function onClick(_, v) AU().set(o[1], v); ns.Core.log("info", "automation " .. o[1] .. (v and " on" or " off")); UI.Refresh() end
     local c
@@ -78,8 +80,19 @@ function tab.build(p)
       c.line:SetPoint("TOPLEFT", 24 + col * 336, -34 - row * 38 - 19)
       c.line:SetWidth(306)
     end
-    c.key = o[1]
+    c.key, c.opt = o[1], o
     c.line.wbxCopy = "data"
+    local sub = subs[o[1]]
+    if sub then
+      -- a small on/off button for the sub-option (Warning sound inside Follow warning)
+      c.sub = W.button(p, "Sound on", 72, 18, function()
+        local v = not AU().on(sub[1]); AU().set(sub[1], v)
+        ns.Core.log("info", "automation " .. sub[1] .. (v and " on" or " off")); UI.Refresh()
+      end, { sub[2], sub[3] })
+      c.sub.key = sub[1]
+      if themed then c.sub:SetPoint("RIGHT", c.card, "RIGHT", -44, 0)
+      else c.sub:SetPoint("TOPLEFT", 230 + col * 336, -34 - row * 38) end
+    end
     W.tip(c, o[2], o[3])
     if AU().ACCEPTS[o[1]] then
       -- Advanced: this row's own "Accept from"
@@ -119,15 +132,17 @@ end
 function tab.refresh(p)
   local adv = ns.Advanced and ns.Advanced.on()
   p.from.Refresh(); p.reward.Refresh()
-  for i, c in ipairs(p.ticks) do
-    local o = AU().OPTIONS[i]
+  for _, c in ipairs(p.ticks) do
+    local o = c.opt
     c:SetChecked(AU().on(c.key))
     local text = o[3]
     if AU().ACCEPTS[c.key] then text = "Accepts from: " .. AU().FROM_SHORT[AU().acceptFrom(c.key)] .. " · " .. text end
     c.line:SetText(text)
     if c.own then c.own:SetShown(adv and true or false); c.own.Refresh() end
-    if c.card then c.line:SetWidth((c.own and adv) and 132 or 222); c.label:SetWidth((c.own and adv) and 132 or 222)
-    else c.line:SetWidth((c.own and adv) and 170 or 306) end
+    if c.sub then W.setLabel(c.sub, AU().on(c.sub.key) and "Sound on" or "Sound off") end
+    local narrow = (c.own and adv) or c.sub
+    if c.card then c.line:SetWidth(narrow and 132 or 222); c.label:SetWidth(narrow and 132 or 222)
+    else c.line:SetWidth(narrow and 170 or 306) end
   end
 end
 

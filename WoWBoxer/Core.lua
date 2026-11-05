@@ -913,6 +913,7 @@ local HELP = {
   "/wbx selftest – write a diagnostic report to the saved variables",
   "/wbx shots – screenshots of every WoWBoxer page (for the website; read-only)",
   "/wbx log [n] – show the last n log lines; /wbx debug – toggle debug messages",
+  "/wbx sound – warning sound on/off (follow warning, GM whispers); the warning text stays",
   "/wbx names – how the game names your party and which squad member each one matches (read-only)",
 }
 --- /wbx names: the names exactly as the game gives them, the squad match per member, and the send results.
@@ -953,6 +954,12 @@ function Core.slash(msg)
   elseif cmd == "discord" or cmd == "youtube" or cmd == "website" then if ns.Community then ns.Community.ShowLink(cmd) end
   elseif cmd == "report" then if ns.Community then ns.Community.ShowReport() end
   elseif cmd == "sync" then Core.sync({ replace = rest == "replace" })
+  elseif cmd == "sound" then
+    local on = rest == "on" or (rest ~= "off" and not ns.Auto.on("warnSound"))
+    ns.Auto.set("warnSound", on)
+    Core.log("info", "automation warnSound " .. (on and "on" or "off") .. " (/wbx sound)")
+    chat("Warning sound " .. (on and "on." or "off – the warnings still show on screen and in chat."))
+    if ns.UI and ns.UI.Refresh and ns.UI.frame and ns.UI.frame:IsShown() then ns.UI.Refresh() end
   elseif cmd == "names" then for _, l in ipairs(Core.namesReport()) do chat(l) end
   elseif cmd == "sell" then if ns.Relay then ns.Relay.slash(rest) end
   elseif cmd == "team" then

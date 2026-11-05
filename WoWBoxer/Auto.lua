@@ -24,7 +24,7 @@ local function now() return (G.GetTime and G.GetTime()) or 0 end
 AU.OPTIONS = {
   { "invite", "Accept invites", "Accepts a group invite from a squad member." },
   { "autoInvite", "Invite the squad", "Leader: invites squad members who are not in the group (now and then, while you lead)." },
-  { "quests", "Accept quests", "Accepts a quest the squad leader also has (when you open the quest giver yourself, or a share)." },
+  { "quests", "Accept quests", "Leader: takes every quest a quest giver you open offers. Followers: accept the quests the leader has." },
   { "questAny", "Accept any quest", "Accepts every quest offered, not only the leader's (needs Accept quests)." },
   { "share", "Share quests", "Leader: shares every quest you accept with the party." },
   { "turnin", "Turn in quests", "Completes and turns in finished quests at the quest giver you opened." },
@@ -38,13 +38,15 @@ AU.OPTIONS = {
   { "restock", "Restock reagents", "Buys your class reagents (candles, symbols, ankhs, powders, ammo you use) up to a set amount." },
   { "shareSell", "Share sell list", "Keeps the sell list the same on every squad window (/wbx sell add [item]); each sells at its own merchant." },
   { "whispers", "Forward whispers", "Followers' whispers show in the leader's chat; GM whispers are tagged, with a sound.", true, true },
-  { "followWarn", "Follow warning", "Warning and sound on the leader when a follower stops following (not in combat, zoning, death, flights).", true, true },
+  { "followWarn", "Follow warning", "Warning on the leader when a follower stops following (not in combat, zoning, death, flights).", true, true },
+  -- [6] = shown as a small Sound button inside that option's card, not as a card of its own
+  { "warnSound", "Warning sound", "Plays the raid-warning sound with the follow warning and GM whispers (/wbx sound toggles it).", true, true, "followWarn" },
   { "chat", "Chat line", "Writes one chat line for each automatic action." },
 }
 AU.BY_KEY = {}
 for _, o in ipairs(AU.OPTIONS) do AU.BY_KEY[o[1]] = o end
 AU.PRESET_LEVELLING = { "invite", "quests", "share", "turnin", "dialog", "res", "summon", "rolecheck", "sell", "repair", "shareSell",
-  "whispers", "followWarn" }
+  "whispers", "followWarn", "warnSound" }
 AU.REWARD_RULES = { "leader", "value", "ask" }
 AU.GOLD_FLOOR = 10000     -- copper kept when repairing (1 gold)
 AU.TAXI_LIMIT = 20000     -- a synced flight costs at most 2 gold
@@ -251,7 +253,12 @@ function AU.onQuestDetail()
   local id = questId()
   AU.detailOpen = id
   if not AU.on("quests") then return end
-  if AU.isLeader() then Core().log("info", "auto: quest " .. questTitle(id) .. " not accepted – the leader picks quests (then shares them)"); return end
+  if AU.isLeader() then
+    -- the leader (owner, 5 Nov 2026): every quest a quest giver offers is taken; Share quests then shares it
+    if skipShift("quest") then return end
+    if call(G.AcceptQuest) then AU.detailOpen = nil; AU.did("Accepted quest " .. questTitle(id) .. ".") end
+    return
+  end
   if not (AU.on("questAny") or (id and AU.leaderQuests[id])) then
     Core().log("info", "auto: quest " .. questTitle(id) .. " not accepted yet – the leader does not have it (accepted when " ..
       "the leader takes it while this window is open)")
@@ -403,6 +410,59 @@ function AU.applyDialog(npc, kind, index, text, from)
     if GI and GI.SelectAvailableQuest then ok = pcall(kind == "a" and GI.SelectAvailableQuest or GI.SelectActiveQuest, index)
     else ok = call(kind == "a" and G.SelectGossipAvailableQuest or G.SelectGossipActiveQuest, index) end
     if ok then AU.did("Picked the quest " .. tostring(text) .. " like " .. from.name .. "."); return true end
+  end
+  return false
+end
+
+-- ------------------------------------------------------------------ 3b. leader: take every quest a quest giver offers
+-- The leader opened the NPC (own key press). WoWBoxer opens the first quest not tried yet in this NPC window;
+-- QUEST_DETAIL then accepts it. When the NPC shows its list again, the next one follows. [AFKLAR: whether Forever
+-- returns to the list after an accept, or the leader talks to the NPC again for the next quest.]
+AU.picked = { npc = nil, at = 0, tried = {} }
+AU.PICK_MAX = 12
+local function pickSession()
+  local npc, t = npcName(), now()
+  local P = AU.picked
+  if P.npc ~= npc or t - P.at > 120 then P.npc, P.tried, P.n = npc, {}, 0 end
+  P.at = t
+  return P
+end
+--- Available quests here: {{key, title, pick = function}} – modern gossip, Classic gossip or a quest greeting.
+function AU.availableQuests(greeting)
+  local out, GI = {}, G.C_GossipInfo
+  if greeting then
+    local n = G.GetNumAvailableQuests and C().safe(G.GetNumAvailableQuests()) or 0
+    for i = 1, (tonumber(n) or 0) do
+      local title = G.GetAvailableTitle and C().safe(G.GetAvailableTitle(i)) or ("#" .. i)
+      out[#out + 1] = { key = "g:" .. tostring(title), title = title, pick = function() return call(G.SelectAvailableQuest, i) end }
+    end
+  elseif GI and GI.GetAvailableQuests and GI.SelectAvailableQuest then
+    local ok, list = pcall(GI.GetAvailableQuests)
+    for _, q in ipairs(ok and type(list) == "table" and list or {}) do
+      local id = C().safe(q.questID)
+      if id then out[#out + 1] = { key = "q:" .. tostring(id), title = C().safe(q.title) or ("#" .. id), pick = function() return pcall(GI.SelectAvailableQuest, id) end } end
+    end
+  elseif G.GetNumGossipAvailableQuests and G.SelectGossipAvailableQuest then
+    local n = tonumber(C().safe(G.GetNumGossipAvailableQuests())) or 0
+    local raw = G.GetGossipAvailableQuests and { G.GetGossipAvailableQuests() } or {}
+    local per = n > 0 and math.floor(#raw / n) or 0
+    for i = 1, n do
+      local title = type(raw[1]) == "table" and raw[i] and raw[i].title or (per > 0 and raw[(i - 1) * per + 1]) or ("#" .. i)
+      out[#out + 1] = { key = "g:" .. tostring(title), title = tostring(title), pick = function() return call(G.SelectGossipAvailableQuest, i) end }
+    end
+  end
+  return out
+end
+--- GOSSIP_SHOW / QUEST_GREETING on the leader: open the next quest not tried in this NPC window.
+function AU.leaderTakeQuests(greeting)
+  if not (AU.on("quests") and AU.isLeader()) or shift() then return false end
+  local P = pickSession()
+  if (P.n or 0) >= AU.PICK_MAX then return false end
+  for _, q in ipairs(AU.availableQuests(greeting)) do
+    if not P.tried[q.key] then
+      P.tried[q.key], P.n = true, (P.n or 0) + 1
+      if q.pick() then Core().log("info", "auto: leader opens quest " .. tostring(q.title)); return true end
+    end
   end
   return false
 end
@@ -586,7 +646,7 @@ end
 local f = CreateFrame("Frame")
 AU.frame = f
 local EVENTS = { "CHAT_MSG_ADDON", "PARTY_INVITE_REQUEST", "QUEST_DETAIL", "QUEST_ACCEPT_CONFIRM", "QUEST_ACCEPTED", "QUEST_PROGRESS",
-  "QUEST_COMPLETE", "QUEST_FINISHED", "GOSSIP_SHOW", "GOSSIP_CLOSED", "TAXIMAP_OPENED", "TAXIMAP_CLOSED", "RESURRECT_REQUEST",
+  "QUEST_COMPLETE", "QUEST_FINISHED", "QUEST_GREETING", "GOSSIP_SHOW", "GOSSIP_CLOSED", "TAXIMAP_OPENED", "TAXIMAP_CLOSED", "RESURRECT_REQUEST",
   "CONFIRM_SUMMON", "LFG_ROLE_CHECK_SHOW", "MERCHANT_SHOW", "GROUP_ROSTER_UPDATE", "QUEST_REMOVED" }
 function AU.Init()
   local CI = G.C_ChatInfo
@@ -622,7 +682,8 @@ f:SetScript("OnEvent", function(_, event, a, b, c, d)
     elseif event == "QUEST_PROGRESS" then AU.onQuestProgress()
     elseif event == "QUEST_COMPLETE" then AU.onQuestComplete()
     elseif event == "QUEST_FINISHED" then AU.completeOpen = false; AU.detailOpen = nil
-    elseif event == "GOSSIP_SHOW" then AU.window.gossip = npcName()
+    elseif event == "GOSSIP_SHOW" then AU.window.gossip = npcName(); AU.leaderTakeQuests(false)
+    elseif event == "QUEST_GREETING" then AU.leaderTakeQuests(true)
     elseif event == "GOSSIP_CLOSED" then AU.window.gossip = nil
     elseif event == "TAXIMAP_OPENED" then AU.window.taxi = true
     elseif event == "TAXIMAP_CLOSED" then AU.window.taxi = nil

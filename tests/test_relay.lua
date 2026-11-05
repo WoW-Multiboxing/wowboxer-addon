@@ -133,6 +133,19 @@ do
   H.eq(#W.warnings, 1, "a stranger cannot raise it")
   H.eq(#W.acted, 0, "the warning never acts (no follow, no target)")
 end
+do -- Warning sound off: the warning stays, the sound goes; /wbx sound toggles it
+  local W, ns = boot("Dorin")
+  ns.Relay.zonedAt = -1e9
+  H.ok(ns.Auto.on("warnSound"), "Warning sound: on by default")
+  ns.Core.slash("sound")
+  H.ok(not ns.Auto.on("warnSound"), "/wbx sound turns it off")
+  deliver(W, "Anna", "F|1")
+  H.ok(#W.warnings == 1 and #W.sounds == 0, "sound off: the warning shows, no sound")
+  ns.Core.slash("sound on")
+  H.ok(ns.Auto.on("warnSound"), "/wbx sound on")
+  deliver(W, "Bo", "F|1")
+  H.eq(#W.sounds, 1, "sound on again: it plays")
+end
 
 -- ------------------------------------------------------------------ shared sell list
 do
