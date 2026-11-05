@@ -28,17 +28,45 @@ local PRIMARY = { K1 = 0, K2 = 1, K3 = 2, K4 = 3, K5 = 4, K6 = 5, K7 = 6, K8 = 7
 local SECONDARY = { C1 = 0, C2 = 1, C3 = 2, C4 = 3, C5 = 4, C6 = 5, C7 = 6, C8 = 7, Focus = 8, Pet = 9, PetBack = 10, Invite = 11 }
 local SHARED = { Wand = { 9, 8, 11, 10 } }
 
---- Target slot for every desired macro. cdb.slots remembers manual/earlier placements.
-function B.layout(desired, cdb)
+--- The action slots that have a button on screen (the five bars), in bar order.
+function B.buttonSlots()
+  local out = {}
+  for _, b in ipairs(B.BARS) do for i = 0, 11 do out[#out + 1] = b.first + i end end
+  return out
+end
+--- Target slot for every desired macro, in this order (owner, 5 Nov 2026):
+---   1. where the player has that WBX macro now (cdb.slots, kept by Core.scanBars) – updates never move it;
+---   2. the button that already holds the macro's spell (Smite on button 5 -> WBX K1 goes on button 5);
+---   3. the fixed layout below; extras go to an empty button first.
+--- info(slot) -> C.actionInfo-like table (optional; without it steps 2 and "empty first" are skipped).
+function B.layout(desired, cdb, info)
   local p, s = cdb.primaryBar or 1, cdb.secondaryBar or 61
   local taken, out = {}, {}
   local function take(slot) taken[slot] = true; return slot end
   for _, d in ipairs(desired) do
     local slot = cdb.slots[d.name]
-    if not slot then
-      if PRIMARY[d.key] then slot = p + PRIMARY[d.key] elseif SECONDARY[d.key] then slot = s + SECONDARY[d.key] end
-    end
     if slot and not taken[slot] then out[d.name] = take(slot) end
+  end
+  local held = {}
+  if info then
+    local bySpell = {}
+    for _, slot in ipairs(B.buttonSlots()) do
+      local a = info(slot)
+      held[slot] = a ~= nil
+      if a and a.kind == "spell" and type(a.name) == "string" and not taken[slot] and not bySpell[a.name] then bySpell[a.name] = slot end
+    end
+    for _, d in ipairs(desired) do
+      local sp = d.spell and d.spell.name
+      local slot = sp and bySpell[sp]
+      if not out[d.name] and slot and not taken[slot] then out[d.name] = take(slot) end
+    end
+  end
+  for _, d in ipairs(desired) do
+    if not out[d.name] then
+      local slot
+      if PRIMARY[d.key] then slot = p + PRIMARY[d.key] elseif SECONDARY[d.key] then slot = s + SECONDARY[d.key] end
+      if slot and not taken[slot] then out[d.name] = take(slot) end
+    end
   end
   -- keys that share a fixed button (Wand: the Pet button for mages and priests; a warlock's next free fixed button)
   local reserved = {}
@@ -51,11 +79,17 @@ function B.layout(desired, cdb)
       end
     end
   end
-  -- extras: first free button on the secondary bar, then the primary bar
+  -- extras: the first empty button on the secondary bar, then the primary bar; then the first one not planned
   for _, d in ipairs(desired) do
     if not out[d.name] then
-      for _, base in ipairs({ s, p }) do
-        for i = 0, 11 do if not taken[base + i] then out[d.name] = take(base + i); break end end
+      for _, emptyOnly in ipairs({ true, false }) do
+        for _, base in ipairs({ s, p }) do
+          for i = 0, 11 do
+            local slot = base + i
+            if not taken[slot] and not (emptyOnly and held[slot]) then out[d.name] = take(slot); break end
+          end
+          if out[d.name] then break end
+        end
         if out[d.name] then break end
       end
     end
@@ -66,7 +100,7 @@ end
 --- Placement plan: {items={{name, slot, status, current}}, counts}. status: placed | empty | ours | occupied | missing | off
 function B.plan(desired, cdb, skip)
   skip = skip or {}
-  local layout = B.layout(desired, cdb)
+  local layout = B.layout(desired, cdb, C.actionInfo)
   local items, counts = {}, { placed = 0, empty = 0, ours = 0, occupied = 0, missing = 0, off = 0 }
   for _, d in ipairs(desired) do
     local slot = layout[d.name]
@@ -156,13 +190,14 @@ function B.restoreSlot(slot, orig, source)
   return ok, err
 end
 
---- Place the macros. replace=true also replaces slots that hold other things. Out of combat only.
+--- Place the macros on empty buttons. replace=true (only after the player said yes to "Replace?") also replaces
+--- buttons that hold something else – a spell, an item or another WBX macro. Out of combat only.
 function B.apply(plan, cdb, replace)
   local res = { placed = 0, skipped = 0, failed = {}, list = {} }
   if C.inCombat() then res.failed[1] = { name = "*", err = "in combat" }; return res end
   if C.cursorBusy() then res.failed[1] = { name = "*", err = "your cursor is holding something; drop it first" }; return res end
   for _, it in ipairs(plan.items) do
-    if it.status == "empty" or it.status == "ours" or (it.status == "occupied" and replace) then
+    if it.status == "empty" or ((it.status == "occupied" or it.status == "ours") and replace) then
       local idx = M.findIndex(it.name)
       if idx then
         local ok, err = B.placeMacro(idx, it.slot, "place all")

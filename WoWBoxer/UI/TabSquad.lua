@@ -510,7 +510,7 @@ SP.register({ key = "main", label = "Squad", tip = "Who plays together, who lead
     f.keys.state:SetPoint("TOPRIGHT", -20, -27)
     f.keys.state:SetWidth(110)
     f.keys.state.wbxCopy = "hint"
-    f.keys.update = W.button(f.keys, "Update macros", 100, 22, function() Core().sync({ replace = Core().cdb.replace }) end,
+    f.keys.update = W.button(f.keys, "Update macros", 100, 22, function() Core().sync({}) end,
       "Creates or updates your squad macros (and any other changed macros) and puts new ones on your bars.")
     f.keys.update:SetPoint("TOPRIGHT", -20, -22)
     W.setStyle(f.keys.update, "raised")

@@ -4,7 +4,9 @@
     least one is higher, nothing it wears now is lost) → equipped, one log/chat line;
   - bind on equip (not bound yet) → always asked first (equipping binds it to you);
   - in doubt (some stats up, some down; trinkets; weapon layout changes; effects WoWBoxer can't compare; no stats
-    on this client) → asked: Equip / Keep in bag;
+    on this client) → asked: Equip / Keep in bag – but only when it could be an upgrade: a trade-off must come out
+    ahead in a weighted score for your class and role (E.score), a lower-quality item (white next to green) clearly
+    ahead (25 %), and trinkets / unreadable items must not be a lower quality or item level;
   - worse, or not for you (red text in its tooltip: armour type, level, class) → nothing. Too high a level: looked
     at again after a level-up.
   Only this character's own bags and gear through WoW's normal API (EquipItemByName); never in combat (waits until
@@ -94,6 +96,33 @@ function E.compare(new, old, rel)
   if #ups > 0 then return "mixed", ups, downs end
   if #downs > 0 then return "worse", ups, downs end
   return "same", ups, downs
+end
+
+--- One number for "how good is this for me" (owner, 5 Nov 2026: a white item next to a worn green must not ask).
+--- Every stat that counts is worth 1 a point; Stamina and Spirit 0.6 (1 for a tank's Stamina); armour 0.02 a point
+--- (50 armour ≈ one main stat); weapon DPS 3 a point; a stat WoWBoxer doesn't know 0.5; stats that don't count 0.
+function E.weight(k, rel)
+  if IGNORE[k] then return 0 end
+  if not E.KNOWN[k] then return 0.5 end
+  if not rel[k] then return 0 end
+  if k == ARMOR then return 0.02 end
+  if k == DPS then return 3 end
+  if k == STA then return rel["ITEM_MOD_DODGE_RATING_SHORT"] and 1 or 0.6 end
+  if k == SPI then return 0.6 end
+  return 1
+end
+function E.score(stats, rel)
+  local n = 0
+  for k, v in pairs(stats or {}) do n = n + (tonumber(v) or 0) * E.weight(k, rel) end
+  return n
+end
+--- New item is a lower tier than the old one: lower quality, or the same quality and a lower item level.
+function E.lowerTier(new, old)
+  local q, qo = new and new.info and new.info.quality, old and old.info and old.info.quality
+  local l, lo = new and new.info and new.info.ilvl, old and old.info and old.info.ilvl
+  if q and qo and q < qo then return true end
+  if q and qo and q == qo and l and lo and l < lo then return true end
+  return false
 end
 
 --- "+4 Strength, +2 Stamina" (the client's own stat names).
@@ -204,8 +233,17 @@ function E.decide(it, worn, rel)
   if slots[1] == 17 and worn[16] and worn[16].info and worn[16].info.equipLoc == "INVTYPE_2HWEAPON" then return result(17, worn[17], "ask", "layout") end
   -- an empty slot: anything you can wear is better than nothing (trinkets too)
   for _, s in ipairs(slots) do if not worn[s] then return result(s, nil, "equip", "empty") end end
-  if loc == "INVTYPE_TRINKET" then return result(slots[1], worn[slots[1]], "ask", "trinket") end
-  if not it.stats then return result(slots[1], worn[slots[1]], "ask", "nostats") end
+  if loc == "INVTYPE_TRINKET" then
+    -- effects can't be compared: ask only when it could be an upgrade (quality / item level) over the weaker trinket
+    local weak = slots[1]
+    if E.lowerTier(worn[slots[1]], worn[slots[2]]) then weak = slots[1] elseif worn[slots[2]] then weak = slots[2] end
+    if E.lowerTier(it, worn[weak]) then return { why = "trinket not better" } end
+    return result(weak, worn[weak], "ask", "trinket")
+  end
+  if not it.stats then
+    if E.lowerTier(it, worn[slots[1]]) then return { why = "no stats, not better" } end
+    return result(slots[1], worn[slots[1]], "ask", "nostats")
+  end
   -- compare with each slot it can go to; the best case wins (rings: the weaker ring is replaced)
   local best
   local RANK = { better = 4, mixed = 3, unknown = 2, same = 1, worse = 0 }
@@ -218,10 +256,19 @@ function E.decide(it, worn, rel)
       for e in pairs(w.tip.effects) do if not it.tip.effects[e] then v = "effect" end end
     end
     local rank = v == "effect" and 3 or RANK[v]
-    if not best or rank > best.rank then best = { rank = rank, v = v, ups = ups, downs = downs, slot = s, old = w } end
+    local delta = E.score(it.stats, wrel) - E.score(w.stats or {}, wrel)
+    if not best or rank > best.rank or (rank == best.rank and delta > best.delta) then
+      best = { rank = rank, v = v, ups = ups, downs = downs, slot = s, old = w, delta = delta, base = math.max(1, E.score(w.stats or {}, wrel)) }
+    end
   end
   if best.v == "better" then return result(best.slot, best.old, "equip", "better") end
   if best.v == "mixed" or best.v == "unknown" or best.v == "effect" then
+    -- a trade-off is only a question when the new item comes out ahead overall (weighted for your class and role);
+    -- a lower-quality item (white next to green) must come out clearly ahead (25 %)
+    if best.delta <= best.base * 0.02 then return { why = "worse overall" } end
+    if E.lowerTier(it, best.old) and (it.info and best.old.info and (it.info.quality or 0) < (best.old.info.quality or 0)) and best.delta < best.base * 0.25 then
+      return { why = "lower quality" }
+    end
     local d = result(best.slot, best.old, "ask", best.v)
     d.ups, d.downs = best.ups, best.downs
     return d

@@ -178,9 +178,14 @@ function Core.sync(opts)
     local mres = { created = 0, updated = 0, failed = {} }
     if not opts.barsOnly then mres = M.apply({ items = only(ctx.macros.items, ctx.desired, groups) }) end
     local bres = { placed = 0, skipped = 0, failed = {} }
+    local ask = {}
     if not opts.macrosOnly then
       local again = Core.compute() -- indices and statuses after creating macros
-      bres = B.apply({ items = only(again.bars.items, again.desired, groups) }, Core.cdb, opts.replace)
+      local items = only(again.bars.items, again.desired, groups)
+      bres = B.apply({ items = items }, Core.cdb, opts.replace)
+      if not opts.replace then
+        for _, it in ipairs(items) do if it.status == "occupied" or it.status == "ours" then ask[#ask + 1] = it end end
+      end
     end
     Core.cdb.lastSync = { level = ctx.level, at = time and time() or 0 }
     local msg = string.format("%d macros created, %d updated, %d placed on your bars", mres.created, mres.updated, bres.placed)
@@ -196,7 +201,37 @@ function Core.sync(opts)
     Core.changed()
     Core.flyKeys(ctx, mres.changed, bres.list)
     if ns.SeqStrip then ns.SeqStrip.markDirty(); ns.SeqStrip.request() end
+    if #ask > 0 then Core.askReplace(ask, opts) end
   end)
+end
+--- What a button holds, in words ("Smite", "your macro Heals", "WBX K5", "an item").
+local function holds(cur)
+  if not cur then return "nothing" end
+  if cur.kind == "macro" then return R.isOurs(cur.name) and tostring(cur.name) or ("your macro " .. tostring(cur.name or "?")) end
+  if cur.kind == "spell" then return tostring(cur.name or "a spell") end
+  if cur.kind == "item" then return "an item" end
+  return tostring(cur.kind)
+end
+Core.holdsText = holds
+--- Some macros' buttons hold something else: ask once (owner, 5 Nov 2026: replacing a button needs a yes).
+--- "Ask to replace buttons" off (cdb.askReplace == false): never ask, never replace.
+function Core.askReplace(items, opts)
+  if Core.cdb.askReplace == false or not (ns.UI and ns.UI.Popup) then return false end
+  local lines = {}
+  for i, it in ipairs(items) do
+    if i > 4 then lines[#lines + 1] = "and " .. (#items - 4) .. " more"; break end
+    local same = it.current and it.current.kind == "spell" and it.label == it.current.name
+    lines[#lines + 1] = it.name .. " on " .. B.slotLabel(it.slot) .. " replaces " .. holds(it.current) .. (same and " (same spell)" or "")
+  end
+  Core.log("info", "asked to replace " .. #items .. " button(s)")
+  ns.UI.Popup("Replace " .. (#items == 1 and "this button" or ("these " .. #items .. " buttons")) .. "?\n" .. table.concat(lines, "\n"), {
+    { "Replace", function()
+      Core.log("info", "replace: yes (" .. #items .. ")")
+      Core.sync({ barsOnly = true, replace = true, page = opts and opts.page })
+    end, "Puts the WoWBoxer macros on these buttons. What was there is remembered for Reset to default." },
+    { "Keep", function() Core.log("info", "replace: kept") end, "Leaves the buttons as they are. Drag the macros yourself from My macros." },
+  })
+  return true
 end
 
 --- The keys that were just created, updated or placed fly to their action buttons (purely visual, Fly.lua).

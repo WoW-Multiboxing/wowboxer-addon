@@ -116,7 +116,7 @@ function RP.build(opts)
   add("Settings: " .. table.concat({
     "mode " .. (st.advanced and "Advanced" or "Standard"),
     "main bar " .. tostring(cdb.primaryBar or "-"), "other bar " .. tostring(cdb.secondaryBar or "-"),
-    "replace " .. (cdb.replace and "on" or "off"),
+    "ask to replace " .. (cdb.askReplace ~= false and "on" or "off"),
     "sequence " .. tostring(m and m.seq or "-"),
     "accept from " .. tostring(st.acceptFrom or "squad"),
     "automation " .. (#auto > 0 and table.concat(auto, ",") or "off"),

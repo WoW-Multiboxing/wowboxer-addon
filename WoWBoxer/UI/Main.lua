@@ -451,7 +451,7 @@ function UI.ShowOffer(ctx, sig)
     o.text = W.text(o, "GameFontHighlightSmall", nil, W.TEXT)
     o.text:SetPoint("TOPLEFT", 12, -10)
     o.text:SetPoint("TOPRIGHT", -12, -10)
-    o.go = W.button(o, "Update", 80, 22, function() o:Hide(); ns.Core.sync({ replace = ns.Core.cdb.replace }) end,
+    o.go = W.button(o, "Update", 80, 22, function() o:Hide(); ns.Core.sync({}) end,
       "Updates the changed WoWBoxer macros. They keep their action buttons and keybinds.")
     W.primary(o.go)
     o.go:SetPoint("BOTTOMRIGHT", -10, 8)

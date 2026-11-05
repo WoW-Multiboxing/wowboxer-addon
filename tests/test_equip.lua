@@ -21,7 +21,7 @@ local function boot(cls)
   env.GetItemInfo = function(l)
     local it = W.items[l]
     if not it or it.uncached then return nil end
-    return it.name, l, 2, 20, 15, "Armor", "Mail", 1, it.loc
+    return it.name, l, it.quality or 2, it.ilvl or 20, 15, "Armor", "Mail", 1, it.loc
   end
   env.GetItemStats = function(l) local it = W.items[l]; return it and it.stats end
   local function lines(l)
@@ -260,6 +260,42 @@ do
   local hood = item(W, 702, "Hood", "INVTYPE_HEAD", { ITEM_MOD_INTELLECT_SHORT = 8 })
   arrive(W, 2, hood)
   H.eq(W.inv[1], hood, "no C_TooltipInfo (scan tooltip): still works")
+end
+
+-- ------------------------------------------------------------------ 8. smart questions (owner, 5 Nov 2026: a white item
+-- next to a worn green must not ask)
+do
+  local W, ns = onBoot("PRIEST")
+  local E = ns.Equip
+  -- a priest wears a green robe with Intellect and Spirit
+  W.inv[5] = item(W, 800, "Green Robe", "INVTYPE_CHEST", { ITEM_MOD_INTELLECT_SHORT = 4, ITEM_MOD_SPIRIT_SHORT = 3, RESISTANCE0_NAME = 30 }, { quality = 2, ilvl = 15 })
+  ns.Equip.noteWorn()
+  -- a white robe: more armour, no stats -> not asked, not equipped
+  arrive(W, 1, item(W, 801, "White Robe", "INVTYPE_CHEST", { RESISTANCE0_NAME = 60 }, { quality = 1, ilvl = 18 }))
+  H.ok(not popupShown(ns), "white robe next to a green one: not asked")
+  H.eq(#W.equipped, 0, "and not equipped")
+  -- a green with a little more Stamina but less Intellect and Spirit: worse overall -> not asked
+  arrive(W, 2, item(W, 802, "Other Green Robe", "INVTYPE_CHEST", { ITEM_MOD_INTELLECT_SHORT = 2, ITEM_MOD_STAMINA_SHORT = 3, RESISTANCE0_NAME = 30 }, { quality = 2, ilvl = 16 }))
+  H.ok(not popupShown(ns), "worse overall for a priest: not asked")
+  -- a real trade-off that comes out ahead: asked
+  arrive(W, 3, item(W, 803, "Better Robe", "INVTYPE_CHEST", { ITEM_MOD_INTELLECT_SHORT = 8, ITEM_MOD_SPIRIT_SHORT = 1, RESISTANCE0_NAME = 30 }, { quality = 2, ilvl = 18 }))
+  H.ok(popupShown(ns) and popupText(ns):find("Better Robe", 1, true) ~= nil, "a trade-off that comes out ahead: asked")
+  click(ns, "Keep in bag")
+  -- a white that is far better than the green (25 % or more): asked
+  arrive(W, 4, item(W, 804, "Big White Robe", "INVTYPE_CHEST", { ITEM_MOD_INTELLECT_SHORT = 12, RESISTANCE0_NAME = 30 }, { quality = 1, ilvl = 25 }))
+  H.ok(popupShown(ns), "a white that is far better: asked")
+  click(ns, "Keep in bag")
+  -- a weaker trinket (lower quality) is not asked about
+  W.inv[13] = item(W, 810, "Blue Trinket", "INVTYPE_TRINKET", {}, { quality = 3, ilvl = 20 })
+  W.inv[14] = item(W, 811, "Green Trinket", "INVTYPE_TRINKET", {}, { quality = 2, ilvl = 20 }); ns.Equip.noteWorn()
+  arrive(W, 5, item(W, 812, "White Trinket", "INVTYPE_TRINKET", {}, { quality = 1, ilvl = 20 }))
+  H.ok(not popupShown(ns), "a white trinket next to green and blue ones: not asked")
+  arrive(W, 6, item(W, 813, "Epic Trinket", "INVTYPE_TRINKET", {}, { quality = 4, ilvl = 20 }))
+  H.ok(popupShown(ns) and popupText(ns):find("Green Trinket", 1, true) ~= nil, "a better-quality trinket: asked, replacing the weaker one: " .. popupText(ns))
+  click(ns, "Keep in bag")
+  -- the weights
+  local rel = E.relevant("priest", "healer")
+  H.ok(E.score({ ITEM_MOD_INTELLECT_SHORT = 1 }, rel) > E.score({ RESISTANCE0_NAME = 40 }, rel), "1 Intellect is worth more than 40 armour to a priest")
 end
 
 H.report("equip")

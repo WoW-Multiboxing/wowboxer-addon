@@ -47,7 +47,7 @@ function SP.myFix(row)
   local hu = ns.Squad.unitHint()
   if hu then return { "Use " .. hu, "Your macros follow the leader through " .. hu .. " here (WoWBoxer's setting only; then Update macros).", function() Core().setPlaysAs(hu) end } end
   if rd.keys > 0 or rd.helpers == 0 then
-    return { "Update macros", "Creates or updates your WoWBoxer macros and puts missing macros on your bars.", function() Core().sync({ replace = Core().cdb.replace }) end }
+    return { "Update macros", "Creates or updates your WoWBoxer macros and puts missing macros on your bars.", function() Core().sync({}) end }
   end
   if rd.cvars > 0 then
     return { "Apply settings", "Changes the recommended game settings on this client (the old values are kept for Restore).", function() Core().applyCVars(Core().cdb.importCVars) end }

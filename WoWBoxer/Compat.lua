@@ -151,10 +151,22 @@ end
 -- ------------------------------------------------------------------ action bars
 --- {kind, id, name?} for an action slot, or nil when empty.
 function C.actionInfo(slot)
-  local ok, kind, id = pcall(GetActionInfo, slot)
+  local ok, kind, id, sub = pcall(GetActionInfo, slot)
   if not ok or not kind then return nil end
   local info = { kind = kind, id = id }
-  if kind == "macro" and id then info.name = C.macroInfo(id) end
+  if kind == "macro" then
+    -- Forever (modern API): GetActionInfo gives a macro button the ID of the SPELL the macro casts now (subType
+    -- "spell"), not the macro index (seen 5 Nov 2026: K2 Lesser Heal read as macro 2053). The button's text is the
+    -- macro's name on every client, so read that first.
+    local okT, t = false, nil
+    if G.GetActionText then okT, t = pcall(G.GetActionText, slot) end
+    t = okT and C.safe(t) or nil
+    if type(t) == "string" and t ~= "" then
+      info.name = t
+      local idx = G.GetMacroIndexByName and C.safe(G.GetMacroIndexByName(t))
+      if type(idx) == "number" and idx > 0 then info.id = idx end
+    elseif id and (sub == nil or sub == "" or sub == "macro") then info.name = C.macroInfo(id) end
+  end
   if kind == "spell" and id then
     local CS = G.C_Spell
     if CS and CS.GetSpellName then info.name = CS.GetSpellName(id)

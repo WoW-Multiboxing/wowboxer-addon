@@ -382,9 +382,9 @@ function Book.pageWork(ctx, page)
   for _, it in ipairs(Core().onlyGroups(ctx.macros.items, ctx.desired, groups)) do
     if it.status == "create" or it.status == "update" then n = n + 1; seen[it.name] = true end
   end
-  local replace = Core().cdb.replace
+  local replace = Core().cdb.askReplace ~= false -- a filled button is work only when WoWBoxer may ask to replace it
   for _, b in ipairs(Core().onlyGroups(ctx.bars.items, ctx.desired, groups)) do
-    if not seen[b.name] and (b.status == "empty" or b.status == "ours" or b.status == "missing" or (replace and b.status == "occupied")) then n = n + 1 end
+    if not seen[b.name] and (b.status == "empty" or b.status == "missing" or (replace and (b.status == "occupied" or b.status == "ours"))) then n = n + 1 end
   end
   return n
 end
@@ -433,18 +433,18 @@ function Book.nextStep(ctx, mode)
   if n > 0 then
     if not cdb.lastSync then
       return { text = n .. (n == 1 and " macro ready" or " macros ready"), tip = "Drag your macros onto your action bar, or press Place all and WoWBoxer puts them there.",
-        button = { "Place all", "Creates your " .. n .. " WoWBoxer macros and puts them on your action bars. Buttons that hold something else are kept (see Setup).", function() Core().sync({ replace = cdb.replace }) end } }
+        button = { "Place all", "Creates your " .. n .. " WoWBoxer macros and puts them on your action bars. Buttons that hold something else are kept (see Setup).", function() Core().sync({}) end } }
     end
     local names = {}
     for _, it in ipairs(m.items) do if it.status == "create" or it.status == "update" then names[#names + 1] = Book.shortLabel(it) end end
     local lvl = (cdb.lastSync.level or 0) < ctx.level and ("|cffb7f07aLevel " .. ctx.level .. ":|r ") or ""
     return { text = lvl .. n .. (n == 1 and " macro changed" or " macros changed"), tip = table.concat(names, ", ") .. ". They keep their buttons and keybinds.",
-      button = { "Update macros", "Updates the changed macros. They keep their action buttons and keybinds.", function() Core().sync({ replace = cdb.replace }) end } }
+      button = { "Update macros", "Updates the changed macros. They keep their action buttons and keybinds.", function() Core().sync({}) end } }
   end
   if ctx.bars.changes > 0 then
     local k = ctx.bars.changes
     return { text = k .. (k == 1 and " macro not on a bar" or " macros not on a bar"), tip = "Drag them from the book, or press Place all.",
-      button = { "Place all", "Puts the macros that are not on a bar onto your action bars. Buttons that hold something else are kept.", function() Core().sync({ replace = cdb.replace }) end } }
+      button = { "Place all", "Puts the macros that are not on a bar onto your action bars. Buttons that hold something else are kept.", function() Core().sync({}) end } }
   end
   if #ctx.missing > 0 then
     local names = {}
@@ -1007,12 +1007,12 @@ local function build(p, mode)
       "Press a key to run this macro directly, also when it is not on a bar. Saved for this character only. Right-click a macro for more.")
     p.bind:SetPoint("BOTTOMLEFT", 0, 0)
     -- one Place button per page: the left page's spells, the right page's squad keys (same rules as Place all)
-    p.placeLeft = W.button(p.left, "Place spells", 100, 22, function() Core().sync({ replace = Core().cdb.replace, page = "spells" }) end,
+    p.placeLeft = W.button(p.left, "Place spells", 100, 22, function() Core().sync({ page = "spells" }) end,
       "Creates or updates your spell and sequence macros and puts them on empty or WoWBoxer buttons (others only with Replace buttons in Setup). Macros you keep off your bars stay off.")
     p.placeLeft:SetPoint("BOTTOMLEFT", 32, 2)
     p.placeLeft.wbxBig = true
     W.primary(p.placeLeft)
-    p.placeRight = W.button(p.right, "Place squad macros", 120, 20, function() Core().sync({ replace = Core().cdb.replace, page = "squad" }) end,
+    p.placeRight = W.button(p.right, "Place squad macros", 120, 20, function() Core().sync({ page = "squad" }) end,
       "Creates or updates your squad macros (Invite, Follow, Assist, pet macros …) and puts them on empty or WoWBoxer buttons. Macros you keep off your bars stay off.")
     p.placeRight.wbxBig = true -- the right page's one action (the owner's wording)
     W.setStyle(p.placeRight, "raised")
@@ -1298,17 +1298,17 @@ function Book.buildGuide(p)
   g.seq = W.seqControl(g, { member = function() local _, mem = Core().me(); return mem end, width = 110 })
   g.seq:SetPoint("TOPLEFT", 20, -262)
   -- step 2 option
-  g.replace = W.check(g, "Replace buttons", function(_, v) Core().cdb.replace = v; Core().changed() end)
+  g.replace = W.check(g, "Ask to replace buttons", function(_, v) Core().cdb.askReplace = v and true or false; Core().changed() end)
   g.replace:SetPoint("TOPLEFT", 20, -186)
-  W.tip(g.replace, "Replace buttons", function()
-    return "Off: buttons that already hold a spell or item are kept and that macro waits for you to drag it. On: WoWBoxer puts its macro there." ..
+  W.tip(g.replace, "Ask to replace buttons", function()
+    return "A macro goes where you put it, else where its spell already is. On: when that button holds something else, WoWBoxer asks before replacing it. Off: it never replaces; drag the macro yourself." ..
       (g.occupied and g.occupied > 0 and (" " .. g.occupied .. (g.occupied == 1 and " of those buttons holds" or " of those buttons hold") .. " something else now.") or "")
   end)
   -- navigation
   g.next = W.button(g, "Next", 90, 26, function() g.step = g.step + 1; Core().cdb.guideStep = g.step; UI.Refresh() end, "Goes to the next step.")
   g.next:SetPoint("BOTTOMRIGHT", -16, 16)
   g.place = W.button(g, "Place all", 100, 26, function()
-    Core().sync({ replace = Core().cdb.replace })
+    Core().sync({})
     g.step = 3; Core().cdb.guideStep = 3; UI.Refresh()
   end, "Creates your WoWBoxer macros and puts them on the action buttons shown above.")
   g.place:SetPoint("BOTTOMRIGHT", -16, 16)
@@ -1393,7 +1393,7 @@ function Book.refreshGuide(p, ctx)
     g.title:SetText("Step 2 of 4 – Your action bar")
     g.occupied = ctx.bars.counts.occupied or 0
     g.text:SetText("Place all puts your " .. #ctx.desired .. " macros on " .. Book.whereText(ctx) .. ".")
-    g.replace:Show(); g.replace:SetChecked(cdb.replace and true or false)
+    g.replace:Show(); g.replace:SetChecked(cdb.askReplace ~= false)
     g.place:Show(); g.drag:Show()
     g.place:SetEnabled(not ns.Compat.inCombat())
   elseif g.step == 3 then

@@ -54,7 +54,7 @@ end
 -- ------------------------------------------------------------------ right-click menu
 local ITEMS = { -- (MM.MENU, for tests)
   { "Open WoWBoxer", function() ns.UI.Open("keys") end },
-  { "Place all macros", function() ns.Core.sync({ replace = ns.Core.cdb.replace }) end },
+  { "Place all macros", function() ns.Core.sync({}) end },
   { "First-run guide", function() ns.Book.ShowGuide() end },
   { "Squad guide", function() ns.Help.ShowSquadGuide() end },
   { "Setup", function() ns.UI.Open("setup") end },
