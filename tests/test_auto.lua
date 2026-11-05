@@ -77,6 +77,31 @@ do
   reset(W); AU.set("questAny", true); W.fire("QUEST_DETAIL")
   H.ok(did(W, "AcceptQuest"), "Accept any quest")
   AU.set("questAny", false)
+  -- 1.1.1: an unknown quest -> the follower asks the leader once (QQ); the answer accepts it while the window is open
+  W.env.GetQuestID = function() return 777 end
+  W.sent = {}; reset(W); W.fire("QUEST_DETAIL")
+  local qq = 0
+  for _, m in ipairs(W.sent) do if m.msg == "QQ|777" then qq = qq + 1 end end
+  H.eq(qq, 1, "unknown quest: the follower asks the leader for its list")
+  W.fire("QUEST_DETAIL")
+  qq = 0
+  for _, m in ipairs(W.sent) do if m.msg == "QQ|777" then qq = qq + 1 end end
+  H.eq(qq, 1, "and not again right away")
+  msg(W, "Dorin", "QL|5,123,777")
+  H.ok(did(W, "AcceptQuest"), "the leader's answer arrives with the window open: accepted")
+  W.fire("QUEST_FINISHED")
+  -- a quest a squad member shares: "questnpc" is that player -> accepted without a list
+  W.env.GetQuestID = function() return 888 end
+  local oldUN, oldUP = W.env.UnitName, W.env.UnitIsPlayer
+  W.env.UnitIsPlayer = function(u) if u == "questnpc" then return true end return oldUP and oldUP(u) end
+  W.env.UnitName = function(u) if u == "questnpc" then return "Dorin" end return oldUN(u) end
+  reset(W); W.fire("QUEST_DETAIL")
+  H.ok(did(W, "AcceptQuest"), "shared by the leader (questnpc): accepted")
+  W.env.UnitName = function(u) if u == "questnpc" then return "Stranger" end return oldUN(u) end
+  reset(W); W.fire("QUEST_DETAIL")
+  H.eq(did(W, "AcceptQuest"), nil, "shared by a stranger: not accepted")
+  W.env.UnitName, W.env.UnitIsPlayer = oldUN, oldUP
+  W.fire("QUEST_FINISHED")
   -- escort / shared start
   reset(W); W.fire("QUEST_ACCEPT_CONFIRM", "Stranger")
   H.eq(did(W, "ConfirmAcceptQuest"), nil, "a stranger's escort: no")
@@ -189,9 +214,45 @@ do
   W.sent = {}
   W.fire("QUEST_ACCEPTED", 4, 555) -- Classic: questLogIndex, questID
   H.ok(did(W, "SelectQuestLogEntry") and did(W, "QuestLogPushQuest"), "the leader shares a quest it accepts")
-  local ql
-  for _, m in ipairs(W.sent) do if m.prefix == "WBXA" and m.msg:find("^QL|") then ql = m.msg end end
+  local function qls() local t = {}; for _, m in ipairs(W.sent) do if m.prefix == "WBXA" and m.msg:find("^QL|") then t[#t + 1] = m.msg end end return t end
+  H.eq(#qls(), 0, "the quest list waits a moment (several accepts in a row become one message)")
+  W.flush()
+  local ql = qls()[1]
   H.ok(ql ~= nil, "and sends its quest list (data only): " .. tostring(ql))
+  -- 1.1.1: the whole log fits (it was cut at 60 characters = ~10 quests, so newer quests never reached the followers)
+  local LOG = {}
+  for i = 1, 30 do LOG[i] = 90000 + i end
+  W.env.GetNumQuestLogEntries = function() return #LOG end
+  W.env.GetQuestLogTitle = function(i) return "Q" .. i, 10, nil, false, false, false, nil, LOG[i] end
+  W.sent = {}
+  W.fire("QUEST_ACCEPTED", 1, 90001); W.fire("QUEST_ACCEPTED", 2, 90002); W.fire("QUEST_ACCEPTED", 3, 90003)
+  W.fire("GROUP_ROSTER_UPDATE")
+  W.flush()
+  H.eq(#qls(), 1, "three accepts and a roster update: one quest list")
+  ql = qls()[1] or ""
+  H.ok(ql:find("90030", 1, true) ~= nil and #ql <= 255, "all 30 quests are in it (" .. #ql .. " chars)")
+  -- a throttled send is tried again
+  local real = W.env.C_ChatInfo and W.env.C_ChatInfo.SendAddonMessage
+  local fails = 1
+  local function throttled(...) if fails > 0 then fails = fails - 1; return 3 end return real(...) end
+  if W.env.C_ChatInfo then W.env.C_ChatInfo.SendAddonMessage = throttled end
+  local realG = W.env.SendAddonMessage
+  if not W.env.C_ChatInfo then W.env.SendAddonMessage = function(...) if fails > 0 then fails = fails - 1; return 3 end return realG(...) end end
+  W.sent = {}
+  AU.sendQuestList(); W.flush()
+  H.eq(#qls(), 0, "throttled: nothing went out yet")
+  W.flush()
+  H.eq(#qls(), 1, "throttled: sent on the retry")
+  if W.env.C_ChatInfo then W.env.C_ChatInfo.SendAddonMessage = real end
+  W.env.SendAddonMessage = realG
+  -- a follower asks again (QQ): the leader answers with its list
+  W.sent = {}
+  msg(W, "Anna", "QQ|90030"); W.flush()
+  H.eq(#qls(), 1, "a squad member's QQ: the list is sent again")
+  W.sent = {}
+  msg(W, "Stranger", "QQ|90030"); W.flush()
+  H.eq(#qls(), 0, "a stranger's QQ: nothing")
+  W.env.GetNumQuestLogEntries, W.env.GetQuestLogTitle = nil, nil
   -- Bo is not in the party: invite him
   W.party = { party1 = "Anna" }
   reset(W)

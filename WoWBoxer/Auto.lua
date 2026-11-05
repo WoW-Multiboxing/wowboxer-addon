@@ -182,6 +182,7 @@ function AU.receive(prefix, text, _, sender)
     for id in (f[2] or ""):gmatch("(%d+)") do AU.leaderQuests[tonumber(id)] = true end
     -- the quest window is already open here and the leader just took that quest: accept it now
     if AU.detailOpen and AU.leaderQuests[AU.detailOpen] then AU.onQuestDetail() end
+  elseif kind == "QQ" and AU.isLeader() then AU.sendQuestList() -- a follower has a quest window open and asks again
   elseif kind == "QR" and m.leader then
     local q, i = tonumber(f[2]), tonumber(f[3])
     if q and i then AU.leaderReward[q] = i; AU.chooseReward() end
@@ -234,13 +235,51 @@ function AU.questIds()
   end
   return out
 end
---- Leader: tell the followers which quests it has (for "Accept quests").
-function AU.sendQuestList()
-  if not AU.isLeader() then return end
-  local ids = {}
-  for i, id in ipairs(AU.questIds()) do if i <= 25 then ids[#ids + 1] = id end end
-  AU.send("QL", table.concat(ids, ","))
+--- The leader's quest list as one message: "QL|id,id,…" – every quest that fits in an addon message (255).
+--- (Before 1.1.1 each field was cut at 60 characters: ~10 quests, so newer quests never reached the followers.)
+AU.QL_MAX = 250
+function AU.questListText()
+  local out = "QL|"
+  local first = true
+  for _, id in ipairs(AU.questIds()) do
+    local add = (first and "" or ",") .. tostring(math.floor(tonumber(id) or 0))
+    if #out + #add > AU.QL_MAX then break end
+    out = out .. add
+    first = false
+  end
+  return out
 end
+--- Leader: tell the followers which quests it has (for "Accept quests"). Several triggers in a row (taking every
+--- quest from an NPC, roster updates) become one message a moment later; a throttled send is tried again.
+AU.QL_DELAY, AU.QL_RETRY, AU.QL_TRIES = 0.3, 2, 3
+function AU.sendQuestList(tries)
+  if not AU.isLeader() then return end
+  local after = G.C_Timer and G.C_Timer.After
+  if tries == nil and after then
+    if AU.qlPending then return end
+    AU.qlPending = true
+    after(AU.QL_DELAY, function() AU.qlPending = nil; AU.sendQuestList(1) end)
+    return
+  end
+  if not C().inParty() then return end
+  local ok = C().sendAddon(AU.PREFIX, AU.questListText(), (G.IsInRaid and G.IsInRaid()) and "RAID" or "PARTY", "auto QL")
+  if not ok and after and (tries or 1) < AU.QL_TRIES and not AU.qlPending then
+    AU.qlPending = true
+    after(AU.QL_RETRY, function() AU.qlPending = nil; AU.sendQuestList((tries or 1) + 1) end)
+  end
+end
+--- A quest window shared by a squad member: "questnpc" is then that player. [AFKLAR: Forever + Era – if it is not,
+--- the follower asks the leader for its list instead (QQ) and accepts when it arrives.]
+function AU.questSharer()
+  local isP = G.UnitIsPlayer and C().safe(G.UnitIsPlayer("questnpc"))
+  if not isP then return nil end
+  local n = G.UnitName and C().safe(G.UnitName("questnpc"))
+  if type(n) ~= "string" or n == "" then return nil end
+  local m = AU.member(n, true)
+  return m and m.name or nil
+end
+AU.asked = {}
+AU.ASK_EVERY = 5
 local function questId() return (G.GetQuestID and C().safe(G.GetQuestID())) or nil end
 local function questTitle(id)
   local t = G.GetTitleText and C().safe(G.GetTitleText())
@@ -260,7 +299,10 @@ function AU.onQuestDetail()
     if call(G.AcceptQuest) then AU.detailOpen = nil; AU.did("Accepted quest " .. questTitle(id) .. ".") end
     return
   end
-  if not (AU.on("questAny") or (id and AU.leaderQuests[id])) then
+  if not (AU.on("questAny") or (id and AU.leaderQuests[id]) or AU.questSharer()) then
+    -- maybe the leader's list was lost on the way: ask once (the answer accepts it while this window is open)
+    local t = now()
+    if id and t - (AU.asked[id] or -1e9) >= AU.ASK_EVERY then AU.asked[id] = t; AU.send("QQ", id) end
     Core().log("info", "auto: quest " .. questTitle(id) .. " not accepted yet – the leader does not have it (accepted when " ..
       "the leader takes it while this window is open)")
     return
