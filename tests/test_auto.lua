@@ -65,7 +65,9 @@ do
   msg(W, "Bo", "QL|123")
   W.fire("QUEST_DETAIL")
   H.eq(did(W, "AcceptQuest"), nil, "only the squad leader's list counts")
+  W.fire("QUEST_FINISHED") -- window closed: the list below must not accept anything by itself
   msg(W, "Dorin", "QL|5,123")
+  H.eq(did(W, "AcceptQuest"), nil, "the leader's list with no quest window open: nothing")
   W.mods.shift = true; W.fire("QUEST_DETAIL"); W.mods.shift = false
   H.eq(did(W, "AcceptQuest"), nil, "Shift held: skipped")
   W.fire("QUEST_DETAIL")

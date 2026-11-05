@@ -298,6 +298,19 @@ for _, sender in ipairs({ "Rip And", "Rip-And", "Rip" }) do
   W.fire("CHAT_MSG_ADDON", AU.PREFIX, "QR|77|2", "PARTY", sender)
   H.eq(did("GetQuestReward"), "GetQuestReward(2)", tag .. "the leader's reward pick")
   W.fire("QUEST_FINISHED")
+  -- the quest window opens before the leader has the quest: not yet (logged why), then accepted when the leader takes it
+  W.env.GetQuestID = function() return 602 end
+  W.did = {}; W.fire("QUEST_DETAIL")
+  H.eq(did("AcceptQuest"), nil, tag .. "quest the leader does not have yet: waits")
+  H.ok(logHas(ns, "not accepted yet %– the leader does not have it"), tag .. "the reason is logged")
+  W.fire("CHAT_MSG_ADDON", AU.PREFIX, "QL|501,602", "PARTY", sender)
+  H.ok(did("AcceptQuest"), tag .. "accepted as soon as the leader takes it")
+  W.fire("QUEST_FINISHED")
+  W.did = {}; W.fire("CHAT_MSG_ADDON", AU.PREFIX, "QL|501,602,603", "PARTY", sender)
+  H.eq(did("AcceptQuest"), nil, tag .. "window closed: a later quest list accepts nothing")
+  -- our own message echoed back is not a "dropped" message
+  W.fire("CHAT_MSG_ADDON", AU.PREFIX, "QL|1", "PARTY", "Rup And")
+  H.ok(not logHas(ns, "dropped WBXA from Rup And"), tag .. "own echo: no drop logged")
   -- resurrection + summon
   W.did = {}; W.fire("RESURRECT_REQUEST", sender)
   H.ok(did("AcceptResurrect"), tag .. "resurrection accepted")

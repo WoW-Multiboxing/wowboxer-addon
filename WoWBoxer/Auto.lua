@@ -168,6 +168,7 @@ AU.leaderReward = {}   -- questID -> reward index the leader picked
 function AU.receive(prefix, text, _, sender)
   if prefix ~= AU.PREFIX or type(text) ~= "string" then return end
   C().arrived(prefix, sender)
+  if C().sameName(sender, C().playerName()) then return end -- our own message, echoed back by the party channel
   local m = AU.member(sender, true)
   if not m then return C().drop(prefix, sender, "not a squad member in your party (name not matched)") end -- only squad members in the party
   local f = {}
@@ -176,6 +177,8 @@ function AU.receive(prefix, text, _, sender)
   if kind == "QL" and m.leader then
     AU.leaderQuests = {}
     for id in (f[2] or ""):gmatch("(%d+)") do AU.leaderQuests[tonumber(id)] = true end
+    -- the quest window is already open here and the leader just took that quest: accept it now
+    if AU.detailOpen and AU.leaderQuests[AU.detailOpen] then AU.onQuestDetail() end
   elseif kind == "QR" and m.leader then
     local q, i = tonumber(f[2]), tonumber(f[3])
     if q and i then AU.leaderReward[q] = i; AU.chooseReward() end
@@ -236,12 +239,26 @@ function AU.sendQuestList()
   AU.send("QL", table.concat(ids, ","))
 end
 local function questId() return (G.GetQuestID and C().safe(G.GetQuestID())) or nil end
+local function questTitle(id)
+  local t = G.GetTitleText and C().safe(G.GetTitleText())
+  if type(t) ~= "string" or t == "" then
+    local QL = G.C_QuestLog
+    t = QL and QL.GetTitleForQuestID and C().safe(QL.GetTitleForQuestID(id or 0)) or nil
+  end
+  return (type(t) == "string" and t ~= "") and t or ("#" .. tostring(id or "?"))
+end
 function AU.onQuestDetail()
-  if not AU.on("quests") or AU.isLeader() then return end
   local id = questId()
-  if not (AU.on("questAny") or (id and AU.leaderQuests[id])) then return end
+  AU.detailOpen = id
+  if not AU.on("quests") then return end
+  if AU.isLeader() then Core().log("info", "auto: quest " .. questTitle(id) .. " not accepted – the leader picks quests (then shares them)"); return end
+  if not (AU.on("questAny") or (id and AU.leaderQuests[id])) then
+    Core().log("info", "auto: quest " .. questTitle(id) .. " not accepted yet – the leader does not have it (accepted when " ..
+      "the leader takes it while this window is open)")
+    return
+  end
   if skipShift("quest") then return end
-  if call(G.AcceptQuest) then AU.did("Accepted quest " .. tostring(G.GetTitleText and C().safe(G.GetTitleText()) or id) .. ".") end
+  if call(G.AcceptQuest) then AU.detailOpen = nil; AU.did("Accepted quest " .. questTitle(id) .. ".") end
 end
 function AU.onQuestConfirm(name) -- an escort / shared start from a squad member
   if not AU.on("quests") or not AU.allowed("quests", name, true) or skipShift("quest") then return end
@@ -604,7 +621,7 @@ f:SetScript("OnEvent", function(_, event, a, b, c, d)
     elseif event == "QUEST_REMOVED" then if AU.isLeader() then AU.sendQuestList() end
     elseif event == "QUEST_PROGRESS" then AU.onQuestProgress()
     elseif event == "QUEST_COMPLETE" then AU.onQuestComplete()
-    elseif event == "QUEST_FINISHED" then AU.completeOpen = false
+    elseif event == "QUEST_FINISHED" then AU.completeOpen = false; AU.detailOpen = nil
     elseif event == "GOSSIP_SHOW" then AU.window.gossip = npcName()
     elseif event == "GOSSIP_CLOSED" then AU.window.gossip = nil
     elseif event == "TAXIMAP_OPENED" then AU.window.taxi = true

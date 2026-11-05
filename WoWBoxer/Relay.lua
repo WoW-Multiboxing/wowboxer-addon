@@ -196,6 +196,7 @@ end
 function RL.receive(prefix, text, _, sender)
   if prefix ~= RL.PREFIX or type(text) ~= "string" or #text > 255 then return end
   C().arrived(prefix, sender)
+  if C().sameName(sender, C().playerName()) then return end -- our own message, echoed back by the party channel
   local m = AU().member(sender, true)
   if not m then return C().drop(prefix, sender, "not a squad member in your party (name not matched)") end -- only squad members in the party
   local kind = text:sub(1, 2)
