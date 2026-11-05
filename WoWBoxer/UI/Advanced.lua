@@ -681,7 +681,7 @@ function A.refreshEditor()
   local body, missing = f.base, {}
   if ov then body, missing = O().apply(f.base, ov, f.ctx) end
   f.body = body
-  f.preview:SetText(W.wrapMacro(body, f.preview:GetWidth() or 560, 9))
+  A.fitPreview(f.preview, body)
   local ok, why = ns.Rules.validateMacro(f.name or "WBX C1", body)
   if f.own and body == "" then ok, why = true, nil end -- a new macro: its spells come first (the Spells section says so)
   local msg = #body .. "/255"
@@ -694,6 +694,17 @@ function A.refreshEditor()
   f.back:SetEnabled(Core().cdb.overrides[f.name] ~= nil)
 end
 A.refreshTargeting = A.refreshEditor
+--- The preview at size 9, a step smaller (down to 7) when a long macro (wand line, many targets) needs more lines than fit.
+function A.fitPreview(fs, body)
+  local w, h = fs:GetWidth() or 560, fs:GetHeight() or 0
+  for size = 9, 7, -1 do
+    if W.themed() then W.gameFont(fs, size)
+    elseif fs.SetFont then local file, _, flags = fs:GetFont(); if file then fs:SetFont(file, size, flags) end end
+    fs:SetText(W.wrapMacro(body, w, size))
+    -- fits: the wrapped text is no taller than the box (a line is size + 2 high)
+    if size == 7 or h <= 0 or (fs:GetStringHeight() or 0) <= math.floor((h + 0.5) / (size + 2)) * (size + 2) then return size end
+  end
+end
 --- Save: an own macro saves its spells first (and its preset), then the targeting when it was changed here.
 function A.saveEditor()
   local f = A.ef

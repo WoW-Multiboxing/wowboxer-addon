@@ -181,7 +181,7 @@ local MELEE_CLS = { "warrior", "rogue", "paladin" }
 function K.isMelee(m)
   return contains(MELEE_CLS, m.cls) or (m.cls == "druid" and (m.role == "tank" or m.role == "melee")) or (m.cls == "shaman" and m.role == "melee")
 end
-function K.memberCtx(m) return { leader = not not m.leader, unit = m.unit } end
+function K.memberCtx(m) return { leader = not not m.leader, unit = m.unit, wand = E.WAND_CLASSES[m.cls] or false } end
 
 --- has(name) for level L: the learned spell object with that name or nil. live(name) (optional, in game) must also say yes.
 function K.seqHas(m, L, live)
@@ -300,6 +300,11 @@ function K.helpers(m)
     local chain = m.leader and "[@mouseover,harm,nodead][harm,nodead]" or ("[@mouseover,harm,nodead][@" .. u.mainTarget .. ",harm,nodead][harm,nodead]")
     out[#out + 1] = { key = "Pet", label = "Send pet to the same target", body = "#showtooltip\n/petattack " .. chain }
     out[#out + 1] = { key = "PetBack", label = "Pet passive + follow", body = "/petpassive\n/petfollow" }
+  end
+  if E.WAND_CLASSES[m.cls] then
+    local chain = m.leader and "[@mouseover,harm,nodead][harm,nodead]" or ("[@mouseover,harm,nodead][@" .. u.mainTarget .. ",harm,nodead][harm,nodead]")
+    out[#out + 1] = { key = "Wand", label = "Shoot your wand at " .. (m.leader and "your target" or "the leader's target"),
+      body = "#showtooltip Shoot\n/cast " .. chain .. " !Shoot" }
   end
   return out
 end

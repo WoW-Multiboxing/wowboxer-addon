@@ -40,7 +40,7 @@ function Book.kindName(it)
   return k
 end
 --- Short helper names (the spec: no truncated names).
-Book.HELPER_NAME = { Follow = "Follow (line)", FollowLead = "Follow leader", Assist = "Assist", Focus = "Focus", Pet = "Pet attack", PetBack = "Pet back", Invite = "Invite squad",
+Book.HELPER_NAME = { Follow = "Follow (line)", FollowLead = "Follow leader", Assist = "Assist", Focus = "Focus", Pet = "Pet attack", PetBack = "Pet back", Wand = "Wand", Invite = "Invite squad",
   Invite2 = "Invite squad 2", Target = "Target leader" }
 function Book.shortLabel(it)
   if it.group == "helper" then return Book.HELPER_NAME[it.key] or it.label end
@@ -109,6 +109,7 @@ function Book.helperShort(key, mem)
   local T = { Follow = "Follows " .. ((ahead and ahead.name) or L) .. ", the one ahead of you in the line.", FollowLead = "Follows " .. L .. ".",
     Assist = "Takes " .. L .. "'s target.", Focus = "Sets your target as focus.",
     Pet = "Sends your pet at " .. ((mem and mem.leader) and "your target." or (L .. "'s target.")), PetBack = "Calls your pet back, passive.",
+    Wand = "Shoots your wand at " .. ((mem and mem.leader) and "your target" or (L .. "'s target")) .. " and keeps shooting.",
     Invite = "Invites the others in your squad.", Invite2 = "Invites the rest of your squad.", Target = "Targets " .. L .. "." }
   return T[key] or "A squad macro."
 end
@@ -119,6 +120,7 @@ function Book.helperText(key, mem)
   local u = mem and mem.unit or "party1"
   local why = (key == "Invite" or key == "Invite2") and "Built from your squad's names; it changes when the squad does. They still accept by hand."
     or (key == "Pet" or key == "PetBack") and "You have a pet; untick it under Squad macros if you don't want it."
+    or key == "Wand" and "Your damage spell macros also fall back to the wand when the spell cannot be cast; this macro only shoots. Untick it under Squad macros if you don't want it."
     or ("Uses " .. leaderName(mem) .. " through " .. u .. "; untick it under Squad macros if you don't want it.")
   return Book.helperShort(key, mem) .. " One press, one action, this character only. " .. why
 end

@@ -13,6 +13,9 @@ local dir = (arg and arg[0] and arg[0]:match("^(.*)/[^/]+$")) or "tests"
 SV.GAMES = { forever = 16001, era = 11509 }
 --- Keys that change on every login (logs, diagnose, the bridge for the companion): not compared.
 SV.VOLATILE_DB = { log = true, diag = true, bridge = true }
+-- per character: the signature of the last level-up offer shown. It is made from the desired macros, so a deliberate
+-- macro change (1.1.1: the Wand squad macro) changes it and the player is offered the new macro, by design.
+SV.VOLATILE_CDB = { offerShown = true }
 
 -- ------------------------------------------------------------------ serialise like the client (sorted, stable)
 local function key(k)
@@ -44,11 +47,11 @@ local function val(v, ind, out, skip)
   else out[#out + 1] = "nil" end
 end
 --- "WoWBoxerDB = {...}\nWoWBoxerCharDB = {...}\n"; skipDb = keys of WoWBoxerDB to leave out.
-function SV.serialize(db, cdb, skipDb)
+function SV.serialize(db, cdb, skipDb, skipCdb)
   local out = { "WoWBoxerDB = " }
   val(db or {}, "", out, skipDb)
   out[#out + 1] = "\nWoWBoxerCharDB = "
-  val(cdb or {}, "", out)
+  val(cdb or {}, "", out, skipCdb)
   out[#out + 1] = "\n"
   return table.concat(out)
 end

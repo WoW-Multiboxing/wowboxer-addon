@@ -12,7 +12,10 @@
     - FOLLOWERS assist the leader through a unit (party1-4 or focus): hostile mouseover > leader's target > own target;
       heals/buffs: friendly mouseover > leader > self;
     - melee abilities start auto attack with /startattack; pet classes send the pet with /petattack;
-      crowd control never starts attacks or pets; every macro is at most 255 characters.
+      crowd control never starts attacks or pets; every macro is at most 255 characters;
+    - wand classes (mage, priest, warlock - every role, healers too) end each damage spell key with /cast !Shoot on the
+      same target: when the spell cannot be cast (no mana, cooldown, moving) the press shoots the wand instead
+      (owner, 5 Nov 2026). The wand line is the first thing dropped to stay within 255.
   Spell objects carry pre-computed seconds (castFirst, castLast, cdSec, durSec) from tools/build_data.js. ]]
 local _, ns = ...
 local E = {}
@@ -233,8 +236,14 @@ function E.units(mode)
 end
 local function ctxOf(ctx)
   if type(ctx) == "string" or ctx == nil then return { leader = false, unit = ctx or "party1" } end
-  return { leader = not not ctx.leader, unit = contains(UNITS, ctx.unit) and ctx.unit or "party1" }
+  return { leader = not not ctx.leader, unit = contains(UNITS, ctx.unit) and ctx.unit or "party1", wand = not not ctx.wand }
 end
+--- Classes that shoot a wand (spell "Shoot"); hunters have Auto Shot instead.
+E.WAND_CLASSES = { mage = true, priest = true, warlock = true }
+local WAND_ACTIONS = { ranged = true, hostile = true, petattack = true }
+local WAND_CATEGORIES = { Damage = true, Debuff = true } -- never crowd control (it would break Polymorph, Fear, Shackle)
+--- Does this spell key end with the wand line? (ctx.wand: the character's class shoots wands)
+function E.wandsAfter(s, ctx) return (ctx.wand and WAND_ACTIONS[s.action] and WAND_CATEGORIES[s.category]) and true or false end
 E.ctxOf = ctxOf
 
 local function buildMacro(s, ctxIn)
@@ -267,10 +276,16 @@ local function buildMacro(s, ctxIn)
   end
   return title .. "\n/cast " .. name
 end
+local addWand -- defined after aimFor
 function E.makeMacro(s, ctxIn)
-  local out = buildMacro(s, ctxIn)
-  if #out > MACRO_LIMIT then return replaceFirst(out, "#showtooltip " .. s.name .. "\n", "#showtooltip\n") end
-  return out
+  local ctx = ctxOf(ctxIn)
+  local out = buildMacro(s, ctx)
+  local function fit(t) if #t > MACRO_LIMIT then return replaceFirst(t, "#showtooltip " .. s.name .. "\n", "#showtooltip\n") end return t end
+  if E.wandsAfter(s, ctx) then
+    local w = addWand(out, ctx, fit)
+    if w then return w end
+  end
+  return fit(out)
 end
 E.OFFENSIVE_MELEE = { "melee", "melee-pet", "melee-cc", "aoe-melee", "dual", "engage", "opener" }
 E.OFFENSIVE_PAL = E.OFFENSIVE_MELEE
@@ -308,6 +323,16 @@ local function aimFor(def, ctx, lvl)
   return opts[lvl + 1]
 end
 E.aimFor = aimFor
+--- body + "/cast <aim> !Shoot", the aim shortened step by step to fit 255; nil if it never fits.
+--- fit(t) may shorten the rest of the body first (#showtooltip without the name).
+function addWand(body, ctx, fit)
+  fit = fit or function(t) return t end
+  for lvl = 0, 2 do
+    local w = fit(body .. "\n/cast " .. aimFor({ aim = "harm" }, ctx, lvl) .. " !Shoot")
+    if #w <= MACRO_LIMIT then return w end
+  end
+  return nil
+end
 
 local function buildCastSequence(def, t, ctx, has, o)
   local steps = {}
@@ -367,6 +392,7 @@ local function buildCastSequence(def, t, ctx, has, o)
     if #macro > MACRO_LIMIT and aimFor(def, ctx, lv) ~= aimFor(def, ctx, level) then level = lv; macro = make(lv, fill) end
   end
   while #macro > MACRO_LIMIT and fill > need do fill = fill - 1; macro = make(level, fill) end
+  if ctx.wand and def.aim ~= "help" and #macro <= MACRO_LIMIT then macro = addWand(macro, ctx) or macro end
   local single = #names + (filler and fill or 0) == 1
   local loopSec = jsround((pre + (filler and fill * castSec(filler, "last") or 0)) * 10) / 10
   if fill < n and ssub(why, 1, 5) == "about" then why = "" end
@@ -418,6 +444,7 @@ local function buildPriority(def, t, ctx, has)
   local macro = make(0, list)
   if #macro > MACRO_LIMIT and not ctx.leader then level = 1; macro = make(1, list) end
   while #macro > MACRO_LIMIT and #list > 1 do list = slice(list, 1, #list - 1); macro = make(level, list) end
+  if ctx.wand and def.aim ~= "help" and not def.autoshot and #macro <= MACRO_LIMIT then macro = addWand(macro, ctx) or macro end
   local names = {}
   for i, s in ipairs(list) do names[i] = s.name end
   return { id = def.id, label = def.label, base = "priority", kind = #list == 1 and "single" or "priority", spells = names, macro = macro,
@@ -471,6 +498,7 @@ function E.buildCustom(cls, c, ctxIn, has, opts)
       if #macro > MACRO_LIMIT and aimFor(def, ctx, lv) ~= aimFor(def, ctx, level) then level = lv; macro = make(lv, list) end
     end
     while #macro > MACRO_LIMIT and #list > 1 do list = slice(list, 1, #list - 1); macro = make(level, list) end
+    if ctx.wand and aim == "harm" and #macro <= MACRO_LIMIT then macro = addWand(macro, ctx) or macro end
     local names = {}
     for i, s in ipairs(list) do names[i] = s.name end
     return { id = id, label = c.name, custom = true, base = "priority", kind = #list == 1 and "single" or "priority", spells = names, macro = macro,

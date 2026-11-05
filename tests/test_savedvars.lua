@@ -32,7 +32,8 @@ for _, game in ipairs({ "forever", "era" }) do
     local db, cdb = SV.parse(beforeText)
     H.ok(type(db) == "table" and type(cdb) == "table" and #db.squads == 1, game .. ": the v" .. VERSION .. " file has a squad")
     local db2, cdb2 = SV.relog(H, Mock, game, db, cdb)
-    local got = SV.serialize(db2, cdb2, SV.VOLATILE_DB)
+    local got = SV.serialize(db2, cdb2, SV.VOLATILE_DB, SV.VOLATILE_CDB)
+    do local a, ac = SV.parse(afterText); afterText = SV.serialize(a, ac, SV.VOLATILE_DB, SV.VOLATILE_CDB) end
     local b1, c1 = SV.parse(beforeText)
     local b2, c2 = SV.parse(got)
     if game == "forever" then
@@ -46,7 +47,7 @@ for _, game in ipairs({ "forever", "era" }) do
       H.eq(b2.legacy, nil, game .. ": nothing moved to legacy")
     else
       local a1 = SV.parse(afterText)
-      H.eq(SV.serialize(withoutTalents(b2), c2), SV.serialize(withoutTalents(a1), SV.parse(afterText) and select(2, SV.parse(afterText))),
+      H.eq(SV.serialize(withoutTalents(b2), c2, nil, SV.VOLATILE_CDB), SV.serialize(withoutTalents(a1), select(2, SV.parse(afterText)), nil, SV.VOLATILE_CDB),
         game .. ": everything but the talent plans is exactly what v" .. VERSION .. " wrote")
       H.eq(SV.serialize(pick(withoutTalents(b2), DB_KEYS), pick(c2, CDB_KEYS)), SV.serialize(pick(withoutTalents(b1), DB_KEYS), pick(c1, CDB_KEYS)),
         game .. ": squads, settings, overrides, keybind and bar memory untouched")

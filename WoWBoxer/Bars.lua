@@ -1,6 +1,7 @@
 --[[ WoWBoxer – action bar placement.
   Fixed layout so muscle memory survives level-ups: on the primary bar K1–K8 sit on buttons 1–8, S1/S2 on 9–10 and
-  Follow/Assist on 11–12; on the secondary bar C1–C8 sit on 1–8, Focus/Pet/PetBack on 9–11 and Invite on 12, extras fill what is
+  Follow/Assist on 11–12; on the secondary bar C1–C8 sit on 1–8, Focus/Pet/PetBack on 9–11 and Invite on 12 (Wand on 10, or
+  the first of 9/12/11 its character does not use), extras fill what is
   left. A slot that holds something that is not a WoWBoxer macro is only replaced when the player ticks "replace". ]]
 local _, ns = ...
 local B = {}
@@ -25,6 +26,7 @@ end
 function B.barLabel(first) for _, b in ipairs(B.BARS) do if b.first == first then return b.label end end return "Bar " .. tostring(first) end
 local PRIMARY = { K1 = 0, K2 = 1, K3 = 2, K4 = 3, K5 = 4, K6 = 5, K7 = 6, K8 = 7, S1 = 8, S2 = 9, Follow = 10, Assist = 11 }
 local SECONDARY = { C1 = 0, C2 = 1, C3 = 2, C4 = 3, C5 = 4, C6 = 5, C7 = 6, C8 = 7, Focus = 8, Pet = 9, PetBack = 10, Invite = 11 }
+local SHARED = { Wand = { 9, 8, 11, 10 } }
 
 --- Target slot for every desired macro. cdb.slots remembers manual/earlier placements.
 function B.layout(desired, cdb)
@@ -37,6 +39,17 @@ function B.layout(desired, cdb)
       if PRIMARY[d.key] then slot = p + PRIMARY[d.key] elseif SECONDARY[d.key] then slot = s + SECONDARY[d.key] end
     end
     if slot and not taken[slot] then out[d.name] = take(slot) end
+  end
+  -- keys that share a fixed button (Wand: the Pet button for mages and priests; a warlock's next free fixed button)
+  local reserved = {}
+  for _, d in ipairs(desired) do if SECONDARY[d.key] then reserved[s + SECONDARY[d.key]] = true end end
+  for _, d in ipairs(desired) do
+    if not out[d.name] and SHARED[d.key] then
+      for _, i in ipairs(SHARED[d.key]) do
+        local slot = s + i
+        if not taken[slot] and not reserved[slot] then out[d.name] = take(slot); break end
+      end
+    end
   end
   -- extras: first free button on the secondary bar, then the primary bar
   for _, d in ipairs(desired) do

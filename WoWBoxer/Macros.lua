@@ -11,18 +11,19 @@ local E, K, R, C = ns.Engine, ns.Kit, ns.Rules, ns.Compat
 
 M.ICON = 134400 -- the "?" icon: #showtooltip then shows the spell
 M.ORDER = { "K1", "K2", "K3", "K4", "K5", "K6", "K7", "K8", "S1", "S2", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8",
-  "Invite", "Invite2", "Follow", "FollowLead", "Assist", "Target", "Focus", "Pet", "PetBack" }
+  "Invite", "Invite2", "Follow", "FollowLead", "Assist", "Target", "Focus", "Pet", "PetBack", "Wand" }
 local SEQ_KEY = { dps = "S1", heal = "S2" }
 --- Helper keys run no spell, so #showtooltip cannot pick an icon: each gets a picture that says what it does.
 M.HELPER_ICON = { Follow = "Ability_Tracking", Assist = "Ability_Hunter_SniperShot", Focus = "Spell_Holy_MindVision",
   Pet = "Ability_GhoulFrenzy", PetBack = "Ability_Seal", Invite = "INV_Letter_01", Invite2 = "INV_Letter_01", Target = "Ability_TownWatch",
-  FollowLead = "Ability_Rogue_Sprint" }
+  FollowLead = "Ability_Rogue_Sprint", Wand = "INV_Wand_01" }
 
 -- ------------------------------------------------------------------ squad keys (docs/squad-v2-simple.md §3)
 -- The player ticks which ones this character gets (cdb.squadKeys, per character); unticked ones are not created.
 -- Only Invite uses names; Follow, Assist, Target and Focus use the leader's party unit, exactly like the spell keys.
 local function follower(m) return not m.leader end
 local function petClass(m) return m.cls == "warlock" or m.cls == "hunter" end
+local function wandClass(m) return E.WAND_CLASSES[m.cls] == true end
 M.SQUAD_KEYS = {
   { key = "Invite", label = "Invite squad", applies = function(m, s) return s ~= nil and #s.members > 1 end, default = function(m) return m.leader end },
   { key = "Follow", label = "Follow (line)", applies = follower, default = function() return true end },
@@ -32,6 +33,7 @@ M.SQUAD_KEYS = {
   { key = "Focus", label = "Focus leader", applies = function(m) return follower(m) and m.unit == "focus" end, default = function() return true end },
   { key = "Pet", label = "Pet attack", applies = petClass, default = function() return true end },
   { key = "PetBack", label = "Pet back", applies = petClass, default = function() return true end },
+  { key = "Wand", label = "Wand", applies = wandClass, default = function() return true end },
 }
 --- Is squad key `key` ticked for member m? choices = cdb.squadKeys ({[key] = true/false}); nil = the default.
 function M.squadKeyOn(m, key, choices)
