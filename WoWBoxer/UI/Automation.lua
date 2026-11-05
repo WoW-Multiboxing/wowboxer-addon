@@ -47,6 +47,10 @@ function tab.build(p)
   for _, o in ipairs(AU().OPTIONS) do if o[6] then subs[o[6]] = o else shown[#shown + 1] = o end end
   local per = math.ceil(#shown / 2)
   local themed = W.themed()
+  -- rows get a little tighter when a column holds more than 9 (the buttons at the bottom keep their room)
+  local _, ph = UI.PanelSize()
+  local pitch = math.max(33, math.min(38, math.floor(((ph or 420) - 32 - 36) / per)))
+  local cardH = pitch - 3
   for i, o in ipairs(shown) do
     local col, row = math.floor((i - 1) / per), (i - 1) % per
     local function onClick(_, v) AU().set(o[1], v); ns.Core.log("info", "automation " .. o[1] .. (v and " on" or " off")); UI.Refresh() end
@@ -54,19 +58,19 @@ function tab.build(p)
     if themed then
       -- a toggle card (docs/ui-redesign.md §3): switch, the option's name, one muted line about what it does
       local card = W.card(p)
-      card:SetPoint("TOPLEFT", col * 336, -32 - row * 38)
-      card:SetSize(328, 35)
+      card:SetPoint("TOPLEFT", col * 336, -32 - row * pitch)
+      card:SetSize(328, cardH)
       c = W.toggle(p, o[2], onClick)
       c:SetPoint("LEFT", card, "LEFT", 10, 0)
       c.card = card
       c.label:ClearAllPoints()
-      c.label:SetPoint("TOPLEFT", card, "TOPLEFT", 66, -4)
+      c.label:SetPoint("TOPLEFT", card, "TOPLEFT", 66, cardH < 35 and -3 or -4)
       ns.Theme.font(c.label, "bold", 12)
       c.label:SetWordWrap(false); if c.label.SetMaxLines then c.label:SetMaxLines(1) end
       c.label.wbxTrunc = true
       c.label:SetWidth(222)
       c.line = W.line(card, "GameFontHighlightSmall", 10, W.MUTED)
-      c.line:SetPoint("BOTTOMLEFT", card, "BOTTOMLEFT", 66, 5)
+      c.line:SetPoint("BOTTOMLEFT", card, "BOTTOMLEFT", 66, cardH < 35 and 3 or 5)
       c.line:SetWidth(222)
       -- ON / OFF at the right of the card; the card lifts while ON (§2 "On and off")
       c.word:ClearAllPoints()
@@ -75,9 +79,9 @@ function tab.build(p)
       c.wbxPaint(c)
     else
       c = W.check(p, o[2], onClick)
-      c:SetPoint("TOPLEFT", -2 + col * 336, -34 - row * 38)
+      c:SetPoint("TOPLEFT", -2 + col * 336, -34 - row * pitch)
       c.line = W.line(p, "GameFontHighlightSmall", 10, W.MUTED)
-      c.line:SetPoint("TOPLEFT", 24 + col * 336, -34 - row * 38 - 19)
+      c.line:SetPoint("TOPLEFT", 24 + col * 336, -34 - row * pitch - 19)
       c.line:SetWidth(306)
     end
     c.key, c.opt = o[1], o
@@ -91,7 +95,7 @@ function tab.build(p)
       end, { sub[2], sub[3] })
       c.sub.key = sub[1]
       if themed then c.sub:SetPoint("RIGHT", c.card, "RIGHT", -44, 0)
-      else c.sub:SetPoint("TOPLEFT", 230 + col * 336, -34 - row * 38) end
+      else c.sub:SetPoint("TOPLEFT", 230 + col * 336, -34 - row * pitch) end
     end
     W.tip(c, o[2], o[3])
     if AU().ACCEPTS[o[1]] then
@@ -102,7 +106,7 @@ function tab.build(p)
         set = function(v) settings().acceptOverride = type(settings().acceptOverride) == "table" and settings().acceptOverride or {}
           settings().acceptOverride[o[1]] = v ~= "default" and v or nil; UI.Refresh() end })
       if themed then c.own:SetPoint("RIGHT", c.card, "RIGHT", -38, 0)
-      else c.own:SetPoint("TOPLEFT", 200 + col * 336, -34 - row * 38 - 14) end
+      else c.own:SetPoint("TOPLEFT", 200 + col * 336, -34 - row * pitch - 14) end
       W.ddTip(c.own, "Accept from (this one)", "Advanced: this automation uses its own choice instead of the one at the top.")
     end
     p.ticks[#p.ticks + 1] = c
@@ -119,7 +123,7 @@ function tab.build(p)
   W.primary(p.preset)
   p.preset:SetPoint("BOTTOMLEFT", 0, 2)
   p.defaults = W.button(p, "Default", 70, 24, function() AU().defaults(); ns.Core.log("info", "automation: default"); UI.Refresh() end,
-    "WoWBoxer's recommendation: everything on except Accept any quest, Abandon together and Restock reagents.")
+    "WoWBoxer's recommendation: everything on except Accept any quest, Abandon together, Restock reagents and Auto-equip.")
   p.defaults:SetPoint("LEFT", p.preset, "RIGHT", 8, 0)
   p.allOn = W.button(p, "All on", 70, 24, function() AU().setAll(true); UI.Refresh() end, "Turns every automation on.")
   p.allOn:SetPoint("LEFT", p.defaults, "RIGHT", 6, 0)

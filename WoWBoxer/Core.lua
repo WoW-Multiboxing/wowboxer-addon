@@ -1051,6 +1051,7 @@ function Core.onEvent(event, ...)
     if ns.SeqStrip and ns.SeqStrip.Init then ns.SeqStrip.Init() end
     if ns.Sync and ns.Sync.Init then ns.Sync.Init() end
     if ns.Auto and ns.Auto.Init then ns.Auto.Init() end
+    if ns.Equip and ns.Equip.Init then ns.Equip.Init() end
     if ns.Relay and ns.Relay.Init then ns.Relay.Init() end
     if C_Timer and C_Timer.After then C_Timer.After(3, function() Core.checkOffer("login") end) end
     if C_Timer and C_Timer.After then C_Timer.After(6, function() local ok, err = pcall(Core.loginChecks); if not ok then Core.log("error", "login checks: " .. tostring(err)) end end) end

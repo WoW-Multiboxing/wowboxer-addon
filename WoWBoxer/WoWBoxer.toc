@@ -72,6 +72,7 @@ Squad.lua
 Override.lua
 Sync.lua
 Auto.lua
+Equip.lua
 Relay.lua
 UI\Theme.lua
 UI\Widgets.lua

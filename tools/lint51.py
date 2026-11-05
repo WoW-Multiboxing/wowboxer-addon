@@ -24,8 +24,10 @@ FORBIDDEN = [
 # Automation through WoW's normal addon API (CLAUDE.md hard rule 1, the owner 29 Oct 2026): allowed ONLY in WoWBoxer/Auto.lua,
 # where every call sits behind a Setup → Automation option and a squad-member check. Casting, targeting, moving,
 # following and NPC interaction stay forbidden everywhere.
-AUTOMATION = {'AcceptQuest', 'CompleteQuest', 'GetQuestReward', 'AcceptGroup', 'TakeTaxiNode', 'RepairAllItems', 'UseContainerItem'}
-AUTOMATION_FILES = {'Auto.lua'}
+AUTOMATION = {'AcceptQuest', 'CompleteQuest', 'GetQuestReward', 'AcceptGroup', 'TakeTaxiNode', 'RepairAllItems', 'UseContainerItem',
+              'EquipItemByName', 'EquipPendingItem'}
+# Equip.lua: Auto-equip (owner 5 Nov 2026), behind the autoEquip option; this character's own bags and gear only.
+AUTOMATION_FILES = {'Auto.lua', 'Equip.lua'}
 # Writes to keybinds, action slots and the cursor: only in Binds.lua / Bars.lua (one place, a source= log line each,
 # docs/feedback-2026-10-30-night.md §3.2) – also when called as G.X or _G.X.
 WRITE_API = {'SetBinding', 'SetBindingMacro', 'SetBindingClick', 'SetBindingSpell', 'SetBindingItem', 'SaveBindings',

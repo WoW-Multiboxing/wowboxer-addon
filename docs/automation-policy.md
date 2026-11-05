@@ -25,6 +25,8 @@
   - sharing and turning in quests;
   - repeating the leader's dialog, quest or flight choice on followers that have the same window open;
   - selling junk, repairing, restocking reagents;
+  - auto-equip (owner, 5 Nov 2026; off by default): this character's own new items that are strictly better; bind on
+    equip and "in doubt" items are asked first (`WoWBoxer/Equip.lua`);
   - loot rules;
   - trade fill.
 

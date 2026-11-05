@@ -41,6 +41,7 @@ AU.OPTIONS = {
   { "followWarn", "Follow warning", "Warning on the leader when a follower stops following (not in combat, zoning, death, flights).", true, true },
   -- [6] = shown as a small Sound button inside that option's card, not as a card of its own
   { "warnSound", "Warning sound", "Plays the raid-warning sound with the follow warning and GM whispers (/wbx sound toggles it).", true, true, "followWarn" },
+  { "autoEquip", "Auto-equip", "Equips new items that are clearly better; asks for bind-on-equip items and when unsure. Off by default." },
   { "chat", "Chat line", "Writes one chat line for each automatic action." },
 }
 AU.BY_KEY = {}
@@ -67,7 +68,7 @@ end
 function AU.set(key, v) opts()[key] = v and true or false end
 function AU.setAll(v) for _, o in ipairs(AU.OPTIONS) do AU.set(o[1], v) end end
 --- WoWBoxer's recommendation (the owner, 30 Oct 2026): everything on except these three.
-AU.RECOMMENDED_OFF = { abandon = true, questAny = true, restock = true }
+AU.RECOMMENDED_OFF = { abandon = true, questAny = true, restock = true, autoEquip = true }
 function AU.defaults() for _, o in ipairs(AU.OPTIONS) do AU.set(o[1], not AU.RECOMMENDED_OFF[o[1]]) end end
 function AU.preset() for _, o in ipairs(AU.OPTIONS) do AU.set(o[1], false) end for _, k in ipairs(AU.PRESET_LEVELLING) do AU.set(k, true) end AU.set("chat", true) end
 function AU.rewardRule() local r = db().autoReward; for _, x in ipairs(AU.REWARD_RULES) do if x == r then return r end end return "leader" end
