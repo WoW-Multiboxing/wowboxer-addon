@@ -820,6 +820,8 @@ function Core.selftest(quiet)
       if ok and n ~= nil and not C.isSecret(n) then raw[u] = tostring(n) .. ((realm and not C.isSecret(realm) and realm ~= "") and ("-" .. tostring(realm)) or "") end
     end
     r.team.names = raw
+    r.team.arrivals = {}
+    for k, v in pairs(C.arrivals) do r.team.arrivals[k] = v end
     r.team.squadNames = {}
     for _, m in ipairs(s and s.members or {}) do r.team.squadNames[#r.team.squadNames + 1] = m.name .. " -> " .. tostring(ns.Squad.unitOf(m.name) or "-") end
   end
@@ -881,6 +883,14 @@ function Core.selftest(quiet)
   r.ui.helpUsed = ns.Help and ns.Help.diag or nil
   db.diag[Core.charKey or "?"] = r
   Core.log("info", "selftest written to WoWBoxerDB.diag[" .. tostring(Core.charKey) .. "]")
+  if ns.Squad and ns.Team then
+    local ok, rows = pcall(ns.Squad.readiness)
+    local parts = {}
+    for _, row in ipairs(ok and rows or {}) do
+      if not row.me then parts[#parts + 1] = row.m.name .. "=" .. (row.inParty and "party" or "not in party") .. "/" .. (row.signal and "signal" or "no signal") end
+    end
+    if #parts > 0 then Core.log("info", "team sees: " .. table.concat(parts, ", ") .. " (sent " .. C.sendStats.ok .. ", failed " .. C.sendStats.failed .. ")") end
+  end
   if not quiet then chat("Selftest done. /reload (or log out) to save it to WTF\\...\\SavedVariables\\WoWBoxer.lua.") end
   return r
 end
@@ -921,6 +931,10 @@ function Core.namesReport()
     lines[#lines + 1] = "squad \"" .. m.name .. "\" -> " .. (u or "|cffff8a80not in your party here|r") .. (m == me and "" or (p and ", signal" or ", no signal"))
   end
   if not me then lines[#lines + 1] = "|cffff8a80This character is not in a squad.|r" end
+  local got = {}
+  for k, v in pairs(C.arrivals) do got[#got + 1] = k .. " x" .. v end
+  table.sort(got)
+  lines[#lines + 1] = "received: " .. (#got > 0 and table.concat(got, ", ") or "nothing yet")
   lines[#lines + 1] = "addon messages: " .. C.sendStats.ok .. " sent, " .. C.sendStats.failed .. " failed" .. (C.sendStats.last and (" (last: " .. C.sendStats.last .. ")") or "")
   return lines
 end

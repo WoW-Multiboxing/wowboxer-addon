@@ -170,7 +170,8 @@ function TM.receive(prefix, text, _, sender)
   if prefix ~= TM.PREFIX then return end
   local name = C().baseName(sender)
   if not name then return C().drop(prefix, sender, "unknown or secret sender") end
-  if C().nameKey(name) == C().nameKey(C().playerName()) then return end
+  C().arrived(prefix, sender)
+  if C().sameName(name, C().playerName()) then return end -- our own message (Forever: "Rip And" = Rip of realm And)
   if type(text) ~= "string" then return C().drop(prefix, name, "no text") end
   local kind = text:sub(1, 2)
   if kind == "R|" then

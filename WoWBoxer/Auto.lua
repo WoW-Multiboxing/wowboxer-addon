@@ -108,16 +108,16 @@ function AU.isFriend(name)
   n = n:lower()
   local CF = G.C_FriendList
   if CF and CF.GetNumFriends and CF.GetFriendInfoByIndex then
-    for i = 1, (CF.GetNumFriends() or 0) do local f = CF.GetFriendInfoByIndex(i); if f and f.name and C().nameKey(f.name) == n then return true end end
+    for i = 1, (CF.GetNumFriends() or 0) do local f = CF.GetFriendInfoByIndex(i); if f and f.name and C().sameName(f.name, n) then return true end end
   elseif G.GetNumFriends and G.GetFriendInfo then
-    for i = 1, (G.GetNumFriends() or 0) do local fn = G.GetFriendInfo(i); if fn and C().nameKey(fn) == n then return true end end
+    for i = 1, (G.GetNumFriends() or 0) do local fn = G.GetFriendInfo(i); if fn and C().sameName(fn, n) then return true end end
   end
   local BN = G.C_BattleNet
   if BN and BN.GetFriendAccountInfo and G.BNGetNumFriends then
     for i = 1, (G.BNGetNumFriends() or 0) do
       local ok, a = pcall(BN.GetFriendAccountInfo, i)
       local gi = ok and a and a.gameAccountInfo
-      if gi and gi.characterName and C().nameKey(gi.characterName) == n then return true end
+      if gi and gi.characterName and C().sameName(gi.characterName, n) then return true end
     end
   end
   return false
@@ -129,7 +129,7 @@ function AU.isGuild(name)
   n = n:lower()
   for i = 1, (G.GetNumGuildMembers() or 0) do
     local gn = G.GetGuildRosterInfo(i)
-    if gn and C().nameKey(gn) == n then return true end
+    if gn and C().sameName(gn, n) then return true end
   end
   return false
 end
@@ -167,6 +167,7 @@ AU.leaderQuests = {}   -- quest IDs the squad leader has (from "QL" messages)
 AU.leaderReward = {}   -- questID -> reward index the leader picked
 function AU.receive(prefix, text, _, sender)
   if prefix ~= AU.PREFIX or type(text) ~= "string" then return end
+  C().arrived(prefix, sender)
   local m = AU.member(sender, true)
   if not m then return C().drop(prefix, sender, "not a squad member in your party (name not matched)") end -- only squad members in the party
   local f = {}

@@ -250,4 +250,99 @@ do
   H.ok(table.concat(lines, "\n"):find("failed", 1, true) ~= nil, "/wbx names shows the send results")
 end
 
+
+-- ------------------------------------------------------------------ 6. Forever as seen live (5 Nov 08:17 logs)
+-- UnitName gives "Rip" with realm "And"; CHAT_MSG_ADDON senders arrive as "Rip And" (name, space, realm). Every
+-- automation must treat both forms (and "Rip-And") as the squad member Rip.
+for _, sender in ipairs({ "Rip And", "Rip-And", "Rip" }) do
+  local tag = "[live, sender \"" .. sender .. "\"] "
+  local W = Mock.new(H, { name = "Rup", class = "PRIEST", race = "Human", faction = "Alliance", level = 20,
+    party = { party1 = "Rip", party2 = "Rap" },
+    partyInfo = { party1 = { class = "PALADIN", race = "Human", level = 20, leader = true, realm = "And" }, party2 = { class = "MAGE", race = "Human", level = 20, realm = "And" } } })
+  local ns = H.loadAddon({ env = W.env })
+  W.fire("ADDON_LOADED", "WoWBoxer")
+  local sq = ns.State.newSquad({ name = "Gronspaetterne", faction = "alliance", members = {
+    { name = "Rip", cls = "paladin", race = "human", role = "tank", leader = true, realm = "And" },
+    { name = "Rup", cls = "priest", race = "human", role = "healer", unit = "party1", realm = "And" },
+    { name = "Rap", cls = "mage", race = "human", role = "ranged", unit = "party1", realm = "And" } } })
+  ns.Core.db.squads = { sq }; ns.Core.db.active = sq.id
+  W.fire("PLAYER_LOGIN")
+  W.did = {}
+  for _, fn in ipairs({ "AcceptGroup", "AcceptQuest", "ConfirmAcceptQuest", "AcceptResurrect", "ConfirmSummon", "CompleteLFGRoleCheck",
+    "SelectGossipOption", "TakeTaxiNode", "StaticPopup_Hide", "GetQuestReward", "InviteUnit" }) do
+    W.env[fn] = function(...) local t = {}; for i = 1, select("#", ...) do t[i] = tostring(select(i, ...)) end; W.did[#W.did + 1] = fn .. "(" .. table.concat(t, ",") .. ")"; return true end
+  end
+  W.env.C_PartyInfo, W.env.C_GossipInfo, W.env.C_SummonInfo = nil, nil, nil
+  local function did(name) for _, c in ipairs(W.did) do if c:find("^" .. name .. "%(") then return c end end return nil end
+  local AU = ns.Auto
+  for _, o in ipairs(AU.OPTIONS) do AU.set(o[1], true) end
+  AU.set("questAny", false)
+  H.ok(AU.member(sender, true) ~= nil, tag .. "the sender is the squad member Rip, in the party")
+  H.eq(ns.Squad.unitOf(sender), "party1", tag .. "unitOf")
+  -- invite
+  W.did = {}; W.fire("PARTY_INVITE_REQUEST", sender)
+  H.ok(did("AcceptGroup"), tag .. "invite accepted")
+  -- escort / shared quest start
+  W.did = {}; W.fire("QUEST_ACCEPT_CONFIRM", sender)
+  H.ok(did("ConfirmAcceptQuest"), tag .. "escort / shared quest accepted")
+  -- quest share: the leader's quest list (message), then the shared quest window
+  W.fire("CHAT_MSG_ADDON", AU.PREFIX, "QL|501", "PARTY", sender)
+  W.env.GetQuestID = function() return 501 end
+  W.did = {}; W.fire("QUEST_DETAIL")
+  H.ok(did("AcceptQuest"), tag .. "quest the leader has: accepted")
+  -- the leader's reward pick
+  W.env.GetQuestID = function() return 77 end
+  W.env.GetNumQuestChoices = function() return 3 end
+  ns.Core.db.settings.autoReward = "leader"
+  W.did = {}; W.fire("QUEST_COMPLETE")
+  W.fire("CHAT_MSG_ADDON", AU.PREFIX, "QR|77|2", "PARTY", sender)
+  H.eq(did("GetQuestReward"), "GetQuestReward(2)", tag .. "the leader's reward pick")
+  W.fire("QUEST_FINISHED")
+  -- resurrection + summon
+  W.did = {}; W.fire("RESURRECT_REQUEST", sender)
+  H.ok(did("AcceptResurrect"), tag .. "resurrection accepted")
+  W.env.GetSummonConfirmSummoner = function() return sender end
+  W.did = {}; W.fire("CONFIRM_SUMMON")
+  H.ok(did("ConfirmSummon"), tag .. "summon accepted")
+  -- role check (the group leader is in the squad)
+  W.env.UnitIsGroupLeader = function(u) return u == "party1" end
+  W.did = {}; W.fire("LFG_ROLE_CHECK_SHOW")
+  H.ok(did("CompleteLFGRoleCheck"), tag .. "role check")
+  -- dialog + flight sync from the leader
+  W.env.UnitName = (function(orig) return function(u) if u == "npc" then return "Innkeeper" end return orig(u) end end)(W.env.UnitName)
+  W.env.GetGossipOptions = function() return "Make this inn your home.", "binder" end
+  W.fire("GOSSIP_SHOW")
+  W.did = {}; W.fire("CHAT_MSG_ADDON", AU.PREFIX, "D|Innkeeper|g|1|Make this inn your home.", "PARTY", sender)
+  H.eq(did("SelectGossipOption"), "SelectGossipOption(1)", tag .. "dialog sync")
+  W.fire("GOSSIP_CLOSED")
+  W.env.NumTaxiNodes = function() return 1 end
+  W.env.TaxiNodeName = function() return "Goldshire" end
+  W.env.TaxiNodeCost = function() return 10 end
+  W.fire("TAXIMAP_OPENED")
+  W.did = {}; W.fire("CHAT_MSG_ADDON", AU.PREFIX, "D|taxi|t|1|Goldshire", "PARTY", sender)
+  H.eq(did("TakeTaxiNode"), "TakeTaxiNode(1)", tag .. "flight sync")
+  -- a stranger with the same realm never counts
+  W.did = {}; W.fire("PARTY_INVITE_REQUEST", "Stranger And")
+  W.fire("RESURRECT_REQUEST", "Stranger And")
+  H.eq(#W.did, 0, tag .. "a stranger: nothing accepted")
+  -- team status: the leader's message gives Rip a signal; our own message does not make a peer
+  ns.Team.receive(ns.Team.PREFIX, ns.Team.encode({ level = 20, mana = 50, follow = 0, combat = 0, target = "-" }), "PARTY", sender)
+  ns.Team.receive(ns.Team.PREFIX, ns.Team.encode({ level = 20, mana = 50, follow = 0, combat = 0, target = "-" }), "PARTY", "Rup And")
+  local sig = {}
+  for _, r in ipairs(ns.Team.rows()) do sig[r.name] = r.st ~= nil end
+  H.ok(sig.Rip and sig.Rup, tag .. "team panel: Rip has a signal")
+  H.ok(not sig.Rap, tag .. "team panel: Rap (silent) has no signal")
+  H.eq(ns.Team.peers["rup and"], nil, tag .. "our own message is not a peer")
+  H.ok(logHas(ns, "first " .. AU.PREFIX .. " message from \"" .. sender:gsub("%-", "%%-") .. "\""), tag .. "arrival logged with the raw sender")
+  -- invite macro: Name-Realm
+  local bodies = ns.Macros.inviteBodies(sq, select(2, ns.Core.me()))
+  H.eq(bodies[1], "/invite Rip-And\n/invite Rap-And", tag .. "invite macro uses Name-Realm")
+  -- learnNames never turns "Rip" + realm into a two-part name
+  W.fire("GROUP_ROSTER_UPDATE")
+  H.eq(sq.members[1].name, "Rip", tag .. "names unchanged by the roster update")
+  ns.Core.selftest(true)
+  H.ok(logHas(ns, "team sees: Rip=party/signal, Rap=party/no signal"), tag .. "selftest logs who is seen")
+  H.eq(errors(ns), "", tag .. "no errors")
+end
+
 os.exit(H.report("names") and 0 or 1)

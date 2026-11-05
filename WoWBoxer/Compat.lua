@@ -469,6 +469,14 @@ function C.sendAddon(prefix, msg, channel, what, loud)
   end
   return false, reason, r
 end
+C.arrivals = {}  -- "prefix sender" (exactly as the game gives it) -> count
+--- A WoWBoxer message arrived (CHAT_MSG_ADDON): counted per prefix + raw sender; the first one per sender is logged.
+function C.arrived(prefix, sender)
+  local key = tostring(prefix) .. " " .. tostring(C.safe(sender) or "<secret>")
+  local n = (C.arrivals[key] or 0) + 1
+  C.arrivals[key] = n
+  if n == 1 and ns.Core and ns.Core.log then ns.Core.log("info", "first " .. tostring(prefix) .. " message from \"" .. tostring(C.safe(sender) or "<secret>") .. "\"") end
+end
 C.dropped = {}
 C.DROP_LOG_EVERY = 30
 --- A WoWBoxer message that arrived but was not used: logged with the reason (once per sender+reason every 30 s).
