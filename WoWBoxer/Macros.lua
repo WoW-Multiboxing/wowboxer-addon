@@ -48,8 +48,12 @@ function M.squadKeyList(m, choices, s)
   end
   return out
 end
---- "Name" or "Name-Realm" for /invite.
-function M.inviteName(m) return m.realm and (m.name .. "-" .. m.realm) or m.name end
+--- "Name" or "Name-Realm" for /invite. Forever two-part names keep their space ("/invite Rip And"): /invite takes
+--- the rest of the line as the name. Inner spaces are collapsed and the ends trimmed (Compat.baseName).
+function M.inviteName(m)
+  local n = (ns.Compat.baseName and ns.Compat.baseName(m.name)) or m.name
+  return m.realm and (n .. "-" .. m.realm) or n
+end
 --- /invite lines for every other member, split into bodies of at most 255 characters.
 function M.inviteBodies(s, me)
   local bodies, cur = {}, ""

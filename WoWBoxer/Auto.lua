@@ -71,19 +71,19 @@ function AU.preset() for _, o in ipairs(AU.OPTIONS) do AU.set(o[1], false) end f
 function AU.rewardRule() local r = db().autoReward; for _, x in ipairs(AU.REWARD_RULES) do if x == r then return r end end return "leader" end
 
 -- ------------------------------------------------------------------ who may trigger it
-local function short(n) n = C().safe(n); if type(n) ~= "string" or n == "" then return nil end return (n:match("^([^%-]+)") or n) end
---- The squad member named `name` (not this character), or nil. inParty = also in the party here.
+local function short(n) return C().baseName(n) end -- realm-free, trimmed, full name kept ("Rip And")
+--- The squad member named `name` (not this character), or nil. inParty = also in the party here. Matching is
+--- Compat.sameName (full name, or the first name for old squads); an exact match wins.
 function AU.member(name, inParty)
   local n = short(name)
   if not n then return nil end
   local s, me = Core().me()
-  for _, m in ipairs(s and s.members or {}) do
-    if m ~= me and m.name:lower() == n:lower() then
-      if inParty and not ns.Squad.unitOf(m.name) then return nil end
-      return m
-    end
-  end
-  return nil
+  local others = {}
+  for _, m in ipairs(s and s.members or {}) do if m ~= me then others[#others + 1] = m end end
+  local m = C().findByName(others, n)
+  if not m then return nil end
+  if inParty and not ns.Squad.unitOf(n) then return nil end
+  return m
 end
 function AU.isLeader() local _, me = Core().me(); return me ~= nil and me.leader == true end
 
@@ -108,16 +108,16 @@ function AU.isFriend(name)
   n = n:lower()
   local CF = G.C_FriendList
   if CF and CF.GetNumFriends and CF.GetFriendInfoByIndex then
-    for i = 1, (CF.GetNumFriends() or 0) do local f = CF.GetFriendInfoByIndex(i); if f and f.name and short(f.name):lower() == n then return true end end
+    for i = 1, (CF.GetNumFriends() or 0) do local f = CF.GetFriendInfoByIndex(i); if f and f.name and C().nameKey(f.name) == n then return true end end
   elseif G.GetNumFriends and G.GetFriendInfo then
-    for i = 1, (G.GetNumFriends() or 0) do local fn = G.GetFriendInfo(i); if fn and short(fn) and short(fn):lower() == n then return true end end
+    for i = 1, (G.GetNumFriends() or 0) do local fn = G.GetFriendInfo(i); if fn and C().nameKey(fn) == n then return true end end
   end
   local BN = G.C_BattleNet
   if BN and BN.GetFriendAccountInfo and G.BNGetNumFriends then
     for i = 1, (G.BNGetNumFriends() or 0) do
       local ok, a = pcall(BN.GetFriendAccountInfo, i)
       local gi = ok and a and a.gameAccountInfo
-      if gi and gi.characterName and short(gi.characterName) and short(gi.characterName):lower() == n then return true end
+      if gi and gi.characterName and C().nameKey(gi.characterName) == n then return true end
     end
   end
   return false
@@ -129,7 +129,7 @@ function AU.isGuild(name)
   n = n:lower()
   for i = 1, (G.GetNumGuildMembers() or 0) do
     local gn = G.GetGuildRosterInfo(i)
-    if gn and short(gn) and short(gn):lower() == n then return true end
+    if gn and C().nameKey(gn) == n then return true end
   end
   return false
 end
@@ -158,19 +158,17 @@ local function call(f, ...) if not f then return false end return pcall(f, ...) 
 -- ------------------------------------------------------------------ messages (data only)
 local function clean(t) return (tostring(t or ""):gsub("[|\n\r]", "")):sub(1, 60) end
 function AU.send(...)
-  local CI = G.C_ChatInfo
-  local f = (CI and CI.SendAddonMessage) or G.SendAddonMessage
-  if not (f and C().inParty()) then return false end
+  if not C().inParty() then return false end
   local parts = {}
   for i = 1, select("#", ...) do parts[i] = clean(select(i, ...)) end
-  return pcall(f, AU.PREFIX, table.concat(parts, "|"), (G.IsInRaid and G.IsInRaid()) and "RAID" or "PARTY")
+  return (C().sendAddon(AU.PREFIX, table.concat(parts, "|"), (G.IsInRaid and G.IsInRaid()) and "RAID" or "PARTY", "auto " .. tostring(parts[1])))
 end
 AU.leaderQuests = {}   -- quest IDs the squad leader has (from "QL" messages)
 AU.leaderReward = {}   -- questID -> reward index the leader picked
 function AU.receive(prefix, text, _, sender)
   if prefix ~= AU.PREFIX or type(text) ~= "string" then return end
   local m = AU.member(sender, true)
-  if not m then return end -- only squad members in the party; everything else is ignored
+  if not m then return C().drop(prefix, sender, "not a squad member in your party (name not matched)") end -- only squad members in the party
   local f = {}
   for x in (text .. "|"):gmatch("([^|]*)|") do f[#f + 1] = x end
   local kind = f[1]
@@ -246,7 +244,7 @@ function AU.onQuestDetail()
 end
 function AU.onQuestConfirm(name) -- an escort / shared start from a squad member
   if not AU.on("quests") or not AU.allowed("quests", name, true) or skipShift("quest") then return end
-  if call(G.ConfirmAcceptQuest) then AU.did("Accepted the quest " .. short(name) .. " started.") end
+  if call(G.ConfirmAcceptQuest) then AU.did("Accepted the quest " .. (short(name) or "?") .. " started.") end
 end
 --- Leader: share a quest it just accepted (QUEST_ACCEPTED: retail = questID, Classic = questLogIndex, questID).
 function AU.onQuestAccepted(a, b)

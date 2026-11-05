@@ -440,12 +440,15 @@ function S.findMe(db, cdb, playerName)
   local m = s and S.member(s, cdb.memberId)
   if m then return s, m end
   if not playerName then return nil end
-  local lname = playerName:lower()
   local order = { S.activeSquad(db) }
   for _, x in ipairs(db.squads) do if x ~= order[1] then order[#order + 1] = x end end
-  for _, x in ipairs(order) do
-    for _, mm in ipairs(x and x.members or {}) do
-      if mm.name:lower() == lname then cdb.squadId, cdb.memberId = x.id, mm.id; return x, mm end
+  -- exact name first (any squad), then the first name only (old squads; Forever two-part names) – ns.Compat.nameScore
+  local score = ns.Compat.nameScore
+  for want = 2, 1, -1 do
+    for _, x in ipairs(order) do
+      for _, mm in ipairs(x and x.members or {}) do
+        if score(mm.name, playerName) == want then cdb.squadId, cdb.memberId = x.id, mm.id; return x, mm end
+      end
     end
   end
   return nil

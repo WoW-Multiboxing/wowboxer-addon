@@ -99,8 +99,7 @@ function O.unitFor(t, ctx)
     return u and (u .. "target") or nil
   end
   if w == "member" then
-    local m
-    for _, x in ipairs(s and s.members or {}) do if slower(x.name) == slower(t.name) then m = x end end
+    local m = ns.Compat.findByName(s and s.members or {}, t.name) -- full or first name (Compat names)
     local u = memberUnit(m)
     if not u then return nil end
     if t.pet then return u == "player" and "pet" or (u .. "pet") end

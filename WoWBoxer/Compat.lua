@@ -380,16 +380,118 @@ function C.addonState(name)
   return "missing"
 end
 
+-- ------------------------------------------------------------------ character names (the ONE place names are compared)
+-- Era/TBC: "Name" or "Name-Realm". Forever: two-part names, first + last, no realm ("Rip And"); the game may also
+-- hand them over as "Rip And-Realm". Old saved squads hold only the first name ("Rip"). Every name comparison in
+-- WoWBoxer goes through C.sameName / C.nameKey so all of these match each other.
+--- The name without "-Realm", trimmed, inner spaces collapsed, case kept ("Rip And"); nil for nil/secret/empty.
+function C.baseName(n)
+  n = C.safe(n)
+  if type(n) ~= "string" then return nil end
+  n = n:gsub("%c", "")
+  n = n:match("^%s*([^%-]*)") or ""      -- everything before the first "-" (realm)
+  n = n:gsub("%s+", " "):match("^%s*(.-)%s*$")
+  if n == "" then return nil end
+  return n
+end
+--- Lower-case comparison key of a name ("rip and"), or nil.
+function C.nameKey(n) local b = C.baseName(n); return b and b:lower() or nil end
+--- Lower-case first name ("rip"), or nil.
+function C.firstNameKey(n) local k = C.nameKey(n); return k and (k:match("^(%S+)") or k) or nil end
+--- Is it a two-part (or longer) name?
+function C.isFullName(n) local k = C.nameKey(n); return k ~= nil and k:find(" ", 1, true) ~= nil end
+--- Same character? Exact (realm-free, case-free) match, or one side has only the first name and it matches the
+--- other side's first name (old squads / Forever two-part names).
+function C.sameName(a, b)
+  local ka, kb = C.nameKey(a), C.nameKey(b)
+  if not (ka and kb) then return false end
+  if ka == kb then return true end
+  local sa, sb = ka:find(" ", 1, true) ~= nil, kb:find(" ", 1, true) ~= nil
+  if sa == sb then return false end      -- two different single names, or two different full names
+  return (sa and ka:match("^(%S+)") or ka) == (sb and kb:match("^(%S+)") or kb)
+end
+--- Exact match is how sameName ranks first: 2 = exact, 1 = first-name match, 0 = no match.
+function C.nameScore(a, b)
+  local ka, kb = C.nameKey(a), C.nameKey(b)
+  if not (ka and kb) then return 0 end
+  if ka == kb then return 2 end
+  return C.sameName(a, b) and 1 or 0
+end
+--- The entry of `list` whose name (field `field`, default "name") best matches `name`: an exact match wins over a
+--- first-name match. Returns entry, score.
+function C.findByName(list, name, field)
+  field = field or "name"
+  local best, bestScore = nil, 0
+  for _, x in ipairs(list or {}) do
+    local sc = C.nameScore(type(x) == "table" and x[field] or x, name)
+    if sc > bestScore then best, bestScore = x, sc; if sc == 2 then break end end
+  end
+  return best, bestScore
+end
+
+-- ------------------------------------------------------------------ addon messages (send result + drops, logged)
+-- Forever (modern API) returns an Enum.SendAddonMessageResult code: 0 = success, anything else = not sent. Older
+-- clients return true/false or nothing. pcall returning true is NOT success.
+C.SEND_RESULT = { [0] = "Success", "InvalidPrefix", "InvalidMessage", "AddonMessageThrottle", "InvalidChatType", "NotInGroup",
+  "TargetRequired", "InvalidChannel", "ChannelThrottle", "GeneralError", "NotInGuild", "AddOnMessageLockdown", "TargetOffline" }
+function C.sendResultName(code)
+  local E = G.Enum and G.Enum.SendAddonMessageResult
+  if type(E) == "table" then for k, v in pairs(E) do if v == code then return tostring(k) end end end
+  return C.SEND_RESULT[code] or tostring(code)
+end
+C.sendStats = { ok = 0, failed = 0 }
+C.sendWarned = {}
+C.SEND_WARN_EVERY = 120 -- background sends (team status): one chat line per reason this often
+--- Send an addon message and check the result. what = a short label for the log ("team", "squad", "relay" …);
+--- loud = the player asked for this send (always told in chat when it fails). Returns ok, reason.
+function C.sendAddon(prefix, msg, channel, what, loud)
+  local CI = G.C_ChatInfo
+  local f = (CI and CI.SendAddonMessage) or G.SendAddonMessage
+  local ok, r, reason
+  if not f then ok, reason = false, "no SendAddonMessage API"
+  else
+    local pok, res = pcall(f, prefix, msg, channel)
+    if not pok then ok, reason = false, "error: " .. tostring(res)
+    elseif res == nil or res == true or res == 0 then ok = true
+    elseif res == false then ok, reason = false, "refused (false)"
+    else ok, r, reason = false, res, C.sendResultName(res) .. " (" .. tostring(res) .. ")" end
+  end
+  local Core = ns.Core
+  if ok then C.sendStats.ok = C.sendStats.ok + 1; return true end
+  C.sendStats.failed = C.sendStats.failed + 1
+  C.sendStats.last = (what or prefix) .. ": " .. reason
+  if Core and Core.log then Core.log("warn", "send " .. (what or prefix) .. " on " .. tostring(channel) .. " failed: " .. reason .. " (" .. #tostring(msg) .. " chars)") end
+  local key = (what or prefix) .. ":" .. tostring(r or reason)
+  local t = (G.GetTime and G.GetTime()) or 0
+  if Core and Core.print and (loud or t - (C.sendWarned[key] or -1e9) >= C.SEND_WARN_EVERY) then
+    C.sendWarned[key] = t
+    Core.print("|cffff8a80Could not send to your other characters|r (" .. (what or prefix) .. ": " .. reason .. ").")
+  end
+  return false, reason, r
+end
+C.dropped = {}
+C.DROP_LOG_EVERY = 30
+--- A WoWBoxer message that arrived but was not used: logged with the reason (once per sender+reason every 30 s).
+function C.drop(prefix, sender, reason)
+  local key = tostring(prefix) .. ":" .. tostring(sender) .. ":" .. tostring(reason)
+  local t = (G.GetTime and G.GetTime()) or 0
+  if t - (C.dropped[key] or -1e9) < C.DROP_LOG_EVERY then return end
+  C.dropped[key] = t
+  if ns.Core and ns.Core.log then ns.Core.log("info", "dropped " .. tostring(prefix) .. " from " .. tostring(sender) .. ": " .. tostring(reason)) end
+end
+
 -- ------------------------------------------------------------------ group
---- Which partyN holds a character with this name (nil if not in party or unknown).
+--- Which partyN holds a character with this name (nil if not in party or unknown). Exact match first.
 function C.partyUnitOf(name)
-  if not name then return nil end
+  if not C.nameKey(name) then return nil end
+  local list = {}
   for i = 1, 4 do
     local u = "party" .. i
     local n = C.unitName(u)
-    if n and n:lower() == name:lower() then return u end
+    if n then list[#list + 1] = { name = n, unit = u } end
   end
-  return nil
+  local x = C.findByName(list, name)
+  return x and x.unit or nil
 end
 function C.inParty() return (G.IsInGroup and G.IsInGroup()) or (G.GetNumGroupMembers and G.GetNumGroupMembers() > 0) or false end
 

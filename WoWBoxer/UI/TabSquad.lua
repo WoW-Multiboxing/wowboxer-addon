@@ -93,11 +93,10 @@ local function ensureSquad()
   return squad()
 end
 
---- Live party info by lower-case name.
+--- Live party info, looked up by name with Compat.sameName (exact first): live[name] works for "Rip" and "Rip And".
 local function partyByName()
-  local out = {}
-  for _, x in ipairs(ns.Squad.partyInfo()) do out[x.name:lower()] = x end
-  return out
+  local list = ns.Squad.partyInfo()
+  return setmetatable({}, { __index = function(_, name) return (ns.Compat.findByName(list, name)) end })
 end
 
 --- Add a character that is not in the party: name + class (race = the first race of the faction, editable later).
@@ -111,8 +110,9 @@ function SP.addByName(name, cls)
   if not base or base == "" then return nil, "Type a name" end
   if not S().validClass(cls) then return nil, "Pick a class" end
   if #s.members >= S().MAX_MEMBERS then return nil, "A squad holds at most " .. S().MAX_MEMBERS .. " characters" end
-  for _, m in ipairs(s.members) do if m.name:lower() == base:lower() then return nil, base .. " is already in the squad" end end
-  local live = partyByName()[base:lower()]
+  if ns.Compat.findByName(s.members, base) then return nil, base .. " is already in the squad" end
+  local live = partyByName()[base]
+  if live and ns.Compat.isFullName(live.name) and not ns.Compat.isFullName(base) then base = live.name end -- the full name from the game
   local m = S().newMember({ name = base, cls = cls, race = (live and live.cls == cls and live.race) or S().raceFor(cls, s.faction), unit = "party1",
     level = (live and live.level) or ns.Compat.playerLevel(), realm = realm ~= "" and realm or (live and live.realm) })
   table.insert(s.members, m)
@@ -128,9 +128,7 @@ function SP.addCharacter() return SP.addByName("Character" .. (#(ensureSquad() o
 function SP.partyMissing(s)
   local out = {}
   if not ns.Compat.inParty() then return out end
-  local have = {}
-  for _, m in ipairs(s and s.members or {}) do have[m.name:lower()] = true end
-  for _, x in ipairs(ns.Squad.partyInfo()) do if not have[x.name:lower()] then out[#out + 1] = x end end
+  for _, x in ipairs(ns.Squad.partyInfo()) do if not ns.Compat.findByName(s and s.members or {}, x.name) then out[#out + 1] = x end end
   return out
 end
 --- One party member running WoWBoxer (it sends team status) who is not in the squad: {name, cls} or nil.
@@ -153,16 +151,16 @@ function SP.addParty(only)
   end
   local n, leaderName = 0, nil
   for _, x in ipairs(info) do
-    local found
-    for _, m in ipairs(s.members) do if m.name:lower() == x.name:lower() then found = m end end
-    if not found and #s.members < S().MAX_MEMBERS and (not only or only:lower() == x.name:lower()) then
+    local found = ns.Compat.findByName(s.members, x.name)
+    if found and ns.Compat.isFullName(x.name) and not ns.Compat.isFullName(found.name) then found.name = x.name end -- store the game's full name
+    if not found and #s.members < S().MAX_MEMBERS and (not only or ns.Compat.sameName(only, x.name)) then
       found = S().newMember({ name = x.name, cls = x.cls, race = x.race or S().raceFor(x.cls, s.faction), level = x.level, unit = "party1", realm = x.realm })
       table.insert(s.members, found)
       n = n + 1
     end
     if x.leader then leaderName = x.name end
   end
-  if leaderName and not only and n > 0 then for _, m in ipairs(s.members) do m.leader = m.name:lower() == leaderName:lower() end end
+  if leaderName and not only and n > 0 then local L = ns.Compat.findByName(s.members, leaderName); for _, m in ipairs(s.members) do m.leader = m == L end end
   S().fixLeader(s); S().applyLink(s)
   Core().log("info", "added " .. n .. " from the party")
   changed(n > 0 and SAVED or "Everyone is in")
@@ -172,9 +170,9 @@ end
 --- Members who are in the party here get their race, level and realm from the game (WoWBoxer data only).
 function SP.fillFromParty(s)
   if not (s and ns.Compat.inParty()) then return 0 end
-  local live, n = partyByName(), 0
+  local live, n = partyByName(), ns.Squad.learnNames(s)
   for _, m in ipairs(s.members) do
-    local x = live[m.name:lower()]
+    local x = live[m.name]
     if x and x.cls == m.cls then
       if x.race and x.race ~= m.race then m.race = x.race; n = n + 1 end
       if x.level and x.level ~= m.level and not s.linkLevels then m.level = x.level; n = n + 1 end

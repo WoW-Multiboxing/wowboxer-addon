@@ -35,12 +35,10 @@ function RL.plain(text, max)
   local t = text:gsub("|H.-|h(.-)|h", "%1"):gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("|T.-|t", ""):gsub("[|\r\n]", " ")
   return t:sub(1, max or RL.MAX_TEXT)
 end
-local function short(n) n = C().safe(n); if type(n) ~= "string" or n == "" then return nil end return n:match("^([^%-]+)") or n end
+local function short(n) return C().baseName(n) end -- realm-free, full name kept (Compat names)
 local function send(msg)
-  local CI = G.C_ChatInfo
-  local f = (CI and CI.SendAddonMessage) or G.SendAddonMessage
-  if not (f and C().inParty()) then return false end
-  return pcall(f, RL.PREFIX, msg, (G.IsInRaid and G.IsInRaid()) and "RAID" or "PARTY") and true or false
+  if not C().inParty() then return false end
+  return (C().sendAddon(RL.PREFIX, msg, (G.IsInRaid and G.IsInRaid()) and "RAID" or "PARTY", "relay " .. msg:sub(1, 1)))
 end
 local function iAmLeader() return AU().isLeader() end
 local function squadSize() local s = Core().me(); return s and #s.members or 0 end
@@ -198,7 +196,7 @@ end
 function RL.receive(prefix, text, _, sender)
   if prefix ~= RL.PREFIX or type(text) ~= "string" or #text > 255 then return end
   local m = AU().member(sender, true)
-  if not m then return end -- only squad members in the party
+  if not m then return C().drop(prefix, sender, "not a squad member in your party (name not matched)") end -- only squad members in the party
   local kind = text:sub(1, 2)
   if kind == "W|" then
     local gm, who, body = text:match("^W|([01])|([^|]+)|(.*)$")

@@ -10,11 +10,11 @@ local function preview(p)
   local res, err, warn = ns.Core.importString(txt)
   if not res then p.result:SetText("|cffff8a80" .. err .. "|r"); p.importBtn:Disable(); return end
   p.pending = res
-  local me = (ns.Compat.playerName() or ""):lower()
+  local me = ns.Compat.playerName()
   local lines = { "|cffb7f07aValid:|r \"" .. res.squad.name .. "\" (" .. #res.squad.members .. ")" }
   local found = false
   for _, m in ipairs(res.squad.members) do
-    local isMe = m.name:lower() == me
+    local isMe = me ~= nil and ns.Compat.sameName(m.name, me)
     found = found or isMe
     lines[#lines + 1] = (isMe and "|cffffd100" or "") .. m.name .. " – " .. ns.Data.classes[m.cls].n .. " " .. ns.State.ROLE_NAME[m.role]:lower() ..
       (m.leader and ", leader" or (", " .. m.unit)) .. (isMe and " (you)|r" or "")

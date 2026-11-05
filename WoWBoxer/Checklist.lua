@@ -21,7 +21,7 @@ function CL.items()
     local unitOfLeader = C.partyUnitOf(leader.name)
     if m.unit == "focus" then
       local f = C.unitName("focus")
-      local okf = f ~= nil and f:lower() == leader.name:lower()
+      local okf = f ~= nil and C.sameName(f, leader.name)
       add(okf, "Focus: " .. leader.name, okf and "Your macros assist your focus." or "Target " .. leader.name .. " and press your Focus macro (after every login).")
     elseif unitOfLeader then
       add(unitOfLeader == m.unit, leader.name .. " is " .. unitOfLeader .. " here",

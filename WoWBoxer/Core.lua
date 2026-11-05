@@ -495,7 +495,7 @@ function Core.alsoHeal(name, owner)
   local targets, put = {}, false
   local pet = { who = "member", name = owner, pet = true, help = true, nodead = true }
   for _, t in ipairs(base or {}) do
-    if t.who == "member" and t.pet and t.name == owner then return false end -- already there
+    if t.who == "member" and t.pet and C.sameName(t.name, owner) then return false end -- already there
     if not put and t.who == "player" then targets[#targets + 1] = pet; put = true end
     targets[#targets + 1] = t
     if not put and t.who == "leader" then targets[#targets + 1] = pet; put = true end
@@ -812,7 +812,16 @@ function Core.selftest(quiet)
     local peers = {}
     for k, p in pairs(ns.Team.peers) do peers[k] = { level = p.level, version = p.version, keys = p.ready and p.ready.keys or nil } end
     r.team = { active = ns.Team.active(), version = ns.Team.version(), members = s and #s.members or 0, presets = s and #(s.presets or {}) or 0,
-      me = me and me.name or nil, peers = peers }
+      me = me and me.name or nil, peers = peers, sends = { ok = C.sendStats.ok, failed = C.sendStats.failed, last = C.sendStats.last } }
+    -- names exactly as the game gives them (Forever two-part names): player + party units, with realm
+    local raw = {}
+    for _, u in ipairs({ "player", "party1", "party2", "party3", "party4" }) do
+      local ok, n, realm = pcall(UnitName, u)
+      if ok and n ~= nil and not C.isSecret(n) then raw[u] = tostring(n) .. ((realm and not C.isSecret(realm) and realm ~= "") and ("-" .. tostring(realm)) or "") end
+    end
+    r.team.names = raw
+    r.team.squadNames = {}
+    for _, m in ipairs(s and s.members or {}) do r.team.squadNames[#r.team.squadNames + 1] = m.name .. " -> " .. tostring(ns.Squad.unitOf(m.name) or "-") end
   end
   -- docs/sequences-all-classes.md §5 [AFKLAR]: spell names of the v8.5 sequences on this client (by spell ID), and
   -- what can only be seen in play (left open here, results go into LOG.md)
@@ -894,7 +903,27 @@ local HELP = {
   "/wbx selftest – write a diagnostic report to the saved variables",
   "/wbx shots – screenshots of every WoWBoxer page (for the website; read-only)",
   "/wbx log [n] – show the last n log lines; /wbx debug – toggle debug messages",
+  "/wbx names – how the game names your party and which squad member each one matches (read-only)",
 }
+--- /wbx names: the names exactly as the game gives them, the squad match per member, and the send results.
+function Core.namesReport()
+  local lines = {}
+  for _, u in ipairs({ "player", "party1", "party2", "party3", "party4" }) do
+    local ok, n, realm = pcall(UnitName, u)
+    if ok and n ~= nil and not C.isSecret(n) then
+      lines[#lines + 1] = u .. ": \"" .. tostring(n) .. "\"" .. ((realm and not C.isSecret(realm) and realm ~= "") and (" realm \"" .. tostring(realm) .. "\"") or "")
+    end
+  end
+  local s, me = Core.me()
+  for _, m in ipairs(s and s.members or {}) do
+    local u = m == me and "player (you)" or ns.Squad.unitOf(m.name)
+    local p = ns.Team and ns.Team.peer(m.name)
+    lines[#lines + 1] = "squad \"" .. m.name .. "\" -> " .. (u or "|cffff8a80not in your party here|r") .. (m == me and "" or (p and ", signal" or ", no signal"))
+  end
+  if not me then lines[#lines + 1] = "|cffff8a80This character is not in a squad.|r" end
+  lines[#lines + 1] = "addon messages: " .. C.sendStats.ok .. " sent, " .. C.sendStats.failed .. " failed" .. (C.sendStats.last and (" (last: " .. C.sendStats.last .. ")") or "")
+  return lines
+end
 function Core.slash(msg)
   msg = (msg or ""):match("^%s*(.-)%s*$")
   local cmd, rest = msg:match("^(%S*)%s*(.-)$")
@@ -910,6 +939,7 @@ function Core.slash(msg)
   elseif cmd == "discord" or cmd == "youtube" or cmd == "website" then if ns.Community then ns.Community.ShowLink(cmd) end
   elseif cmd == "report" then if ns.Community then ns.Community.ShowReport() end
   elseif cmd == "sync" then Core.sync({ replace = rest == "replace" })
+  elseif cmd == "names" then for _, l in ipairs(Core.namesReport()) do chat(l) end
   elseif cmd == "sell" then if ns.Relay then ns.Relay.slash(rest) end
   elseif cmd == "team" then
     local on = rest == "on" or (rest == "" and Core.db.settings.team == false)

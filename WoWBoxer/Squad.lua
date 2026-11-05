@@ -36,7 +36,7 @@ function SQ.partyInfo()
     local okn, _, realm = pcall(G.UnitName, u)
     realm = okn and C().safe(realm) or nil
     realm = type(realm) == "string" and realm:gsub("%s", "") or nil
-    out[#out + 1] = { name = name:match("^([^%-]+)") or name, cls = cls, race = race, level = okl and tonumber(C().safe(lvl)) or nil,
+    out[#out + 1] = { name = C().baseName(name) or name, cls = cls, race = race, level = okl and tonumber(C().safe(lvl)) or nil,
       leader = okg and C().safe(lead) == true or false, unit = u, realm = (realm and realm ~= "") and realm or nil }
   end
   add("player")
@@ -48,12 +48,34 @@ function SQ.partyInfo()
   return out
 end
 
---- Which party unit holds `name` on this client, or nil.
-function SQ.unitOf(name)
-  if not name then return nil end
-  local l = name:lower()
-  for _, u in ipairs(SQ.PARTY) do local n = unitName(u); if n and (n:match("^([^%-]+)") or n):lower() == l then return u end end
-  return nil
+--- Which party unit holds `name` on this client, or nil (Compat.sameName: realm-free, first name or full name).
+function SQ.unitOf(name) return C().partyUnitOf(name) end
+
+--- Old squads hold only the first name ("Rip"); Forever names are two-part ("Rip And"). A member whose first name
+--- matches exactly one character here (this one or a party unit) with a full name gets that full name, so /invite
+--- and every later match use it. WoWBoxer data only (no macro, bar or game setting changes). Returns how many.
+function SQ.learnNames(s)
+  s = s or Core().me()
+  if not s then return 0 end
+  local live = {}
+  local pn = C().playerName()
+  if pn then live[#live + 1] = C().baseName(pn) end
+  for _, u in ipairs(SQ.PARTY) do local n = C().baseName(unitName(u)); if n then live[#live + 1] = n end end
+  local n = 0
+  for _, m in ipairs(s.members or {}) do
+    if not C().isFullName(m.name) then
+      local hit, hits = nil, 0
+      for _, x in ipairs(live) do if C().isFullName(x) and C().sameName(m.name, x) then hit, hits = x, hits + 1 end end
+      local taken = false
+      for _, o in ipairs(s.members) do if o ~= m and hit and C().nameKey(o.name) == C().nameKey(hit) then taken = true end end
+      if hits == 1 and not taken and #hit <= 24 then
+        Core().log("info", "name: " .. m.name .. " is " .. hit .. " in the game – saved the full name")
+        m.name = hit
+        n = n + 1
+      end
+    end
+  end
+  return n
 end
 
 --- This character follows and the leader is in another party slot here: the unit to use instead, or nil.
@@ -99,7 +121,7 @@ function SQ.myReady(ctx)
   elseif m.unit ~= "focus" and C().inParty() then
     local L = S().leaderOf(s)
     local n = unitName(m.unit)
-    r.unit = (L and n and (n:match("^([^%-]+)") or n):lower() == L.name:lower()) and 1 or 0
+    r.unit = (L and n and C().sameName(n, L.name)) and 1 or 0
   end
   for _, b in ipairs(ctx.bars.items) do
     if (b.name == "WBX Follow" or b.name == "WBX Assist") and b.status ~= "placed" then r.helpers = 0 end

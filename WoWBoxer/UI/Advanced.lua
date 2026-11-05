@@ -134,7 +134,7 @@ function A.iconOf(tex, t, ctx)
   if t.who == "member" or t.who == "leader" then
     local m
     for _, x in ipairs(ctx.squad and ctx.squad.members or {}) do
-      if (t.who == "member" and x.name:lower() == t.name:lower()) or (t.who == "leader" and x.leader) then m = x end
+      if (t.who == "member" and ns.Compat.sameName(x.name, t.name)) or (t.who == "leader" and x.leader) then m = x end
     end
     if m and ns.SquadPages then ns.SquadPages.setClassIcon(tex, m.cls); return end
   end

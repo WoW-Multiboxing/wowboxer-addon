@@ -25,13 +25,20 @@ local function Core() return ns.Core end
 local function now() return (G.GetTime and G.GetTime()) or 0 end
 local function clean(t) return (tostring(t or ""):gsub("[|\n\r]", "")):sub(1, 40) end
 
-local function send(msg)
-  local CI = G.C_ChatInfo
-  local f = (CI and CI.SendAddonMessage) or G.SendAddonMessage
-  if not f then return false end
-  return pcall(f, ns.Team.PREFIX, msg, (G.IsInRaid and G.IsInRaid()) and "RAID" or "PARTY")
-end
 local function after(sec, fn) if G.C_Timer and G.C_Timer.After then G.C_Timer.After(sec, fn) else fn() end end
+SY.RETRIES = 3
+SY.RETRY_GAP = 1.5
+--- Send one message; a throttled send is tried again (RETRIES times, RETRY_GAP apart) before it counts as failed.
+local function send(msg, what, tries)
+  tries = tries or 0
+  local channel = (G.IsInRaid and G.IsInRaid()) and "RAID" or "PARTY"
+  local last = tries >= SY.RETRIES
+  local ok, reason, code = ns.Compat.sendAddon(ns.Team.PREFIX, msg, channel, what or "sync", last)
+  if not ok and not last and (code == 3 or code == 8 or tostring(reason):find("Throttle", 1, true)) then
+    after(SY.RETRY_GAP, function() send(msg, what, tries + 1) end)
+  end
+  return ok
+end
 local idN = 0
 local function newId()
   idN = idN + 1
@@ -50,7 +57,7 @@ function SY.sendSquad(s)
   if n > SY.MAX_CHUNKS then Core().print("|cffff8a80This squad is too big to send.|r Use the Share tab and copy the string instead."); return false end
   for i = 1, n do
     local part = str:sub((i - 1) * SY.CHUNK + 1, i * SY.CHUNK)
-    after((i - 1) * SY.GAP, function() send("Q|" .. id .. "|" .. i .. "|" .. n .. "|" .. part) end)
+    after((i - 1) * SY.GAP, function() send("Q|" .. id .. "|" .. i .. "|" .. n .. "|" .. part, "squad " .. i .. "/" .. n) end)
   end
   Core().log("info", "offered squad " .. s.name .. " to the party (" .. n .. " parts)")
   Core().print("Offered squad \"" .. s.name .. "\" to your party. Each client shows Review / Ignore – nothing changes there without a click.")
@@ -60,26 +67,27 @@ end
 function SY.offerPreset(s, p)
   if not (s and p and ns.Compat.inParty()) then return false end
   local L = ns.State.member(s, p.leader)
-  local ok = send("P|" .. s.id .. "|" .. p.id .. "|" .. clean(L and L.name or "?") .. "|" .. clean(p.name))
+  local ok = send("P|" .. s.id .. "|" .. p.id .. "|" .. clean(L and L.name or "?") .. "|" .. clean(p.name), "preset")
   Core().log("info", "offered preset " .. p.name)
   return ok
 end
 
 -- ------------------------------------------------------------------ receiving (offers only)
 local function inParty(name) return ns.Squad.unitOf(name) ~= nil end
+local function drop(sender, why) ns.Compat.drop("sync", sender, why) end
 
 function SY.receive(text, sender)
-  if type(text) ~= "string" or #text > 255 then return end
-  if not inParty(sender) then return end -- only your own party
+  if type(text) ~= "string" or #text > 255 then return drop(sender, "too long or not text") end
+  if not inParty(sender) then return drop(sender, "not in your party here (name not matched)") end -- only your own party
   local t = now()
   for k, v in pairs(SY.inbox) do if t - v.at > SY.TTL then SY.inbox[k] = nil end end
   local id, i, n, part = text:match("^Q|(%x+)|(%d+)|(%d+)|(.+)$")
   if id then
     i, n = tonumber(i), tonumber(n)
-    if not (i and n) or n < 1 or n > SY.MAX_CHUNKS or i < 1 or i > n or #part > SY.CHUNK then return end
-    local key = sender:lower() .. ":" .. id
+    if not (i and n) or n < 1 or n > SY.MAX_CHUNKS or i < 1 or i > n or #part > SY.CHUNK then return drop(sender, "bad squad chunk") end
+    local key = (ns.Compat.nameKey(sender) or "?") .. ":" .. id
     local box = SY.inbox[key] or { n = n, parts = {}, got = 0, at = t }
-    if box.n ~= n then return end
+    if box.n ~= n then return drop(sender, "squad chunk count changed") end
     if not box.parts[i] then box.parts[i] = part; box.got = box.got + 1 end
     box.at = t
     SY.inbox[key] = box
@@ -97,11 +105,13 @@ function SY.receive(text, sender)
   if sid then
     local s = ns.State.squad(Core().db, sid)
     local p = s and ns.State.preset(s, pid)
-    if not p then return end -- not our squad or preset: nothing to offer
-    if s.activePreset == pid and ns.State.leaderOf(s) and ns.State.leaderOf(s).id == p.leader then return end
+    if not p then return drop(sender, "preset of a squad or preset not on this client") end
+    if s.activePreset == pid and ns.State.leaderOf(s) and ns.State.leaderOf(s).id == p.leader then return drop(sender, "preset already active") end
     Core().log("info", "preset offer from " .. sender .. ": " .. p.name)
     SY.offer({ kind = "preset", from = sender, squadId = sid, presetId = pid, name = p.name, leader = lname, sentName = pname })
+    return
   end
+  drop(sender, "unknown sync message")
 end
 
 -- ------------------------------------------------------------------ the offer card (one at a time)

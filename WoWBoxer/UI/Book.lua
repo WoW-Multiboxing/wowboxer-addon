@@ -1191,8 +1191,8 @@ local function refresh(p, ctx)
       p.detName:SetText(sel.label)
       local kt = {}
       for _, k in ipairs(sel.keys or {}) do kt[#kt + 1] = ns.Binds.short(k.key) end
-      p.detSub:SetText(Book.kindName(sel.item) .. (#kt > 0 and (" · |cffffd100" .. table.concat(kt, " ") .. "|r") or ""))
-      p.detDesc:SetText(sel.group == "helper" and Book.helperShort(sel.item.key) or Book.describe(sel.d, nil))
+      p.detSub:SetText(Book.kindName(sel.item or { key = "" }) .. (#kt > 0 and (" · |cffffd100" .. table.concat(kt, " ") .. "|r") or ""))
+      p.detDesc:SetText(sel.group == "helper" and sel.item and Book.helperShort(sel.item.key) or Book.describe(sel.d, nil))
       p.detMacro:SetText(sel.d and sel.d.body or "")
       local h = p.detMacro:GetHeight() or 0
       if p.detMacro.SetMaxLines then p.detMacro:SetMaxLines(math.max(1, math.floor((h + 0.5) / 11))) end

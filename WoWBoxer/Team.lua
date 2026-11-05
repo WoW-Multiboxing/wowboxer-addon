@@ -121,10 +121,7 @@ function TM.sendExtra(force)
   local t = now()
   if not force and msg == TM.lastExtra and t - (TM.lastExtraAt or -1e9) < TM.HEARTBEAT then return false end
   if not force and t - (TM.lastExtraAt or -1e9) < TM.MIN_GAP then return false end
-  local CI = G.C_ChatInfo
-  local send = (CI and CI.SendAddonMessage) or G.SendAddonMessage
-  if not send then return false end
-  local ok = pcall(send, TM.PREFIX, msg, channel())
+  local ok = C().sendAddon(TM.PREFIX, msg, channel(), "team")
   if ok then TM.lastExtra, TM.lastExtraAt = msg, t end
   return ok
 end
@@ -136,10 +133,7 @@ function TM.send(force)
   local t = now()
   if not force and msg == TM.lastMsg and t - (TM.lastAt or -1e9) < TM.HEARTBEAT then return false end
   if t - (TM.lastAt or -1e9) < TM.MIN_GAP then TM.schedule(); return false end
-  local CI = G.C_ChatInfo
-  local send = (CI and CI.SendAddonMessage) or G.SendAddonMessage
-  if not send then return false end
-  local ok = pcall(send, TM.PREFIX, msg, channel())
+  local ok = C().sendAddon(TM.PREFIX, msg, channel(), "team")
   if ok then TM.lastMsg, TM.lastAt = msg, t; TM.sent = (TM.sent or 0) + 1 end
   return ok
 end
@@ -151,10 +145,7 @@ function TM.sendReady(force)
   local msg = TM.encodeReady(r)
   local t = now()
   if not force and msg == TM.lastReady and t - (TM.lastReadyAt or -1e9) < TM.HEARTBEAT then return false end
-  local CI = G.C_ChatInfo
-  local send = (CI and CI.SendAddonMessage) or G.SendAddonMessage
-  if not send then return false end
-  local sent = pcall(send, TM.PREFIX, msg, channel())
+  local sent = C().sendAddon(TM.PREFIX, msg, channel(), "team")
   if sent then TM.lastReady, TM.lastReadyAt = msg, t end
   return sent
 end
@@ -177,18 +168,17 @@ end
 -- ------------------------------------------------------------------ receiving (display only)
 function TM.receive(prefix, text, _, sender)
   if prefix ~= TM.PREFIX then return end
-  local name = C().safe(sender)
-  if type(name) ~= "string" then return end
-  name = name:match("^([^%-]+)") or name
-  if name:lower() == (C().playerName() or ""):lower() then return end
-  if type(text) ~= "string" then return end
+  local name = C().baseName(sender)
+  if not name then return C().drop(prefix, sender, "unknown or secret sender") end
+  if C().nameKey(name) == C().nameKey(C().playerName()) then return end
+  if type(text) ~= "string" then return C().drop(prefix, name, "no text") end
   local kind = text:sub(1, 2)
   if kind == "R|" then
     local r = TM.decodeReady(text)
     if not r then return end
-    local p = TM.peers[name:lower()] or { name = name, level = 0, mana = -1, follow = 0, combat = 0, target = "-" }
+    local p = TM.peers[C().nameKey(name)] or { name = name, level = 0, mana = -1, follow = 0, combat = 0, target = "-" }
     p.ready, p.version, p.at, p.name = r, r.version, now(), name
-    TM.peers[name:lower()] = p
+    TM.peers[C().nameKey(name)] = p
     TM.changed()
     return
   end
@@ -196,7 +186,7 @@ function TM.receive(prefix, text, _, sender)
     local x = TM.decodeExtra(text)
     if not x then return end
     x.at = now()
-    TM.extras[name:lower()] = x
+    TM.extras[C().nameKey(name)] = x
     TM.changed()
     return
   end
@@ -205,16 +195,25 @@ function TM.receive(prefix, text, _, sender)
     return
   end
   local st = TM.decode(text)
-  if not st then return end
-  local old = TM.peers[name:lower()]
+  if not st then return C().drop(prefix, name, "unreadable status message") end
+  local old = TM.peers[C().nameKey(name)]
   st.at, st.name = now(), name
   if old then st.ready, st.version = old.ready, old.version end
-  TM.peers[name:lower()] = st
+  TM.peers[C().nameKey(name)] = st
   TM.changed()
 end
+--- tbl[name key], or the entry whose key is the same character (Compat.sameName: "Rip" finds "rip and").
+local function byName(tbl, name)
+  local k = C().nameKey(name)
+  if not k then return nil end
+  if tbl[k] then return tbl[k] end
+  for key, v in pairs(tbl) do if C().sameName(key, k) then return v end end
+  return nil
+end
+TM.byName = byName
 --- The last state another client reported (nil when none or older than STALE).
 function TM.peer(name)
-  local p = name and TM.peers[name:lower()]
+  local p = byName(TM.peers, name)
   if p and now() - (p.at or 0) > TM.STALE then return nil end
   return p
 end
@@ -231,7 +230,7 @@ function TM.rows()
   local t = now()
   local function stateOf(m)
     if m == me then local st = TM.collect(); st.at = t; return st end
-    local st = TM.peers[m.name:lower()]
+    local st = byName(TM.peers, m.name)
     if st and t - st.at > TM.STALE then return nil end
     return st
   end
@@ -249,7 +248,7 @@ function TM.rows()
       if st.mana >= 0 and st.mana <= TM.LOW_MANA then flags[#flags + 1] = { "low mana", "bad" } end
     end
     -- gold / bags (mine live, others from their X message) and away (AFK/DND straight from the unit)
-    local x = m == me and TM.collectExtra() or TM.extras[m.name:lower()]
+    local x = m == me and TM.collectExtra() or byName(TM.extras, m.name)
     if x and m ~= me and t - (x.at or 0) > TM.STALE then x = nil end
     if x and x.free >= 0 and x.slots > 0 and x.free <= TM.BAGS_FULL then flags[#flags + 1] = { "bags full", "warn" } end
     local unit = m == me and "player" or ns.Squad.unitOf(m.name)
@@ -286,7 +285,11 @@ f:SetScript("OnEvent", function(_, event, a, b, c, d)
   if event == "AUTOFOLLOW_BEGIN" then TM.following = true
   elseif event == "AUTOFOLLOW_END" then TM.following = false
   elseif event == "UNIT_POWER_UPDATE" and a ~= "player" then return end
-  if event == "GROUP_ROSTER_UPDATE" and ns.TeamFrame then ns.TeamFrame.Refresh() end
+  if event == "GROUP_ROSTER_UPDATE" then
+    local ok, n = pcall(ns.Squad.learnNames)
+    if ok and n and n > 0 then TM.changed() end
+    if ns.TeamFrame then ns.TeamFrame.Refresh() end
+  end
   if event == "PLAYER_FLAGS_CHANGED" then TM.changed(); return end
   if event == "PLAYER_MONEY" or event == "BAG_UPDATE" then TM.scheduleExtra(); return end
   TM.schedule()
