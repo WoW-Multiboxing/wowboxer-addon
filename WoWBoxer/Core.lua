@@ -949,6 +949,7 @@ local HELP = {
   "/wbx shots – screenshots of every WoWBoxer page (for the website; read-only)",
   "/wbx log [n] – show the last n log lines; /wbx debug – toggle debug messages",
   "/wbx sound – warning sound on/off (follow warning, GM whispers); the warning text stays",
+  "/wbx barfit – which action bars are visible and whether every button fits in this window (read-only)",
   "/wbx names – how the game names your party and which squad member each one matches (read-only)",
 }
 --- /wbx names: the names exactly as the game gives them, the squad match per member, and the send results.
@@ -996,6 +997,12 @@ function Core.slash(msg)
     chat("Warning sound " .. (on and "on." or "off – the warnings still show on screen and in chat."))
     if ns.UI and ns.UI.Refresh and ns.UI.frame and ns.UI.frame:IsShown() then ns.UI.Refresh() end
   elseif cmd == "names" then for _, l in ipairs(Core.namesReport()) do chat(l) end
+  elseif cmd == "barfit" then
+    local m = ns.BarFit and ns.BarFit.update("/wbx barfit")
+    chat(ns.BarFit and ns.BarFit.summary(m) or "bars: not measured")
+    for _, b in ipairs(m and m.bars or {}) do
+      chat(string.format("  %s: %d buttons, %d outside, %d under another bar (%s)", b.label, b.buttons, b.outside, b.covered, b.anchor))
+    end
   elseif cmd == "sell" then if ns.Relay then ns.Relay.slash(rest) end
   elseif cmd == "team" then
     local on = rest == "on" or (rest == "" and Core.db.settings.team == false)
@@ -1071,6 +1078,8 @@ function Core.onEvent(event, ...)
       chat("loaded. Type |cffffd100/wbx|r or click the minimap button to set up this character's macros.")
     end
     safeRegister("PLAYER_LOGOUT")
+    safeRegister("UI_SCALE_CHANGED")
+    safeRegister("DISPLAY_SIZE_CHANGED")
     Core.log("info", "login " .. Core.charKey .. " " .. C.buildString() .. " (" .. C.game() .. ", toc " .. C.interface() .. ")")
     safeRegister("PLAYER_LEVEL_UP")
     safeRegister("PLAYER_REGEN_ENABLED")
@@ -1093,12 +1102,17 @@ function Core.onEvent(event, ...)
     -- read-only diagnose a few seconds after login, so a /reload is enough to see how the addon behaves in this client
     if C_Timer and C_Timer.After then
       C_Timer.After(5, function()
+        if ns.BarFit then ns.BarFit.update("login") end
         local ok, err = pcall(Core.selftest, true)
         if not ok then Core.log("error", "auto selftest: " .. tostring(err)) end
       end)
     end
   elseif event == "PLAYER_LOGOUT" then
     Core.writeBridge("logout") -- also fires on /reload, right before SavedVariables are written
+    if ns.BarFit then ns.BarFit.update("logout") end
+  elseif event == "UI_SCALE_CHANGED" or event == "DISPLAY_SIZE_CHANGED" then
+    -- the window app (Auto-fit) or the player changed the window or the UI scale: measure again once it settles
+    if C_Timer and C_Timer.After and ns.BarFit then C_Timer.After(1, function() ns.BarFit.update(event) end) end
   elseif event == "PLAYER_REGEN_ENABLED" then
     Core.runQueue()
   elseif event == "PLAYER_LEVEL_UP" then

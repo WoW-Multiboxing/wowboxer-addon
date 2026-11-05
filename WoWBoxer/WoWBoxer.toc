@@ -74,6 +74,7 @@ Sync.lua
 Auto.lua
 Equip.lua
 Relay.lua
+BarFit.lua
 UI\Theme.lua
 UI\Widgets.lua
 UI\Dropdown.lua
