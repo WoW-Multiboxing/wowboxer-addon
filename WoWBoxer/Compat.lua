@@ -213,6 +213,41 @@ function C.spellName(id)
   return ok and type(n) == "string" and C.safe(n) or nil
 end
 
+--- What a spell does, in the game's own words (its tooltip description, localised), or nil. Reads the client only:
+--- the rank for `level` first, then the other ranks. Not loaded yet: asks the client once and refreshes the window
+--- when it arrives (nil until then). Colour codes and line breaks are kept; Windows line ends are cleaned.
+local descAsked = {}
+function C.spellDescription(spell, level)
+  if not spell then return nil end
+  local CS = G.C_Spell
+  local f = (CS and CS.GetSpellDescription) or G.GetSpellDescription
+  if not f then return nil end
+  local ids = {}
+  local r = ns.Kit and ns.Kit.rankAt(spell, level or C.playerLevel() or 1)
+  if r and r.id then ids[#ids + 1] = r.id end
+  for _, x in ipairs(spell.ranks or {}) do if x.id and x ~= r then ids[#ids + 1] = x.id end end
+  if spell.id then ids[#ids + 1] = spell.id end
+  for _, id in ipairs(ids) do
+    local ok, t = pcall(f, id)
+    t = ok and C.safe(t) or nil
+    if type(t) == "string" and t:match("%S") then return (t:gsub("\r\n", "\n"):gsub("%s+$", "")) end
+  end
+  local id = ids[1]
+  if id and not descAsked[id] then
+    descAsked[id] = true
+    local SM = G.Spell
+    if SM and SM.CreateFromSpellID then
+      pcall(function()
+        local o = SM:CreateFromSpellID(id)
+        if o and not (o.IsSpellEmpty and o:IsSpellEmpty()) and o.ContinueOnSpellLoad then
+          o:ContinueOnSpellLoad(function() if ns.UI and ns.UI.Refresh then pcall(ns.UI.Refresh) end end)
+        end
+      end)
+    elseif CS and CS.RequestLoadSpellData then pcall(CS.RequestLoadSpellData, id) end
+  end
+  return nil
+end
+
 -- ------------------------------------------------------------------ talents (read-only)
 local function spellName(id)
   if not id then return nil end

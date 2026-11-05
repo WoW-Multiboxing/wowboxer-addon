@@ -129,7 +129,8 @@ function Mock.new(H, opts)
       GetSpellBookItemName = function(i, bank) return knownList()[i] end,
     }
     env.C_Spell = { GetSpellName = function(id) return "Spell" .. tostring(id) end,
-      GetSpellTexture = function(id) return 200000 + (tonumber(id) or 0) end }
+      GetSpellTexture = function(id) return 200000 + (tonumber(id) or 0) end,
+      GetSpellDescription = function(id) if W.spellDesc then return W.spellDesc[id] or "" end return "Hurls a bolt that deals damage (spell " .. tostring(id) .. ")." end }
   elseif W.spellbookStyle == "classic" then
     env.GetNumSpellTabs = function() return 1 end
     env.GetSpellTabInfo = function(i) return "General", nil, 0, #knownList() end
@@ -137,6 +138,7 @@ function Mock.new(H, opts)
     env.BOOKTYPE_SPELL = "spell"
     env.GetSpellInfo = function(id) return "Spell" .. tostring(id) end
     env.GetSpellTexture = function(id) return 200000 + (tonumber(id) or 0) end
+    env.GetSpellDescription = function(id) if W.spellDesc then return W.spellDesc[id] or "" end return "Hurls a bolt that deals damage (spell " .. tostring(id) .. ")." end
   end
   env.IsPlayerSpell = function(id) return false end
 

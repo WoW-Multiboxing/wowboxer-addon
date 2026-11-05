@@ -93,6 +93,12 @@ function Book.describe(d, mem)
   end
   return "Casts " .. (d.label or "the spell") .. "."
 end
+--- What the key's spell does in the game's own tooltip words (localised), or nil (helpers, sequences, not loaded yet).
+function Book.spellText(d, sp)
+  sp = sp or (d and d.spell)
+  if not sp then return nil end
+  return ns.Compat.spellDescription(sp, ns.Compat.playerLevel())
+end
 --- One short sentence per helper key.
 function Book.helperShort(key, mem)
   local _, me = Core().me()
@@ -612,7 +618,11 @@ local function cellTooltip(GT, c)
     d = { group = "extra", label = c.spell.name, body = ns.Engine.makeMacro(c.spell, ns.Kit.memberCtx(ns.Core.compute().member)) }
   end
   if c.group == "helper" then GT:AddLine(Book.helperText(c.item.key), 1, 1, 1, true)
-  else GT:AddLine(Book.describe(d, nil), 1, 1, 1, true) end
+  else
+    GT:AddLine(Book.describe(d, nil), 1, 1, 1, true)
+    local said = Book.spellText(d, c.spell)
+    if said then GT:AddLine(said, 1, 0.82, 0, true) end
+  end
   if d and d.steps and #d.steps > 1 then GT:AddLine(W.stepsText(d.steps), 0.85, 0.72, 1, true) end
   if d and d.seq and d.seq.label == "Combo" then
     local _, me = Core().me()
@@ -968,8 +978,13 @@ local function build(p, mode)
     p.detDesc.wbxCopy = "sentence"
     p.detMacro = W.text(p.det, "GameFontHighlightSmall", 9, W.themed() and W.TEXT or { 0.6, 0.66, 0.52 })
     W.gameFont(p.detMacro)
-    p.detMacro:SetPoint("TOPLEFT", p.detDesc, "BOTTOMLEFT", 6, -10)
-    p.detMacro:SetPoint("BOTTOMRIGHT", p.det, "BOTTOMRIGHT", -6, 34)
+    -- the room for the macro text and the spell's words (an empty frame; the texts are sized to what they show)
+    p.detArea = CreateFrame("Frame", nil, p.det)
+    p.detArea:SetPoint("TOPLEFT", p.detDesc, "BOTTOMLEFT", 6, -10)
+    p.detArea:SetPoint("BOTTOMRIGHT", p.det, "BOTTOMRIGHT", -6, 34)
+    p.detMacro:SetPoint("TOPLEFT", p.detArea, "TOPLEFT", 0, 0)
+    p.detMacro:SetPoint("TOPRIGHT", p.detArea, "TOPRIGHT", 0, 0)
+    p.detMacro:SetHeight(11)
     if W.themed() then
       -- macro text in a tooltip-style box (§3)
       p.detMacroBox = CreateFrame("Frame", nil, p.det)
@@ -981,7 +996,12 @@ local function build(p, mode)
     p.detMacro:SetJustifyV("TOP")
     if p.detMacro.SetNonSpaceWrap then p.detMacro:SetNonSpaceWrap(true) end
     p.detMacro.wbxCopy = "data"
-    p.bind = W.button(p.det, "Set keybind", 76, 24, function() if p.selected then p.capture:Start(p.selected, p.selLabel) end end,
+    -- what the spell does, in the game's own tooltip words (under the macro text)
+    p.detSpell = W.text(p.det, "GameFontHighlightSmall", nil, { 1, 0.82, 0 })
+    p.detSpell:SetWidth(PW)
+    p.detSpell:SetJustifyV("TOP")
+    p.detSpell.wbxCopy = "data"
+    p.bind =W.button(p.det, "Set keybind", 76, 24, function() if p.selected then p.capture:Start(p.selected, p.selLabel) end end,
       "Press a key to run this macro directly, also when it is not on a bar. Saved for this character only. Right-click a macro for more.")
     p.bind:SetPoint("BOTTOMLEFT", 0, 0)
     -- one Place button per page: the left page's spells, the right page's squad keys (same rules as Place all)
@@ -1194,11 +1214,21 @@ local function refresh(p, ctx)
       p.detSub:SetText(Book.kindName(sel.item or { key = "" }) .. (#kt > 0 and (" · |cffffd100" .. table.concat(kt, " ") .. "|r") or ""))
       p.detDesc:SetText(sel.group == "helper" and sel.item and Book.helperShort(sel.item.key) or Book.describe(sel.d, nil))
       p.detMacro:SetText(sel.d and sel.d.body or "")
-      local h = p.detMacro:GetHeight() or 0
-      if p.detMacro.SetMaxLines then p.detMacro:SetMaxLines(math.max(1, math.floor((h + 0.5) / 11))) end
-      if p.detMacroBox then -- the tooltip-style box hugs the text
-        p.detMacroBox:SetPoint("BOTTOMRIGHT", p.detMacro, "TOPRIGHT", 6, -math.min(h, (p.detMacro:GetStringHeight() or h)) - 5)
-      end
+      local spellText = sel.group ~= "helper" and Book.spellText(sel.d) or nil
+      local h = p.detArea:GetHeight() or 0
+      local lines = math.max(1, math.floor((h + 0.5) / 11))
+      if spellText then lines = math.max(2, lines - 4) end -- leave room for the spell's own words under it
+      if p.detMacro.SetMaxLines then p.detMacro:SetMaxLines(lines) end
+      p.detMacro:SetHeight(math.max(11, lines * 11))
+      local shown = math.max(11, math.min(lines * 11, h, (p.detMacro:GetStringHeight() or h)))
+      p.detMacro:SetHeight(shown)
+      p.detSpell:ClearAllPoints()
+      p.detSpell:SetPoint("TOPLEFT", p.detMacro, "BOTTOMLEFT", -6, -9)
+      p.detSpell:SetText(spellText or "")
+      local spellLines = math.max(1, math.floor((h - shown - 9) / 12))
+      if p.detSpell.SetMaxLines then p.detSpell:SetMaxLines(spellLines) end
+      p.detSpell:SetHeight(math.min(spellLines * 12, math.max(12, p.detSpell:GetStringHeight() or 12)))
+      p.detSpell:SetShown(spellText ~= nil)
       p.bind:SetEnabled(not ns.Compat.inCombat())
     end
     -- footer
