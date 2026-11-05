@@ -324,40 +324,15 @@ local function aimFor(def, ctx, lvl)
   return opts[lvl + 1]
 end
 E.aimFor = aimFor
---- The first spell a /cast or /castsequence line casts ("[..][..] reset=combat Mind Blast, Smite" -> "Mind Blast").
-local function firstSpellOf(line)
-  local rest = smatch(line, "^/castsequence%s+(.*)$") or smatch(line, "^/cast%s+(.*)$")
-  if not rest then return nil end
-  while ssub(rest, 1, 1) == "[" do rest = (rest:gsub("^%b[]%s*", "")) end
-  rest = rest:gsub("^reset=%S+%s+", ""):gsub("^!", "")
-  local name = smatch(rest, "^([^,]+)")
-  return name and (name:gsub("%s+$", "")) or nil
-end
---- body with the wand line put FIRST (owner, 5 Nov 2026: "put the wand shooting in the top … so it starts doing it
---- and then turns to using spells"): after #showtooltip, /startattack and /petattack, before the first /cast. A bare
---- #showtooltip would then show the wand, so it names the first spell (nameTip; dropped again when 255 is tight).
-local function withWand(body, wl, nameTip)
-  local lines = {}
-  for l in (body .. "\n"):gmatch("([^\n]*)\n") do lines[#lines + 1] = l end
-  local at = #lines + 1
-  for i, l in ipairs(lines) do if ssub(l, 1, 5) == "/cast" then at = i break end end
-  local first = lines[at] and firstSpellOf(lines[at])
-  if nameTip and lines[1] == "#showtooltip" and first then lines[1] = "#showtooltip " .. first end
-  table.insert(lines, at, wl)
-  return tconcat(lines, "\n")
-end
-E.withWand = withWand
---- body + "/cast <aim> !Shoot" (first), the aim shortened step by step to fit 255; nil if it never fits.
+--- body + "/cast <aim> !Shoot" LAST, the aim shortened step by step to fit 255; nil if it never fits.
 --- fit(t) may shorten the rest of the body first (#showtooltip without the name).
+--- Never first: tested in game 5 Nov 2026 (1.2.0-test.1), "/cast !Shoot" before the spell made every press only wand
+--- and the spells never cast. Last = the wand shoots when the spell cannot be cast.
 function addWand(body, ctx, fit)
   fit = fit or function(t) return t end
-  -- the button must keep showing the spell: shorten the wand line's targeting first, drop the tooltip name last
-  for _, keepTip in ipairs({ true, false }) do
-    for lvl = 0, 2 do
-      local wl = "/cast " .. aimFor({ aim = "harm" }, ctx, lvl) .. " !Shoot"
-      local w = keepTip and withWand(body, wl, true) or fit(withWand(body, wl, false))
-      if #w <= MACRO_LIMIT then return w end
-    end
+  for lvl = 0, 2 do
+    local w = fit(body .. "\n/cast " .. aimFor({ aim = "harm" }, ctx, lvl) .. " !Shoot")
+    if #w <= MACRO_LIMIT then return w end
   end
   return nil
 end

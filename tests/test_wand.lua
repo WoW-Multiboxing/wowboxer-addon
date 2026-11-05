@@ -23,14 +23,13 @@ for _, game in ipairs({ { "forever", 16001, "camelot" }, { "era", 11509 }, { "tb
       H.ok(d.Wand and d.Wand.body:find("!Shoot", 1, true), who .. "has the Wand key")
       H.ok(leader or d.Wand.body:find("@party1target", 1, true), who .. "the Wand key shoots the leader's target")
       local k1 = d.K1
-      -- wand FIRST (owner: "put the wand shooting in the top"), then the spell; the tooltip still shows the spell
-      H.ok(k1 and k1.body:find("^#showtooltip " .. k1.label .. "\n[^\n]*\n?/cast [^\n]* !Shoot\n/cast [^\n]* " .. k1.label .. "$") ~= nil,
-        who .. "K1 (" .. (k1 and k1.label or "?") .. ") starts with the wand: " .. tostring(k1 and k1.body))
+      H.ok(k1 and k1.body:find("\n/cast [^\n]* !Shoot$") ~= nil, who .. "K1 (" .. (k1 and k1.label or "?") .. ") ends with the wand")
+      -- never wand first: tested in game (1.2.0-test.1), "/cast !Shoot" first made every press only wand
       for _, x in pairs(d) do
         if x.key ~= "Wand" and x.body:find("!Shoot", 1, true) then
           local firstCast = x.body:match("\n(/cast[^\n]*)")
-          H.ok(firstCast and firstCast:find(" !Shoot$") ~= nil, who .. x.name .. ": the wand is the first cast line")
-          H.ok(x.body:find("^#showtooltip [^\n]") ~= nil, who .. x.name .. ": the tooltip names the spell, not the wand: " .. x.body)
+          H.ok(firstCast and firstCast:find(" !Shoot$") == nil, who .. x.name .. ": the spell comes before the wand")
+          H.ok(x.body:find(" !Shoot$") ~= nil, who .. x.name .. ": the wand is the last line")
         end
       end
       for _, x in pairs(d) do
