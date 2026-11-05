@@ -20,10 +20,11 @@ local RESETS = { { "combat", "Reset after combat" }, { "target/combat", "Reset o
 local function Core() return ns.Core end
 local function E() return ns.Engine end
 
---- Spells that can go into a key: learned (by the companion's rules), active, with ranks, no racials or Auto Shot.
+--- Spells that can go into a key: learned (by the companion's rules), active, with ranks, no racials or Auto Shot;
+--- plus the wand's Shoot for mage, priest and warlock.
 function KE.spellChoices(m, L)
   local out = {}
-  for _, s in ipairs(ns.Kit.spellsOf(m)) do
+  for _, s in ipairs(ns.Kit.customSpellsOf(m)) do
     if ns.Kit.learned(m, s, L) and s.action ~= "passive" and s.action ~= "autoshot" and s.gate ~= "racial" and #(s.ranks or {}) > 0 then
       out[#out + 1] = s
     end
@@ -463,7 +464,7 @@ function KE.Refresh()
   local seq = d.kind == "sequence"
   f.reset:SetShown(seq); f.fills:SetShown(seq)
   local byName = {}
-  for _, s in ipairs(ns.Kit.spellsOf(m)) do byName[s.name] = byName[s.name] or s end
+  for _, s in ipairs(ns.Kit.customSpellsOf(m)) do byName[s.name] = byName[s.name] or s end
   for i, b in ipairs(f.stepBtns) do
     local n = d.steps[i]
     b.i = i

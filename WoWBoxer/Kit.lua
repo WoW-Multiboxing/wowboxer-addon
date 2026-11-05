@@ -57,6 +57,24 @@ function K.racialsOf(m)
   return out
 end
 
+--- The wand's Shoot as a spell for own macros (owner, 5 Nov 2026: "shooting … has to be like a spell as well").
+--- Not in the class data (it is the wand's, not a trained spell); only mage, priest and warlock.
+local wandCache = {}
+function K.wandOf(m)
+  if not (m and E.WAND_CLASSES[m.cls]) then return nil end
+  wandCache[m.cls] = wandCache[m.cls] or { id = "wand", cls = m.cls, name = "Shoot", level = 1, category = "Damage", action = "wand",
+    icon = "INV_Wand_01", gate = "wand", desc = "Shoots your wand at the target and keeps shooting. Needs a wand.",
+    ranks = { { r = 1, id = 5019 } } }
+  return wandCache[m.cls]
+end
+--- Spells an own macro can use: the class spells plus Shoot for wand classes.
+function K.customSpellsOf(m)
+  local out = K.spellsOf(m)
+  local w = K.wandOf(m)
+  if w then out[#out + 1] = w end
+  return out
+end
+
 function K.raceOk(s, m)
   if not s.lock then return true end
   if s.lock.faction then local r = K.race(m.race); return r ~= nil and r.f == s.lock.faction end
@@ -95,6 +113,7 @@ function K.learned(m, s, level) return s.level <= level and (s.gate ~= "talent" 
 --- Can member m use spell s at level L? In game (live = the spellbook check): on a game whose data says liveSpells
 --- (TBC: plan step 2) the spellbook alone decides; elsewhere the data must say learned AND the spellbook must have it.
 function K.usable(m, s, L, live)
+  if s.gate == "wand" then return true end -- the wand's Shoot: the macro line itself needs no spellbook entry
   if live and D().game and D().game.liveSpells then return live(s.name, s) and true or false end
   return K.learned(m, s, L) and (not live or live(s.name, s)) and true or false
 end
@@ -185,7 +204,7 @@ function K.memberCtx(m) return { leader = not not m.leader, unit = m.unit, wand 
 
 --- has(name) for level L: the learned spell object with that name or nil. live(name) (optional, in game) must also say yes.
 function K.seqHas(m, L, live)
-  local all = K.spellsOf(m)
+  local all = K.customSpellsOf(m)
   return function(name)
     for _, s in ipairs(all) do
       if s.name == name and K.usable(m, s, L, live) then return s end

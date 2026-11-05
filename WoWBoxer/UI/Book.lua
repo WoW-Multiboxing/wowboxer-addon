@@ -330,6 +330,9 @@ function Book.spellSections(ctx, q)
   for _, l in ipairs({ lists.primary, lists.others }) do
     for _, s in ipairs(l) do shown[s] = true; if Book.matches(s, q) then learned.cells[#learned.cells + 1] = cell(s, M.pendingOf(m, s, ctx.level, ctx.live)) end end
   end
+  -- the wand's Shoot (mage, priest, warlock): a spell like the others, drag it to make an own macro
+  local wand = ns.Kit.wandOf(m)
+  if wand and Book.matches(wand, q) then learned.cells[#learned.cells + 1] = cell(wand, nil) end
   local later = {}
   for i, s in ipairs(ns.Kit.spellsOf(m)) do
     if not shown[s] and s.action ~= "passive" and Book.matches(s, q) then

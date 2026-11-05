@@ -265,6 +265,7 @@ local function buildMacro(s, ctxIn)
     return title .. "\n" .. meleeStart .. "\n/cast [@mouseover,harm,nodead][@mouseover,help,nodead]" .. (ctx.leader and "" or ("[@" .. u.mainTarget .. ",harm,nodead]")) .. "[harm,nodead][help,nodead][@player] " .. name
   elseif a == "ranged" then return title .. "\n/cast " .. harm .. " " .. name
   elseif a == "autoshot" then return title .. "\n/petattack " .. harm .. "\n/cast " .. harm .. " !" .. name
+  elseif a == "wand" then return title .. "\n/cast " .. harm .. " !" .. name
   elseif a == "petattack" then return title .. "\n/petattack " .. harm .. "\n/cast " .. harm .. " " .. name
   elseif a == "friendlymain" then return title .. "\n/cast " .. help .. " " .. name
   elseif a == "friendlyself" then return title .. "\n/cast [@mouseover,help,nodead][help,nodead][@player] " .. name
@@ -323,13 +324,40 @@ local function aimFor(def, ctx, lvl)
   return opts[lvl + 1]
 end
 E.aimFor = aimFor
---- body + "/cast <aim> !Shoot", the aim shortened step by step to fit 255; nil if it never fits.
+--- The first spell a /cast or /castsequence line casts ("[..][..] reset=combat Mind Blast, Smite" -> "Mind Blast").
+local function firstSpellOf(line)
+  local rest = smatch(line, "^/castsequence%s+(.*)$") or smatch(line, "^/cast%s+(.*)$")
+  if not rest then return nil end
+  while ssub(rest, 1, 1) == "[" do rest = (rest:gsub("^%b[]%s*", "")) end
+  rest = rest:gsub("^reset=%S+%s+", ""):gsub("^!", "")
+  local name = smatch(rest, "^([^,]+)")
+  return name and (name:gsub("%s+$", "")) or nil
+end
+--- body with the wand line put FIRST (owner, 5 Nov 2026: "put the wand shooting in the top … so it starts doing it
+--- and then turns to using spells"): after #showtooltip, /startattack and /petattack, before the first /cast. A bare
+--- #showtooltip would then show the wand, so it names the first spell (nameTip; dropped again when 255 is tight).
+local function withWand(body, wl, nameTip)
+  local lines = {}
+  for l in (body .. "\n"):gmatch("([^\n]*)\n") do lines[#lines + 1] = l end
+  local at = #lines + 1
+  for i, l in ipairs(lines) do if ssub(l, 1, 5) == "/cast" then at = i break end end
+  local first = lines[at] and firstSpellOf(lines[at])
+  if nameTip and lines[1] == "#showtooltip" and first then lines[1] = "#showtooltip " .. first end
+  table.insert(lines, at, wl)
+  return tconcat(lines, "\n")
+end
+E.withWand = withWand
+--- body + "/cast <aim> !Shoot" (first), the aim shortened step by step to fit 255; nil if it never fits.
 --- fit(t) may shorten the rest of the body first (#showtooltip without the name).
 function addWand(body, ctx, fit)
   fit = fit or function(t) return t end
-  for lvl = 0, 2 do
-    local w = fit(body .. "\n/cast " .. aimFor({ aim = "harm" }, ctx, lvl) .. " !Shoot")
-    if #w <= MACRO_LIMIT then return w end
+  -- the button must keep showing the spell: shorten the wand line's targeting first, drop the tooltip name last
+  for _, keepTip in ipairs({ true, false }) do
+    for lvl = 0, 2 do
+      local wl = "/cast " .. aimFor({ aim = "harm" }, ctx, lvl) .. " !Shoot"
+      local w = keepTip and withWand(body, wl, true) or fit(withWand(body, wl, false))
+      if #w <= MACRO_LIMIT then return w end
+    end
   end
   return nil
 end
@@ -392,7 +420,7 @@ local function buildCastSequence(def, t, ctx, has, o)
     if #macro > MACRO_LIMIT and aimFor(def, ctx, lv) ~= aimFor(def, ctx, level) then level = lv; macro = make(lv, fill) end
   end
   while #macro > MACRO_LIMIT and fill > need do fill = fill - 1; macro = make(level, fill) end
-  if ctx.wand and def.aim ~= "help" and #macro <= MACRO_LIMIT then macro = addWand(macro, ctx) or macro end
+  if ctx.wand and def.aim ~= "help" and not def.noWand and #macro <= MACRO_LIMIT then macro = addWand(macro, ctx) or macro end
   local single = #names + (filler and fill or 0) == 1
   local loopSec = jsround((pre + (filler and fill * castSec(filler, "last") or 0)) * 10) / 10
   if fill < n and ssub(why, 1, 5) == "about" then why = "" end
@@ -489,7 +517,10 @@ function E.buildCustom(cls, c, ctxIn, has, opts)
       if melee then txt = txt .. "/startattack " .. a .. "\n" end
       if pet then txt = txt .. "/petattack " .. a .. "\n" end
       local lines = {}
-      for i, s in ipairs(list) do lines[i] = "/cast " .. (contains(NO_TARGET, s.action) and "[combat] " or (a .. " ")) .. s.name end
+      for i, s in ipairs(list) do
+        -- "!Shoot": a press while the wand already shoots keeps it shooting (plain Shoot would stop it)
+        lines[i] = "/cast " .. (contains(NO_TARGET, s.action) and "[combat] " or (a .. " ")) .. (s.action == "wand" and "!" or "") .. s.name
+      end
       return txt .. tconcat(lines, "\n")
     end
     local level, list = 0, slice(spells)
@@ -498,7 +529,9 @@ function E.buildCustom(cls, c, ctxIn, has, opts)
       if #macro > MACRO_LIMIT and aimFor(def, ctx, lv) ~= aimFor(def, ctx, level) then level = lv; macro = make(lv, list) end
     end
     while #macro > MACRO_LIMIT and #list > 1 do list = slice(list, 1, #list - 1); macro = make(level, list) end
-    if ctx.wand and aim == "harm" and #macro <= MACRO_LIMIT then macro = addWand(macro, ctx) or macro end
+    local ownWand = false
+    for _, s in ipairs(list) do if s.action == "wand" then ownWand = true end end
+    if ctx.wand and aim == "harm" and not ownWand and #macro <= MACRO_LIMIT then macro = addWand(macro, ctx) or macro end
     local names = {}
     for i, s in ipairs(list) do names[i] = s.name end
     return { id = id, label = c.name, custom = true, base = "priority", kind = #list == 1 and "single" or "priority", spells = names, macro = macro,
@@ -511,6 +544,10 @@ function E.buildCustom(cls, c, ctxIn, has, opts)
     reset = contains(CUSTOM_RESETS, c.reset) and c.reset or "combat", fixedFill = fills, allowDup = true }
   local steps = {}
   for _, n in ipairs(c.steps or {}) do if has(n) then steps[#steps + 1] = n end end
+  -- Shoot chosen as a step or filler: no extra wand line after the sequence
+  for _, n in ipairs(steps) do local s = has(n); if s and s.action == "wand" then def.noWand = true end end
+  local fs = (c.filler and c.filler ~= "") and has(c.filler) or nil
+  if fs and fs.action == "wand" then def.noWand = true end
   local function run()
     local st = {}
     for i, n in ipairs(steps) do st[i] = { s = n } end
@@ -529,7 +566,7 @@ function E.buildCustom(cls, c, ctxIn, has, opts)
 end
 
 local FRIENDLY_ACTIONS = { "friendlymain", "friendlyself", "friendlytarget", "resurrection", "petheal" }
-local HOSTILE_ACTIONS = { "hostile", "ranged", "melee", "melee-pet", "melee-cc", "opener", "petattack", "autoshot", "aoe-melee" }
+local HOSTILE_ACTIONS = { "hostile", "ranged", "melee", "melee-pet", "melee-cc", "opener", "petattack", "autoshot", "aoe-melee", "wand" }
 --- Plain-language warnings for a custom key. spells: learned spell objects in key order (filler last for sequences).
 function E.customWarnings(kind, spells, filler, aim, cls)
   local out, all = {}, slice(spells)
@@ -539,6 +576,7 @@ function E.customWarnings(kind, spells, filler, aim, cls)
     elseif kind == "sequence" and cdSec(s) > 12 then out[#out + 1] = s.name .. " has a " .. numstr(cdSec(s)) .. " s cooldown: the sequence waits until it is ready. Better on its own key." end
     if contains(CHANNELS, s.name) then out[#out + 1] = s.name .. " is channelled: pressing the key again cuts it short." end
     if s.action == "ground" then out[#out + 1] = s.name .. " needs a click on the ground after the key press." end
+    if s.action == "wand" and kind == "sequence" then out[#out + 1] = "Shoot in a sequence: a press on that step while the wand already shoots stops the wand. Better: a Priority macro with Shoot last." end
   end
   local wrong, seen = {}, {}
   for _, s in ipairs(all) do
@@ -560,7 +598,10 @@ function E.customWarnings(kind, spells, filler, aim, cls)
   end
   if kind == "priority" then
     local blockers = {}
-    for i = 1, #spells - 1 do
+    -- Shoot after the last spell is the wand fallback (runs when the spells above cannot be cast): not "never runs"
+    local last = #spells
+    while last > 1 and spells[last].action == "wand" do last = last - 1 end
+    for i = 1, last - 1 do
       local s = spells[i]
       local exempt = false
       for _, w in ipairs({ "Hammer of Wrath", "Exorcism", "Execute", "Overpower", "Revenge" }) do if sfind(s.name, w, 1, true) then exempt = true break end end

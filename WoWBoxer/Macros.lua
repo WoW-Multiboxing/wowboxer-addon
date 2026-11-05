@@ -125,7 +125,7 @@ function M.nameMap(m)
   local key = m.cls .. ":" .. tostring(m.race)
   if nameMaps[key] ~= nil then return nameMaps[key] or nil end
   local map, n = {}, 0
-  for _, s in ipairs(K.spellsOf(m)) do
+  for _, s in ipairs(K.customSpellsOf(m)) do -- incl. Shoot (5019): wand lines in the client's language
     local id = s.ranks and s.ranks[1] and s.ranks[1].id
     local loc = id and C.spellName(id)
     if loc and loc ~= s.name then map[s.name] = loc; n = n + 1 end
@@ -207,7 +207,7 @@ function M.desired(m, L, opts)
     out[#out + 1] = { key = h.key, name = R.PREFIX .. " " .. h.key, group = "helper", label = h.label, body = h.body }
   end
   -- extra single-spell keys the player added from the spell list
-  local all = K.spellsOf(m)
+  local all = K.customSpellsOf(m) -- + the wand's Shoot (All spells → drag)
   -- names are cut to 16 characters, so two spells can share one ("Shadow Word: Pain"/"Death"): the later one gets a
   -- digit instead of its last character. Taken in the order of the extras list, so a name never changes by level.
   local taken = {}
