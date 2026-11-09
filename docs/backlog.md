@@ -1,6 +1,6 @@
 # WoWBoxer addon – backlog
 
-## The owner: TEST BUILD 1.3.0-test.1 – bug sweep (all three Forever clients, `/reload` each, one party)
+## The owner: TEST BUILD 1.3.0-test.2 – bug sweep (all three Forever clients, `/reload` each, one party)
 1. On Rip: Setup → tick Advanced (or any setting) → the card "Use the same on your other characters?" → **Send**.
 2. On Rup and Rap: the card "Rip sends WoWBoxer settings" → **Use them** → `/reload` → Advanced is still on.
 3. Fight a few mobs (or a dungeon boss): during the fight the team panel may say *paused*; after it, all three show again.
