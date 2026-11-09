@@ -631,9 +631,10 @@ local function cellTooltip(GT, c)
   if d and d.steps and #d.steps > 1 then GT:AddLine(W.stepsText(d.steps), 0.85, 0.72, 1, true) end
   if d and d.seq and d.seq.label == "Combo" then
     local _, me = Core().me()
-    if me and not me.leader then
-      -- [AFKLAR: do combo points add up on [@party1target] when your own target is something else?]
-      GT:AddLine("Combo points stay on your own target: if they don't add up, press Assist first (one press).", 1, 0.82, 0.4, true)
+    if me and not me.leader and not ns.Kit.takesTarget(me) then
+      -- [AFKLAR result 9 Nov 2026] combo points (like the wand's auto-repeat) need the follower's own target; with
+      -- "Take the leader's target" on (the default) the key does /assist first, so this tip is only for "off"
+      GT:AddLine("Combo points stay on your own target: if they don't add up, press Assist first (one press), or turn on Take the leader's target (Squad).", 1, 0.82, 0.4, true)
     end
   end
   local sp = c.spell or (d and d.spell)
@@ -1295,7 +1296,7 @@ function Book.buildGuide(p)
   end, { "Follower", function()
     local _, mem = Core().me()
     return "This character follows " .. leaderName(mem) .. ": its macros use the leader's target through " .. ((mem and not mem.leader and mem.unit) or "party1") ..
-      " (change the unit on the My macros page)."
+      " (change the unit on the My macros page)." .. (ns.Kit.takesTarget(mem) and " Its damage macros take the leader's target first, because the wand keeps shooting and combo points build only on your own target." or "")
   end })
   g.follow:SetPoint("LEFT", g.lead, "RIGHT", 8, 0)
   g.seq = W.seqControl(g, { member = function() local _, mem = Core().me(); return mem end, width = 110 })

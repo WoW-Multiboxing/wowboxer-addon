@@ -107,6 +107,13 @@ minimap button, much more drag & drop of macros onto the action bars.
 - [x] Engine.lua: SEQ for all classes + buildPriority (pet, !Auto Shot, ranged leader aim, empty keys); parity 0 failures.
 - [x] UI: tick + tier for every class; sequence vs priority sentence; Rogue/Cat Assist tip; diagnose `seqCheck`.
 - [ ] In game [AFKLAR]: combo points for followers, !Auto Shot after Aimed Shot, warrior fall-through, spell names on Forever.
+  - [AFKLAR result 9 Nov 2026] followers' own target: the owner's bug "the wand filler shoots once, then stops on
+    followers". `wbx snap` of the owner's Forever followers (9 Nov, 10:02) shows the priest follower casting Smite with
+    NO target frame, and the WoWBoxer team panel says "no target" for both followers: the keys cast at
+    [@party1target] without targeting it. Auto-repeat (Shoot, Auto Shot) keeps going only on your own target, so on
+    another unit it fires once; combo points sit on the own target the same way. Fix: "Take the leader's target"
+    (Squad page, per follower, on by default) puts /assist <leader unit> first in every damage key. To confirm in game:
+    the checklist of TEST BUILD 1.2.0-test.6.
 
 ## Follow in a line (docs/follow-line.md, the owner 2026-10-29)
 - [x] Follow (line) = WBX Follow on the party unit of the member ahead (this client, `m.lineUnit` saved after a click),

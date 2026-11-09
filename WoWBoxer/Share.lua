@@ -95,7 +95,7 @@ function Sh.export(squad, extra)
       custom[#custom + 1] = { id = c.id, name = c.name, kind = c.kind, aim = c.aim, steps = Json.array(E_copy(c.steps)), filler = c.filler, fills = c.fills, reset = c.reset }
     end
     members[#members + 1] = { id = m.id, name = m.name, cls = m.cls, race = m.race, role = m.role, level = m.level, leader = m.leader, unit = m.unit,
-      talented = m.talented, build = Json.array(E_copy(build)), buildName = buildName, guide = m.guide, seq = m.seq, seqTarget = m.seqTarget, customSeq = custom,
+      talented = m.talented, build = Json.array(E_copy(build)), buildName = buildName, guide = m.guide, seq = m.seq, seqTarget = m.seqTarget, assist = ns.State.offOrNil(m.assist), customSeq = custom,
       pins = Json.array(E_copy(m.pins)), tags = Json.array(E_copy(m.tags)), seqTier = m.seqTier, realm = m.realm }
   end
   local payload = { f = Sh.FORMAT, game = extra.game or "any",

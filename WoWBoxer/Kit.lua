@@ -200,7 +200,9 @@ local MELEE_CLS = { "warrior", "rogue", "paladin" }
 function K.isMelee(m)
   return contains(MELEE_CLS, m.cls) or (m.cls == "druid" and (m.role == "tank" or m.role == "melee")) or (m.cls == "shaman" and m.role == "melee")
 end
-function K.memberCtx(m) return { leader = not not m.leader, unit = m.unit, wand = E.WAND_CLASSES[m.cls] or false } end
+--- "Take the leader's target" (Squad page, per character): followers on unless switched off; never the leader.
+function K.takesTarget(m) return m ~= nil and not m.leader and m.assist ~= false end
+function K.memberCtx(m) return { leader = not not m.leader, unit = m.unit, wand = E.WAND_CLASSES[m.cls] or false, assist = K.takesTarget(m) } end
 
 --- has(name) for level L: the learned spell object with that name or nil. live(name) (optional, in game) must also say yes.
 function K.seqHas(m, L, live)
@@ -322,8 +324,10 @@ function K.helpers(m)
   end
   if E.WAND_CLASSES[m.cls] then
     local chain = m.leader and "[@mouseover,harm,nodead][harm,nodead]" or ("[@mouseover,harm,nodead][@" .. u.mainTarget .. ",harm,nodead][harm,nodead]")
-    out[#out + 1] = { key = "Wand", label = "Shoot your wand at " .. (m.leader and "your target" or "the leader's target"),
-      body = "#showtooltip Shoot\n/cast " .. chain .. " !Shoot" }
+    -- with "Take the leader's target": target it first, then shoot at the own target (auto-repeat keeps going only there)
+    local body = K.takesTarget(m) and ("#showtooltip Shoot\n/assist " .. u.main .. "\n/cast [harm,nodead] !Shoot")
+      or ("#showtooltip Shoot\n/cast " .. chain .. " !Shoot")
+    out[#out + 1] = { key = "Wand", label = "Shoot your wand at " .. (m.leader and "your target" or "the leader's target"), body = body }
   end
   return out
 end

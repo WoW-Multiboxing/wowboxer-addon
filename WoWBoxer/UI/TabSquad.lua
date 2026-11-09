@@ -14,7 +14,7 @@ ns.SquadPages = SP
 local T = ns.Theme
 local LIST_W = 648 -- + scrollbar
 -- the war table look: party-frame rows (class edge, class icon, name over "Class · level", the follow line labelled)
-local ROW_H, EDIT_H, ADD_H = W.themed() and 44 or 28, 58, 30
+local ROW_H, EDIT_H, ADD_H = W.themed() and 44 or 28, 82, 30
 local LIST_H = 252
 local TOP_H = 30
 local NEW, DEL = "\1new", "\1del"
@@ -50,6 +50,9 @@ function SP.presetValues(s)
   return v
 end
 local ORD = { "1st", "2nd", "3rd" }
+--- Help for "Take the leader's target" (Squad page and Help).
+SP.ASSIST_HELP = "Followers take the leader's target first (/assist) in every damage macro, because the wand only keeps shooting, and combo points only build, on your own target. Off: the macros cast at the leader's target without taking it, as before."
+
 --- "Leader" or "2nd in line · follows Anna" (the follow line: the squad order, docs/follow-line.md).
 function SP.followsText(m, s)
   if m.leader then return "Leader" end
@@ -403,12 +406,22 @@ local function buildEditor(f, parent)
   e.plays:SetPoint("LEFT", pl, "RIGHT", 6, 0)
   e.seq = W.seqControl(e, { member = m, width = 96, set = function(x, tier) x.seq = tier; changed() end })
   e.seq:SetPoint("LEFT", e.plays, "RIGHT", 12, 0)
+  -- "Take the leader's target" (followers; owner 9 Nov 2026): damage keys start with /assist, so the wand keeps
+  -- shooting and combo points land – both only work on your own target
+  e.assist = W.check(e, "Take the leader's target", function(_, v)
+    local x = m()
+    if x and not x.leader then x.assist = ns.State.offOrNil(not v); changed() end
+  end)
+  e.assist:SetPoint("TOPLEFT", 26, -59) -- line 3
+  W.tip(e.assist, "Take the leader's target", SP.ASSIST_HELP)
   e.isMe = W.button(e, "That's me", 80, 22, function() local x = m(); if x then Core().setMe(squad().id, x.id); SP.saved() end end,
     "Tells WoWBoxer that the character you are logged in on is this one (its macros and role are used here).")
   e.isMe:SetPoint("BOTTOMRIGHT", -4, 4)
   function e.Refresh(x, me)
     if not e.name:HasFocus() then e.name:SetText(x.name) end
     e.cls.Refresh(); e.race.Refresh(); e.plays.Refresh(); e.seq.Refresh()
+    e.assist:SetShown(not x.leader)
+    e.assist:SetChecked(ns.Kit.takesTarget(x))
     e.isMe:SetShown(x ~= me)
     local i = S().slotOf(squad(), x) or 1
     e.up:SetEnabled(i > 1); e.down:SetEnabled(i < #squad().members)

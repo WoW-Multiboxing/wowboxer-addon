@@ -105,6 +105,8 @@ function S.newMember(o)
   return { id = safeId(o.id, "m"), name = name, cls = cls, race = race, role = role, level = clampLvl(o.level or 1), leader = not not o.leader,
     unit = E.contains(E.UNITS, o.unit) and o.unit or "party1", talented = clampT(o.talented), build = S.sanitizeOrder(cls, o.build or {}),
     guide = guide, seq = E.contains(E.SEQ_TIERS, o.seq) and o.seq or "off", seqTarget = not not o.seqTarget,
+    -- "Take the leader's target": nil = the default (on for followers), false = switched off
+    assist = S.offOrNil(o.assist),
     seqTier = (E.contains(E.SEQ_TIERS, o.seqTier) and o.seqTier ~= "off") and o.seqTier or nil, customSeq = S.cleanCustom(o.customSeq), pins = pins,
     tags = tags, realm = S.cleanRealm(o.realm),
     -- Follow (line): the party unit of the member ahead as seen on THIS client (docs/follow-line.md); per client,
@@ -112,6 +114,8 @@ function S.newMember(o)
     lineUnit = (o.lineUnit and E.contains(E.UNITS, o.lineUnit) and o.lineUnit ~= "focus") and o.lineUnit or nil,
     buildName = R.cleanText(o.buildName, 40) }
 end
+--- false stays false, anything else is nil (a default-on switch stores only "off"). Not "v == false and false or nil": that is always nil.
+function S.offOrNil(v) if v == false then return false end return nil end
 --- A realm for "Name-Realm" (another realm than this character's): letters, digits and ' only, no spaces; else nil.
 function S.cleanRealm(v)
   if type(v) ~= "string" then return nil end

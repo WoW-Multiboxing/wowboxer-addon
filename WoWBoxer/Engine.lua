@@ -16,6 +16,11 @@
     - wand classes (mage, priest, warlock - every role, healers too) end each damage spell key with /cast !Shoot on the
       same target: when the spell cannot be cast (no mana, cooldown, moving) the press shoots the wand instead
       (owner, 5 Nov 2026). The wand line is the first thing dropped to stay within 255.
+    - "Take the leader's target" (per character, on by default for followers, owner 9 Nov 2026): every damage key of
+      a follower starts with /assist <leader unit>, so the follower really targets the leader's target. Auto-repeat
+      (Shoot, Auto Shot) only keeps going on your OWN target – on @party1target it fires once – and combo points sit
+      on your own target. While assisting, the wand line aims at the own target. Never on crowd control. To stay
+      within 255 the wand line goes first, then the /assist line (= the macro as without the setting).
   Spell objects carry pre-computed seconds (castFirst, castLast, cdSec, durSec) from tools/build_data.js. ]]
 local _, ns = ...
 local E = {}
@@ -236,12 +241,32 @@ function E.units(mode)
 end
 local function ctxOf(ctx)
   if type(ctx) == "string" or ctx == nil then return { leader = false, unit = ctx or "party1" } end
-  return { leader = not not ctx.leader, unit = contains(UNITS, ctx.unit) and ctx.unit or "party1", wand = not not ctx.wand }
+  local leader = not not ctx.leader
+  return { leader = leader, unit = contains(UNITS, ctx.unit) and ctx.unit or "party1", wand = not not ctx.wand,
+    assist = (not leader) and ctx.assist and true or false }
 end
+--- The same context without "Take the leader's target" (the fallback when a key does not fit 255 with it).
+local function noAssist(ctx) return { leader = ctx.leader, unit = ctx.unit, wand = ctx.wand, assist = false } end
+--- "/assist <unit>" right after the first line (#showtooltip ...).
+local function withAssist(body, ctx)
+  local line = "/assist " .. E.units(ctx.unit).main
+  local i = sfind(body, "\n", 1, true)
+  if not i then return line .. "\n" .. body end
+  return ssub(body, 1, i) .. line .. "\n" .. ssub(body, i + 1)
+end
+E.withAssist = withAssist
 --- Classes that shoot a wand (spell "Shoot"); hunters have Auto Shot instead.
 E.WAND_CLASSES = { mage = true, priest = true, warlock = true }
 local WAND_ACTIONS = { ranged = true, hostile = true, petattack = true }
 local WAND_CATEGORIES = { Damage = true, Debuff = true } -- never crowd control (it would break Polymorph, Fear, Shackle)
+--- Keys that take the leader's target first: enemy damage/debuff keys (never crowd control), Attack and Auto Shot.
+local ASSIST_ACTIONS = { ranged = true, hostile = true, petattack = true, melee = true, ["melee-pet"] = true, opener = true,
+  ["aoe-melee"] = true, dual = true, autoshot = true, wand = true }
+function E.assistsFirst(s, ctx)
+  if not (ctx.assist and not ctx.leader) then return false end
+  if s.action == "engage" then return true end
+  return (ASSIST_ACTIONS[s.action] and WAND_CATEGORIES[s.category]) and true or false
+end
 --- Does this spell key end with the wand line? (ctx.wand: the character's class shoots wands)
 function E.wandsAfter(s, ctx) return (ctx.wand and WAND_ACTIONS[s.action] and WAND_CATEGORIES[s.category]) and true or false end
 E.ctxOf = ctxOf
@@ -282,6 +307,16 @@ function E.makeMacro(s, ctxIn)
   local ctx = ctxOf(ctxIn)
   local out = buildMacro(s, ctx)
   local function fit(t) if #t > MACRO_LIMIT then return replaceFirst(t, "#showtooltip " .. s.name .. "\n", "#showtooltip\n") end return t end
+  if E.assistsFirst(s, ctx) and out ~= "" then
+    local a = withAssist(out, ctx)
+    if E.wandsAfter(s, ctx) then
+      local w = addWand(a, ctx, fit)
+      if w then return w end
+    end
+    a = fit(a)
+    if #a <= MACRO_LIMIT then return a end
+    ctx = noAssist(ctx) -- does not fit with /assist: the macro as without the setting
+  end
   if E.wandsAfter(s, ctx) then
     local w = addWand(out, ctx, fit)
     if w then return w end
@@ -330,6 +365,11 @@ E.aimFor = aimFor
 --- and the spells never cast. Last = the wand shoots when the spell cannot be cast.
 function addWand(body, ctx, fit)
   fit = fit or function(t) return t end
+  if ctx.assist and not ctx.leader then
+    -- after /assist the own target is the leader's target: auto-repeat only keeps shooting at the own target
+    local w = fit(body .. "\n/cast [harm,nodead] !Shoot")
+    return #w <= MACRO_LIMIT and w or nil
+  end
   for lvl = 0, 2 do
     local w = fit(body .. "\n/cast " .. aimFor({ aim = "harm" }, ctx, lvl) .. " !Shoot")
     if #w <= MACRO_LIMIT then return w end
@@ -382,6 +422,7 @@ local function buildCastSequence(def, t, ctx, has, o)
     local list = slice(names)
     if filler then for _ = 1, nFill do list[#list + 1] = filler.name end end
     local txt = "#showtooltip\n"
+    if ctx.assist and def.aim ~= "help" and not def.noAssist then txt = txt .. "/assist " .. E.units(ctx.unit).main .. "\n" end
     if def.startattack then txt = txt .. "/startattack " .. aim .. "\n" end
     if def.pet then txt = txt .. "/petattack " .. aim .. "\n" end
     if #list == 1 then return txt .. "/cast " .. aim .. " " .. list[1] end
@@ -395,6 +436,11 @@ local function buildCastSequence(def, t, ctx, has, o)
     if #macro > MACRO_LIMIT and aimFor(def, ctx, lv) ~= aimFor(def, ctx, level) then level = lv; macro = make(lv, fill) end
   end
   while #macro > MACRO_LIMIT and fill > need do fill = fill - 1; macro = make(level, fill) end
+  if ctx.assist and def.aim ~= "help" and not def.noAssist and (#macro > MACRO_LIMIT or fill < n) then
+    -- does not fit as well with /assist: the key as without the setting (the wand line went first already)
+    local plain = buildCastSequence(def, t, noAssist(ctx), has, o)
+    if plain and (#macro > MACRO_LIMIT or plain.fills > fill) then return plain end
+  end
   if ctx.wand and def.aim ~= "help" and not def.noWand and #macro <= MACRO_LIMIT then macro = addWand(macro, ctx) or macro end
   local single = #names + (filler and fill or 0) == 1
   local loopSec = jsround((pre + (filler and fill * castSec(filler, "last") or 0)) * 10) / 10
@@ -427,6 +473,7 @@ local function buildPriority(def, t, ctx, has)
     local cond = smatch(aim, "^%s*(.-)%s*$")
     if cond == "" then cond = "[harm,nodead]" end
     local parts = { "#showtooltip " .. tipName }
+    if ctx.assist and def.aim ~= "help" then parts[#parts + 1] = "\n/assist " .. u.main end
     if def.aim == "melee" then parts[#parts + 1] = "\n/startattack " .. cond end
     if def.pet then parts[#parts + 1] = "\n/petattack " .. cond end
     for _, s in ipairs(list) do parts[#parts + 1] = "\n/cast " .. (self[s] and "[combat] " or aim) .. s.name end
@@ -446,6 +493,10 @@ local function buildPriority(def, t, ctx, has)
   local list, level = slice(spells), 0
   local macro = make(0, list)
   if #macro > MACRO_LIMIT and not ctx.leader then level = 1; macro = make(1, list) end
+  if #macro > MACRO_LIMIT and ctx.assist and def.aim ~= "help" then
+    -- does not fit with /assist: the key as without the setting
+    return buildPriority(def, t, noAssist(ctx), has)
+  end
   while #macro > MACRO_LIMIT and #list > 1 do list = slice(list, 1, #list - 1); macro = make(level, list) end
   if ctx.wand and def.aim ~= "help" and not def.autoshot and #macro <= MACRO_LIMIT then macro = addWand(macro, ctx) or macro end
   local names = {}
@@ -486,9 +537,13 @@ function E.buildCustom(cls, c, ctxIn, has, opts)
     if #spells == 0 then return { id = id, label = c.name, custom = true, base = "priority", kind = "empty", spells = {}, macro = "", compact = false, tooLong = false } end
     local melee = meleeOpt and aim == "harm"
     local def = { aim = aim }
+    -- "Take the leader's target" first, unless the key holds crowd control (it would retarget away from the CC target)
+    local assist = ctx.assist and aim == "harm"
+    for _, s in ipairs(spells) do if s.category == "Control" then assist = false end end
     local function make(lvl, list)
       local a = aimFor(def, ctx, lvl)
       local txt = "#showtooltip\n"
+      if assist then txt = txt .. "/assist " .. E.units(ctx.unit).main .. "\n" end
       if melee then txt = txt .. "/startattack " .. a .. "\n" end
       if pet then txt = txt .. "/petattack " .. a .. "\n" end
       local lines = {}
@@ -503,6 +558,7 @@ function E.buildCustom(cls, c, ctxIn, has, opts)
     for _, lv in ipairs({ 1, 2 }) do
       if #macro > MACRO_LIMIT and aimFor(def, ctx, lv) ~= aimFor(def, ctx, level) then level = lv; macro = make(lv, list) end
     end
+    if #macro > MACRO_LIMIT and assist then return E.buildCustom(cls, c, noAssist(ctx), has, opts) end
     while #macro > MACRO_LIMIT and #list > 1 do list = slice(list, 1, #list - 1); macro = make(level, list) end
     local ownWand = false
     for _, s in ipairs(list) do if s.action == "wand" then ownWand = true end end
@@ -523,6 +579,9 @@ function E.buildCustom(cls, c, ctxIn, has, opts)
   for _, n in ipairs(steps) do local s = has(n); if s and s.action == "wand" then def.noWand = true end end
   local fs = (c.filler and c.filler ~= "") and has(c.filler) or nil
   if fs and fs.action == "wand" then def.noWand = true end
+  -- crowd control in the key: no /assist (it would retarget away from the CC target)
+  for _, n in ipairs(steps) do local s = has(n); if s and s.category == "Control" then def.noAssist = true end end
+  if fs and fs.category == "Control" then def.noAssist = true end
   local function run()
     local st = {}
     for i, n in ipairs(steps) do st[i] = { s = n } end
