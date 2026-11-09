@@ -38,9 +38,35 @@ local function walk(root, visit, depth)
   for _, k in ipairs(all(root, "GetChildren")) do if type(k) == "table" then walk(k, visit, depth + 1) end end
 end
 
+--- The box of obj as the player sees it: clipped to every scroll frame above it (bug sweep 9 Nov 2026: rows of the
+--- talents point order list that were scrolled out of view were reported as "overlap" with the buttons above).
+--- nil when it is scrolled out of view completely.
 local function rect(obj)
   local l, r, b, t = num(call(obj, "GetLeft")), num(call(obj, "GetRight")), num(call(obj, "GetBottom")), num(call(obj, "GetTop"))
-  if l and r and b and t then return { l, b, r, t } end
+  if not (l and r and b and t) then return nil end
+  local p = call(obj, "GetParent")
+  local depth = 0
+  while p and depth < 20 do
+    if call(p, "GetObjectType") == "ScrollFrame" then
+      local cl, cr, cb, ct = num(call(p, "GetLeft")), num(call(p, "GetRight")), num(call(p, "GetBottom")), num(call(p, "GetTop"))
+      if cl and cr and cb and ct then
+        l, r, b, t = math.max(l, cl), math.min(r, cr), math.max(b, cb), math.min(t, ct)
+        if r - l <= 1.5 or t - b <= 1.5 then return nil end
+      end
+    end
+    p = call(p, "GetParent"); depth = depth + 1
+  end
+  return { l, b, r, t }
+end
+--- True when obj is inside a scroll frame (its own box may lie outside the window: scrolled, not sticking out).
+local function scrolled(obj)
+  local p = call(obj, "GetParent")
+  local depth = 0
+  while p and depth < 20 do
+    if call(p, "GetObjectType") == "ScrollFrame" then return true end
+    p = call(p, "GetParent"); depth = depth + 1
+  end
+  return false
 end
 local function inter(a, b)
   return math.min(a[3], b[3]) - math.max(a[1], b[1]) > 1.5 and math.min(a[4], b[4]) - math.max(a[2], b[2]) > 1.5
@@ -67,7 +93,7 @@ function AU.scan(frame, tabKey)
       local w, sw = num(call(obj, "GetWidth")), num(call(obj, "GetStringWidth"))
       local wraps = call(obj, "CanWordWrap")
       local cut = (w and sw and w > 0 and wraps == false and sw > w + 2) or (wraps ~= false and call(obj, "IsTruncated") == true)
-      if cut and not obj.wbxTrunc then
+      if cut and not obj.wbxTrunc and rect(obj) then
         out[#out + 1] = { tab = tabKey, kind = "cut", text = plain(txt):sub(1, 50), need = math.floor(sw or 0), have = math.floor(w or 0) }
       end
       local r = rect(obj)
@@ -89,7 +115,7 @@ function AU.scan(frame, tabKey)
         end
       end
       local l, r, b = num(call(obj, "GetLeft")), num(call(obj, "GetRight")), num(call(obj, "GetBottom"))
-      if obj ~= frame and fl and fr and fb and l and r and b and (l < fl - 2 or r > fr + 2 or b < fb - 2) then
+      if obj ~= frame and fl and fr and fb and l and r and b and (l < fl - 2 or r > fr + 2 or b < fb - 2) and not scrolled(obj) then
         local name = call(obj, "GetName") or call(obj, "GetObjectType") or "?"
         out[#out + 1] = { tab = tabKey, kind = "outside", text = tostring(name), need = math.floor(math.max(fl - l, r - fr, fb - b)), have = 0 }
       end

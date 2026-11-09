@@ -1,5 +1,11 @@
 # WoWBoxer addon – backlog
 
+## The owner: TEST BUILD 1.3.0-test.1 – bug sweep (all three Forever clients, `/reload` each, one party)
+1. On Rip: Setup → tick Advanced (or any setting) → the card "Use the same on your other characters?" → **Send**.
+2. On Rup and Rap: the card "Rip sends WoWBoxer settings" → **Use them** → `/reload` → Advanced is still on.
+3. Fight a few mobs (or a dungeon boss): during the fight the team panel may say *paused*; after it, all three show again.
+4. Pick up a spell with the mouse, press Update macros: a plain chat line; drop it → the macros go on the bars.
+
 ## The owner: TEST BUILD 1.1.0-test.1 – team relay (restart the clients, 2+ in one party, leader = squad leader)
 1. Whisper a follower from a third character (or a friend): the leader's chat shows `[Follower] Name whispers: …`.
 2. Out of combat, move a follower so its follow breaks: the leader gets "X stopped following!" + a sound (not when zoning/flying).

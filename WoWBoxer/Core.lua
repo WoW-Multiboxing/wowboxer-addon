@@ -1006,7 +1006,7 @@ function Core.selftest(quiet)
   end
   -- docs/sequences-all-classes.md §5 [AFKLAR]: spell names of the v8.5 sequences on this client (by spell ID), and
   -- what can only be seen in play (left open here, results go into LOG.md)
-  local sq = { names = {}, open = { "combo points for followers ([@party1target] builder)", "!Auto Shot after Aimed Shot (clip?)",
+  local sq = { names = {}, open = { "combo points for followers with Take the leader's target off", "!Auto Shot after Aimed Shot (clip?)",
     "warrior priority lines fall through (Execute / Overpower / Victory Rush)" } }
   for _, n in ipairs({ "Primal Bite", "Arcane Wrath", "Frostfire Bolt", "Riptide", "Lava Burst", "Stormstrike", "Hemorrhage" }) do
     local found

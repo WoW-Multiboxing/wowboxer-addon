@@ -471,7 +471,8 @@ function Book.nextStep(ctx, mode)
     local names = {}
     for _, it in ipairs(m.items) do if it.status == "create" or it.status == "update" then names[#names + 1] = Book.shortLabel(it) end end
     local lvl = (cdb.lastSync.level or 0) < ctx.level and ("|cffb7f07aLevel " .. ctx.level .. ":|r ") or ""
-    return { text = lvl .. n .. (n == 1 and " macro changed" or " macros changed"), tip = table.concat(names, ", ") .. ". They keep their buttons and keybinds.",
+    return { text = lvl .. n .. (n == 1 and " macro changed" or " macros changed"), short = n .. (n == 1 and " macro changed" or " macros changed"),
+      tip = (lvl ~= "" and ("Level " .. ctx.level .. ": ") or "") .. table.concat(names, ", ") .. ". They keep their buttons and keybinds.",
       button = { "Update macros", "Updates the changed macros. They keep their action buttons and keybinds.", function() Core().sync({}) end } }
   end
   if ctx.bars.changes > 0 then
@@ -1166,6 +1167,16 @@ local function refresh(p, ctx)
   local textW = math.max(40, (p.strip:GetWidth() or 300) - 48 - (step.button and (p.stepBtn:GetWidth() + 8) or 0))
   p.stepText:SetWidth(textW)
   p.stepSub:SetWidth(textW)
+  -- the real font is wider than the measure (Forever 9 Nov: "Level 15: 13 macros changed" was cut): the short form
+  local function width() local w = p.stepText.GetStringWidth and p.stepText:GetStringWidth(); return type(w) == "number" and w or 0 end
+  if step.short and width() >= textW - 2 then p.stepText:SetText(step.short) end
+  -- still too wide (a wide font, a small window): the button says only its first word ("Update macros" -> "Update")
+  if step.short and step.button and width() >= textW - 2 and step.button[1]:find(" ", 1, true) then
+    W.setLabel(p.stepBtn, step.button[1]:match("^(%S+)"))
+    textW = math.max(40, (p.strip:GetWidth() or 300) - 48 - (p.stepBtn:GetWidth() + 8))
+    p.stepText:SetWidth(textW)
+    p.stepSub:SetWidth(textW)
+  end
   for _, b in ipairs(p.cellPool) do b:Hide(); b.cell = nil end
   for _, r in ipairs(p.rules) do r:Hide() end
   for _, b in ipairs(p.helperPool or {}) do b:Hide(); b.cell = nil end
