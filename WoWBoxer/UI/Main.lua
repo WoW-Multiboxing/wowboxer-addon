@@ -193,8 +193,23 @@ local function buildRail(f)
   m.bar:SetPoint("TOPLEFT", 0, 0)
   m.bar:SetPoint("BOTTOMLEFT", 0, 0)
   m.bar:SetWidth(1)
-  W.tip(m, "Macro slots", "Character macros on this character, of the game's limit. WoWBoxer macros start with WBX.")
+  W.tip(m, "Macro slots", function() return UI.meterTip() end)
   UI.meter = m
+end
+--- The meter's tooltip: character slots, the general slots and which WoWBoxer macros use them.
+function UI.meterTip()
+  local acc, used = ns.Compat.numMacros()
+  local accMax, max = ns.Compat.macroLimits()
+  local t = "Character macros on this character: " .. used .. " of " .. max .. ". WoWBoxer macros start with WBX. General (account) macros: " ..
+    acc .. " of " .. accMax .. "."
+  local ok, ctx = pcall(ns.Core.compute)
+  if ok and ctx then
+    local names = {}
+    for _, it in ipairs(ctx.macros.items) do if it.account and it.status ~= "create" then names[#names + 1] = it.gameName end end
+    if #names > 0 then t = t .. " When the character slots are full WoWBoxer uses general slots, named for this character: " .. table.concat(names, ", ") .. "." end
+    if ctx.macros.counts.noslot > 0 then t = t .. " |cffff8a80No slot for: " .. table.concat(ctx.macros.noslotNames, ", ") .. ".|r" end
+  end
+  return t
 end
 --- The slot meter at the bottom of the rail: "18 of 30 macro slots".
 function UI.RefreshMeter()

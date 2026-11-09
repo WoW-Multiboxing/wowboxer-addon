@@ -40,7 +40,7 @@ function Book.kindName(it)
   return k
 end
 --- Short helper names (the spec: no truncated names).
-Book.HELPER_NAME = { Follow = "Follow (line)", FollowLead = "Follow leader", Assist = "Assist", Focus = "Focus", Pet = "Pet attack", PetBack = "Pet back", Wand = "Wand", Invite = "Invite squad",
+Book.HELPER_NAME = { Follow = "Follow (line)", FollowLead = "Follow leader", Assist = "Assist", Focus = "Focus", PetBack = "Pet back", Wand = "Wand", Invite = "Invite squad",
   Invite2 = "Invite squad 2", Target = "Target leader" }
 function Book.shortLabel(it)
   if it.group == "helper" then return Book.HELPER_NAME[it.key] or it.label end
@@ -49,8 +49,19 @@ end
 --- Status words (tooltips only; the page shows colours).
 Book.STATUS = {
   create = { "New macro", W.BLUE }, update = { "Changed", W.ORANGE }, noslot = { "No macro slot", W.RED },
-  invalid = { "Blocked", W.RED }, skipped = { "Left out", W.MUTED },
+  invalid = { "Blocked", W.RED }, skipped = { "Left out", W.MUTED }, spell = { "The spell itself – no macro slot", W.GREEN },
 }
+--- Which macro slot a key uses, in words (tooltip): a character slot, a general slot (its name there), or none.
+function Book.slotText(it)
+  if not it then return nil end
+  if it.status == "spell" then return "The spell itself on your bar: it needs no target, so no macro and no macro slot." end
+  if it.status == "noslot" then return "Needs a macro slot: character and general slots are full." end
+  if it.status == "skipped" or it.status == "invalid" then return nil end
+  if it.account then
+    return "Uses a general macro slot (shared by this WoW account), named " .. tostring(it.gameName) .. " so your other characters never use it."
+  end
+  return "Uses a character macro slot."
+end
 --- How a key looks: {glow, dot = colour?, dim (not on a bar), off (left out), word, color}.
 function Book.statusOf(it, b)
   local st = Book.barStatus(it, b)
@@ -61,6 +72,10 @@ function Book.statusOf(it, b)
   return st
 end
 function Book.barStatus(it, b)
+  if it.status == "spell" and b and b.status == "unlearned" then return { dim = true, word = "Not in your spellbook yet", color = W.MUTED } end
+  if it.status == "spell" and b and (b.status == "convert" or b.status == "rank") then
+    return { dot = W.ORANGE, word = b.status == "rank" and "Higher rank – Place spells" or "Becomes the spell – Place spells", color = W.ORANGE }
+  end
   local placed = b and b.status == "placed"
   local st = Book.STATUS[it.status]
   if it.status == "skipped" then return { off = true, word = st[1], color = st[2] } end
@@ -86,6 +101,7 @@ function Book.describe(d, mem)
   if d.group == "helper" then return Book.helperShort(d.key, mem) end
   local body = d.body or ""
   local follows = body:match("@party%dtarget") or body:match("@focustarget")
+  if d.plain then return "Casts " .. (d.label or "the spell") .. " – the spell itself on your bar." end
   if body:find("help", 1, true) then
     return "Casts on your mouseover, else " .. (body:match("@party%d") and leaderName(mem) or "your target") .. ", else you."
   elseif body:find("harm", 1, true) then
@@ -108,7 +124,7 @@ function Book.helperShort(key, mem)
   local _, ahead = ns.Squad.lineFor(s, mem)
   local T = { Follow = "Follows " .. ((ahead and ahead.name) or L) .. ", the one ahead of you in the line.", FollowLead = "Follows " .. L .. ".",
     Assist = "Takes " .. L .. "'s target.", Focus = "Sets your target as focus.",
-    Pet = "Sends your pet at " .. ((mem and mem.leader) and "your target." or (L .. "'s target.")), PetBack = "Calls your pet back, passive.",
+    PetBack = "Sets your pet passive and makes it follow you.",
     Wand = "Shoots your wand at " .. ((mem and mem.leader) and "your target" or (L .. "'s target")) .. " and keeps shooting.",
     Invite = "Invites the others in your squad.", Invite2 = "Invites the rest of your squad.", Target = "Targets " .. L .. "." }
   return T[key] or "A squad macro."
@@ -119,7 +135,7 @@ function Book.helperText(key, mem)
   mem = mem or me
   local u = mem and mem.unit or "party1"
   local why = (key == "Invite" or key == "Invite2") and "Built from your squad's names; it changes when the squad does. They still accept by hand."
-    or (key == "Pet" or key == "PetBack") and "You have a pet; untick it under Squad macros if you don't want it."
+    or key == "PetBack" and "Off by default: your damage macros already send the pet. Tick it under Squad macros to get a key that calls the pet back."
     or key == "Wand" and "Your damage spell macros also fall back to the wand when the spell cannot be cast; this macro only shoots. Untick it under Squad macros if you don't want it."
     or ("Uses " .. leaderName(mem) .. " through " .. u .. "; untick it under Squad macros if you don't want it.")
   return Book.helperShort(key, mem) .. " One press, one action, this character only. " .. why
@@ -317,7 +333,7 @@ function Book.spellSections(ctx, q)
     if key then
       local it
       for _, x in ipairs(ctx.macros.items) do if x.name == key then it = x end end
-      sub, col, word = Book.kindName(it or { key = "" }), W.GREEN, "Already a macro"
+      sub, col, word = Book.kindName(it or { key = "" }), W.GREEN, (d.plain and "One of your spells (no macro)" or "Already a macro")
     else sub, col, word = "", W.BLUE, "Drag to your bar" end
     if Book.newAt(s, ctx.level) then
       sub = "|cffb7f07aNew at " .. ctx.level .. "|r" .. (sub ~= "" and (" · " .. sub) or "")
@@ -387,7 +403,8 @@ function Book.pageWork(ctx, page)
   end
   local replace = Core().cdb.askReplace ~= false -- a filled button is work only when WoWBoxer may ask to replace it
   for _, b in ipairs(Core().onlyGroups(ctx.bars.items, ctx.desired, groups)) do
-    if not seen[b.name] and (b.status == "empty" or b.status == "missing" or (replace and (b.status == "occupied" or b.status == "ours"))) then n = n + 1 end
+    if not seen[b.name] and (b.status == "empty" or b.status == "missing" or b.status == "convert" or b.status == "rank"
+      or (replace and (b.status == "occupied" or b.status == "ours"))) then n = n + 1 end
   end
   return n
 end
@@ -428,9 +445,22 @@ function Book.nextStep(ctx, mode)
       button = { "Use " .. lu, "Follow (line) will follow " .. ahead.name .. " through " .. lu .. " (WoWBoxer's setting; then Update macros).", function() Core().setLineUnit(lu) end } }
   end
   local m = ctx.macros
+  local unused = m.unused or {}
+  local function removeBtn()
+    return { "Remove " .. #unused, "Deletes " .. table.concat(unused, ", ") .. ". Only these WBX macros of this character; nothing else is touched.",
+      function() Core().removeUnused() end }
+  end
   if m.counts.noslot > 0 then
     return { text = "|cffff8a80No free macro slot|r", tip = m.counts.noslot .. (m.counts.noslot == 1 and " macro needs" or " macros need") ..
-      " a macro slot. Delete a macro you don't need in the game's macro window (/macro)." }
+      " a macro slot: " .. table.concat(m.noslotNames or {}, ", ") .. ". Character (" .. (m.charUsed or 0) .. " of " .. m.charMax .. ") and general (" ..
+      (m.accUsed or 0) .. " of " .. (m.accMax or 120) .. ") slots are full. " ..
+      (#unused > 0 and ("Remove the WBX macros you no longer use (" .. table.concat(unused, ", ") .. "), or delete") or "Delete") ..
+      " a macro you don't need in the game's macro window (/macro).", button = #unused > 0 and removeBtn() or nil }
+  end
+  if #unused > 0 then
+    return { text = #unused .. (#unused == 1 and " WBX macro no longer used" or " WBX macros no longer used"),
+      tip = table.concat(unused, ", ") .. ": spells without a target now go on your bar as the spell itself, and squad macros you don't use are gone. Remove them to free their macro slots.",
+      button = removeBtn() }
   end
   local n = m.changes
   if n > 0 then
@@ -582,7 +612,8 @@ function Book.menuFor(p, c)
   if c.kind == "new" then return { { "New macro", function() ns.Advanced.openNew(p) end } } end
   if c.kind == "squadkey" then return { { "Make this macro", function() Book.setSquadKey(c.squadKey, true) end } } end
   if c.kind == "spell" and not c.name then
-    items[#items + 1] = { c.pending and "Pick up (macro works once learned)" or "Pick up (make a macro)", function() pickupCell(c) end }
+    local plain = ns.Engine.isPlain(c.spell, ns.Kit.memberCtx(Core().compute().member))
+    items[#items + 1] = { plain and "Pick up the spell" or (c.pending and "Pick up (macro works once learned)" or "Pick up (make a macro)"), function() pickupCell(c) end }
     if ns.Advanced then for _, it in ipairs(ns.Advanced.menuItems(p, c)) do items[#items + 1] = it end end
     return items
   end
@@ -599,7 +630,7 @@ function Book.menuFor(p, c)
   end
 
   if ns.Advanced then for _, it in ipairs(ns.Advanced.menuItems(p, c)) do items[#items + 1] = it end end
-  if c.d and c.d.body then items[#items + 1] = { "Copy…", function() Book.copyKey(c) end } end
+  if c.d and c.d.body and c.d.body ~= "" then items[#items + 1] = { "Copy…", function() Book.copyKey(c) end } end
   if directBound(c) then items[#items + 1] = { "Remove keybind", function() Core().unbindKey(c.name) end } end
   return items
 end
@@ -620,7 +651,9 @@ local function cellTooltip(GT, c)
   if c.kind == "squadkey" then GT:AddLine(Book.helperShort(c.squadKey) .. " Tick the box to make this macro.", 1, 1, 1, true); return end
   local d = c.d
   if c.kind == "spell" and not d then
-    d = { group = "extra", label = c.spell.name, body = ns.Engine.makeMacro(c.spell, ns.Kit.memberCtx(ns.Core.compute().member)) }
+    local mctx = ns.Kit.memberCtx(ns.Core.compute().member)
+    local plain = ns.Engine.isPlain(c.spell, mctx)
+    d = { group = "extra", label = c.spell.name, plain = plain or nil, body = plain and "" or ns.Engine.makeMacro(c.spell, mctx) }
   end
   if c.group == "helper" then GT:AddLine(Book.helperText(c.item.key), 1, 1, 1, true)
   else
@@ -641,6 +674,9 @@ local function cellTooltip(GT, c)
   if sp then local rl = Book.rankLine(sp, ns.Compat.playerLevel()); if rl then GT:AddLine(rl, 0.8, 0.8, 0.8, true) end end
   if d and d.body then for line in (d.body .. "\n"):gmatch("([^\n]*)\n") do if line ~= "" then GT:AddLine(line, 0.56, 0.85, 0.45) end end end
   if c.item and c.item.why then GT:AddLine(c.item.why, 1, 0.54, 0.5, true) end
+  local slotLine = c.item and Book.slotText(c.item)
+  if not slotLine and c.kind == "spell" and d and d.plain then slotLine = "Drag it: the spell itself goes on your bar – no macro, no macro slot." end
+  if slotLine then GT:AddLine(slotLine, 0.66, 0.78, 0.9, true) end
   if c.kind == "key" then
     -- the keybind: the key on its action button, or a direct one (docs/feedback-2026-10-29-late.md §2)
     local k = c.keys and c.keys[1]
@@ -1219,7 +1255,7 @@ local function refresh(p, ctx)
       for _, k in ipairs(sel.keys or {}) do kt[#kt + 1] = ns.Binds.short(k.key) end
       p.detSub:SetText(Book.kindName(sel.item or { key = "" }) .. (#kt > 0 and (" · |cffffd100" .. table.concat(kt, " ") .. "|r") or ""))
       p.detDesc:SetText(sel.group == "helper" and sel.item and Book.helperShort(sel.item.key) or Book.describe(sel.d, nil))
-      p.detMacro:SetText(sel.d and sel.d.body or "")
+      p.detMacro:SetText((sel.d and sel.d.plain) and "|cffa8c8e6The spell itself on your bar: no macro, no macro slot.|r" or (sel.d and sel.d.body or ""))
       local spellText = sel.group ~= "helper" and Book.spellText(sel.d) or nil
       local h = p.detArea:GetHeight() or 0
       local lines = math.max(1, math.floor((h + 0.5) / 11))
@@ -1239,9 +1275,13 @@ local function refresh(p, ctx)
     end
     -- footer
     local _, charMax = ns.Compat.macroLimits()
-    local used = charMax - ctx.macros.free - ctx.macros.counts.create
-    p.slots:SetText(used .. "/" .. charMax .. " macros")
-    p.slotsTip = used .. " of " .. charMax .. " character macro slots used."
+    local used = ctx.macros.charUsed or (charMax - ctx.macros.free - ctx.macros.counts.create)
+    local acc = 0
+    for _, it in ipairs(ctx.macros.items) do if it.account and it.status ~= "create" then acc = acc + 1 end end
+    p.slots:SetText(used .. "/" .. charMax .. " macros" .. (acc > 0 and (" +" .. acc .. " general") or ""))
+    p.slotsTip = used .. " of " .. charMax .. " character macro slots used." ..
+      (acc > 0 and (" " .. acc .. " WoWBoxer " .. (acc == 1 and "macro uses a general slot" or "macros use general slots") .. " (account, named for this character).") or "") ..
+      (ctx.macros.counts.spell > 0 and (" " .. ctx.macros.counts.spell .. " of your spells need no macro.") or "")
   end
   if ns.KeyEditor.IsOpen() then ns.KeyEditor.Refresh() end
   if p.guide then Book.refreshGuide(p, ctx) end

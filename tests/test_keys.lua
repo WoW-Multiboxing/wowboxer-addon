@@ -34,7 +34,8 @@ for _, fileIds in ipairs({ false, true }) do
   local ctx = Core.computeFresh()
   local names = {}
   for _, d in ipairs(ctx.desired) do if d.group == "helper" then names[d.key] = d end end
-  H.ok(names.Follow and names.Assist and names.Pet and names.PetBack, tag .. "follower warlock: Follow, Assist, Pet, PetBack")
+  -- owner, 9 Nov 2026: no Pet attack key (damage macros send the pet); Pet passive + follow is opt-in
+  H.ok(names.Follow and names.Assist and not names.Pet and not names.PetBack, tag .. "follower warlock: Follow, Assist; no Pet, no PetBack by default")
   for key, d in pairs(names) do H.ok(d.icon ~= ns.Macros.ICON, tag .. key .. " gets its own icon, not the ?") end
   H.eq(names.Follow.iconName, "Ability_Tracking", tag .. "Follow icon")
   Core.sync({})
@@ -42,7 +43,7 @@ for _, fileIds in ipairs({ false, true }) do
   H.ok(fm and fm.icon ~= 134400, tag .. "the macro in the game has the icon")
   local again = Core.computeFresh().macros
   local upd = {}
-  for _, it in ipairs(again.items) do if it.status ~= "same" then upd[#upd + 1] = it.name .. "=" .. it.status end end
+  for _, it in ipairs(again.items) do if it.status ~= "same" and it.status ~= "spell" then upd[#upd + 1] = it.name .. "=" .. it.status end end
   H.eq(table.concat(upd, ","), "", tag .. "no endless updates after the icon is set")
   -- an old ? helper gets the icon with the next Update macros
   fm.icon = 134400

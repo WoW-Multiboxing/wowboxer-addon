@@ -117,7 +117,7 @@ function G.build(H, Mock, game)
             m.level = L
             local list = {}
             for i, d in ipairs(M.desired(m, L, opts)) do
-              list[i] = { name = d.name, key = d.key, group = d.group, body = d.body, icon = d.icon, ok = d.ok and true or false, why = d.why }
+              list[i] = { name = d.name, key = d.key, group = d.group, body = d.body, icon = d.icon, ok = d.ok and true or false, why = d.why, plain = d.plain }
             end
             local sig = G.encode(list)
             if prev and prev.sig == sig then prev.band.to = L
@@ -138,7 +138,7 @@ function G.build(H, Mock, game)
         m.level = L
         local list = {}
         for _, d in ipairs(M.desired(m, L, { extras = extras })) do
-          if d.group == "extra" then list[#list + 1] = { name = d.name, id = d.spell.id, pending = d.pending, icon = d.icon } end
+          if d.group == "extra" then list[#list + 1] = { name = d.name, id = d.spell.id, pending = d.pending, icon = d.icon, plain = d.plain } end
         end
         local sig = G.encode(list)
         if prev and prev.sig == sig then prev.band.to = L

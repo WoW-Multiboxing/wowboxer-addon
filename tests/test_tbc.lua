@@ -89,7 +89,9 @@ for _, sc in ipairs({
   Core.sync()
   for _ = 1, 3 do W.flush() end
   H.eq(Core.compute().macros.changes, 0, tag .. "Place all creates every macro")
-  H.ok((W.calls.CreateMacro or 0) >= kit, tag .. "macros created")
+  local kitMacros = 0 -- plain spells (no target) are the spell itself on the bar, no macro (owner, 9 Nov 2026)
+  for _, d in ipairs(ctx.desired) do if d.group == "kit" and not d.plain then kitMacros = kitMacros + 1 end end
+  H.ok((W.calls.CreateMacro or 0) >= kitMacros, tag .. "macros created")
   -- selftest + login checks run without errors
   for _ = 1, 4 do W.flush() end
   Core.selftest(true)

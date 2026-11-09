@@ -21,6 +21,9 @@ function KB.commandForSlot(slot)
   return prefix and (prefix .. ((slot - 1) % 12 + 1)) or nil
 end
 
+--- The macro's name in the game: a key in a general macro slot has its per-character name there (Macros.gameName).
+local function real(name) return (ns.Macros and ns.Macros.gameName) and ns.Macros.gameName(name) or name end
+KB.realName = real
 local function keysOf(command)
   if not command or not G.GetBindingKey then return {} end
   local out = {}
@@ -31,7 +34,7 @@ end
 --- Keys that press macro `name`: its own macro binding first, then the keys of its action button. {{key, via}}
 function KB.keysFor(name, slot)
   local out, seen = {}, {}
-  for _, k in ipairs(keysOf("MACRO " .. name)) do if not seen[k] then seen[k] = true; out[#out + 1] = { key = k, via = "macro" } end end
+  for _, k in ipairs(keysOf("MACRO " .. real(name))) do if not seen[k] then seen[k] = true; out[#out + 1] = { key = k, via = "macro" } end end
   for _, k in ipairs(keysOf(KB.commandForSlot(slot))) do if not seen[k] then seen[k] = true; out[#out + 1] = { key = k, via = "button" } end end
   return out
 end
@@ -91,12 +94,12 @@ function KB.classify(name, key)
   if not used then return { kind = "free" } end
   -- a 1–= key that presses a WBX macro directly is broken (0.9.4): it is still its action button's key, never "other"
   local broken = KB.DEFAULT_KEYS[key] and used:find("^MACRO WBX") and KB.DEFAULT_KEYS[key] or nil
-  if used == "MACRO " .. name and not broken then return { kind = "same" } end
+  if used == "MACRO " .. real(name) and not broken then return { kind = "same" } end
   local slot = broken or KB.slotForCommand(used)
   if slot then
     local a = ns.Compat.actionInfo(slot)
     if not a then return { kind = "button", slot = slot, empty = true, broken = broken and true or nil } end
-    if a.kind == "macro" and a.name == name then return { kind = broken and "button" or "same", slot = slot, broken = broken and true or nil, here = true } end
+    if a.kind == "macro" and (a.name == name or a.name == real(name)) then return { kind = broken and "button" or "same", slot = slot, broken = broken and true or nil, here = true } end
     local what = a.name
     if not what and a.kind == "item" and G.GetItemInfo then local ok, n = pcall(G.GetItemInfo, a.id); what = ok and n or nil end
     return { kind = "button", slot = slot, what = what or "something", broken = broken and true or nil }
@@ -159,8 +162,8 @@ function KB.bind(name, key)
   local before = KB.actionOf(key)
   if KB.slotForCommand(before) then return false, key .. " is the keybind of " .. KB.buttonName(KB.slotForCommand(before)) .. " – put the macro on that button instead" end
   local prev = prevStore()
-  if prev[key] == nil and before ~= "MACRO " .. name then prev[key] = before or "" end -- "" = it did nothing before
-  local ok = KB.writeMacro(key, name, "set keybind")
+  if prev[key] == nil and before ~= "MACRO " .. real(name) then prev[key] = before or "" end -- "" = it did nothing before
+  local ok = KB.writeMacro(key, real(name), "set keybind")
   if not ok then return false, "the game refused the keybind" end
   save("set keybind")
   return true, before
@@ -183,7 +186,7 @@ KB.restoreKey = restoreKey
 function KB.unbind(name)
   if not ns.Rules.isOurs(name) or ns.Compat.inCombat() or not G.SetBinding then return 0 end
   local n = 0
-  for _, k in ipairs(keysOf("MACRO " .. name)) do restoreKey(k); n = n + 1 end
+  for _, k in ipairs(keysOf("MACRO " .. real(name))) do restoreKey(k); n = n + 1 end
   if n > 0 then save("remove keybind") end
   return n
 end

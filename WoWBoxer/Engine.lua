@@ -323,6 +323,18 @@ function E.makeMacro(s, ctxIn)
   end
   return fit(out)
 end
+--- Plain spells (owner, 9 Nov 2026): a spell that needs no target – summons, self buffs, Create Healthstone, Life Tap,
+--- mounts, ground spells – gains nothing from a macro, so it goes on the bar as the spell itself (no macro slot).
+--- Per game: ns.Data.game.plainActions (Games/<Game>.lua) can replace this set of data actions.
+E.PLAIN_ACTIONS = { self = true, petself = true, ground = true }
+function E.plainActions() local g = ns.Data and ns.Data.game; return (g and g.plainActions) or E.PLAIN_ACTIONS end
+--- Is spell s a plain spell for this context? Only when its action is in the set AND the macro would be nothing but
+--- "#showtooltip <name>\n/cast <name>" (no target chain, no /assist, no wand line, no pet line).
+function E.isPlain(s, ctxIn)
+  if type(s) ~= "table" or s.gate == "wand" or not E.plainActions()[s.action] then return false end
+  if not (s.ranks and s.ranks[1] and s.ranks[1].id) then return false end -- the bar needs a spell ID to pick up
+  return E.makeMacro(s, ctxIn) == "#showtooltip " .. s.name .. "\n/cast " .. s.name
+end
 E.OFFENSIVE_MELEE = { "melee", "melee-pet", "melee-cc", "aoe-melee", "dual", "engage", "opener" }
 E.OFFENSIVE_PAL = E.OFFENSIVE_MELEE
 

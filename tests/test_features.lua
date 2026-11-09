@@ -878,17 +878,24 @@ do
   Core.cdb.guide = "done"
   UI.Open("keys")
   local cap = UI.panels.keys.capture
+  -- the first two keys that are macros (Life Tap, Summon Imp … are plain spells: no macro, owner 9 Nov 2026)
+  local KA, KB2, plainKey
+  for _, d in ipairs(Core.compute().desired) do
+    if not d.plain and (d.group == "kit" or d.group == "helper") then if not KA then KA = d.name elseif not KB2 then KB2 = d.name end end
+    if d.group == "kit" and d.plain and not plainKey then plainKey = d end
+  end
+  H.ok(KA and KB2 and plainKey, "warlock 20: two macro keys and a plain spell key: " .. tostring(KA) .. " " .. tostring(KB2) .. " " .. tostring(plainKey and plainKey.name))
   local function texts() return (cap.text:GetText() or "") .. " " .. (cap.yes:IsShown() and cap.yes:GetText() or "") .. " " .. (cap.no:IsShown() and cap.no:GetText() or "") end
   local function noRaw(what) H.ok(not texts():find("ACTIONBUTTON", 1, true) and not texts():find("OPENALLBAGS", 1, true), what .. ": no command names: " .. texts()) end
   -- regression: key 4 belongs to the empty action button 4 -> the key goes onto that button, no warning
   H.eq(W.slotMacroName(4), nil, "button 4 is empty")
-  cap:Start("WBX K2", "Key 2")
+  cap:Start(KA, "Key A")
   cap._scripts.OnKeyDown(cap, "4")
   H.ok(not cap:IsShown(), "empty action button: no question")
-  H.eq(W.slotMacroName(4), "WBX K2", "regression: key 4 of an empty button puts the key on button 4")
+  H.eq(W.slotMacroName(4), KA, "regression: key 4 of an empty button puts the key on button 4")
   H.eq(W.bindings["4"], "ACTIONBUTTON4", "the game binding is not touched")
   -- the same key already there
-  cap:Start("WBX K2", "Key 2")
+  cap:Start(KA, "Key A")
   cap._scripts.OnKeyDown(cap, "4")
   H.ok(cap:IsShown() and cap.text:GetText():find("Already on", 1, true), "same key there: Already on 4")
   noRaw("already on")
@@ -898,7 +905,7 @@ do
   W.env.C_Spell = W.env.C_Spell or {}
   local origName = W.env.C_Spell.GetSpellName
   W.env.C_Spell.GetSpellName = function(id) if id == 686 then return "Shadow Bolt" end return origName and origName(id) end
-  cap:Start("WBX K2", "Key 2")
+  cap:Start(KA, "Key A")
   cap._scripts.OnKeyDown(cap, "5")
   H.ok(cap:IsShown() and cap.text:GetText():find("is action button 5 (Shadow Bolt)", 1, true), "holds something else: " .. texts())
   H.eq(cap.yes:GetText(), "Put it there", "button: Put it there")
@@ -908,19 +915,28 @@ do
   H.ok(cap:IsShown() and not cap.yes:IsShown(), "Another key: waits again")
   H.eq(W.actions[5].kind, "spell", "nothing changed")
   cap._scripts.OnKeyDown(cap, "5"); cap.yes:Click()
-  H.eq(W.slotMacroName(5), "WBX K2", "Put it there: on button 5")
+  H.eq(W.slotMacroName(5), KA, "Put it there: on button 5")
   -- another game binding: the game's own name, Yes/No, then the binding
-  cap:Start("WBX K3", "Key 3")
+  cap:Start(KB2, "Key B")
   cap._scripts.OnKeyDown(cap, "B")
   H.ok(cap.text:GetText():find("\"Open All Bags\"", 1, true) and cap.yes:GetText() == "Yes" and cap.no:GetText() == "No", "other binding: " .. texts())
   noRaw("other binding")
   H.eq(W.bindings.B, "OPENALLBAGS", "not bound before Yes")
   cap.yes:Click()
-  H.eq(W.bindings.B, "MACRO WBX K3", "Yes binds it")
+  H.eq(W.bindings.B, "MACRO " .. KB2, "Yes binds it")
   -- an unbound key: bound at once
-  cap:Start("WBX K3", "Key 3")
+  cap:Start(KB2, "Key B")
   cap._scripts.OnKeyDown(cap, "J")
-  H.ok(not cap:IsShown() and W.bindings.J == "MACRO WBX K3", "unbound key: bound directly")
+  H.ok(not cap:IsShown() and W.bindings.J == "MACRO " .. KB2, "unbound key: bound directly")
+  cap:Start(plainKey.name, plainKey.label)
+  W.actions[2] = nil
+  cap._scripts.OnKeyDown(cap, "2")
+  H.ok(W.actions[2] and W.actions[2].kind == "spell" and ns.Compat.isRankOf(W.actions[2].id, plainKey.spell), "plain spell: key 2 puts the spell itself on button 2")
+  H.eq(W.bindings["2"], "ACTIONBUTTON2", "plain spell: button 2 keeps its key")
+  cap:Start(plainKey.name, plainKey.label)
+  cap._scripts.OnKeyDown(cap, "K")
+  H.ok(W.bindings.K == nil and W.chatHas("takes the keybind of its action button"), "plain spell: a free key is not bound to a macro that does not exist")
+  cap:Stop()
   H.eq(KB.bindingText("ACTIONBUTTON4"), "another game function", "a raw command never shows")
   H.eq(KB.slotForCommand("MULTIACTIONBAR1BUTTON2"), 62, "bottom left button 2 = slot 62")
   -- in combat: nothing is placed

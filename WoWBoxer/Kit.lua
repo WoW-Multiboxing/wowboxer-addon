@@ -318,8 +318,7 @@ function K.helpers(m)
     end
   end
   if m.cls == "warlock" or m.cls == "hunter" then
-    local chain = m.leader and "[@mouseover,harm,nodead][harm,nodead]" or ("[@mouseover,harm,nodead][@" .. u.mainTarget .. ",harm,nodead][harm,nodead]")
-    out[#out + 1] = { key = "Pet", label = "Send pet to the same target", body = "#showtooltip\n/petattack " .. chain }
+    -- no "Send pet to the same target" (owner, 9 Nov 2026): every damage macro of a pet class already has /petattack
     out[#out + 1] = { key = "PetBack", label = "Pet passive + follow", body = "/petpassive\n/petfollow" }
   end
   if E.WAND_CLASSES[m.cls] then

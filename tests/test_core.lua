@@ -72,7 +72,11 @@ do
   H.eq(again.macros.changes, 0, "second compute: nothing to change")
   -- replace occupied slots on request
   Core.sync({ replace = true })
-  H.eq(W.slotMacroName(3), "WBX K3", "replace puts K3 on button 3")
+  local k3
+  for _, d in ipairs(Core.compute().desired) do if d.key == "K3" then k3 = d end end
+  if k3 and k3.plain then -- a spell without a target is the spell itself on the bar (owner, 9 Nov 2026)
+    H.ok(W.actions[3] and W.actions[3].kind == "spell" and ns.Compat.isRankOf(W.actions[3].id, k3.spell), "replace puts K3 (" .. k3.label .. ", a plain spell) on button 3")
+  else H.eq(W.slotMacroName(3), "WBX K3", "replace puts K3 on button 3") end
 
   -- level up: same names, new bodies, offer in chat
   local before = {}
@@ -145,17 +149,43 @@ end
 
 -- ------------------------------------------------------------------ full macro slots
 do
-  local W, ns = boot({ name = "Lock", class = "WARLOCK", race = "Scourge", level = 30, maxChar = 3 })
+  local W, ns = boot({ name = "Lock", class = "WARLOCK", race = "Scourge", level = 30, maxChar = 2 })
   W.known = namesAt(ns, "warlock", 30)
   local Core, S = ns.Core, ns.State
   W.addMacro("Mine", "/cast Fear", true)
   S.quickStart(Core.db, Core.cdb, Core.playerInfo())
   local ctx = Core.compute()
-  H.eq(ctx.macros.counts.create, 2, "only free slots are planned")
-  H.ok(ctx.macros.counts.noslot > 0, "rest reported as no slot")
+  local inChar, inAcc = 0, 0
+  for _, it in ipairs(ctx.macros.items) do if it.status == "create" then if it.account then inAcc = inAcc + 1 else inChar = inChar + 1 end end end
+  H.eq(inChar, 1, "the free character slot first")
+  H.ok(inAcc > 0, "the rest goes to general (account) slots")
+  H.eq(ctx.macros.counts.noslot, 0, "general slots free: no macro without a slot")
   Core.sync()
-  H.ok(W.chatHas("without a free macro slot"), "no-slot warning in chat")
-  H.eq(#W.char, 3, "never more than the slot limit")
+  H.eq(#W.char, 2, "never more than the character slot limit")
+  local tag = Core.db.macroTags and Core.db.macroTags[Core.charKey]
+  H.ok(type(tag) == "string" and #tag == 2, "a general-slot tag is kept for this character")
+  local accOurs = 0
+  for _, m in ipairs(W.acc) do if m.name:sub(1, 3) == "WBX" then accOurs = accOurs + 1; H.ok(m.name:sub(1, 6) == "WBX" .. tag .. " " and #m.name <= 16, "general macro named for this character: " .. m.name) end end
+  H.eq(accOurs, inAcc, "every general macro created")
+  H.eq(Core.compute().macros.changes, 0, "after sync: nothing left to create")
+end
+do -- character AND general slots full: the banner and chat name the macros without a slot
+  local W, ns = boot({ name = "Lock", class = "WARLOCK", race = "Scourge", level = 30, maxChar = 2 })
+  W.known = namesAt(ns, "warlock", 30)
+  local Core, S = ns.Core, ns.State
+  W.addMacro("Mine", "/cast Fear", true)
+  for i = 1, 120 do W.addMacro(string.format("Acc%03d", i), "/cast Fear", false) end
+  S.quickStart(Core.db, Core.cdb, Core.playerInfo())
+  local ctx = Core.compute()
+  H.eq(ctx.macros.counts.create, 1, "only free slots are planned")
+  H.ok(ctx.macros.counts.noslot > 0, "rest reported as no slot")
+  H.eq(#ctx.macros.noslotNames, ctx.macros.counts.noslot, "every macro without a slot is named")
+  Core.sync()
+  local said = false
+  for _, m in ipairs(W.chat) do if m:find("without a free macro slot (" .. tostring(ctx.macros.noslotNames[1]), 1, true) then said = true end end
+  H.ok(said, "no-slot warning in chat names the macros")
+  H.eq(#W.char, 2, "never more than the slot limit")
+  H.eq(#W.acc, 120, "no general macro over the limit")
 end
 
 -- ------------------------------------------------------------------ settings (CVars)

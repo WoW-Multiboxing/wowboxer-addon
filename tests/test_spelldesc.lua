@@ -63,7 +63,7 @@ for _, sc in ipairs({
 
   -- 4. a helper (no spell) shows none
   local helper
-  for _, b in ipairs(p.cells) do if b:IsShown() and b.cell and b.cell.group == "helper" then helper = b; break end end
+  for _, b in ipairs(p.cells) do if b:IsShown() and b.cell and b.cell.group == "helper" and b.cell.kind == "key" then helper = b; break end end
   if helper then
     helper:Click("LeftButton")
     H.ok(not p.detSpell:IsShown(), tag .. "helpers show no spell description")

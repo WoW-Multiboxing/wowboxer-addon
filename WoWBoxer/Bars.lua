@@ -1,6 +1,6 @@
 --[[ WoWBoxer – action bar placement.
   Fixed layout so muscle memory survives level-ups: on the primary bar K1–K8 sit on buttons 1–8, S1/S2 on 9–10 and
-  Follow/Assist on 11–12; on the secondary bar C1–C8 sit on 1–8, Focus/Pet/PetBack on 9–11 and Invite on 12 (Wand on 10, or
+  Follow/Assist on 11–12; on the secondary bar C1–C8 sit on 1–8, Focus on 9, PetBack on 11 and Invite on 12 (Wand on 10, or
   the first of 9/12/11 its character does not use), extras fill what is
   left. A slot that holds something that is not a WoWBoxer macro is only replaced when the player ticks "replace". ]]
 local _, ns = ...
@@ -25,7 +25,7 @@ function B.slotLabel(slot)
 end
 function B.barLabel(first) for _, b in ipairs(B.BARS) do if b.first == first then return b.label end end return "Bar " .. tostring(first) end
 local PRIMARY = { K1 = 0, K2 = 1, K3 = 2, K4 = 3, K5 = 4, K6 = 5, K7 = 6, K8 = 7, S1 = 8, S2 = 9, Follow = 10, Assist = 11 }
-local SECONDARY = { C1 = 0, C2 = 1, C3 = 2, C4 = 3, C5 = 4, C6 = 5, C7 = 6, C8 = 7, Focus = 8, Pet = 9, PetBack = 10, Invite = 11 }
+local SECONDARY = { C1 = 0, C2 = 1, C3 = 2, C4 = 3, C5 = 4, C6 = 5, C7 = 6, C8 = 7, Focus = 8, PetBack = 10, Invite = 11 }
 local SHARED = { Wand = { 9, 8, 11, 10 } }
 
 --- The action slots that have a button on screen (the five bars), in bar order.
@@ -49,15 +49,21 @@ function B.layout(desired, cdb, info)
   end
   local held = {}
   if info then
-    local bySpell = {}
+    local bySpell, byId = {}, {}
     for _, slot in ipairs(B.buttonSlots()) do
       local a = info(slot)
       held[slot] = a ~= nil
-      if a and a.kind == "spell" and type(a.name) == "string" and not taken[slot] and not bySpell[a.name] then bySpell[a.name] = slot end
+      if a and a.kind == "spell" and not taken[slot] then
+        if type(a.name) == "string" and not bySpell[a.name] then bySpell[a.name] = slot end
+        if a.id and not byId[a.id] then byId[a.id] = slot end
+      end
     end
     for _, d in ipairs(desired) do
       local sp = d.spell and d.spell.name
       local slot = sp and bySpell[sp]
+      if not slot and d.spell then -- by spell ID too (any rank): works on every client language
+        for _, r in ipairs(d.spell.ranks or {}) do if r.id and byId[r.id] then slot = byId[r.id]; break end end
+      end
       if not out[d.name] and slot and not taken[slot] then out[d.name] = take(slot) end
     end
   end
@@ -97,17 +103,37 @@ function B.layout(desired, cdb, info)
   return out
 end
 
---- Placement plan: {items={{name, slot, status, current}}, counts}. status: placed | empty | ours | occupied | missing | off
+--- Does action `cur` hold spell s (any rank)?
+function B.holdsSpell(cur, s)
+  if not (cur and cur.kind == "spell" and s) then return false end
+  for _, r in ipairs(s.ranks or {}) do if r.id and r.id == cur.id then return true end end
+  return type(cur.name) == "string" and cur.name == s.name
+end
+--- Placement plan: {items={{name, slot, status, current}}, counts}.
+--- status: placed | empty | ours | occupied | missing | off | convert | rank | unlearned
+---   convert = a plain spell's button still holds its old WBX macro (replaced without asking: the same key);
+---   rank = a plain spell's button holds a lower rank (put the highest known rank there, no question);
+---   unlearned = a plain spell the character does not know yet (nothing to put on the bar).
 function B.plan(desired, cdb, skip)
   skip = skip or {}
   local layout = B.layout(desired, cdb, C.actionInfo)
-  local items, counts = {}, { placed = 0, empty = 0, ours = 0, occupied = 0, missing = 0, off = 0 }
+  local items, counts = {}, { placed = 0, empty = 0, ours = 0, occupied = 0, missing = 0, off = 0, convert = 0, rank = 0, unlearned = 0 }
   for _, d in ipairs(desired) do
     local slot = layout[d.name]
     if slot and not skip[d.name] then
       local cur = C.actionInfo(slot)
-      local it = { name = d.name, label = d.label, slot = slot, current = cur }
-      if cur and cur.kind == "macro" and cur.name == d.name then it.status = "placed"
+      local it = { name = d.name, label = d.label, slot = slot, current = cur, plain = d.plain }
+      if d.plain then
+        local best = C.bestRankId(d.spell)
+        it.spellId = best
+        if B.holdsSpell(cur, d.spell) then it.status = (best and cur.id ~= best and C.isRankOf(cur.id, d.spell)) and "rank" or "placed"
+        elseif d.keepOff then it.status = "off"
+        elseif not best then it.status = "unlearned"
+        elseif not cur then it.status = "empty"
+        elseif cur.kind == "macro" and M.isMacro(cur.name, d.name) then it.status = "convert"
+        elseif cur.kind == "macro" and R.isOurs(cur.name) then it.status = "ours"
+        else it.status = "occupied" end
+      elseif cur and cur.kind == "macro" and M.isMacro(cur.name, d.name) then it.status = "placed"
       elseif d.keepOff then it.status = "off" -- "Keep off my bars": never placed by Place all, never counted
       elseif not M.findIndex(d.name) then it.status = "missing"
       elseif not cur then it.status = "empty"
@@ -117,11 +143,11 @@ function B.plan(desired, cdb, skip)
       items[#items + 1] = it
     end
   end
-  return { items = items, counts = counts, changes = counts.empty + counts.ours }
+  return { items = items, counts = counts, changes = counts.empty + counts.ours + counts.convert + counts.rank }
 end
 
 -- ------------------------------------------------------------------ the ONLY writes to action slots and the cursor
--- Every PickupMacro / PlaceAction / PickupAction / ClearCursor of the addon is here (lint51 checks it), with a log line
+-- Every PickupMacro / PickupSpell / PlaceAction / PickupAction / ClearCursor of the addon is here (lint51 checks it), with a log line
 -- naming who asked (source=). Before WoWBoxer first changes a slot, what was there goes into cdb.barOriginal[slot]
 -- (never overwritten), so Reset to default can put the bars back as they were.
 local function charDB() return ns.Core and ns.Core.cdb end
@@ -174,6 +200,29 @@ function B.placeMacro(idx, slot, source)
   log("bar " .. slot .. " <- macro #" .. tostring(idx) .. (ok and "" or (" failed: " .. tostring(err))) .. " (source=" .. tostring(source) .. ")")
   return ok, err
 end
+--- The client's spell pickup (Forever: C_Spell.PickupSpell; Classic Era: PickupSpell), or nil.
+local function pickupSpellFn()
+  local CS = G.C_Spell
+  return (CS and CS.PickupSpell) or G.PickupSpell
+end
+--- Put spell `spellId` on the cursor (a plain spell's drag: the spell itself, no macro).
+function B.pickupSpell(spellId, source)
+  B.clearCursor(source)
+  local f = pickupSpellFn()
+  local ok = f ~= nil and spellId ~= nil and pcall(f, spellId)
+  log("pickup spell " .. tostring(spellId) .. (ok and "" or " failed") .. " (source=" .. tostring(source) .. ")")
+  return ok and true or false
+end
+--- Put spell `spellId` on slot (snapshot first). Returns true or false, err.
+function B.placeSpell(spellId, slot, source)
+  local f = pickupSpellFn()
+  if not (f and spellId) then return false, "this client cannot pick up spells" end
+  B.snapshot(slot)
+  local ok, err = pcall(function() f(spellId); PlaceAction(slot); ClearCursor() end)
+  if not ok then pcall(ClearCursor) end
+  log("bar " .. slot .. " <- spell " .. tostring(spellId) .. (ok and "" or (" failed: " .. tostring(err))) .. " (source=" .. tostring(source) .. ")")
+  return ok, err
+end
 --- Put the original content back on slot (Reset to default). Returns true or false, why.
 function B.restoreSlot(slot, orig, source)
   local ok, err
@@ -197,7 +246,16 @@ function B.apply(plan, cdb, replace)
   if C.inCombat() then res.failed[1] = { name = "*", err = "in combat" }; return res end
   if C.cursorBusy() then res.failed[1] = { name = "*", err = "your cursor is holding something; drop it first" }; return res end
   for _, it in ipairs(plan.items) do
-    if it.status == "empty" or ((it.status == "occupied" or it.status == "ours") and replace) then
+    if it.plain then
+      if it.status == "empty" or it.status == "convert" or it.status == "rank" or ((it.status == "occupied" or it.status == "ours") and replace) then
+        local ok, err = B.placeSpell(it.spellId, it.slot, "place all")
+        if ok then
+          res.placed = res.placed + 1; cdb.slots[it.name] = it.slot; cdb.spellSlots = cdb.spellSlots or {}; cdb.spellSlots[it.name] = true
+          if cdb.placedOnce then cdb.placedOnce[it.name] = true end; res.list[#res.list + 1] = it.name
+        else res.failed[#res.failed + 1] = { name = it.name, err = tostring(err) } end
+      elseif it.status == "placed" then cdb.slots[it.name] = it.slot; cdb.spellSlots = cdb.spellSlots or {}; cdb.spellSlots[it.name] = true
+      else res.skipped = res.skipped + 1 end
+    elseif it.status == "empty" or ((it.status == "occupied" or it.status == "ours") and replace) then
       local idx = M.findIndex(it.name)
       if idx then
         local ok, err = B.placeMacro(idx, it.slot, "place all")

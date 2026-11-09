@@ -85,6 +85,8 @@ function Mock.new(H, opts)
   env.PlaceAction = function(slot) protected("PlaceAction"); call("PlaceAction"); local old = W.actions[slot]; W.actions[slot] = W.cursor; W.cursor = old end
   env.PickupAction = function(slot) protected("PickupAction"); local old = W.actions[slot]; W.actions[slot] = W.cursor; W.cursor = old end
   env.ClearCursor = function() W.cursor = nil end
+  -- a plain spell on the cursor (PickupSpell / C_Spell.PickupSpell): {kind = "spell", id}
+  env.PickupSpell = function(id) W.cursor = { kind = "spell", id = id }; call("PickupSpell") end
   env.GetCursorInfo = function() return W.cursor and W.cursor.kind or nil end
   function W.slotMacroName(slot) local a = W.actions[slot]; return a and a.kind == "macro" and a.ref.name or nil end
 
@@ -140,7 +142,8 @@ function Mock.new(H, opts)
     env.GetSpellTexture = function(id) return 200000 + (tonumber(id) or 0) end
     env.GetSpellDescription = function(id) if W.spellDesc then return W.spellDesc[id] or "" end return "Hurls a bolt that deals damage (spell " .. tostring(id) .. ")." end
   end
-  env.IsPlayerSpell = function(id) return false end
+  W.knownIds = opts.knownIds or {} -- spell IDs IsPlayerSpell says yes to
+  env.IsPlayerSpell = function(id) return W.knownIds[id] == true end
 
   -- ---------------------------------------------------------------- cvars, addons
   env.C_CVar = { GetCVar = function(n) return W.cvars[n] end, SetCVar = function(n, v) protected("SetCVar"); if W.cvars[n] == nil then error("unknown cvar") end W.cvars[n] = tostring(v); return true end }

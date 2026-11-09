@@ -113,12 +113,43 @@ function Core.computeFresh()
   local desired = M.desired(m, L, { live = live, extras = Core.cdb.extras, squad = s, squadKeys = Core.cdb.squadKeys, lineUnit = lineUnit,
     overrides = Core.cdb.overrides, ovCtx = { squad = s, me = m } })
   for _, d in ipairs(desired) do d.keepOff = Core.keptOff(d.name, d.group) end
+  M.setTag(Core.macroTag())
   local mplan = M.plan(desired, Core.cdb.skip)
   local bplan = B.plan(desired, Core.cdb, Core.cdb.skip)
   local ctx = { squad = s, member = m, level = L, live = live, desired = desired, macros = mplan, bars = bplan,
     missing = M.missingFromBook(m, L, live) }
   Core.ctxGen, Core.lastCtx = (Core.ctxGen or 0) + 1, ctx -- the strip on the action bars reuses it
   return ctx
+end
+
+--- This character's tag for general (account) macro slots: 2 characters, unique among the characters of this WoW
+--- account (WoWBoxerDB is account-wide, like the general macros), from the name where it can ("Rip" -> "Ri").
+--- Kept in db.macroTags[charKey] from the first general macro on (persist = true, Macros.apply), so the names of its
+--- general macros never change; before that it is only worked out (nothing is saved).
+function Core.macroTag(persist)
+  local db = Core.db
+  if not (db and Core.charKey) then return nil end
+  local tags = type(db.macroTags) == "table" and db.macroTags or {}
+  if type(tags[Core.charKey]) == "string" then return tags[Core.charKey] end
+  local used = {}
+  for k, t in pairs(tags) do if k ~= Core.charKey then used[t] = true end end
+  local letters = (Core.charKey:match("^([^%-]*)") or ""):gsub("[^%w]", "")
+  local a, b = letters:sub(1, 1):upper(), letters:sub(2, 2):lower()
+  local cands = {}
+  if a ~= "" and b ~= "" then cands[#cands + 1] = a .. b end
+  local first = a ~= "" and a or "Z"
+  for i = 2, 9 do cands[#cands + 1] = first .. i end
+  for c = 65, 90 do for i = 0, 9 do cands[#cands + 1] = string.char(c) .. i end end
+  for _, t in ipairs(cands) do
+    if not used[t] then
+      if persist then
+        db.macroTags = tags; tags[Core.charKey] = t
+        Core.log("info", "general macro tag " .. t .. " for " .. Core.charKey)
+      end
+      return t
+    end
+  end
+  return nil
 end
 
 --- "Keep off my bars" (docs/squad-v2-simple.md §4): such a key is never placed by Place all and never counted as
@@ -189,7 +220,7 @@ function Core.sync(opts)
     end
     Core.cdb.lastSync = { level = ctx.level, at = time and time() or 0 }
     local msg = string.format("%d macros created, %d updated, %d placed on your bars", mres.created, mres.updated, bres.placed)
-    if ctx.macros.counts.noslot > 0 then msg = msg .. string.format(", %d without a free macro slot", ctx.macros.counts.noslot) end
+    if ctx.macros.counts.noslot > 0 then msg = msg .. string.format(", %d without a free macro slot (%s)", ctx.macros.counts.noslot, table.concat(ctx.macros.noslotNames, ", ")) end
     if bres.skipped > 0 then msg = msg .. string.format(", %d left where they were (the button holds something else)", bres.skipped) end
     chat(msg .. ".")
     Core.log("info", "sync L" .. ctx.level .. ": " .. msg)
@@ -202,6 +233,21 @@ function Core.sync(opts)
     Core.flyKeys(ctx, mres.changed, bres.list)
     if ns.SeqStrip then ns.SeqStrip.markDirty(); ns.SeqStrip.request() end
     if #ask > 0 then Core.askReplace(ask, opts) end
+  end)
+end
+--- WBX macros this character no longer uses (a key that became a plain spell, Pet attack, an unticked squad key):
+--- names as in the game. Offered for removal on the banner; never deleted without the click.
+function Core.unusedMacros()
+  local ctx = Core.compute()
+  return ctx and ctx.macros.unused or {}
+end
+function Core.removeUnused()
+  return Core.whenSafe("Remove unused macros", function()
+    local names = Core.unusedMacros()
+    local n = M.deleteUnused(names)
+    chat(Core.plural(n, "unused WBX macro", "unused WBX macros") .. " removed" .. (n > 0 and (": " .. table.concat(names, ", ")) or "") .. ".")
+    Core.log("info", "removed unused macros: " .. n .. " (" .. table.concat(names, ", ") .. ")")
+    Core.changed()
   end)
 end
 --- What a button holds, in words ("Smite", "your macro Heals", "WBX K5", "an item").
@@ -323,7 +369,19 @@ function Core.pickup(name)
   local item
   for _, it in ipairs(ctx.macros.items) do if it.name == name then item = it end end
   if not item then return false, "Unknown macro " .. tostring(name) end
-  if item.status == "noslot" then return false, "No free character macro slot. Delete a macro first." end
+  if item.status == "spell" then -- a plain spell: the spell itself goes on the cursor, no macro
+    for _, b in ipairs(ctx.bars.items) do
+      if b.name == name and b.spellId then return Core.pickedSpell(B.pickupSpell(b.spellId, "drag " .. name)) end
+    end
+    for _, d in ipairs(ctx.desired) do
+      if d.name == name then
+        local id = C.bestRankId(d.spell)
+        if id then return Core.pickedSpell(B.pickupSpell(id, "drag " .. name)) end
+        return false, d.label .. " is not in your spellbook yet."
+      end
+    end
+  end
+  if item.status == "noslot" then return false, "No free macro slot (character and general). Delete a macro in /macro first." end
   if item.status == "invalid" then return false, item.why or "invalid macro" end
   if item.status == "create" or item.status == "update" or item.status == "skipped" then
     if item.status == "skipped" then Core.cdb.skip[name] = nil; ctx = Core.compute(); for _, it in ipairs(ctx.macros.items) do if it.name == name then item = it end end end
@@ -338,8 +396,20 @@ function Core.pickup(name)
   B.pickupMacro(idx, "drag " .. name)
   return true
 end
+function Core.pickedSpell(ok) if ok then return true end return false, "Could not pick up the spell." end
 --- Same for a spell from the spell list: it becomes an extra key "WBX <Spell>" (kept for this character).
 function Core.pickupSpell(spellId)
+  if C.inCombat() then return false, "Not in combat." end
+  local _, me = Core.me()
+  if me then
+    for _, s in ipairs(K.customSpellsOf(me)) do
+      if s.id == spellId and ns.Engine.isPlain(s, K.memberCtx(me)) then
+        local id = C.bestRankId(s)
+        if not id then return false, s.name .. " is not in your spellbook yet." end
+        return Core.pickedSpell(B.pickupSpell(id, "drag spell " .. s.name))
+      end
+    end
+  end
   local extras = Core.cdb.extras
   local have = false
   for _, id in ipairs(extras) do if id == spellId then have = true end end
@@ -357,12 +427,19 @@ function Core.scanBars()
   local found = {}
   for slot = 1, 120 do
     local a = C.actionInfo(slot)
-    if a and a.kind == "macro" and R.isOurs(a.name) and not found[a.name] then found[a.name] = slot end
+    if a and a.kind == "macro" and R.isOurs(a.name) then
+      local key = M.keyName(a.name) -- a general macro ("WBXRi K1") is key WBX K1
+      if not found[key] then found[key] = slot end
+    end
   end
+  local spellSlots = cdb.spellSlots or {}
   for name, slot in pairs(cdb.slots) do
     local a = C.actionInfo(slot)
-    if a and a.kind == "macro" and a.name == name then found[name] = slot end -- keep the remembered one if still there
+    if a and a.kind == "macro" and M.isMacro(a.name, name) then found[name] = slot end -- keep the remembered one if still there
+    -- a plain spell's button (Bars.plan checks it still holds that spell)
+    if a and a.kind == "spell" and spellSlots[name] and not found[name] then found[name] = slot end
   end
+  for name in pairs(spellSlots) do if not found[name] then spellSlots[name] = nil end end
   cdb.slots = found
   for name in pairs(found) do cdb.placedOnce[name] = true end
   B.watch() -- a slot the player dragged a WBX macro onto keeps what was there before (Reset to default)
@@ -389,6 +466,13 @@ end
 local function plural(n, one, many) return n .. " " .. (n == 1 and one or many) end
 Core.plural = plural
 function Core.bindKey(name, key)
+  local ctx = Core.compute()
+  for _, it in ipairs(ctx and ctx.macros.items or {}) do
+    if it.name == name and it.status == "spell" then
+      chat(it.label .. " is the spell itself on your bar (no macro), so it takes the keybind of its action button: press that button's key, or set it in the game's Key Bindings.")
+      return false
+    end
+  end
   return Core.whenSafe("Bind " .. name, function()
     local ok, info = ns.Binds.bind(name, key)
     if ok then
@@ -405,7 +489,12 @@ function Core.placeOn(name, slot, key)
     local ok, why = Core.pickup(name) -- creates / updates the macro first
     if not ok then chat("|cffff6060Could not place:|r " .. tostring(why)); return end
     B.clearCursor("placeOn")
-    local placed, err = B.placeMacro(M.findIndex(name), slot, "placeOn " .. tostring(key))
+    local spellId = Core.plainSpellId(name)
+    local placed, err
+    if spellId then
+      placed, err = B.placeSpell(spellId, slot, "placeOn " .. tostring(key))
+      if placed then Core.cdb.spellSlots = Core.cdb.spellSlots or {}; Core.cdb.spellSlots[name] = true end
+    else placed, err = B.placeMacro(M.findIndex(name), slot, "placeOn " .. tostring(key)) end
     if not placed then chat("|cffff6060Could not place:|r " .. tostring(err)); return end
     Core.cdb.slots[name] = slot
     Core.cdb.placedOnce[name] = true
@@ -413,6 +502,12 @@ function Core.placeOn(name, slot, key)
     Core.log("info", "place " .. name .. " on slot " .. slot .. " for keybind " .. tostring(key))
     Core.changed()
   end)
+end
+--- The spell ID to put on a bar for key `name` when it is a plain spell (no macro), else nil.
+function Core.plainSpellId(name)
+  local ctx = Core.compute()
+  for _, d in ipairs(ctx and ctx.desired or {}) do if d.name == name and d.plain then return C.bestRankId(d.spell) end end
+  return nil
 end
 --- "Give 3 back to button 3": the key presses action button 3 again (the macro stays where it is on the bars).
 function Core.giveBack(key)
@@ -569,6 +664,8 @@ end
 local function wbxMacros()
   local out = {}
   for _, x in ipairs(C.characterMacros()) do if R.isOurs(x.name) then out[#out + 1] = x end end
+  local tag = Core.macroTag()
+  for _, x in ipairs(C.accountMacros()) do if M.isMineAccount(x.name, tag) then out[#out + 1] = x end end
   return out
 end
 --- Plain summary of what a reset with choices ch {char, account, macros, cvars} removes.
@@ -1063,7 +1160,7 @@ local function safeRegister(ev) pcall(frame.RegisterEvent, frame, ev) end
 safeRegister("ADDON_LOADED")
 safeRegister("PLAYER_LOGIN")
 
-local spellsTimer, barsTimer
+local spellsTimer, barsTimer, macrosTimer
 function Core.onEvent(event, ...)
   if event == "ADDON_LOADED" then
     local name = ...
@@ -1089,6 +1186,7 @@ function Core.onEvent(event, ...)
     Core.defaultBars()
     safeRegister("ACTIONBAR_SLOT_CHANGED")
     safeRegister("UPDATE_BINDINGS")
+    safeRegister("UPDATE_MACROS")
     Core.scanBars()
     if ns.Minimap and ns.Minimap.Init then ns.Minimap.Init() end
     if ns.Team and ns.Team.Init then ns.Team.Init() end
@@ -1134,6 +1232,13 @@ function Core.onEvent(event, ...)
     if C_Timer and C_Timer.After then C_Timer.After(0.3, run) else run() end
   elseif event == "UPDATE_BINDINGS" then
     Core.changed()
+  elseif event == "UPDATE_MACROS" then
+    -- a macro was made, changed or deleted (here or in /macro): refresh once, so "x of 18", the banner and the
+    -- book all count the same macros
+    if macrosTimer then return end
+    macrosTimer = true
+    local function run() macrosTimer = nil; Core.changed() end
+    if C_Timer and C_Timer.After then C_Timer.After(0.2, run) else run() end
   end
 end
 frame:SetScript("OnEvent", function(_, event, ...) Core.onEvent(event, ...) end)

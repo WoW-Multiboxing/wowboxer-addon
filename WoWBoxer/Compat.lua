@@ -116,6 +116,32 @@ function C.knowsAnyRank(spell)
   return false
 end
 
+-- ------------------------------------------------------------------ plain spells on the bar
+--- Is spell ID `id` one of the ranks of data spell `spell`?
+function C.isRankOf(id, spell)
+  for _, r in ipairs(spell and spell.ranks or {}) do if r.id and r.id == id then return true end end
+  return false
+end
+--- The spell ID to put on the bar for data spell `spell`: its highest rank the character knows; when the client only
+--- knows the spell by name (spellbook scan), the highest rank up to the player's level. nil = not known.
+function C.bestRankId(spell)
+  if not (spell and spell.ranks and #spell.ranks > 0) then return nil end
+  local f = G.IsPlayerSpell or G.IsSpellKnown
+  if f then
+    for i = #spell.ranks, 1, -1 do
+      local id = spell.ranks[i].id
+      if id then local ok, yes = pcall(f, id); if ok and yes then return id end end
+    end
+  end
+  local names = C.knownSpellNames()
+  if names and names[spell.name] then
+    local lvl, best = C.playerLevel() or 1, nil
+    for _, r in ipairs(spell.ranks) do if r.id and (r.l == nil or r.l <= lvl) then best = r.id end end
+    return best or spell.ranks[1].id
+  end
+  return nil
+end
+
 -- ------------------------------------------------------------------ macros
 function C.macroLimits()
   return G.MAX_ACCOUNT_MACROS or 120, G.MAX_CHARACTER_MACROS or 18
@@ -142,8 +168,8 @@ function C.accountMacros()
   local numAcc = C.numMacros()
   local out = {}
   for i = 1, numAcc do
-    local name, _, body = C.macroInfo(i)
-    if name then out[#out + 1] = { index = i, name = name, body = body or "" } end
+    local name, icon, body = C.macroInfo(i)
+    if name then out[#out + 1] = { index = i, name = name, body = body or "", icon = icon } end
   end
   return out
 end

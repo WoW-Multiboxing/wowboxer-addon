@@ -8,14 +8,15 @@ local M = {}
 ns.Macros = M
 
 local E, K, R, C = ns.Engine, ns.Kit, ns.Rules, ns.Compat
+local function Core() return ns.Core end
 
 M.ICON = 134400 -- the "?" icon: #showtooltip then shows the spell
 M.ORDER = { "K1", "K2", "K3", "K4", "K5", "K6", "K7", "K8", "S1", "S2", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8",
-  "Invite", "Invite2", "Follow", "FollowLead", "Assist", "Target", "Focus", "Pet", "PetBack", "Wand" }
+  "Invite", "Invite2", "Follow", "FollowLead", "Assist", "Target", "Focus", "PetBack", "Wand" }
 local SEQ_KEY = { dps = "S1", heal = "S2" }
 --- Helper keys run no spell, so #showtooltip cannot pick an icon: each gets a picture that says what it does.
 M.HELPER_ICON = { Follow = "Ability_Tracking", Assist = "Ability_Hunter_SniperShot", Focus = "Spell_Holy_MindVision",
-  Pet = "Ability_GhoulFrenzy", PetBack = "Ability_Seal", Invite = "INV_Letter_01", Invite2 = "INV_Letter_01", Target = "Ability_TownWatch",
+  PetBack = "Ability_Seal", Invite = "INV_Letter_01", Invite2 = "INV_Letter_01", Target = "Ability_TownWatch",
   FollowLead = "Ability_Rogue_Sprint", Wand = "INV_Wand_01" }
 
 -- ------------------------------------------------------------------ squad keys (docs/squad-v2-simple.md §3)
@@ -31,8 +32,8 @@ M.SQUAD_KEYS = {
   { key = "Assist", label = "Assist", applies = follower, default = function() return true end },
   { key = "Target", label = "Target leader", applies = follower, default = function() return false end },
   { key = "Focus", label = "Focus leader", applies = function(m) return follower(m) and m.unit == "focus" end, default = function() return true end },
-  { key = "Pet", label = "Pet attack", applies = petClass, default = function() return true end },
-  { key = "PetBack", label = "Pet back", applies = petClass, default = function() return true end },
+  -- Pet passive + follow: opt-in, off by default (owner, 9 Nov 2026). "Pet attack" is gone: damage macros send the pet.
+  { key = "PetBack", label = "Pet back", applies = petClass, default = function() return false end },
   { key = "Wand", label = "Wand", applies = wandClass, default = function() return true end },
 }
 --- Is squad key `key` ticked for member m? choices = cdb.squadKeys ({[key] = true/false}); nil = the default.
@@ -192,7 +193,8 @@ function M.desired(m, L, opts)
   for _, x in ipairs(K.kitSlots(m, L, live)) do
     local body = E.makeMacro(x.spell, ctx)
     if body ~= "" then
-      out[#out + 1] = { key = "K" .. x.slot, name = R.PREFIX .. " K" .. x.slot, group = "kit", label = x.spell.name, item = x.item, body = body, spell = x.spell }
+      out[#out + 1] = { key = "K" .. x.slot, name = R.PREFIX .. " K" .. x.slot, group = "kit", label = x.spell.name, item = x.item, body = body, spell = x.spell,
+        plain = E.isPlain(x.spell, ctx) or nil }
     end
   end
   local customIndex = {}
@@ -231,7 +233,7 @@ function M.desired(m, L, opts)
           local pending = M.pendingOf(m, s, L, live)
           if pending ~= false then
             out[#out + 1] = { key = "X:" .. s.id, name = name, group = "extra", label = s.name, body = E.makeMacro(s, ctx), spell = s,
-              pending = pending }
+              pending = pending, plain = E.isPlain(s, ctx) or nil }
           end
         end
       end
@@ -241,14 +243,23 @@ function M.desired(m, L, opts)
   local byName = {}
   for _, s in ipairs(all) do byName[s.name] = s end
   for _, d in ipairs(out) do
+    -- the player's own targeting (Advanced mode) on a plain spell's key makes it a macro again
+    if d.plain and opts.overrides and opts.overrides[d.name] then d.plain = nil end
+    if d.plain then d.body = "" end
     if map then d.body = M.localize(d.body, map) end
     d.icon = M.ICON
     -- a "?" macro of an unknown spell stays a "?" on the bar: give it the spell's own picture
     if d.pending and d.spell.icon then d.icon = M.namedIcon(d.spell.icon) end
     if d.seq then M.seqIcon(d, byName) end
     if d.group == "helper" and M.HELPER_ICON[d.key] then d.iconName = M.HELPER_ICON[d.key]; d.icon = M.namedIcon(d.iconName) end
-    d.ok, d.why = R.validateMacro(d.name, d.body)
-    if not d.ok and map and #d.body > R.MACRO_LIMIT then d.why = "too long with your client's spell names (" .. #d.body .. "/255)" end
+    if d.plain then
+      -- the spell itself on the bar: its own icon, nothing to validate (no macro is written)
+      d.icon = (d.spell.icon and M.namedIcon(d.spell.icon)) or M.ICON
+      d.ok, d.why = true, nil
+    else
+      d.ok, d.why = R.validateMacro(d.name, d.body)
+      if not d.ok and map and #d.body > R.MACRO_LIMIT then d.why = "too long with your client's spell names (" .. #d.body .. "/255)" end
+    end
   end
   -- Advanced mode: the player's own targeting / text (Override.lua), checked by the same rules as every key
   if opts.overrides and ns.Override then
@@ -301,40 +312,111 @@ function M.iconChanged(have, want)
   return have == nil or have == M.ICON or have ~= want
 end
 
---- Diff desired against existing character macros. skip = {[name]=true} to leave out.
-function M.plan(desired, skip)
+-- ------------------------------------------------------------------ general (account) macro slots
+-- When the character's 18 slots are full, a macro goes into the account's general macros (120, shared by every
+-- character on this WoW account). There it gets a name of its own per character: "WBX" + this character's tag +
+-- " " + the key ("WBXRi K1", "WBXRi Shadow W3k"), so two characters never use or change each other's macros.
+-- The tag is handed out by Core.macroTag (unique per character in the account-wide SavedVariables).
+-- Inside WoWBoxer a key keeps its usual name ("WBX K1": skip, bars, overrides); M.gameName gives the macro's name in
+-- the game. Nil tag = character slots only.
+M.tag = nil
+function M.setTag(tag) M.tag = tag end
+--- Two characters 0-9a-z from a text (stable): keeps a shortened name unique.
+local function hash2(s)
+  local h = 0
+  for i = 1, #s do h = (h * 31 + s:byte(i)) % 1296 end
+  local A = "0123456789abcdefghijklmnopqrstuvwxyz"
+  local a, b = math.floor(h / 36) + 1, h % 36 + 1
+  return A:sub(a, a) .. A:sub(b, b)
+end
+--- The general-slot name of key `name` for character tag `tag` (≤ 16 characters, WBX prefix).
+function M.accountName(name, tag)
+  tag = tag or M.tag
+  if not tag then return nil end
+  local suffix = name:sub(1, #R.PREFIX + 1) == R.PREFIX .. " " and name:sub(#R.PREFIX + 2) or name:sub(#R.PREFIX + 1)
+  local head = R.PREFIX .. tag .. " "
+  local room = R.NAME_LIMIT - #head
+  if #suffix > room then suffix = suffix:sub(1, room - 2) .. hash2(suffix) end
+  return head .. suffix
+end
+--- Is general macro `name` this character's (its tag)?
+function M.isMineAccount(name, tag)
+  tag = tag or M.tag
+  if not (tag and type(name) == "string") then return false end
+  local head = R.PREFIX .. tag .. " "
+  return name:sub(1, #head) == head
+end
+--- Key name -> the macro's name in the game (the general-slot name when the last plan put it there), and back.
+M.gameNames, M.keyNames = {}, {}
+function M.gameName(name) return M.gameNames[name] or name end
+function M.keyName(gameName) return M.keyNames[gameName] or gameName end
+--- True when the game macro called `gameName` is WoWBoxer key `name` (its own name, or its general-slot name).
+function M.isMacro(gameName, name)
+  if gameName == nil or name == nil then return false end
+  return gameName == name or (M.tag ~= nil and gameName == M.accountName(name)) or false
+end
+
+--- Diff desired against existing macros. skip = {[name]=true} to leave out. tag (optional, default M.tag): this
+--- character's general-slot tag; without one only character slots are used.
+--- Item status: create | update | same | noslot | invalid | skipped | spell (a plain spell: no macro at all).
+--- it.account = the macro is (or will be) in a general slot, it.gameName = its name in the game.
+function M.plan(desired, skip, tag)
   skip = skip or {}
-  local existing = C.characterMacros()
-  local byName = {}
+  tag = tag or M.tag
+  local existing, accList = C.characterMacros(), C.accountMacros()
+  local byName, accBy = {}, {}
   for _, x in ipairs(existing) do if R.isOurs(x.name) and not byName[x.name] then byName[x.name] = x end end
+  for _, x in ipairs(accList) do if M.isMineAccount(x.name, tag) and not accBy[x.name] then accBy[x.name] = x end end
   local accMax, charMax = C.macroLimits()
-  local free = charMax - #existing
+  local free, accFree = charMax - #existing, accMax - #accList
   local items, wanted = {}, {}
-  local counts = { create = 0, update = 0, same = 0, noslot = 0, invalid = 0, skipped = 0 }
+  local counts = { create = 0, update = 0, same = 0, noslot = 0, invalid = 0, skipped = 0, spell = 0, account = 0 }
+  M.gameNames, M.keyNames = {}, {}
   for _, d in ipairs(desired) do
-    wanted[d.name] = true
-    local it = { name = d.name, key = d.key, label = d.label, body = d.body, icon = d.icon, group = d.group, seq = d.seq ~= nil }
-    local cur = byName[d.name]
-    if skip[d.name] then it.status = "skipped"
-    elseif not d.ok then it.status = "invalid"; it.why = d.why
-    elseif cur and cur.body == d.body and not M.iconChanged(cur.icon, d.icon) then it.status = "same"; it.index = cur.index
-    elseif cur then it.status = "update"; it.index = cur.index; it.old = cur.body
-    elseif free > 0 then it.status = "create"; free = free - 1
-    else it.status = "noslot" end
+    local it = { name = d.name, key = d.key, label = d.label, body = d.body, icon = d.icon, group = d.group, seq = d.seq ~= nil, gameName = d.name }
+    local an = tag and M.accountName(d.name, tag) or nil
+    local cur, inAcc = byName[d.name], false
+    if not cur and an and accBy[an] then cur, inAcc = accBy[an], true end
+    if d.plain then
+      it.status, it.plain = "spell", true -- no macro: an old WBX macro of this name is offered for removal (unused)
+    else
+      wanted[d.name] = true
+      if an then wanted[an] = true end
+      if skip[d.name] then it.status = "skipped"
+      elseif not d.ok then it.status = "invalid"; it.why = d.why
+      elseif cur and cur.body == d.body and not M.iconChanged(cur.icon, d.icon) then it.status = "same"; it.index = cur.index
+      elseif cur then it.status = "update"; it.index = cur.index; it.old = cur.body
+      elseif free > 0 then it.status = "create"; free = free - 1
+      elseif an and accFree > 0 then it.status = "create"; inAcc = true; accFree = accFree - 1
+      else it.status = "noslot" end
+      if inAcc then
+        it.account, it.gameName = true, an
+        M.gameNames[d.name], M.keyNames[an] = an, d.name
+        counts.account = counts.account + 1
+      end
+    end
     counts[it.status] = counts[it.status] + 1
     items[#items + 1] = it
   end
   local unused = {}
   for _, x in ipairs(existing) do if R.isOurs(x.name) and not wanted[x.name] then unused[#unused + 1] = x.name end end
+  for _, x in ipairs(accList) do if M.isMineAccount(x.name, tag) and not wanted[x.name] then unused[#unused + 1] = x.name end end
   local accountOurs = {}
-  for _, x in ipairs(C.accountMacros()) do if R.isOurs(x.name) then accountOurs[#accountOurs + 1] = x.name end end
+  for _, x in ipairs(accList) do if R.isOurs(x.name) then accountOurs[#accountOurs + 1] = x.name end end
+  local noslot = {}
+  for _, it in ipairs(items) do if it.status == "noslot" then noslot[#noslot + 1] = it.label or it.name end end
   return { items = items, counts = counts, unused = unused, accountOurs = accountOurs, free = free, charMax = charMax, accMax = accMax,
+    accFree = accFree, charUsed = #existing, accUsed = #accList, noslotNames = noslot, tag = tag,
     changes = counts.create + counts.update }
 end
 
---- Index of our character macro with this name (re-read every time: indices move when macros are sorted).
+--- Index of our macro with this name (re-read every time: indices move when macros are sorted): a character macro,
+--- else this character's general macro of that name or of that key.
 function M.findIndex(name)
   for _, x in ipairs(C.characterMacros()) do if x.name == name then return x.index end end
+  if not R.isOurs(name) then return nil end
+  local an = M.isMineAccount(name) and name or M.accountName(name)
+  if an then for _, x in ipairs(C.accountMacros()) do if x.name == an then return x.index end end end
   return nil
 end
 
@@ -348,19 +430,25 @@ function M.apply(plan)
       if not ok then
         res.failed[#res.failed + 1] = { name = it.name, err = why }
       elseif it.status == "create" then
+        local gname = it.gameName or it.name
         if M.findIndex(it.name) then -- created meanwhile: edit instead
           local idx = M.findIndex(it.name)
-          local okc, err = pcall(EditMacro, idx, it.name, it.icon, it.body)
+          local okc, err = pcall(EditMacro, idx, M.nameAt(idx, gname), it.icon, it.body)
           if okc then res.updated = res.updated + 1; res.changed[#res.changed + 1] = it.name else res.failed[#res.failed + 1] = { name = it.name, err = tostring(err) } end
         else
-          local okc, err = pcall(CreateMacro, it.name, it.icon, it.body, true)
+          -- perCharacter: true = a character slot; nil = a general slot (named for this character, M.accountName)
+          local okc, err = pcall(CreateMacro, gname, it.icon, it.body, (not it.account) or nil)
+          if okc and err and it.account then
+            if Core() and Core().macroTag then Core().macroTag(true) end -- from now on this tag is this character's
+            Core().log("info", "macro " .. it.name .. " created in a general slot as " .. gname)
+          end
           if okc and err then res.created = res.created + 1; res.changed[#res.changed + 1] = it.name else res.failed[#res.failed + 1] = { name = it.name, err = tostring(err or "no free macro slot") } end
         end
       else
         local idx = M.findIndex(it.name)
         if not idx then res.failed[#res.failed + 1] = { name = it.name, err = "macro disappeared" }
         else
-          local okc, err = pcall(EditMacro, idx, it.name, it.icon, it.body)
+          local okc, err = pcall(EditMacro, idx, M.nameAt(idx, it.gameName or it.name), it.icon, it.body)
           if okc then res.updated = res.updated + 1; res.changed[#res.changed + 1] = it.name else res.failed[#res.failed + 1] = { name = it.name, err = tostring(err) } end
         end
       end
@@ -368,15 +456,23 @@ function M.apply(plan)
   end
   return res
 end
+--- The name to keep when editing macro #idx: the name it has now (a general macro keeps its per-character name).
+function M.nameAt(idx, fallback)
+  local n = C.macroInfo(idx)
+  return (type(n) == "string" and R.isOurs(n)) and n or fallback
+end
 
---- Delete unused WBX character macros (only on an explicit click).
+--- Delete unused WBX macros (only on an explicit click): this character's macros and its own general macros (its
+--- tag), never another character's general macro and never a macro without the WBX prefix.
 function M.deleteUnused(names)
   local n = 0
   if C.inCombat() then return 0 end
   for _, name in ipairs(names) do
     if R.isOurs(name) then
       local idx = M.findIndex(name)
-      if idx and pcall(DeleteMacro, idx) then n = n + 1 end
+      local real = idx and C.macroInfo(idx)
+      local mine = real ~= nil and R.isOurs(real) and (idx > select(1, C.macroLimits()) or M.isMineAccount(real))
+      if mine and pcall(DeleteMacro, idx) then n = n + 1 end
     end
   end
   return n
