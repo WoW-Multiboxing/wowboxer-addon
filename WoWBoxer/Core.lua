@@ -210,7 +210,12 @@ function Core.sync(opts)
     if not opts.barsOnly then mres = M.apply({ items = only(ctx.macros.items, ctx.desired, groups) }) end
     local bres = { placed = 0, skipped = 0, failed = {} }
     local ask = {}
-    if not opts.macrosOnly then
+    local waitCursor = not opts.macrosOnly and C.cursorBusy()
+    if waitCursor then
+      -- bug sweep 9 Nov 2026: "bar *: your cursor is holding something" – the player still held a dragged macro or spell.
+      -- Tell it in plain words and place the macros as soon as the cursor is empty (no error, nothing lost).
+      Core.waitForCursor(opts)
+    elseif not opts.macrosOnly then
       local again = Core.compute() -- indices and statuses after creating macros
       local items = only(again.bars.items, again.desired, groups)
       bres = B.apply({ items = items }, Core.cdb, opts.replace)
@@ -235,6 +240,47 @@ function Core.sync(opts)
     if #ask > 0 then Core.askReplace(ask, opts) end
   end)
 end
+--- What the mouse cursor holds, in plain words ("a spell", "a macro", "an item" …).
+function Core.cursorWhat()
+  local kind = _G.GetCursorInfo and C.safe((_G.GetCursorInfo()))
+  local words = { spell = "a spell", macro = "a macro", item = "an item", petaction = "a pet action", money = "money", mount = "a mount",
+    companion = "a pet", equipmentset = "an equipment set", battlepet = "a pet", merchant = "an item", flyout = "a flyout" }
+  return words[tostring(kind)] or "something"
+end
+Core.CURSOR_WAIT = 120   -- seconds: after that the player presses Place again
+--- The cursor holds something: Place waits for it to be empty, then places (bars only – the macros are already made).
+function Core.waitForCursor(opts)
+  local what = Core.cursorWhat()
+  chat("Your mouse cursor is holding " .. what .. ", so WoWBoxer can't put macros on your bars yet. Drop it on a button or press Escape – the macros go on your bars right after.")
+  Core.log("info", "bars wait for the cursor (it holds " .. what .. ")")
+  local first = not Core.cursorWait
+  Core.cursorWait = { opts = opts, since = (_G.GetTime and _G.GetTime()) or 0 }
+  if first then Core.pollCursor() end
+end
+function Core.pollCursor()
+  local w = Core.cursorWait
+  if not w then return end
+  local t = (_G.GetTime and _G.GetTime()) or 0
+  if C.cursorBusy() then
+    if t - w.since > Core.CURSOR_WAIT then
+      Core.cursorWait = nil
+      Core.log("info", "bars: stopped waiting for the cursor")
+      chat("WoWBoxer stopped waiting for your cursor. Press Place all again when it is empty.")
+      return
+    end
+    if _G.C_Timer and _G.C_Timer.After then _G.C_Timer.After(0.5, Core.pollCursor) end
+    return
+  end
+  Core.cursorWait = nil
+  local o = {}
+  for k, v in pairs(w.opts or {}) do o[k] = v end
+  o.barsOnly = true
+  Core.log("info", "bars: the cursor is free, placing now")
+  Core.sync(o)
+end
+--- CURSOR_CHANGED (where the client has it): don't wait for the next poll.
+function Core.onCursorChanged() if Core.cursorWait and not C.cursorBusy() then Core.pollCursor() end end
+
 --- WBX macros this character no longer uses (a key that became a plain spell, Pet attack, an unticked squad key):
 --- names as in the game. Offered for removal on the banner; never deleted without the click.
 function Core.unusedMacros()
@@ -891,6 +937,7 @@ end
 -- ------------------------------------------------------------------ change notification for the UI
 function Core.changed()
   if ns.SeqStrip then ns.SeqStrip.markDirty() end
+  if ns.Settings then ns.Settings.check() end
   if ns.UI and ns.UI.Refresh then ns.UI.Refresh() end
 end
 
@@ -1180,6 +1227,7 @@ function Core.onEvent(event, ...)
     Core.log("info", "login " .. Core.charKey .. " " .. C.buildString() .. " (" .. C.game() .. ", toc " .. C.interface() .. ")")
     safeRegister("PLAYER_LEVEL_UP")
     safeRegister("PLAYER_REGEN_ENABLED")
+    safeRegister("CURSOR_CHANGED")
     safeRegister("SPELLS_CHANGED")
     safeRegister("LEARNED_SPELL_IN_TAB")
     safeRegister("LEARNED_SPELL_IN_SKILL_LINE")
@@ -1192,6 +1240,7 @@ function Core.onEvent(event, ...)
     if ns.Team and ns.Team.Init then ns.Team.Init() end
     if ns.SeqStrip and ns.SeqStrip.Init then ns.SeqStrip.Init() end
     if ns.Sync and ns.Sync.Init then ns.Sync.Init() end
+    if ns.Settings and ns.Settings.Init then ns.Settings.Init() end
     if ns.Auto and ns.Auto.Init then ns.Auto.Init() end
     if ns.Equip and ns.Equip.Init then ns.Equip.Init() end
     if ns.Relay and ns.Relay.Init then ns.Relay.Init() end
@@ -1211,6 +1260,7 @@ function Core.onEvent(event, ...)
   elseif event == "UI_SCALE_CHANGED" or event == "DISPLAY_SIZE_CHANGED" then
     -- the window app (Auto-fit) or the player changed the window or the UI scale: measure again once it settles
     if C_Timer and C_Timer.After and ns.BarFit then C_Timer.After(1, function() ns.BarFit.update(event) end) end
+  elseif event == "CURSOR_CHANGED" then Core.onCursorChanged()
   elseif event == "PLAYER_REGEN_ENABLED" then
     Core.runQueue()
   elseif event == "PLAYER_LEVEL_UP" then

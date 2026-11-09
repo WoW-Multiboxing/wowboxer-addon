@@ -121,7 +121,7 @@ function TM.sendExtra(force)
   local t = now()
   if not force and msg == TM.lastExtra and t - (TM.lastExtraAt or -1e9) < TM.HEARTBEAT then return false end
   if not force and t - (TM.lastExtraAt or -1e9) < TM.MIN_GAP then return false end
-  local ok = C().sendAddon(TM.PREFIX, msg, channel(), "team")
+  local ok = C().sendAddon(TM.PREFIX, msg, channel(), "team", false, { latest = "team X" })
   if ok then TM.lastExtra, TM.lastExtraAt = msg, t end
   return ok
 end
@@ -133,7 +133,7 @@ function TM.send(force)
   local t = now()
   if not force and msg == TM.lastMsg and t - (TM.lastAt or -1e9) < TM.HEARTBEAT then return false end
   if t - (TM.lastAt or -1e9) < TM.MIN_GAP then TM.schedule(); return false end
-  local ok = C().sendAddon(TM.PREFIX, msg, channel(), "team")
+  local ok = C().sendAddon(TM.PREFIX, msg, channel(), "team", false, { latest = "team S" })
   if ok then TM.lastMsg, TM.lastAt = msg, t; TM.sent = (TM.sent or 0) + 1 end
   return ok
 end
@@ -145,7 +145,7 @@ function TM.sendReady(force)
   local msg = TM.encodeReady(r)
   local t = now()
   if not force and msg == TM.lastReady and t - (TM.lastReadyAt or -1e9) < TM.HEARTBEAT then return false end
-  local sent = C().sendAddon(TM.PREFIX, msg, channel(), "team")
+  local sent = C().sendAddon(TM.PREFIX, msg, channel(), "team", false, { latest = "team R" })
   if sent then TM.lastReady, TM.lastReadyAt = msg, t end
   return sent
 end
@@ -191,7 +191,7 @@ function TM.receive(prefix, text, _, sender)
     TM.changed()
     return
   end
-  if kind == "Q|" or kind == "P|" then
+  if kind == "Q|" or kind == "P|" or kind == "G|" then
     if ns.Sync then ns.Sync.receive(text, name) end
     return
   end
@@ -241,7 +241,7 @@ function TM.rows()
   for _, m in ipairs(s.members) do
     local st = stateOf(m)
     local flags = {}
-    if not st then flags[#flags + 1] = { "no signal", "muted" }
+    if not st then flags[#flags + 1] = C().messagesPaused() and { "paused", "muted" } or { "no signal", "muted" }
     else
       if not m.leader and st.follow == 0 and st.combat == 0 then flags[#flags + 1] = { "not following", "warn" } end
       if not m.leader and lst and (st.combat == 1 or lst.combat == 1) and lst.target ~= "-" and lst.target ~= "?" and

@@ -381,6 +381,7 @@ end
 
 --- Position (per character, saved when the window is dragged) and scale; back to the centre when it would be off screen.
 function UI.ApplyWindowSettings()
+  if ns.Settings then ns.Settings.check() end
   local f = UI.frame
   if not f then return end
   local cdb = ns.Core.cdb or {}

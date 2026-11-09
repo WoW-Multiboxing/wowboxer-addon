@@ -33,7 +33,8 @@ local function send(msg, what, tries)
   tries = tries or 0
   local channel = (G.IsInRaid and G.IsInRaid()) and "RAID" or "PARTY"
   local last = tries >= SY.RETRIES
-  local ok, reason, code = ns.Compat.sendAddon(ns.Team.PREFIX, msg, channel, what or "sync", last)
+  -- loud: the player pressed Send, so a refused send is told in chat (a lockdown once per period)
+  local ok, reason, code = ns.Compat.sendAddon(ns.Team.PREFIX, msg, channel, what or "sync", true)
   if not ok and not last and (code == 3 or code == 8 or tostring(reason):find("Throttle", 1, true)) then
     after(SY.RETRY_GAP, function() send(msg, what, tries + 1) end)
   end
@@ -47,6 +48,16 @@ local function newId()
 end
 
 -- ------------------------------------------------------------------ sending
+--- Send a text in parts: "<tag>|id|i|n|part" (tag Q = squad, G = settings). Returns ok.
+function SY.sendChunks(tag, str, what)
+  local id, n = newId(), math.ceil(#str / SY.CHUNK)
+  if n < 1 or n > SY.MAX_CHUNKS then return false end
+  for i = 1, n do
+    local part = str:sub((i - 1) * SY.CHUNK + 1, i * SY.CHUNK)
+    after((i - 1) * SY.GAP, function() send(tag .. "|" .. id .. "|" .. i .. "|" .. n .. "|" .. part, what .. " " .. i .. "/" .. n) end)
+  end
+  return true
+end
 --- Offer the squad to the party (one click here; the others must click Review and Import there).
 function SY.sendSquad(s)
   if not s then return false end
@@ -61,6 +72,8 @@ function SY.sendSquad(s)
   end
   Core().log("info", "offered squad " .. s.name .. " to the party (" .. n .. " parts)")
   Core().print("Offered squad \"" .. s.name .. "\" to your party. Each client shows Review / Ignore – nothing changes there without a click.")
+  -- the settings go along (bug sweep 9 Nov 2026: settings are per WoW account); a second card there: Use them / Ignore
+  if ns.Settings then after(n * SY.GAP + 0.2, function() ns.Settings.send(true) end) end
   return true
 end
 --- Tell the party this client switched preset (they get Apply / Ignore).
@@ -81,11 +94,11 @@ function SY.receive(text, sender)
   if not inParty(sender) then return drop(sender, "not in your party here (name not matched)") end -- only your own party
   local t = now()
   for k, v in pairs(SY.inbox) do if t - v.at > SY.TTL then SY.inbox[k] = nil end end
-  local id, i, n, part = text:match("^Q|(%x+)|(%d+)|(%d+)|(.+)$")
+  local tag, id, i, n, part = text:match("^([QG])|(%x+)|(%d+)|(%d+)|(.+)$")
   if id then
     i, n = tonumber(i), tonumber(n)
     if not (i and n) or n < 1 or n > SY.MAX_CHUNKS or i < 1 or i > n or #part > SY.CHUNK then return drop(sender, "bad squad chunk") end
-    local key = (ns.Compat.nameKey(sender) or "?") .. ":" .. id
+    local key = (ns.Compat.nameKey(sender) or "?") .. ":" .. tag .. id
     local box = SY.inbox[key] or { n = n, parts = {}, got = 0, at = t }
     if box.n ~= n then return drop(sender, "squad chunk count changed") end
     if not box.parts[i] then box.parts[i] = part; box.got = box.got + 1 end
@@ -94,6 +107,7 @@ function SY.receive(text, sender)
     if box.got == box.n then
       SY.inbox[key] = nil
       local str = table.concat(box.parts)
+      if tag == "G" then if ns.Settings then ns.Settings.received(str, sender) end return end
       local res, err = Core().importString(str)
       if not res then Core().log("warn", "squad from " .. sender .. " ignored: " .. tostring(err)); return end
       Core().log("info", "squad offer from " .. sender .. ": " .. res.squad.name)
@@ -145,6 +159,15 @@ function SY.show()
   elseif x.kind == "preset" then
     text = "|cffffd100" .. x.from .. "|r: |cffffd100\"" .. x.name .. "\"|r, " .. x.leader .. " leads"
     go, goTip = "Apply", "Makes " .. x.leader .. " the leader in WoWBoxer on this client. Your macros change after you press Update macros."
+  elseif x.kind == "settings" then
+    text = "|cffffd100" .. x.from .. "|r sends WoWBoxer settings: " .. x.text
+    go = "Use them"
+    local lines = {}
+    for _, d in ipairs(x.diff or {}) do lines[#lines + 1] = d[1] .. ": " .. tostring(d[2]) .. " → " .. tostring(d[3]) end
+    goTip = "Uses " .. x.from .. "'s settings on this character too (settings are per WoW account).\n" .. table.concat(lines, "\n")
+  elseif x.kind == "push" then
+    text, go = x.text, "Send"
+    goTip = "Sends your WoWBoxer settings (mode, Automation, Accept from, window and panel options) to your squad in the party. Each character asks before it uses them. Settings are per WoW account, so each of your accounts keeps its own until then."
   elseif x.kind == "guide" then
     text, go, goTip = x.text, "Open guide", "Opens the 5-step squad guide on the Squad page."
   else
@@ -153,7 +176,7 @@ function SY.show()
   o.goTip = goTip
   o.text:SetText(text)
   ns.Widgets.setLabel(o.go, go)
-  ns.Widgets.setLabel(o.no, (x.kind == "session" or x.kind == "guide") and "Close" or "Ignore")
+  ns.Widgets.setLabel(o.no, (x.kind == "session" or x.kind == "guide") and "Close" or x.kind == "push" and "Not now" or "Ignore")
   local maxW = math.min(460, (UIParent:GetWidth() or 800) * 0.9)
   local w = math.max(300, o.go:GetWidth() + o.no:GetWidth() + 26, math.min(maxW, ns.Widgets.measure(text, "GameFontHighlightSmall") + 24))
   o:SetWidth(w)
@@ -169,7 +192,7 @@ function SY.offer(x)
 end
 function SY.dismiss()
   local x = table.remove(SY.queue, 1)
-  if x and x.kind ~= "session" then Core().log("info", "ignored " .. x.kind .. " offer from " .. x.from) end
+  if x and x.kind ~= "session" and x.kind ~= "push" then Core().log("info", "ignored " .. x.kind .. " offer from " .. x.from) end
   SY.show()
 end
 --- The click on the offer card: Review (squad), Apply (preset) or Open squad (session card).
@@ -191,6 +214,11 @@ function SY.accept()
       Core().print("Preset \"" .. x.name .. "\" applied. Press Update macros to change your macros.")
       Core().changed()
     end
+  elseif x.kind == "settings" then
+    local n = ns.Settings.apply(x.t, x.from)
+    Core().print("Using " .. x.from .. "'s WoWBoxer settings here (" .. n .. " changed).")
+  elseif x.kind == "push" then
+    ns.Settings.send()
   elseif x.kind == "guide" then
     if ns.Help then ns.Help.ShowSquadGuide() end
   else

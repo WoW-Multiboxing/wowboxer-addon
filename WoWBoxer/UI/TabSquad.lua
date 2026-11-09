@@ -500,7 +500,7 @@ SP.register({ key = "main", label = "Squad", tip = "Who plays together, who lead
       "Adds this character from your party to the squad (on this client only).")
     f.suggAdd:SetPoint("LEFT", f.sugg, "RIGHT", 4, 0)
     f.send = W.button(f.list, "Send to my other characters", 210, 26, function() if ns.Sync then ns.Sync.sendSquad(squad()) end end,
-      { "Send to my other characters", "Offers this squad to your other clients in the party. Nothing changes there until you click Review and Import on that client. Then press Place all there." })
+      { "Send to my other characters", "Offers this squad – and your WoWBoxer settings, which are per WoW account – to your other clients in the party. Nothing changes there until you click Review and Import (and Use them for the settings) on that client. Then press Place all there." })
     f.send.wbxBig = true
     W.primary(f.send)
     f.send:SetPoint("TOPRIGHT", f.list, "TOPRIGHT", 0, y)

@@ -235,16 +235,21 @@ do
   H.ok(not C.sendAddon("WBX1", "hi", "PARTY", "test"), "an error = failure")
   W.env.C_ChatInfo.SendAddonMessage = function() return nil end
   H.ok(C.sendAddon("WBX1", "hi", "PARTY", "test"), "nothing returned = sent (old API)")
-  -- Send squad with a throttled channel: tried again, then reported
+  -- Send squad with a throttled channel: the chunks wait in the outbox and go out in order once the channel is free
   W.chat = {}
-  local n = 0
+  local n, got = 0, {}
   W.env.C_ChatInfo.SendAddonMessage = function() n = n + 1; return 3 end
   ns.Sync.sendSquad(ns.Core.me())
   for _ = 1, 40 do W.flush() end
-  H.ok(n > 1 and n % (ns.Sync.RETRIES + 1) == 0, "throttled chunks are retried (" .. n .. " tries)")
-  local told = false
-  for _, l in ipairs(W.chat) do if l:find("AddonMessageThrottle", 1, true) then told = true end end
-  H.ok(told, "player told the send was throttled")
+  H.ok(n >= 1 and #C.outbox > 0, "throttled chunks wait (" .. n .. " tries, " .. #C.outbox .. " waiting)")
+  W.env.C_ChatInfo.SendAddonMessage = function(_, msg) got[#got + 1] = msg; return 0 end
+  for _ = 1, 40 do C.flush() end
+  H.eq(#C.outbox, 0, "the throttle ended: nothing waits")
+  local qs = {}
+  for _, m in ipairs(got) do if m:find("^Q|") then qs[#qs + 1] = m end end
+  local inOrder = #qs > 0
+  for i, m in ipairs(qs) do local k = m:match("^Q|%x+|(%d+)|"); if tonumber(k) ~= i then inOrder = false end end
+  H.ok(inOrder, "the squad chunks arrived in order (" .. #qs .. ")")
   local lines = ns.Core.namesReport()
   H.ok(table.concat(lines, "\n"):find("party1: \"Rup And\"", 1, true) ~= nil, "/wbx names shows the game's names")
   H.ok(table.concat(lines, "\n"):find("failed", 1, true) ~= nil, "/wbx names shows the send results")

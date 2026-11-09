@@ -71,6 +71,7 @@ Team.lua
 Squad.lua
 Override.lua
 Sync.lua
+Settings.lua
 Auto.lua
 Equip.lua
 Relay.lua

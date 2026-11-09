@@ -512,35 +512,221 @@ function C.sendResultName(code)
   if type(E) == "table" then for k, v in pairs(E) do if v == code then return tostring(k) end end end
   return C.SEND_RESULT[code] or tostring(code)
 end
-C.sendStats = { ok = 0, failed = 0 }
+C.sendStats = { ok = 0, failed = 0, queued = 0 }
 C.sendWarned = {}
 C.SEND_WARN_EVERY = 120 -- background sends (team status): one chat line per reason this often
---- Send an addon message and check the result. what = a short label for the log ("team", "squad", "relay" …);
---- loud = the player asked for this send (always told in chat when it fails). Returns ok, reason.
-function C.sendAddon(prefix, msg, channel, what, loud)
+
+-- Lockdown (bug sweep 9 Nov 2026: ~200 "AddOnMessageLockdown (11)" per account on Forever). The game refuses addon
+-- messages at times; nothing is lost now: such messages wait in C.outbox and go out, in order, when it ends. Team
+-- status (opts.latest) keeps only the newest message of its kind; squad offers and automation keep every message.
+-- GeneralError (9) and the throttles (3, 8) wait the same way (they came in bursts while zoning). [AFKLAR: exactly when
+-- Forever locks – each lockdown period is logged once with its state (combat, instance, encounter, the API's reason).]
+C.outbox = {}
+C.OUTBOX_MAX = 120     -- messages kept while locked (the oldest go first)
+C.OUTBOX_TTL = 600     -- a message older than this is dropped (10 min)
+C.FLUSH_EVERY = 1      -- seconds between tries while something waits
+C.FLUSH_BURST = 4      -- messages per try (under the game's per-second limit)
+C.lock = { on = false }
+C.lockLog = {}         -- the last lockdown periods (diagnose): {start, secs, failed, sent, dropped, state, cause}
+C.WAIT_CODES = { [3] = "throttle", [8] = "throttle", [9] = "general", [11] = "lockdown" }
+
+C.encounter = nil      -- {id, name} between ENCOUNTER_START and ENCOUNTER_END
+C.zoningUntil = 0      -- GetTime() a few seconds after a loading screen
+--- What the game says about addon messages now: locked (bool), reason (text or nil). nil, nil = no such API here.
+function C.messagingLockdown()
+  local CI = G.C_ChatInfo
+  local f = CI and CI.InChatMessagingLockdown
+  if type(f) ~= "function" then return nil, nil end
+  local ok, locked, reason = pcall(f)
+  if not ok then return nil, nil end
+  locked, reason = C.safe(locked), C.safe(reason)
+  if reason ~= nil then
+    local E = G.Enum and G.Enum.ChatMessagingLockdownReason
+    if type(E) == "table" then for k, v in pairs(E) do if v == reason then reason = tostring(k) end end end
+  end
+  return locked and true or false, reason ~= nil and tostring(reason) or nil
+end
+--- The state at a failure (for the log): combat, instance type, encounter, zoning, the lockdown API.
+function C.lockState()
+  local t = (G.GetTime and G.GetTime()) or 0
+  local parts = { "combat " .. ((G.InCombatLockdown and G.InCombatLockdown()) and "yes" or "no") }
+  local okI, inInst, kind = pcall(G.IsInInstance or function() return nil end)
+  parts[#parts + 1] = "instance " .. ((okI and C.safe(inInst)) and tostring(C.safe(kind) or "?") or "no")
+  if C.encounter then parts[#parts + 1] = "encounter " .. tostring(C.encounter.name or C.encounter.id) end
+  if t < C.zoningUntil then parts[#parts + 1] = "zoning" end
+  local locked, reason = C.messagingLockdown()
+  if locked == nil then parts[#parts + 1] = "lockdown API missing"
+  else parts[#parts + 1] = "lockdown API " .. (locked and "yes" or "no") .. (reason and (" (" .. reason .. ")") or "") end
+  return table.concat(parts, ", ")
+end
+
+local function now() return (G.GetTime and G.GetTime()) or 0 end
+local function rawSend(prefix, msg, channel)
   local CI = G.C_ChatInfo
   local f = (CI and CI.SendAddonMessage) or G.SendAddonMessage
-  local ok, r, reason
-  if not f then ok, reason = false, "no SendAddonMessage API"
-  else
-    local pok, res = pcall(f, prefix, msg, channel)
-    if not pok then ok, reason = false, "error: " .. tostring(res)
-    elseif res == nil or res == true or res == 0 then ok = true
-    elseif res == false then ok, reason = false, "refused (false)"
-    else ok, r, reason = false, res, C.sendResultName(res) .. " (" .. tostring(res) .. ")" end
-  end
+  if not f then return false, "no SendAddonMessage API" end
+  local pok, res = pcall(f, prefix, msg, channel)
+  if not pok then return false, "error: " .. tostring(res) end
+  if res == nil or res == true or res == 0 then return true end
+  if res == false then return false, "refused (false)" end
+  return false, C.sendResultName(res) .. " (" .. tostring(res) .. ")", res
+end
+local function startLock(cause, code)
+  local L = C.lock
+  if L.on then L.failed = (L.failed or 0) + 1; return end
+  C.lock = { on = true, since = now(), cause = cause, code = code, failed = 1, state = C.lockState() }
   local Core = ns.Core
+  if Core and Core.log then
+    Core.log("warn", "addon messages paused by the game (" .. tostring(cause) .. "): " .. C.lock.state .. " – WoWBoxer sends them when it ends")
+  end
+end
+local function endLock(sent)
+  local L = C.lock
+  if not L.on then return end
+  local secs = math.floor(now() - (L.since or now()) + 0.5)
+  local rec = { secs = secs, cause = L.cause, failed = L.failed or 0, sent = sent, dropped = L.dropped or 0, state = L.state,
+    at = (G.time and G.time()) or 0 }
+  table.insert(C.lockLog, rec)
+  while #C.lockLog > 20 do table.remove(C.lockLog, 1) end
+  C.lock = { on = false }
+  local Core = ns.Core
+  if Core and Core.log then
+    Core.log("info", "addon messages flow again after " .. secs .. " s (" .. tostring(rec.cause) .. ", " .. rec.failed .. " tries refused, "
+      .. sent .. " waiting message(s) sent, " .. rec.dropped .. " dropped)")
+  end
+  if Core and Core.db and Core.charKey then
+    Core.db.diag = Core.db.diag or {}
+    Core.db.diag[Core.charKey] = Core.db.diag[Core.charKey] or {}
+    Core.db.diag[Core.charKey].lockdowns = C.lockLog
+  end
+  if ns.TeamFrame and ns.TeamFrame.Refresh then pcall(ns.TeamFrame.Refresh) end
+end
+--- Put a message in the outbox. latest = a key: an older waiting message with the same key is replaced (team status).
+local function enqueue(item)
+  local box = C.outbox
+  if item.latest then
+    for i = #box, 1, -1 do
+      if box[i].latest == item.latest then
+        table.remove(box, i)
+      end
+    end
+  end
+  box[#box + 1] = item
+  while #box > C.OUTBOX_MAX do
+    table.remove(box, 1)
+    if C.lock.on then C.lock.dropped = (C.lock.dropped or 0) + 1 end
+  end
+  C.sendStats.queued = C.sendStats.queued + 1
+  C.scheduleFlush()
+end
+function C.scheduleFlush()
+  if C.flushPending or #C.outbox == 0 then return end
+  local After = G.C_Timer and G.C_Timer.After
+  if not After then return end -- tests call C.flush() themselves
+  C.flushPending = true
+  After(C.FLUSH_EVERY, function() C.flushPending = false; C.flush() end)
+end
+--- Try the waiting messages, oldest first. Stops at the first one the game still refuses.
+function C.flush()
+  local box = C.outbox
+  local t = now()
+  local sent = 0
+  while #box > 0 and box[1].at and t - box[1].at > C.OUTBOX_TTL do
+    table.remove(box, 1)
+    if C.lock.on then C.lock.dropped = (C.lock.dropped or 0) + 1 end
+  end
+  if #box == 0 then endLock(0); return 0 end
+  -- the API says locked: wait (but probe now and then, in case the API and the send result disagree)
+  local locked = C.messagingLockdown()
+  if locked and now() - (C.lock.lastProbe or C.lock.since or 0) < 30 then C.scheduleFlush(); return 0 end
+  if locked then C.lock.lastProbe = now() end
+  if not C.inParty() then
+    -- left the party: these messages have nobody to go to
+    local n = #box
+    C.outbox = {}
+    if C.lock.on then C.lock.dropped = (C.lock.dropped or 0) + n end
+    endLock(0)
+    return 0
+  end
+  local n = 0
+  while #box > 0 and n < C.FLUSH_BURST do
+    local it = box[1]
+    local ok, reason, code = rawSend(it.prefix, it.msg, it.channel)
+    if ok then
+      table.remove(box, 1); n = n + 1; sent = sent + 1
+      C.sendStats.ok = C.sendStats.ok + 1
+    elseif code and C.WAIT_CODES[code] then
+      if C.lock.on then C.lock.failed = (C.lock.failed or 0) + 1 end
+      break
+    else
+      -- a real failure (not in a group any more, bad message): drop it, logged once like before
+      table.remove(box, 1)
+      C.sendStats.failed = C.sendStats.failed + 1
+      if ns.Core and ns.Core.log then ns.Core.log("warn", "send " .. tostring(it.what) .. " on " .. tostring(it.channel) .. " failed: " .. tostring(reason)) end
+    end
+  end
+  C.lock.sentSoFar = (C.lock.sentSoFar or 0) + sent
+  if #box == 0 then endLock(C.lock.sentSoFar or sent) else C.scheduleFlush() end
+  return sent
+end
+--- A send the player asked for (Send squad, settings) waits: one chat line per lockdown period.
+function C.waitNotice(loud)
+  if not loud or C.lock.told then return end
+  C.lock.told = true
+  local Core = ns.Core
+  if Core and Core.print then Core.print("WoWBoxer waits: the game holds addon messages back right now (often in a fight). It sends them as soon as it can.") end
+end
+--- True while the game holds our addon messages back (the team panel says "paused" instead of "no signal").
+function C.messagesPaused() return C.lock.on == true end
+
+--- Send an addon message and check the result. what = a short label for the log ("team", "squad", "relay" …);
+--- loud = the player asked for this send (told in chat when it fails); opts.latest = a key: while messages wait,
+--- only the newest one with this key is kept (team status). Returns ok, reason, code. A message the game holds back
+--- (lockdown, throttle, general error) is queued and returns true, "queued": it goes out when the game allows.
+function C.sendAddon(prefix, msg, channel, what, loud, opts)
+  local item = { prefix = prefix, msg = msg, channel = channel, what = what or prefix, latest = opts and opts.latest or nil, at = now() }
+  local Core = ns.Core
+  -- something already waits: keep the order (a newer automation message never overtakes an older one)
+  if #C.outbox > 0 then enqueue(item); C.flush(); if #C.outbox > 0 then C.waitNotice(loud) end; return true, "queued" end
+  local locked, why = C.messagingLockdown()
+  if locked then
+    startLock("lockdown" .. (why and (" " .. why) or ""), 11)
+    enqueue(item)
+    C.waitNotice(loud)
+    return true, "queued"
+  end
+  local ok, reason, r = rawSend(prefix, msg, channel)
   if ok then C.sendStats.ok = C.sendStats.ok + 1; return true end
+  if r and C.WAIT_CODES[r] then
+    startLock(C.WAIT_CODES[r] .. " (" .. tostring(r) .. ")", r)
+    enqueue(item)
+    C.waitNotice(loud)
+    return true, "queued"
+  end
   C.sendStats.failed = C.sendStats.failed + 1
   C.sendStats.last = (what or prefix) .. ": " .. reason
   if Core and Core.log then Core.log("warn", "send " .. (what or prefix) .. " on " .. tostring(channel) .. " failed: " .. reason .. " (" .. #tostring(msg) .. " chars)") end
   local key = (what or prefix) .. ":" .. tostring(r or reason)
-  local t = (G.GetTime and G.GetTime()) or 0
+  local t = now()
   if Core and Core.print and (loud or t - (C.sendWarned[key] or -1e9) >= C.SEND_WARN_EVERY) then
     C.sendWarned[key] = t
     Core.print("|cffff8a80Could not send to your other characters|r (" .. (what or prefix) .. ": " .. reason .. ").")
   end
   return false, reason, r
+end
+--- Events that end a lockdown or a loading screen: try the outbox right away.
+local evf = G.CreateFrame and G.CreateFrame("Frame")
+C.eventFrame = evf
+if evf then
+  for _, ev in ipairs({ "PLAYER_REGEN_ENABLED", "ENCOUNTER_START", "ENCOUNTER_END", "PLAYER_ENTERING_WORLD", "LOADING_SCREEN_ENABLED",
+    "LOADING_SCREEN_DISABLED", "ZONE_CHANGED_NEW_AREA" }) do pcall(evf.RegisterEvent, evf, ev) end
+  evf:SetScript("OnEvent", function(_, ev, a, b)
+    if ev == "ENCOUNTER_START" then C.encounter = { id = C.safe(a), name = C.safe(b) }; return end
+    if ev == "ENCOUNTER_END" then C.encounter = nil end
+    if ev == "LOADING_SCREEN_ENABLED" then C.zoningUntil = now() + 600; return end
+    if ev == "LOADING_SCREEN_DISABLED" or ev == "PLAYER_ENTERING_WORLD" then C.zoningUntil = now() + 3 end
+    if #C.outbox > 0 then C.flush() end
+  end)
 end
 C.arrivals = {}  -- "prefix sender" (exactly as the game gives it) -> count
 --- A WoWBoxer message arrived (CHAT_MSG_ADDON): counted per prefix + raw sender; the first one per sender is logged.
@@ -599,6 +785,7 @@ function C.probe()
     "GetSpellInfo", "GetNumSpellTabs", "IsPlayerSpell", "IsSpellKnown", "CreateMacro", "EditMacro", "PickupMacro", "PlaceAction",
     "GetActionInfo", "GetCursorInfo", "SetBindingMacro", "InCombatLockdown", "WOW_PROJECT_ID", "MAX_CHARACTER_MACROS", "MAX_ACCOUNT_MACROS",
     "BackdropTemplateMixin", "Settings" }
+  r.chatLockdownApi = type(G.C_ChatInfo) == "table" and type(G.C_ChatInfo.InChatMessagingLockdown) == "function" or false
   r.api = {}
   for _, n in ipairs(names) do local v = G[n]; r.api[n] = v ~= nil and type(v) or "missing" end
   r.projectId = G.WOW_PROJECT_ID

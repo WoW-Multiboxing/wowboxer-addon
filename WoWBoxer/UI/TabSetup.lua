@@ -2,7 +2,7 @@
   recommended game settings with apply / restore and recommended addons (right). ]]
 local _, ns = ...
 local UI, W = ns.UI, ns.Widgets
-local tab = { key = "setup", label = "Setup", icon = "INV_Misc_Gear_01", tip = "Where your macros go, window size, animations, the multibox checklist and game settings." }
+local tab = { key = "setup", label = "Setup", icon = "INV_Misc_Gear_01", tip = "Where your macros go, window size, animations, the multibox checklist and game settings. WoWBoxer's settings are per WoW account: with one account per character, use Copy settings to use the same on your other characters." }
 local LEFT_W = 300
 
 local function Core() return ns.Core end
@@ -53,6 +53,13 @@ function tab.build(p)
   p.autoBtn = W.button(p, "Automation…", 96, 22, function() UI.Select("automation") end,
     "Squad automation: accept invites, quests, resurrections and summons, follow the leader's dialogs, sell junk, repair – each one a tick.")
   p.autoBtn:SetPoint("LEFT", p.macrosOnly, "RIGHT", 6, 0)
+  p.copySet = W.button(p, "Copy settings", 120, 22, function() if ns.Settings then ns.Settings.send() end end,
+    { "Copy settings", "WoWBoxer's settings are per WoW account, so with one account per character each one has its own. This sends this character's settings (Standard/Advanced, Automation, Accept from, quest reward, window size, animations, sequence strip, team panel, minimap button, reminders) to your squad in the party. Each character shows Use them / Ignore." })
+  p.copySet:SetPoint("TOPLEFT", 0, -200)
+  p.copyHint = W.text(p, "GameFontHighlightSmall", nil, W.MUTED)
+  p.copyHint:SetPoint("LEFT", p.copySet, "RIGHT", 8, 0)
+  p.copyHint:SetText("to my other characters")
+  p.copyHint.wbxCopy = "hint"
   -- Reset to default (docs/advanced-mode.md §5): a red text button at the bottom; opens a two-step window
   p.resetAll = CreateFrame("Button", nil, p)
   p.resetAll:SetSize(110, 18)
@@ -66,10 +73,10 @@ function tab.build(p)
 
   -- checklist
   local h1 = W.text(p, "GameFontNormal", nil, W.GOLD)
-  h1:SetPoint("TOPLEFT", 0, -204)
+  h1:SetPoint("TOPLEFT", 0, -230)
   h1:SetText("Multibox checklist")
-  local sf, content = W.scroll(p, LEFT_W - 24, 196)
-  sf:SetPoint("TOPLEFT", 0, -222)
+  local sf, content = W.scroll(p, LEFT_W - 24, 170)
+  sf:SetPoint("TOPLEFT", 0, -248)
   p.checkSf, p.checks = sf, content
   p.checkPool = W.pool(content, function(parent)
     local r = CreateFrame("Frame", nil, parent)
@@ -150,6 +157,7 @@ function tab.refresh(p)
   p.strip:SetChecked(Core().db.settings.seqStrip ~= false)
   p.remind:SetChecked(Core().remindersOn())
   p.macrosOnly:SetEnabled(not C.inCombat())
+  p.copySet:SetEnabled(C.inParty() and true or false)
   p.resetAll:SetEnabled(not C.inCombat())
   if ns.Advanced then ns.Advanced.refreshReset() end
   -- checklist
