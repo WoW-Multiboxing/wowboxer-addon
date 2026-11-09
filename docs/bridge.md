@@ -33,15 +33,18 @@ bars = {
   scale = 0.93,                     -- UIParent:GetEffectiveScale() now (= the UI scale)
   ui = { w = 1032, h = 826 },       -- UIParent size in UI units now
   bars = {                          -- only bars that are shown; Blizzard bars only
-    { key = "main" | "bottomLeft" | "bottomRight" | "right" | "left" | "bar5" | "bar6" | "bar7",
+    { key = "main" | "bottomLeft" | "bottomRight" | "right" | "left" | "bar5" | "bar6" | "bar7" | "menu",
       label = "Bottom Left bar (bar 2)",
-      buttons = 12,                 -- buttons measured (empty slots of a shown bar count)
+      buttons = 12,                 -- buttons measured (empty slots of a shown bar count; "menu": shown bag and menu buttons)
       outside = 0,                  -- buttons not completely inside the window
       covered = 0,                  -- buttons lying on a button of another bar
       left = 0, bottom = 0, right = 0, top = 0,  -- the bar's box in UI units, origin bottom-left of the window
-      anchor = "center/bottom" },   -- which window edges the bar follows: left|center|right / bottom|middle|top
+      anchor = "center/bottom",     -- which window edges the bar follows: left|center|right / bottom|middle|top
+      dx = 0, dy = 0 },             -- since 1.2.0-test.4: how far the game pushed the bar from where its anchors put it
+                                    -- (kept on the screen in a too small window); box - dx/dy = the anchored place
   },
   outside = 0, covered = 0,         -- totals over all bars
+  squeezed = false,                 -- since 1.2.0-test.4: a bar was pushed, or something is outside/covered
   fitScale = 0.88,                  -- largest UI scale in [0.64, 1.00] at which every shown bar fits; nil = not even 0.64
   fitsAtMin = true,                 -- false when fitScale is nil
   minScale = 0.64,
@@ -51,6 +54,15 @@ bars = {
 **What `fitScale` means:**
 - It is the UI scale to write (`uiScale`, with `useUiScale 1`) so that, in this window, every button of every shown
   bar is inside the window with a margin of 4 UI units, and no bar lies on top of another.
+- The margin is 4 units except on an edge the bar is anchored to and already sits closer to by design: Forever puts
+  bar 1 two units above the bottom edge, and that bar keeps the room the game gave it. (Until 1.2.0-test.4 the
+  margin applied there too, so live Forever logs said "0 outside, 0 covered; fits all at scale none".)
+- The fit scale is computed from the anchored places (box − dx/dy), not from where a too small window pushed the bars.
+  The app does not rely on dx/dy yet: for a squeezed record it uses its default places (`[AFKLAR]` until dx/dy are
+  checked against a big window on Forever).
+- `menu` (since 1.2.0-test.4) is the bag and menu buttons (micro buttons, bag slots, backpack). On Forever they ride
+  on the main bar to the right of bar 1 and are the first to go in a narrow window. They count only for "outside":
+  their tall frames touch the bars above by design.
 - It is computed from the real positions. Each bar keeps following the window edges it is anchored to. A smaller
   scale makes the window bigger in UI units, so a centred bar moves by half of the growth and a right-anchored bar by
   all of it. Button sizes in UI units do not change.
@@ -67,6 +79,27 @@ bars = {
 - UI Scale is one value per install (`WTF\Config.wtf`). For clients of the same install, take the smallest
   `fitScale` of the characters whose windows share that install.
 
+## Real numbers (Forever, 6 and 9 Nov 2026)
+- Bridge record (2560x1369 window, UI 2244x1200 at 0.64, bars 1–3): bar 1 at x 521–1083, y 2–47 (centre − 601 …
+  centre − 39); bar 2 at 543–1105, y 72–117; bar 3 at 1127–1689. **Bars 2 and 3 sit side by side**, 1146 units
+  together. Bar 1, the menu and the bags together need about 1190 units.
+- `wbx snap` of the owner's three Forever windows (9 Nov): in the 870x696 followers Forever draws at UI scale 1.00
+  (no `uiScale` line: about 1 unit per pixel, never below 0.64, so a 696-pixel window is 768 units high and 960 wide).
+  The addon's record from the same minute: bar 1 at x 0–562 (pushed against the left edge), bar 2 at 22–584, bar 3 at
+  398–960 (pushed against the right edge) **on top of 4 buttons of bar 2**; the bags run off the right edge. That is
+  the owner's bug. UI scale 0.79 fits everything there (the app's Auto-fit, wowboxer-layouts `ActionBars`).
+- Classic Era: bars 2 and 3 sit inside the 1024-wide main bar art and the right bars above it, so the verified 4:3
+  rule for the main bar already covers them.
+
+## How the app uses it (wowboxer-layouts, `feature/autofit-all-bars`)
+- Which bars are on: the character's `config-cache.wtf`, `SET enableMultiActionBars "<mask>"` (1 = bar 2, 2 = bar 3,
+  4 = right, 8 = right 2, 16/32/64 = bars 5–7; a missing line = 0). This is in the file on both games.
+- Where they are: `bridge.bars` when the account has one, otherwise the app's default layout per game. On Classic Era
+  the main bar is always the 1024-unit art.
+- The character: `bridge.character` if its WTF folder exists, otherwise the folder WoW wrote last.
+- The app recomputes the fit for the window size the layout gives (it does not use `fitScale` as is, because the
+  measured window is often not the planned one).
+
 Model numbers from `tests/test_barfit.lua` (window sizes in UI units at scale 1):
 
 | Client | Bars | 1707x960 | 900x720 | 640x512 |
@@ -76,9 +109,8 @@ Model numbers from `tests/test_barfit.lua` (window sizes in UI units at scale 1)
 | Forever | 1, 1+2, 1+2+3 | fits | fits | fits |
 | Forever | 1+2+3 + right bars | fits | 0.99 | 0.70 (right bars lie on bars 1–3) |
 
-On Era, bars 2 and 3 sit inside the 1024-wide main bar art, so they need no more width than bar 1. Their buttons go
-missing for the same reason as bar 1's. On Forever, the bottom bars are narrow (562 units), and the problem is the
-right bars covering them in small windows.
+These are the old stacked-bars mock. The real Forever layout (bars 2 and 3 side by side) is in "Real numbers" above
+and in the test "the real Forever layout".
 
 ## Not built: the addon scaling its own bar (`bridge.barFit`, `bridge.barScale`)
 `docs/backlog.md` P3 "Fit the action bar per client" keeps those two names reserved. That would be an opt-in Setup
