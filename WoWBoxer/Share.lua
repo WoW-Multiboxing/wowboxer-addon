@@ -95,7 +95,7 @@ function Sh.export(squad, extra)
       custom[#custom + 1] = { id = c.id, name = c.name, kind = c.kind, aim = c.aim, steps = Json.array(E_copy(c.steps)), filler = c.filler, fills = c.fills, reset = c.reset }
     end
     members[#members + 1] = { id = m.id, name = m.name, cls = m.cls, race = m.race, role = m.role, level = m.level, leader = m.leader, unit = m.unit,
-      talented = m.talented, build = Json.array(E_copy(build)), buildName = buildName, guide = m.guide, seq = m.seq, seqTarget = m.seqTarget, assist = ns.State.offOrNil(m.assist), customSeq = custom,
+      talented = m.talented, build = Json.array(E_copy(build)), buildName = buildName, guide = m.guide, seq = m.seq, seqTarget = m.seqTarget, assist = ns.State.offOrNil(m.assist), lines = ns.State.cleanLines(m.lines), customSeq = custom,
       pins = Json.array(E_copy(m.pins)), tags = Json.array(E_copy(m.tags)), seqTier = m.seqTier, realm = m.realm }
   end
   local payload = { f = Sh.FORMAT, game = extra.game or "any",
@@ -160,13 +160,23 @@ function Sh.parseMacro(text)
     if n == "" or #n > 40 or n:find("[%[%]/]") then return nil end
     return n
   end
-  local seqLine, casts, help = nil, {}, false
+  local seqLine, casts, help, dropped = nil, {}, false, {}
   for line in (text:gsub("\r", "") .. "\n"):gmatch("([^\n]*)\n") do
     local rest = line:match("^%s*/castsequence%s+(.*)$")
     if rest then seqLine = seqLine or rest
     else
       local r2 = line:match("^%s*/cast%s+(.*)$")
-      if r2 then casts[#casts + 1] = r2 end
+      if r2 then casts[#casts + 1] = r2
+      else
+        -- other lines (/assist, /targetenemy, /startattack …) are not taken over: named in out.dropped, so the paste
+        -- box can say so instead of dropping them silently (#help 10 Nov)
+        local cmd = line:match("^%s*(/%a+)")
+        if cmd and #dropped < 6 then
+          local known = false
+          for _, x in ipairs(dropped) do if x == cmd:lower() then known = true end end
+          if not known then dropped[#dropped + 1] = cmd:lower() end
+        end
+      end
     end
   end
   local out = { name = "Pasted macro", kind = "sequence", aim = "harm", steps = {}, filler = "", fills = 1, reset = "combat" }
@@ -207,5 +217,6 @@ function Sh.parseMacro(text)
   end
   out.aim = help and "help" or "harm"
   while #out.steps > 12 do table.remove(out.steps) end
+  if #dropped > 0 then out.dropped = dropped end
   return out
 end

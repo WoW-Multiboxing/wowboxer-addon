@@ -14,7 +14,7 @@ function tab.build(p)
   h0:SetPoint("TOPLEFT", 0, -4)
   h0:SetText("Macros and window")
   local Bars = ns.Bars
-  local function barValues() local v = {}; for _, b in ipairs(Bars.BARS) do v[#v + 1] = { b.first, b.label } end return v end
+  local function barValues() local v = {}; for _, b in ipairs(Bars.BARS) do v[#v + 1] = { b.first, Bars.barLabel(b.first) } end return v end
   local function row(y, label, widget, tip)
     local t = W.text(p, "GameFontHighlightSmall", nil, W.TEXT)
     t:SetPoint("TOPLEFT", 0, y - 6)
@@ -45,8 +45,21 @@ function tab.build(p)
   p.strip = W.check(p, "Sequence strip", function(_, v) Core().db.settings.seqStrip = v; ns.SeqStrip.markDirty(); ns.SeqStrip.request(); Core().changed() end)
   p.strip:SetPoint("TOPLEFT", -4, -148)
   W.tip(p.strip, "Sequence strip", "Shows the steps of your sequence macros as small icons on the action button and frames the spell that comes next. Only a picture: it changes nothing.")
+  -- extra lines (Talex, #help 10 Nov): one switch each for all this character's macros (also on the Squad page)
+  p.linesLbl = W.text(p, "GameFontHighlightSmall", nil, W.TEXT)
+  p.linesLbl:SetPoint("TOPLEFT", 0, -172)
+  p.linesLbl:SetText("Extra lines:")
+  p.linesLbl.wbxCopy = "label"
+  p.lineChecks = {}
+  for _, def in ipairs(ns.Macros.LINES) do
+    local key = def.key
+    local c = W.check(p, def.short, function(_, v) Core().setLine(key, v) end)
+    W.tip(c, def.label, def.about .. " Off: in none of your macros or sequence steps. One macro only: the icon on its card in My macros. Copy settings sends it along.")
+    c.def = def
+    p.lineChecks[#p.lineChecks + 1] = c
+  end
   p.guideBtn = W.button(p, "Guide", 80, 22, function() ns.Book.ShowGuide() end, "Opens the 3-step guide again on the My macros page.")
-  p.guideBtn:SetPoint("TOPLEFT", 0, -174)
+  p.guideBtn:SetPoint("TOPLEFT", 0, -238)
   p.macrosOnly = W.button(p, "Macros only", 100, 22, function() Core().sync({ macrosOnly = true }) end,
     "Creates or updates your WoWBoxer macros without touching your action bars (drag them yourself from the book).")
   p.macrosOnly:SetPoint("LEFT", p.guideBtn, "RIGHT", 6, 0)
@@ -55,7 +68,7 @@ function tab.build(p)
   p.autoBtn:SetPoint("LEFT", p.macrosOnly, "RIGHT", 6, 0)
   p.copySet = W.button(p, "Copy settings", 120, 22, function() if ns.Settings then ns.Settings.send() end end,
     { "Copy settings", "WoWBoxer's settings are per WoW account, so with one account per character each one has its own. This sends this character's settings (Standard/Advanced, Automation, Accept from, quest reward, window size, animations, sequence strip, team panel, minimap button, reminders) to your squad in the party. Each character shows Use them / Ignore." })
-  p.copySet:SetPoint("TOPLEFT", 0, -200)
+  p.copySet:SetPoint("TOPLEFT", 0, -264)
   p.copyHint = W.text(p, "GameFontHighlightSmall", nil, W.MUTED)
   p.copyHint:SetPoint("LEFT", p.copySet, "RIGHT", 8, 0)
   p.copyHint:SetText("to my other characters")
@@ -73,10 +86,10 @@ function tab.build(p)
 
   -- checklist
   local h1 = W.text(p, "GameFontNormal", nil, W.GOLD)
-  h1:SetPoint("TOPLEFT", 0, -230)
+  h1:SetPoint("TOPLEFT", 0, -294)
   h1:SetText("Multibox checklist")
-  local sf, content = W.scroll(p, LEFT_W - 24, 170)
-  sf:SetPoint("TOPLEFT", 0, -248)
+  local sf, content = W.scroll(p, LEFT_W - 24, 106)
+  sf:SetPoint("TOPLEFT", 0, -312)
   p.checkSf, p.checks = sf, content
   p.checkPool = W.pool(content, function(parent)
     local r = CreateFrame("Frame", nil, parent)
@@ -156,6 +169,19 @@ function tab.refresh(p)
   p.anim:SetChecked(Core().db.settings.animations ~= false)
   p.strip:SetChecked(Core().db.settings.seqStrip ~= false)
   p.remind:SetChecked(Core().remindersOn())
+  -- the extra lines this character's class has: two per row (at most four apply to one character)
+  local _, me = Core().me()
+  local n = 0
+  for _, c in ipairs(p.lineChecks) do
+    local on = me ~= nil and c.def.applies(me)
+    c:SetShown(on)
+    if on then
+      c:ClearAllPoints()
+      c:SetPoint("TOPLEFT", -4 + (n % 2) * 150, -188 - math.floor(n / 2) * 24)
+      c:SetChecked(Core().lineOn(c.def.key))
+      n = n + 1
+    end
+  end
   p.macrosOnly:SetEnabled(not C.inCombat())
   p.copySet:SetEnabled(C.inParty() and true or false)
   p.resetAll:SetEnabled(not C.inCombat())

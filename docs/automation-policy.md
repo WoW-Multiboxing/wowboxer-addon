@@ -27,7 +27,9 @@
   - selling junk, repairing, restocking reagents;
   - auto-equip (owner, 5 Nov 2026; off by default): this character's own new items that are strictly better; bind on
     equip and "in doubt" items are asked first (`WoWBoxer/Equip.lua`);
-  - loot rules;
+  - loot rules – built: Auto greed (owner, 10 Nov 2026; off by default): in 5-player dungeons only, Greed on grey and
+    white items and on better items this character can't use or that are no upgrade; never Need; bind on pickup and
+    "not sure" stay the player's roll (`WoWBoxer/Loot.lua`);
   - trade fill.
 
   MAMA, Multibox Follower Helper, EMA and Jamba have done this for years.

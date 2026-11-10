@@ -1,5 +1,11 @@
 # WoWBoxer addon – backlog
 
+## The owner: TEST BUILD 1.3.0-test.4 – #help fixes + Extra lines + Auto greed (Forever, /reload each, one party)
+1. Mage follower: Setup → Extra lines → untick *Wand* → Update macros: no `!Shoot` left; tick it again, then click the wand icon on one card → only that macro loses it.
+2. Hunter follower: My macros → Assist macro says `/assist party<N>` where the leader really is in that window.
+3. Macro editor → a sequence → Advanced → *Edit text* opens the text; `/wbx team off`, `/wbx team on` brings the box back.
+4. Automation → tick *Auto greed*, run a dungeon: grey/white and gear you can't use get Greed with one chat line; BoP stays yours.
+
 ## The owner: TEST BUILD 1.3.0-test.3 – fit the action bars (Forever followers at 870x696, bars 1–3 on)
 1. `/reload` a follower: one popup "Action bars overlap in this window. [Fit now] sets UI Scale to 0.79" (or close).
 2. **Not now** → nothing changes; `/reload` → it asks again.

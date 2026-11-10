@@ -17,13 +17,35 @@ B.BARS = {
   { first = 25, label = "Right Bar", short = "R1" },
   { first = 37, label = "Right Bar 2", short = "R2" },
 }
---- "Bar1 3", "BL 12" … for an action slot
+-- The names the running client uses in its own options (#help 10 Nov: players on Forever expect "Action Bar 1–8"):
+-- clients with Edit Mode number the bars (Action Bar 1 = main, 2 = bottom left, 3 = bottom right, 4 = right,
+-- 5 = right 2); the classic options use the client's own SHOW_MULTIBAR1–4_TEXT strings when it has them, else the
+-- names above. A capability probe, never the project ID. [AFKLAR: the exact labels of the Era 1.15 and TBC options]
+B.NUMBER = { [1] = 1, [61] = 2, [49] = 3, [25] = 4, [37] = 5 }
+local CLASSIC_STRING = { [61] = "SHOW_MULTIBAR1_TEXT", [49] = "SHOW_MULTIBAR2_TEXT", [25] = "SHOW_MULTIBAR3_TEXT", [37] = "SHOW_MULTIBAR4_TEXT" }
+function B.editMode() return G.EditModeManagerFrame ~= nil or (G.C_EditMode ~= nil and G.C_EditMode.GetLayouts ~= nil) end
+--- {label, short} of the bar whose first slot is `first`, as this client names it.
+function B.names(first)
+  local def
+  for _, b in ipairs(B.BARS) do if b.first == first then def = b end end
+  if not def then return "Bar " .. tostring(first), "#" .. tostring(first) end
+  local n = B.NUMBER[first]
+  if B.editMode() then
+    local fmt = G.HUD_EDIT_MODE_ACTION_BAR_LABEL
+    local label = (type(fmt) == "string" and fmt:find("%d", 1, true)) and string.format(fmt, n) or ("Action Bar " .. n)
+    return label, "Bar " .. n
+  end
+  local s = CLASSIC_STRING[first] and G[CLASSIC_STRING[first]]
+  if type(s) == "string" and s ~= "" and #s <= 40 then return s, def.short end
+  return def.label, def.short
+end
+--- "Bar 1 · 3", "BL · 12" … for an action slot
 function B.slotLabel(slot)
   local first = slot - (slot - 1) % 12
-  for _, b in ipairs(B.BARS) do if b.first == first then return b.short .. " · " .. ((slot - 1) % 12 + 1) end end
+  for _, b in ipairs(B.BARS) do if b.first == first then return select(2, B.names(first)) .. " · " .. ((slot - 1) % 12 + 1) end end
   return "#" .. slot
 end
-function B.barLabel(first) for _, b in ipairs(B.BARS) do if b.first == first then return b.label end end return "Bar " .. tostring(first) end
+function B.barLabel(first) return (B.names(first)) end
 local PRIMARY = { K1 = 0, K2 = 1, K3 = 2, K4 = 3, K5 = 4, K6 = 5, K7 = 6, K8 = 7, S1 = 8, S2 = 9, Follow = 10, Assist = 11 }
 local SECONDARY = { C1 = 0, C2 = 1, C3 = 2, C4 = 3, C5 = 4, C6 = 5, C7 = 6, C8 = 7, Focus = 8, PetBack = 10, Invite = 11 }
 local SHARED = { Wand = { 9, 8, 11, 10 } }

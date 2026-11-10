@@ -95,6 +95,13 @@ function CB.ShowPaste(onUse)
   return f
 end
 
+--- The note for lines a paste leaves out ("/assist, /targetenemy left out. Only /cast …"), or nil.
+CB.DROPPED_NOTE = "Only /cast and /castsequence lines are kept – add targeting in the Targeting tab."
+function CB.droppedNote(d)
+  if not (d and d.dropped and #d.dropped > 0) then return nil end
+  return table.concat(d.dropped, ", ") .. " left out. " .. CB.DROPPED_NOTE
+end
+
 --- Read the pasted text (data only): a key string first, else macro text.
 function CB.parse(text)
   local f = frame()
@@ -110,7 +117,7 @@ function CB.parse(text)
   for _, n in ipairs(d.steps) do parts[#parts + 1] = n end
   if d.filler and d.filler ~= "" then parts[#parts + 1] = d.filler .. " ×" .. d.fills end
   f.result:SetText("|cffb7f07a" .. (d.kind == "priority" and "Priority list" or "Sequence") .. ":|r " .. table.concat(parts, " → ") ..
-    " (" .. (d.aim == "help" and "friendly" or "enemy") .. ")")
+    " (" .. (d.aim == "help" and "friendly" or "enemy") .. ")" .. (CB.droppedNote(d) and ("\n|cfff0b43c" .. CB.droppedNote(d) .. "|r") or ""))
   f.use:SetEnabled(true)
   return d
 end

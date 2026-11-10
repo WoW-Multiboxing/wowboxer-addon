@@ -154,6 +154,7 @@ local function itemStats(link)
   return ok and type(t) == "table" and t or nil
 end
 local function itemId(link) return link and tonumber(link:match("item:(%d+)")) end
+E.itemInfo, E.itemStats = itemInfo, itemStats -- Auto greed (Loot.lua) reads items the same way
 
 local scanTip
 --- The tooltip lines of a bag item or a worn item: {{text, r, g, b}, …}. C_TooltipInfo where it exists, else a
@@ -353,6 +354,7 @@ local function myRel()
   if not cls and G.UnitClass then local _, f = G.UnitClass("player"); cls = type(f) == "string" and f:lower() or nil end
   return E.relevant(cls or "warrior", m and m.role or "melee")
 end
+E.myRel = myRel
 
 --- Put on the item in bag/slot (only if it is still there). Returns true when the call went through.
 function E.equip(bag, slot, link, inv)

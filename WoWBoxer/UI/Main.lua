@@ -456,6 +456,7 @@ function UI.Popup(text, buttons)
 end
 
 -- ------------------------------------------------------------------ level-up toast
+UI.NEVER_LABEL = "Skip these changes" -- ≤ 3 words (copy rules); the tooltip says what it means
 -- One sentence + Update keys / Later + "Don't show again" (this pending state, this character; a new change shows
 -- again). Width from the text (300–480), height from the wrapped text, under the top centre.
 function UI.ShowOffer(ctx, sig)
@@ -473,10 +474,19 @@ function UI.ShowOffer(ctx, sig)
     o.go:SetPoint("BOTTOMRIGHT", -10, 8)
     o.later = W.button(o, "Later", 60, 22, function() o:Hide() end, "Closes this. Open WoWBoxer (/wbx or the minimap button) whenever you like.")
     o.later:SetPoint("RIGHT", o.go, "LEFT", -6, 0)
-    o.never = W.check(o, "Don't show again", function(_, v) if v then ns.Core.dontShowAgain(o.sig); o:Hide() end end)
+    -- ticking does not close the toast (#help 10 Nov: it read as "never again"); it only means THESE changes
+    o.never = W.check(o, UI.NEVER_LABEL, function(_, v) ns.Core.dontShowAgain(o.sig, v) end)
     o.never:SetPoint("BOTTOMLEFT", 8, 8)
     o.never.label.wbxCopy = "label"
-    W.tip(o.never, "Don't show again", "This reminder does not come back on this character, also after /reload. A new change (level-up, new spell) shows again. Turn reminders off in Setup.")
+    W.tip(o.never, UI.NEVER_LABEL, "Don't remind me about these changes: they do not come back on this character, also after /reload. A new change (level-up, new spell) shows a new reminder. To stop all reminders: Reminders off.")
+    o.off = W.button(o, "Reminders off", 100, 18, function()
+      ns.Core.cdb.reminders = false
+      ns.Core.log("info", "reminders off (toast)")
+      ns.Core.print("Level-up reminders are off. Turn them on again in Setup → Level-up reminders.")
+      o:Hide(); ns.Core.changed()
+    end, "No more level-up reminders on this character. The book still marks changed macros; turn them on again in Setup.")
+    W.setStyle(o.off, "ghost")
+    o.off:SetPoint("TOPRIGHT", -8, -6)
     o.text.wbxCopy = "hint"
     local hit = CreateFrame("Frame", nil, o)
     hit:SetAllPoints(o.text)
@@ -495,10 +505,10 @@ function UI.ShowOffer(ctx, sig)
   o.text:SetText(text)
   local maxW = math.min(480, (UIParent:GetWidth() or 800) * 0.9)
   local want = W.measure(text, "GameFontHighlightSmall") + 24
-  local btns = o.go:GetWidth() + o.later:GetWidth() + 26 + 22 + W.measure("Don't show again", "GameFontHighlightSmall") + 16
+  local btns = o.go:GetWidth() + o.later:GetWidth() + 26 + 22 + W.measure(UI.NEVER_LABEL, "GameFontHighlightSmall") + 16
   local w = math.max(300, btns, math.min(maxW, want))
   o:SetWidth(w)
-  o.text:SetWidth(w - 24)
+  o.text:SetWidth(w - 24 - o.off:GetWidth() - 8) -- the "Turn reminders off" link sits top right
   local th = o.text:GetStringHeight() or 14
   o:SetHeight(math.ceil(th) + 10 + 8 + 22 + 10)
   o:Show()

@@ -74,6 +74,7 @@ Sync.lua
 Settings.lua
 Auto.lua
 Equip.lua
+Loot.lua
 Relay.lua
 BarFit.lua
 UI\Theme.lua

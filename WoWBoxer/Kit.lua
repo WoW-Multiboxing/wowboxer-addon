@@ -203,6 +203,23 @@ end
 --- "Take the leader's target" (Squad page, per character): followers on unless switched off; never the leader.
 function K.takesTarget(m) return m ~= nil and not m.leader and m.assist ~= false end
 function K.memberCtx(m) return { leader = not not m.leader, unit = m.unit, wand = E.WAND_CLASSES[m.cls] or false, assist = K.takesTarget(m) } end
+--- The context of one key: the character's context with the extra-line choices (Macros.lineChoice) applied.
+--- lines = this character's switches {wand = false, …} (nil = on); per = this key's own choices (beat the switches).
+function K.keyCtx(m, lines, per)
+  local base = K.memberCtx(m)
+  local c = { leader = base.leader, unit = base.unit, wand = base.wand, assist = base.assist, no = {} }
+  lines, per = lines or {}, per or {}
+  for _, x in ipairs(E.EXTRA_LINES) do
+    local v = per[x]
+    if x == "assist" then
+      if v ~= nil then c.assist = (v and not m.leader) and true or false end -- the switch itself is m.assist
+    else
+      if v == nil then v = lines[x] ~= false end
+      if not v then c.no[x] = true end
+    end
+  end
+  return c
+end
 
 --- has(name) for level L: the learned spell object with that name or nil. live(name) (optional, in game) must also say yes.
 function K.seqHas(m, L, live)
@@ -215,12 +232,18 @@ function K.seqHas(m, L, live)
   end
 end
 
-function K.seqOf(m, L, live)
+--- ctxFor(id) (optional): the context of one key ("dps", "heal", "c<id>") with its own extra-line choices.
+--- only (optional): build just that one id (the book asks which extra lines a key has).
+function K.seqOf(m, L, live, ctxFor, only)
   local has = K.seqHas(m, L == nil and m.level or L, live)
-  local gen = E.buildSequences(m.cls, m.role, m.seq or "off", K.memberCtx(m), has, { targetReset = not not m.seqTarget })
+  local gen = E.buildSequences(m.cls, m.role, m.seq or "off", K.memberCtx(m), has,
+    { targetReset = not not m.seqTarget, ctxFor = ctxFor, only = only })
   for _, c in ipairs(m.customSeq or {}) do
-    local r = E.buildCustom(m.cls, c, K.memberCtx(m), has, { melee = K.isMelee(m) })
-    if r.kind ~= "empty" then gen[#gen + 1] = r end
+    local id = "c" .. tostring(c.id)
+    if not only or only == id then
+      local r = E.buildCustom(m.cls, c, ctxFor and ctxFor(id) or K.memberCtx(m), has, { melee = K.isMelee(m) })
+      if r.kind ~= "empty" then gen[#gen + 1] = r end
+    end
   end
   return gen
 end

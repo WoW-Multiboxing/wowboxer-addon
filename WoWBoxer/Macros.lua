@@ -95,6 +95,63 @@ function M.squadKeys(m, opts)
   end
   return out
 end
+-- ------------------------------------------------------------------ extra lines (Talex, #help 10 Nov; owner 10 Nov)
+-- Lines WoWBoxer adds that the player did not pick. One switch each for ALL macros of this character (cdb.lines,
+-- nil = on = today's macros; "Take the leader's target" is the member's own m.assist), and a per-macro choice
+-- (cdb.keyLines[name]) that beats the switch, survives updates and level-ups and is cleared by "WoWBoxer's version".
+-- The Wand squad macro and Shoot in All spells are separate choices and never change here.
+M.LINES = {
+  { key = "wand", label = "Wand in damage macros", short = "Wand", icon = "INV_Wand_01",
+    about = "Ends caster damage macros with /cast !Shoot: when the spell can't be cast, the press shoots your wand.",
+    applies = function(m) return E.WAND_CLASSES[m.cls] == true end },
+  { key = "autoshot", label = "Auto Shot", short = "Auto Shot", icon = "Ability_Whirlwind",
+    about = "Ends hunter priority macros with /cast !Auto Shot, so the hunter keeps shooting.",
+    applies = function(m) return m.cls == "hunter" end },
+  { key = "startattack", label = "Start attack", short = "Start attack", icon = "Ability_MeleeDamage",
+    about = "Adds /startattack to melee macros, so auto attack starts with the ability.",
+    applies = function(m) return not E.WAND_CLASSES[m.cls] end },
+  { key = "petattack", label = "Pet attack", short = "Pet attack", icon = "Ability_Hunter_BeastTaming",
+    about = "Adds /petattack to damage macros, so your pet attacks the same target.",
+    applies = function(m) return m.cls == "hunter" or m.cls == "warlock" end },
+  { key = "assist", label = "Take the leader's target", short = "Leader's target", icon = "Ability_Hunter_SniperShot",
+    about = "Starts a follower's damage macros with /assist <leader>, so it really targets the leader's target.",
+    applies = function(m) return not m.leader end },
+}
+M.LINE_BY = {}
+for _, x in ipairs(M.LINES) do M.LINE_BY[x.key] = x end
+--- This character's switch for extra line `key` (true = on). lines = cdb.lines; m = the member (for assist).
+function M.lineOn(key, lines, m)
+  if key == "assist" then return m ~= nil and m.assist ~= false end
+  return not (lines and lines[key] == false)
+end
+--- The extra lines key d really has, with their state for this key: {{key, label, on, own}} (own = its own choice).
+--- Found by building the key with everything on and with one line off: only lines that change the macro count.
+local linesCache = setmetatable({}, { __mode = "k" })
+function M.linesOf(d, keyLines)
+  if not (d and d.rebuild and d.lineCtx) then return {} end
+  local cached = linesCache[d]
+  if cached then return cached end
+  local base = d.lineCtx
+  local function with(no, assist)
+    return { leader = base.leader, unit = base.unit, wand = base.wand, assist = assist, no = no }
+  end
+  local follower = not base.leader
+  local full = d.rebuild(with({}, follower))
+  local per = keyLines and keyLines[d.name] or {}
+  local out = {}
+  for _, x in ipairs(M.LINES) do
+    local no, assist = {}, follower
+    if x.key == "assist" then assist = false else no[x.key] = true end
+    if d.rebuild(with(no, assist)) ~= full then
+      local on
+      if x.key == "assist" then on = base.assist and true or false else on = not base.no[x.key] end
+      out[#out + 1] = { key = x.key, label = x.label, short = x.short, on = on, own = per[x.key] ~= nil }
+    end
+  end
+  linesCache[d] = out
+  return out
+end
+
 --- The icon argument for CreateMacro/EditMacro: the file ID when the client can look it up, else the icon name.
 function M.namedIcon(slug)
   local f = _G.GetFileIDFromPath
@@ -189,20 +246,34 @@ function M.desired(m, L, opts)
   L = L or m.level
   local live = opts.live
   local ctx = K.memberCtx(m)
+  -- extra lines (Talex, #help 10 Nov): this character's switches (opts.lines) and each key's own choice (opts.keyLines)
+  local lines, keyLines = opts.lines or m.lines or {}, opts.keyLines or {}
+  local function ctxFor(name) return K.keyCtx(m, lines, name and keyLines[name]) end
   local out = {}
   for _, x in ipairs(K.kitSlots(m, L, live)) do
-    local body = E.makeMacro(x.spell, ctx)
+    local name = R.PREFIX .. " K" .. x.slot
+    local kctx = ctxFor(name)
+    local body = E.makeMacro(x.spell, kctx)
     if body ~= "" then
-      out[#out + 1] = { key = "K" .. x.slot, name = R.PREFIX .. " K" .. x.slot, group = "kit", label = x.spell.name, item = x.item, body = body, spell = x.spell,
-        plain = E.isPlain(x.spell, ctx) or nil }
+      local sp = x.spell
+      out[#out + 1] = { key = "K" .. x.slot, name = name, group = "kit", label = sp.name, item = x.item, body = body, spell = sp,
+        plain = E.isPlain(sp, kctx) or nil, lineCtx = kctx, rebuild = function(c) return E.makeMacro(sp, c) end }
     end
   end
   local customIndex = {}
   for i, c in ipairs(m.customSeq or {}) do customIndex["c" .. c.id] = i end
-  for _, x in ipairs(K.seqOf(m, L, live)) do
+  local function seqKey(id) return customIndex[id] and ("C" .. customIndex[id]) or SEQ_KEY[id] end
+  local function seqCtx(id) local k = seqKey(id); return ctxFor(k and (R.PREFIX .. " " .. k) or nil) end
+  for _, x in ipairs(K.seqOf(m, L, live, seqCtx)) do
     local key = x.custom and customIndex[x.id] and ("C" .. customIndex[x.id]) or SEQ_KEY[x.id]
     if key and x.macro ~= "" then
-      out[#out + 1] = { key = key, name = R.PREFIX .. " " .. key, group = x.custom and "custom" or "sequence", label = x.label, body = x.macro, seq = x }
+      local id = x.id
+      local function rebuild(c)
+        local r = K.seqOf(m, L, live, function(i) return i == id and c or seqCtx(i) end, id)[1]
+        return r and r.macro or ""
+      end
+      out[#out + 1] = { key = key, name = R.PREFIX .. " " .. key, group = x.custom and "custom" or "sequence", label = x.label, body = x.macro, seq = x,
+        lineCtx = seqCtx(id), rebuild = rebuild }
     end
   end
   for _, h in ipairs(M.squadKeys(m, opts)) do
@@ -232,8 +303,9 @@ function M.desired(m, L, opts)
           taken[name] = true
           local pending = M.pendingOf(m, s, L, live)
           if pending ~= false then
-            out[#out + 1] = { key = "X:" .. s.id, name = name, group = "extra", label = s.name, body = E.makeMacro(s, ctx), spell = s,
-              pending = pending, plain = E.isPlain(s, ctx) or nil }
+            local xctx, sp = ctxFor(name), s
+            out[#out + 1] = { key = "X:" .. s.id, name = name, group = "extra", label = s.name, body = E.makeMacro(s, xctx), spell = s,
+              pending = pending, plain = E.isPlain(s, xctx) or nil, lineCtx = xctx, rebuild = function(c) return E.makeMacro(sp, c) end }
           end
         end
       end

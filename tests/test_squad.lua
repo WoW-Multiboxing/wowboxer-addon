@@ -87,17 +87,14 @@ do
   H.eq(#s.members, 3, "squad of three")
   H.ok(ns.State.leaderOf(s).name == "Dorin", "the party leader leads")
   H.eq(ns.SquadPages.addParty(), 0, "nobody twice")
-  -- I follow via party1 by default, but Dorin is party2 here
-  H.ok(not me.leader and me.unit == "party1", "this character follows via party1")
-  local hu = SQ.unitHint()
-  H.eq(hu, "party2", "unit hint: use party2")
+  -- Dorin is party2 here: the macros use the unit where the leader really is in THIS party, no click needed
+  -- (Salamipouch, #help 10 Nov: the Assist macro pointed at another party slot after every update)
+  H.ok(not me.leader, "this character follows")
   UI.Select("keys")
   local step = ns.Book.nextStep(Core.compute(), "keys")
-  H.ok(step.text:find("Dorin is party2 here", 1, true) ~= nil, "the book's next step offers the unit: " .. step.text)
-  H.eq(step.button[1], "Use party2", "one button")
-  step.button[3]()
-  H.eq(me.unit, "party2", "one click fixes it")
-  H.eq(SQ.unitHint(), nil, "no hint any more")
+  H.eq(me.unit, "party2", "the leader's unit comes from this party")
+  H.eq(SQ.unitHint(), nil, "so there is no unit hint")
+  H.ok(not (step and step.text and step.text:find("Dorin is party2 here", 1, true)), "and no unit step in the book")
   -- readiness of this character
   local r = SQ.myReady()
   H.eq(r.unit, 1, "unit OK now")

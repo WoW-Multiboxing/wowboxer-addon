@@ -42,9 +42,16 @@ function KE.engineDraft(c)
   x.kind, x.steps, x.filler = "priority", { c.steps[1] }, ""
   return x
 end
-function KE.preview(m, c, L)
+--- per (optional): the Macro editor's extra-line ticks {key = on}; else this macro's saved choice (and the switches).
+function KE.preview(m, c, L, per)
   c = KE.engineDraft(c)
-  local ctx = ns.Kit.memberCtx(m)
+  local cdb = Core().cdb or {}
+  if per == nil then
+    local f = KE.frame
+    local name = f and f.index and ("WBX C" .. f.index)
+    per = name and cdb.keyLines and cdb.keyLines[name] or nil
+  end
+  local ctx = ns.Kit.keyCtx(m, m.lines, per)
   local has = ns.Kit.seqHas(m, L, nil)
   local r = E().buildCustom(m.cls, c, ctx, has, { melee = ns.Kit.isMelee(m) })
   local sp = {}
@@ -361,6 +368,8 @@ function KE.usePasted(d)
   x.kind, x.aim, x.steps, x.filler, x.fills, x.reset = d.kind, d.aim, steps, filler, d.fills or 1, d.reset or "combat"
   if d.name and d.name ~= "" and d.name ~= "Pasted macro" then x.name = d.name; f.name:SetText(d.name) end
   if #dropped > 0 then Core().print("|cfff0b43cLeft out (not a " .. (ns.Data.classes[m.cls] and ns.Data.classes[m.cls].n or m.cls) .. " spell):|r " .. table.concat(dropped, ", ")) end
+  local note = ns.CopyBox and ns.CopyBox.droppedNote and ns.CopyBox.droppedNote(d)
+  if note then Core().print("|cfff0b43c" .. note .. "|r") end
   Core().log("info", "pasted macro: " .. #steps .. " steps")
   KE.Refresh()
 end

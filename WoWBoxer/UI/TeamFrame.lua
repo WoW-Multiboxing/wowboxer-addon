@@ -79,7 +79,7 @@ end
 function TF.Refresh()
   local TM = ns.Team
   if not TM or not ns.Core.db then return end
-  local show = TM.active() and settings().teamFrame ~= false
+  local show = TM.active() -- one switch: settings.team (TM.enabled); shown only while the squad is grouped
   if not show then if TF.frame then TF.frame:Hide() end return end
   local f = TF.Build()
   local rows = TM.rows()
@@ -98,8 +98,10 @@ function TF.Refresh()
   f:Show()
 end
 
+--- The team status switch (one for sending and the window): on = nil (the default), off = false.
 function TF.SetShown(on)
-  settings().teamFrame = on and true or false
+  settings().team = ns.State.offOrNil(on and true or false)
+  settings().teamFrame = nil -- the old second switch (before 1.3.0), no longer used
   if not on and TF.frame then TF.frame:Hide() end
   TF.Refresh()
 end

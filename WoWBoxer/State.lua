@@ -107,12 +107,21 @@ function S.newMember(o)
     guide = guide, seq = E.contains(E.SEQ_TIERS, o.seq) and o.seq or "off", seqTarget = not not o.seqTarget,
     -- "Take the leader's target": nil = the default (on for followers), false = switched off
     assist = S.offOrNil(o.assist),
+    -- extra lines switched off for all this character's macros (#help 10 Nov): {wand = false, …}; nil = all on
+    lines = S.cleanLines(o.lines),
     seqTier = (E.contains(E.SEQ_TIERS, o.seqTier) and o.seqTier ~= "off") and o.seqTier or nil, customSeq = S.cleanCustom(o.customSeq), pins = pins,
     tags = tags, realm = S.cleanRealm(o.realm),
     -- Follow (line): the party unit of the member ahead as seen on THIS client (docs/follow-line.md); per client,
     -- never in the share string or Sync
     lineUnit = (o.lineUnit and E.contains(E.UNITS, o.lineUnit) and o.lineUnit ~= "focus") and o.lineUnit or nil,
     buildName = R.cleanText(o.buildName, 40) }
+end
+--- The extra-line switches of a member: only known lines, only "off" (false) is kept; nil when all are on.
+function S.cleanLines(t)
+  if type(t) ~= "table" then return nil end
+  local out, n = {}, 0
+  for _, k in ipairs(E.EXTRA_LINES) do if k ~= "assist" and t[k] == false then out[k] = false; n = n + 1 end end
+  return n > 0 and out or nil
 end
 --- false stays false, anything else is nil (a default-on switch stores only "off"). Not "v == false and false or nil": that is always nil.
 function S.offOrNil(v) if v == false then return false end return nil end

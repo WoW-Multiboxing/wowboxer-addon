@@ -109,9 +109,10 @@ function Core.computeFresh()
   if not m then return nil, "This character is not in a squad yet." end
   local live = M.liveCheck()
   local L = C.playerLevel()
+  Core.liveLeaderUnit(s, m)
   local lineUnit = ns.Squad and ns.Squad.lineFor(s, m) or nil
   local desired = M.desired(m, L, { live = live, extras = Core.cdb.extras, squad = s, squadKeys = Core.cdb.squadKeys, lineUnit = lineUnit,
-    overrides = Core.cdb.overrides, ovCtx = { squad = s, me = m } })
+    overrides = Core.cdb.overrides, ovCtx = { squad = s, me = m }, keyLines = Core.cdb.keyLines })
   for _, d in ipairs(desired) do d.keepOff = Core.keptOff(d.name, d.group) end
   M.setTag(Core.macroTag())
   local mplan = M.plan(desired, Core.cdb.skip)
@@ -120,6 +121,21 @@ function Core.computeFresh()
     missing = M.missingFromBook(m, L, live) }
   Core.ctxGen, Core.lastCtx = (Core.ctxGen or 0) + 1, ctx -- the strip on the action bars reuses it
   return ctx
+end
+
+--- The leader's party unit as THIS client sees it (Salamipouch, #help 10 Nov: a hunter's Assist pointed at party2
+--- after every update). Party numbers differ per window, and a squad sent from another character carries that
+--- character's view, so a follower in a party uses the unit where the leader really is here. Focus users and a leader
+--- who is not in the party keep the saved unit. WoWBoxer data only; the macros follow after the usual Update click.
+function Core.liveLeaderUnit(s, m)
+  if not (s and m) or m.leader or m.unit == "focus" or not C.inParty() then return nil end
+  local L = S.leaderOf(s)
+  local u = L and ns.Squad and ns.Squad.unitOf(L.name)
+  if u and u ~= m.unit then
+    Core.log("info", "leader " .. tostring(L.name) .. " is " .. u .. " in this party (was " .. tostring(m.unit) .. ")")
+    m.unit = u
+  end
+  return u
 end
 
 --- This character's tag for general (account) macro slots: 2 characters, unique among the characters of this WoW
@@ -630,7 +646,16 @@ end
 function Core.applyImport(res)
   local db = Core.db
   local replaced = false
+  -- this character's own leader unit and follow-line slot are its own view of the party: an import from another
+  -- character (whose party numbers differ) must not overwrite them (bug 7, #help 10 Nov)
+  local _, old = Core.me()
+  local keep = old and not old.leader and { name = old.name, unit = old.unit, lineUnit = old.lineUnit } or nil
   for i, s in ipairs(db.squads) do if s.id == res.squad.id then db.squads[i] = res.squad; replaced = true end end
+  if keep then
+    for _, x in ipairs(res.squad.members or {}) do
+      if not x.leader and C.sameName(x.name, keep.name) then x.unit, x.lineUnit = keep.unit, keep.lineUnit end
+    end
+  end
   if not replaced then db.squads[#db.squads + 1] = res.squad end
   db.active = res.squad.id
   if next(res.cvars) then Core.cdb.importCVars = res.cvars end
@@ -659,6 +684,59 @@ function Core.setOverride(name, ov)
   Core.changed()
   return true
 end
+--- "WoWBoxer's version" of key `name`: no own targeting or text, and no own extra-line choices (the switches apply).
+function Core.backToDefault(name)
+  if not R.isOurs(name) then return false end
+  if Core.cdb.keyLines then Core.cdb.keyLines[name] = nil; if not next(Core.cdb.keyLines) then Core.cdb.keyLines = nil end end
+  return Core.setOverride(name, nil)
+end
+
+-- ------------------------------------------------------------------ extra lines (Macros.LINES; #help 10 Nov)
+--- A character's switch for extra line `key` (all its macros; member m, default this character), kept on the member
+--- like "Take the leader's target" (m.assist). WoWBoxer data only: the macros change after the usual Update click,
+--- checked against 255 like every change.
+function Core.setLine(key, on, m)
+  if not M.LINE_BY[key] then return false end
+  if not m then local _; _, m = Core.me() end
+  if not m then return false end
+  if key == "assist" then
+    m.assist = S.offOrNil(on and true or false)
+  else
+    local t = m.lines or {}
+    t[key] = S.offOrNil(on and true or false)
+    m.lines = S.cleanLines(t)
+  end
+  Core.log("info", "extra line " .. key .. (on and " on" or " off") .. " (all macros of " .. tostring(m.name) .. ")")
+  Core.changed()
+  return true
+end
+function Core.lineOn(key, m) if not m then local _; _, m = Core.me() end return M.lineOn(key, m and m.lines, m) end
+--- One macro's own choice for extra line `key` (true/false; nil = follow the switch). It beats the switch and survives
+--- updates and level-ups; "WoWBoxer's version" clears it.
+function Core.setKeyLine(name, key, on)
+  if not (R.isOurs(name) and M.LINE_BY[key]) then return false end
+  local all = Core.cdb.keyLines or {}
+  local t = all[name] or {}
+  if on == nil then t[key] = nil else t[key] = on and true or false end
+  all[name] = next(t) and t or nil
+  Core.cdb.keyLines = next(all) and all or nil
+  Core.log("info", "extra line " .. key .. " " .. (on == nil and "as the switch" or on and "on" or "off") .. " in " .. name)
+  Core.changed()
+  return true
+end
+--- One click on a macro's card: turn that line off in this macro (or on again). Returns the new state or nil.
+function Core.toggleKeyLine(name, key)
+  local c = Core.compute()
+  for _, d in ipairs(c and c.desired or {}) do
+    if d.name == name then
+      for _, x in ipairs(M.linesOf(d, Core.cdb.keyLines)) do
+        if x.key == key then Core.setKeyLine(name, key, not x.on); return not x.on end
+      end
+    end
+  end
+  return nil
+end
+
 --- "Also heal Bo's pet": the key's current targets with Bo's pet after the leader (one click, heal keys).
 function Core.alsoHeal(name, owner)
   local ctx, cur = ns.Override.ctx(), Core.cdb.overrides[name]
@@ -929,10 +1007,16 @@ function Core.checkOffer(reason)
   chat(string.format("%s changed at level %d. Open |cffffd100/wbx|r (or type |cffffd100/wbx sync|r) to update them.", plural(n, "macro", "macros"), ctx.level))
   if ns.UI and ns.UI.ShowOffer then ns.UI.ShowOffer(ctx, sig) end
 end
---- "Don't show again" on the toast: this pending state never shows again on this character (a new change does).
-function Core.dontShowAgain(sig)
+--- "Don't remind me about these changes" on the toast: this pending state never shows again on this character (a new
+--- change does). on = false (unticked again) takes it back.
+function Core.dontShowAgain(sig, on)
+  if on == false then
+    if Core.cdb.offerSeen == sig then Core.cdb.offerSeen = nil end
+    Core.log("info", "reminder: remind me again")
+    return
+  end
   Core.cdb.offerSeen = sig
-  Core.log("info", "reminder: don't show again")
+  Core.log("info", "reminder: don't remind me about these changes")
 end
 
 -- ------------------------------------------------------------------ change notification for the UI
@@ -1150,11 +1234,13 @@ function Core.slash(msg)
     end
   elseif cmd == "sell" then if ns.Relay then ns.Relay.slash(rest) end
   elseif cmd == "team" then
+    -- one switch (Talex, #help 10 Nov: "team off" then "team on" did not bring the box back – `on and nil or false`
+    -- is always false in Lua, and the window had a second switch of its own)
     local on = rest == "on" or (rest == "" and Core.db.settings.team == false)
     if rest == "off" then on = false end
-    Core.db.settings.team = on and nil or false
-    if ns.TeamFrame then ns.TeamFrame.SetShown(on) end
-    chat("Team status " .. (on and "on (shown while your squad is grouped)." or "off: nothing is sent or shown."))
+    if ns.TeamFrame then ns.TeamFrame.SetShown(on) else Core.db.settings.team = S.offOrNil(on and true or false) end
+    if not on then chat("Team status off: nothing is sent or shown.")
+    else chat("Team status on. " .. (ns.Team and ns.Team.whyHidden and ns.Team.whyHidden() or "")) end
   elseif cmd == "audit" then
     if ns.UI then ns.UI.Open() end
     local res = ns.Audit and ns.Audit.run()
@@ -1244,6 +1330,7 @@ function Core.onEvent(event, ...)
     if ns.Settings and ns.Settings.Init then ns.Settings.Init() end
     if ns.Auto and ns.Auto.Init then ns.Auto.Init() end
     if ns.Equip and ns.Equip.Init then ns.Equip.Init() end
+    if ns.Loot and ns.Loot.Init then ns.Loot.Init() end
     if ns.Relay and ns.Relay.Init then ns.Relay.Init() end
     if C_Timer and C_Timer.After then C_Timer.After(3, function() Core.checkOffer("login") end) end
     if C_Timer and C_Timer.After then C_Timer.After(6, function() local ok, err = pcall(Core.loginChecks); if not ok then Core.log("error", "login checks: " .. tostring(err)) end end) end

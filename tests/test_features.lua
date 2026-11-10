@@ -369,10 +369,8 @@ do
   s.members[1].name = "Dorin"
   W.party = { party3 = "Dorin" }
   UI.Select("setup")
-  local fix = findButton(W, "Use party3")
-  H.ok(fix ~= nil, "checklist offers Use party3")
-  if fix then fix:Click() end
-  H.eq(select(2, Core.me()).unit, "party3", "fix switched the unit")
+  H.eq(findButton(W, "Use party3"), nil, "no Fix needed: the leader's slot comes from this party")
+  H.eq(select(2, Core.me()).unit, "party3", "the macros use party3")
   -- window position + scale + slash commands
   UI.frame.GetPoint = function() return "TOPLEFT", nil, "TOPLEFT", 120.4, -80.6 end
   UI.frame._scripts.OnDragStop(UI.frame)

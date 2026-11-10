@@ -14,7 +14,7 @@ ns.SquadPages = SP
 local T = ns.Theme
 local LIST_W = 648 -- + scrollbar
 -- the war table look: party-frame rows (class edge, class icon, name over "Class · level", the follow line labelled)
-local ROW_H, EDIT_H, ADD_H = W.themed() and 44 or 28, 82, 30
+local ROW_H, EDIT_H, ADD_H = W.themed() and 44 or 28, 104, 30
 local LIST_H = 252
 local TOP_H = 30
 local NEW, DEL = "\1new", "\1del"
@@ -414,6 +414,22 @@ local function buildEditor(f, parent)
   end)
   e.assist:SetPoint("TOPLEFT", 26, -59) -- line 3
   W.tip(e.assist, "Take the leader's target", SP.ASSIST_HELP)
+  -- line 4: the other extra lines, one switch each for all this character's macros (Talex, #help 10 Nov)
+  e.linesLbl = lbl("Extra lines")
+  e.linesLbl:SetPoint("TOPLEFT", 30, -85)
+  e.lineChecks = {}
+  local prev
+  for _, def in ipairs(ns.Macros.LINES) do
+    if def.key ~= "assist" then
+      local key = def.key
+      local c = W.check(e, def.short, function(_, v) local x = m(); if x then Core().setLine(key, v, x) end end)
+      c:SetPoint("LEFT", prev and prev.label or e.linesLbl, "RIGHT", prev and 10 or 6, 0)
+      W.tip(c, def.label, def.about .. " Off: in none of this character's macros or sequence steps. One macro only: the icon on its card in My macros.")
+      c.def = def
+      e.lineChecks[#e.lineChecks + 1] = c
+      prev = c
+    end
+  end
   e.isMe = W.button(e, "That's me", 80, 22, function() local x = m(); if x then Core().setMe(squad().id, x.id); SP.saved() end end,
     "Tells WoWBoxer that the character you are logged in on is this one (its macros and role are used here).")
   e.isMe:SetPoint("BOTTOMRIGHT", -4, 4)
@@ -422,6 +438,18 @@ local function buildEditor(f, parent)
     e.cls.Refresh(); e.race.Refresh(); e.plays.Refresh(); e.seq.Refresh()
     e.assist:SetShown(not x.leader)
     e.assist:SetChecked(ns.Kit.takesTarget(x))
+    -- only the lines this character's class has, side by side
+    local prev2
+    for _, c in ipairs(e.lineChecks) do
+      local on = c.def.applies(x)
+      c:SetShown(on)
+      if on then
+        c:ClearAllPoints()
+        c:SetPoint("LEFT", prev2 and prev2.label or e.linesLbl, "RIGHT", prev2 and 10 or 6, 0)
+        c:SetChecked(ns.Macros.lineOn(c.def.key, x.lines, x))
+        prev2 = c
+      end
+    end
     e.isMe:SetShown(x ~= me)
     local i = S().slotOf(squad(), x) or 1
     e.up:SetEnabled(i > 1); e.down:SetEnabled(i < #squad().members)

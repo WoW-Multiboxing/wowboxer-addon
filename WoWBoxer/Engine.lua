@@ -239,14 +239,19 @@ function E.units(mode)
   local u = contains(UNITS, mode) and mode or "party1"
   return { main = u, mainTarget = u .. "target" }
 end
+--- ctx.no = the extra lines switched off (Talex, #help 10 Nov: "Extra lines optional"): {wand, autoshot, startattack,
+--- petattack = true}. Missing = on (today's macros). "Take the leader's target" is ctx.assist.
+local NO_NONE = {}
 local function ctxOf(ctx)
-  if type(ctx) == "string" or ctx == nil then return { leader = false, unit = ctx or "party1" } end
+  if type(ctx) == "string" or ctx == nil then return { leader = false, unit = ctx or "party1", no = NO_NONE } end
   local leader = not not ctx.leader
   return { leader = leader, unit = contains(UNITS, ctx.unit) and ctx.unit or "party1", wand = not not ctx.wand,
-    assist = (not leader) and ctx.assist and true or false }
+    assist = (not leader) and ctx.assist and true or false, no = type(ctx.no) == "table" and ctx.no or NO_NONE }
 end
 --- The same context without "Take the leader's target" (the fallback when a key does not fit 255 with it).
-local function noAssist(ctx) return { leader = ctx.leader, unit = ctx.unit, wand = ctx.wand, assist = false } end
+local function noAssist(ctx) return { leader = ctx.leader, unit = ctx.unit, wand = ctx.wand, assist = false, no = ctx.no } end
+--- The extra lines WoWBoxer adds that the player did not pick, in the order of the switches.
+E.EXTRA_LINES = { "wand", "autoshot", "startattack", "petattack", "assist" }
 --- "/assist <unit>" right after the first line (#showtooltip ...).
 local function withAssist(body, ctx)
   local line = "/assist " .. E.units(ctx.unit).main
@@ -268,7 +273,7 @@ function E.assistsFirst(s, ctx)
   return (ASSIST_ACTIONS[s.action] and WAND_CATEGORIES[s.category]) and true or false
 end
 --- Does this spell key end with the wand line? (ctx.wand: the character's class shoots wands)
-function E.wandsAfter(s, ctx) return (ctx.wand and WAND_ACTIONS[s.action] and WAND_CATEGORIES[s.category]) and true or false end
+function E.wandsAfter(s, ctx) return (ctx.wand and not ctx.no.wand and WAND_ACTIONS[s.action] and WAND_CATEGORIES[s.category]) and true or false end
 E.ctxOf = ctxOf
 
 local function buildMacro(s, ctxIn)
@@ -279,19 +284,22 @@ local function buildMacro(s, ctxIn)
   local help = ctx.leader and "[@mouseover,help,nodead][help,nodead][@player]" or ("[@mouseover,help,nodead][@" .. u.main .. ",help,nodead][@player]")
   local meleeStart = ctx.leader and "/startattack [harm,nodead]" or ("/startattack " .. harm)
   local meleeCast = ctx.leader and "[harm,nodead]" or harm
+  -- the extra lines, each "" when the player switched it off (the Attack key itself keeps its /startattack)
+  local st = ctx.no.startattack and "" or (meleeStart .. "\n")
+  local pa = ctx.no.petattack and "" or ("/petattack " .. harm .. "\n")
   local a = s.action
   if a == "engage" then return "#showtooltip Attack\n" .. meleeStart
-  elseif a == "melee" then return title .. "\n" .. meleeStart .. "\n/cast " .. meleeCast .. " " .. name
-  elseif a == "melee-pet" then return title .. "\n" .. meleeStart .. "\n/petattack " .. harm .. "\n/cast " .. meleeCast .. " " .. name
-  elseif a == "melee-cc" then return title .. "\n" .. meleeStart .. "\n/cast " .. harm .. " " .. name
-  elseif a == "opener" then return title .. "\n/cast " .. meleeCast .. " " .. name .. "\n" .. meleeStart
-  elseif a == "aoe-melee" then return title .. "\n" .. meleeStart .. "\n/cast " .. name
+  elseif a == "melee" then return title .. "\n" .. st .. "/cast " .. meleeCast .. " " .. name
+  elseif a == "melee-pet" then return title .. "\n" .. st .. pa .. "/cast " .. meleeCast .. " " .. name
+  elseif a == "melee-cc" then return title .. "\n" .. st .. "/cast " .. harm .. " " .. name
+  elseif a == "opener" then return title .. "\n/cast " .. meleeCast .. " " .. name .. (ctx.no.startattack and "" or ("\n" .. meleeStart))
+  elseif a == "aoe-melee" then return title .. "\n" .. st .. "/cast " .. name
   elseif a == "dual" then
-    return title .. "\n" .. meleeStart .. "\n/cast [@mouseover,harm,nodead][@mouseover,help,nodead]" .. (ctx.leader and "" or ("[@" .. u.mainTarget .. ",harm,nodead]")) .. "[harm,nodead][help,nodead][@player] " .. name
+    return title .. "\n" .. st .. "/cast [@mouseover,harm,nodead][@mouseover,help,nodead]" .. (ctx.leader and "" or ("[@" .. u.mainTarget .. ",harm,nodead]")) .. "[harm,nodead][help,nodead][@player] " .. name
   elseif a == "ranged" then return title .. "\n/cast " .. harm .. " " .. name
-  elseif a == "autoshot" then return title .. "\n/petattack " .. harm .. "\n/cast " .. harm .. " !" .. name
+  elseif a == "autoshot" then return title .. "\n" .. pa .. "/cast " .. harm .. " !" .. name
   elseif a == "wand" then return title .. "\n/cast " .. harm .. " !" .. name
-  elseif a == "petattack" then return title .. "\n/petattack " .. harm .. "\n/cast " .. harm .. " " .. name
+  elseif a == "petattack" then return title .. "\n" .. pa .. "/cast " .. harm .. " " .. name
   elseif a == "friendlymain" then return title .. "\n/cast " .. help .. " " .. name
   elseif a == "friendlyself" then return title .. "\n/cast [@mouseover,help,nodead][help,nodead][@player] " .. name
   elseif a == "friendlytarget" then return title .. "\n/cast [@mouseover,help,nodead][help,nodead] " .. name
@@ -435,8 +443,8 @@ local function buildCastSequence(def, t, ctx, has, o)
     if filler then for _ = 1, nFill do list[#list + 1] = filler.name end end
     local txt = "#showtooltip\n"
     if ctx.assist and def.aim ~= "help" and not def.noAssist then txt = txt .. "/assist " .. E.units(ctx.unit).main .. "\n" end
-    if def.startattack then txt = txt .. "/startattack " .. aim .. "\n" end
-    if def.pet then txt = txt .. "/petattack " .. aim .. "\n" end
+    if def.startattack and not ctx.no.startattack then txt = txt .. "/startattack " .. aim .. "\n" end
+    if def.pet and not ctx.no.petattack then txt = txt .. "/petattack " .. aim .. "\n" end
     if #list == 1 then return txt .. "/cast " .. aim .. " " .. list[1] end
     return txt .. "/castsequence " .. aim .. " reset=" .. reset .. " " .. tconcat(list, ", ")
   end
@@ -453,7 +461,7 @@ local function buildCastSequence(def, t, ctx, has, o)
     local plain = buildCastSequence(def, t, noAssist(ctx), has, o)
     if plain and (#macro > MACRO_LIMIT or plain.fills > fill) then return plain end
   end
-  if ctx.wand and def.aim ~= "help" and not def.noWand and #macro <= MACRO_LIMIT then macro = addWand(macro, ctx) or macro end
+  if ctx.wand and not ctx.no.wand and def.aim ~= "help" and not def.noWand and #macro <= MACRO_LIMIT then macro = addWand(macro, ctx) or macro end
   local single = #names + (filler and fill or 0) == 1
   local loopSec = jsround((pre + (filler and fill * castSec(filler, "last") or 0)) * 10) / 10
   if fill < n and ssub(why, 1, 5) == "about" then why = "" end
@@ -486,17 +494,17 @@ local function buildPriority(def, t, ctx, has)
     if cond == "" then cond = "[harm,nodead]" end
     local parts = { "#showtooltip " .. tipName }
     if ctx.assist and def.aim ~= "help" then parts[#parts + 1] = "\n/assist " .. u.main end
-    if def.aim == "melee" then parts[#parts + 1] = "\n/startattack " .. cond end
-    if def.pet then parts[#parts + 1] = "\n/petattack " .. cond end
+    if def.aim == "melee" and not ctx.no.startattack then parts[#parts + 1] = "\n/startattack " .. cond end
+    if def.pet and not ctx.no.petattack then parts[#parts + 1] = "\n/petattack " .. cond end
     for _, s in ipairs(list) do parts[#parts + 1] = "\n/cast " .. (self[s] and "[combat] " or aim) .. s.name end
-    if def.autoshot then parts[#parts + 1] = "\n/cast " .. aim .. "!Auto Shot" end
+    if def.autoshot and not ctx.no.autoshot then parts[#parts + 1] = "\n/cast " .. aim .. "!Auto Shot" end
     return tconcat(parts)
   end
   if #spells == 0 then
     local c0 = ctx.leader and "[harm,nodead]" or ("[@" .. u.mainTarget .. ",harm,nodead][harm,nodead]")
     if def.autoshot then
       return { id = def.id, label = def.label, base = "priority", kind = "engage", spells = {},
-        macro = "#showtooltip Auto Shot\n/petattack " .. c0 .. "\n/cast " .. c0 .. " !Auto Shot", compact = false, tooLong = false }
+        macro = "#showtooltip Auto Shot\n" .. (ctx.no.petattack and "" or ("/petattack " .. c0 .. "\n")) .. "/cast " .. c0 .. " !Auto Shot", compact = false, tooLong = false }
     end
     if def.aim ~= "melee" then return nil end
     return { id = def.id, label = def.label, base = "priority", kind = "engage", spells = {},
@@ -510,7 +518,7 @@ local function buildPriority(def, t, ctx, has)
     return buildPriority(def, t, noAssist(ctx), has)
   end
   while #macro > MACRO_LIMIT and #list > 1 do list = slice(list, 1, #list - 1); macro = make(level, list) end
-  if ctx.wand and def.aim ~= "help" and not def.autoshot and #macro <= MACRO_LIMIT then macro = addWand(macro, ctx) or macro end
+  if ctx.wand and not ctx.no.wand and def.aim ~= "help" and not def.autoshot and #macro <= MACRO_LIMIT then macro = addWand(macro, ctx) or macro end
   local names = {}
   for i, s in ipairs(list) do names[i] = s.name end
   return { id = def.id, label = def.label, base = "priority", kind = #list == 1 and "single" or "priority", spells = names, macro = macro,
@@ -523,8 +531,12 @@ function E.buildSequences(cls, role, tier, ctxIn, has, opts)
   local ctx, o = ctxOf(ctxIn), opts or {}
   local out = {}
   for _, def in ipairs(seqDefs(cls, role)) do
-    local r = (def.kind == "priority" and buildPriority or buildCastSequence)(def, def.tiers[tier], ctx, has, o)
-    if r then out[#out + 1] = r end
+    if not o.only or o.only == def.id then
+      -- o.ctxFor(id): the context of this one key (its own extra-line choices), else the character's
+      local dctx = o.ctxFor and ctxOf(o.ctxFor(def.id)) or ctx
+      local r = (def.kind == "priority" and buildPriority or buildCastSequence)(def, def.tiers[tier], dctx, has, o)
+      if r then out[#out + 1] = r end
+    end
   end
   return out
 end
@@ -537,17 +549,38 @@ local STALLERS = { ["Conflagrate"] = "needs your Immolate on the target; without
 local NO_TARGET = { "self", "aoe-melee", "ground", "petself" }
 E.CUSTOM_KINDS, E.CUSTOM_AIMS, E.CUSTOM_RESETS, E.PET_CLASSES, E.MELEE_CLASSES = CUSTOM_KINDS, CUSTOM_AIMS, CUSTOM_RESETS, PET_CLASSES, MELEE_CLASSES
 
+--- A spell's own kind of target: "help" (heals, shields, buffs on others), "harm" (attacks), nil (self, ground …).
+--- (Kerafyrm, #help 10 Nov: a single-spell own macro built Power Word: Shield with the ENEMY chain and a wand line.)
+local OWN_FRIENDLY = { friendlymain = true, friendlyself = true, friendlytarget = true, resurrection = true, petheal = true }
+local OWN_HOSTILE = { hostile = true, ranged = true, melee = true, ["melee-pet"] = true, ["melee-cc"] = true, opener = true,
+  petattack = true, autoshot = true, ["aoe-melee"] = true, wand = true }
+function E.ownAim(s)
+  if type(s) ~= "table" then return nil end
+  if OWN_FRIENDLY[s.action] then return "help" end
+  if OWN_HOSTILE[s.action] then return "harm" end
+  return nil
+end
+--- The aim a key really has: all its targeted spells friendly = "help", all hostile = "harm", mixed = the chosen one.
+function E.keyAim(spells, want)
+  local f, h = 0, 0
+  for _, s in ipairs(spells) do local a = E.ownAim(s); if a == "help" then f = f + 1 elseif a == "harm" then h = h + 1 end end
+  if f > 0 and h == 0 then return "help" end
+  if h > 0 and f == 0 then return "harm" end
+  return want
+end
+
 --- opts.melee: the character fights in melee (adds /startattack to enemy keys).
 function E.buildCustom(cls, c, ctxIn, has, opts)
   local ctx, id = ctxOf(ctxIn), "c" .. tostring(c.id)
   local aim = contains(CUSTOM_AIMS, c.aim) and c.aim or "harm"
-  local pet = contains(PET_CLASSES, cls) and aim == "harm"
   local meleeOpt = (opts and opts.melee) or contains(MELEE_CLASSES, cls)
   if c.kind == "priority" then
     local spells = {}
     for _, n in ipairs(c.steps or {}) do local s = has(n); if s and not contains(spells, s) then spells[#spells + 1] = s end end
     if #spells == 0 then return { id = id, label = c.name, custom = true, base = "priority", kind = "empty", spells = {}, macro = "", compact = false, tooLong = false } end
-    local melee = meleeOpt and aim == "harm"
+    aim = E.keyAim(spells, aim) -- a spell's own friendly (or hostile) target always wins
+    local pet = contains(PET_CLASSES, cls) and aim == "harm" and not ctx.no.petattack
+    local melee = meleeOpt and aim == "harm" and not ctx.no.startattack
     local def = { aim = aim }
     -- "Take the leader's target" first, unless the key holds crowd control (it would retarget away from the CC target)
     local assist = ctx.assist and aim == "harm"
@@ -561,7 +594,13 @@ function E.buildCustom(cls, c, ctxIn, has, opts)
       local lines = {}
       for i, s in ipairs(list) do
         -- "!Shoot": a press while the wand already shoots keeps it shooting (plain Shoot would stop it)
-        lines[i] = "/cast " .. (contains(NO_TARGET, s.action) and "[combat] " or (a .. " ")) .. (s.action == "wand" and "!" or "") .. s.name
+        local own = E.ownAim(s)
+        local cond
+        if contains(NO_TARGET, s.action) then cond = "[combat] "
+        elseif s.action == "resurrection" then cond = "[@mouseover,help,dead][help,dead] "
+        elseif own and own ~= aim then cond = aimFor({ aim = own }, ctx, lvl) .. " " -- a mixed key: each spell on its own kind of target
+        else cond = a .. " " end
+        lines[i] = "/cast " .. cond .. (s.action == "wand" and "!" or "") .. s.name
       end
       return txt .. tconcat(lines, "\n")
     end
@@ -574,7 +613,7 @@ function E.buildCustom(cls, c, ctxIn, has, opts)
     while #macro > MACRO_LIMIT and #list > 1 do list = slice(list, 1, #list - 1); macro = make(level, list) end
     local ownWand = false
     for _, s in ipairs(list) do if s.action == "wand" then ownWand = true end end
-    if ctx.wand and aim == "harm" and not ownWand and #macro <= MACRO_LIMIT then macro = addWand(macro, ctx) or macro end
+    if ctx.wand and not ctx.no.wand and aim == "harm" and not ownWand and #macro <= MACRO_LIMIT then macro = addWand(macro, ctx) or macro end
     local names = {}
     for i, s in ipairs(list) do names[i] = s.name end
     return { id = id, label = c.name, custom = true, base = "priority", kind = #list == 1 and "single" or "priority", spells = names, macro = macro,
@@ -583,6 +622,13 @@ function E.buildCustom(cls, c, ctxIn, has, opts)
   local f = trunc(c.fills)
   if f == 0 then f = 1 end
   local fills = max(1, min(6, f))
+  do -- one /castsequence has one target: all-friendly steps make a friendly key, all-hostile an enemy key
+    local all = {}
+    for _, n in ipairs(c.steps or {}) do local s = has(n); if s then all[#all + 1] = s end end
+    if c.filler and c.filler ~= "" and has(c.filler) then all[#all + 1] = has(c.filler) end
+    aim = E.keyAim(all, aim)
+  end
+  local pet = contains(PET_CLASSES, cls) and aim == "harm"
   local def = { id = id, label = c.name, kind = "sequence", aim = aim, pet = pet, startattack = meleeOpt and aim == "harm",
     reset = contains(CUSTOM_RESETS, c.reset) and c.reset or "combat", fixedFill = fills, allowDup = true }
   local steps = {}

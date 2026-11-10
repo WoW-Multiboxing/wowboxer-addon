@@ -328,8 +328,31 @@ local function editorFrame(parent)
   f.reset:SetPoint("LEFT", f.pet, "RIGHT", 8, 0)
   part(f.reset)
   W.ddTip(f.reset, "Reset", "When a sequence macro starts over: after combat, on a new target, after some seconds.")
+  -- extra lines this macro has (Talex, #help 10 Nov): one tick each; unticked = not in this macro (beats the switch)
+  f.linesHead = W.text(f, "GameFontHighlightSmall", 10, W.MUTED)
+  f.linesHead:SetPoint("TOPLEFT", 80, oy - 26)
+  f.linesHead:SetText("Extra lines:")
+  f.linesHead.wbxCopy = "label"
+  part(f.linesHead)
+  f.lineChecks = {}
+  for i = 1, #ns.Macros.LINES do
+    local c = W.check(f, "", function(self, v)
+      if not self.key then return end
+      f.lines[self.key] = v and true or false
+      f.touched = true
+      A.refreshEditor()
+    end)
+    c:SetPoint("LEFT", i == 1 and f.linesHead or f.lineChecks[i - 1].label, "RIGHT", i == 1 and 6 or 10, 0)
+    W.tip(c, function() return c.labelText or "" end, function() return c.about or "" end)
+    f.lineChecks[i] = part(c)
+  end
+  f.linesNone = W.text(f, "GameFontHighlightSmall", 10, W.MUTED)
+  f.linesNone:SetPoint("LEFT", f.linesHead, "RIGHT", 6, 0)
+  f.linesNone:SetText("none: only the spells you picked")
+  f.linesNone.wbxCopy = "hint"
+  part(f.linesNone)
   -- 4 Preview
-  local py = oy - 30
+  local py = oy - 52
   head("4 Preview", 10, py)
   f.preview = W.text(f, "GameFontHighlightSmall", 9, themed and W.TEXT or { 0.6, 0.66, 0.52 })
   W.gameFont(f.preview)
@@ -358,11 +381,16 @@ local function editorFrame(parent)
   f.save:SetPoint("BOTTOMRIGHT", -10, 8)
   f.cancel = W.button(f, "Cancel", 70, 24, function() f:Hide() end, "Closes this. Nothing changes.")
   f.cancel:SetPoint("RIGHT", f.save, "LEFT", -6, 0)
-  f.back = W.button(f, "WoWBoxer's version", 140, 24, function() Core().setOverride(f.name, nil); f:Hide() end,
+  f.back = W.button(f, "WoWBoxer's version", 140, 24, function() Core().backToDefault(f.name); f:Hide() end,
     "Back to WoWBoxer's version: removes your targeting (and text) for this macro.")
   f.back:SetPoint("BOTTOMLEFT", 10, 8)
   W.setStyle(f.back, "ghost")
-  f.text = W.button(f, "Edit text", 80, 24, function() local n, l = f.name, f.label; f:Hide(); A.openText(parent, n, l) end,
+  -- the editor is reused under other panels (SetParent), so the text window opens under the editor's parent NOW, not
+  -- the one it was first built on (Retik, #help 10 Nov: "Edit text" closed the editor and opened nothing)
+  f.text = W.button(f, "Edit text", 80, 24, function()
+    local n, l, body, p = f.name, f.label, f.body or f.base, f:GetParent() or parent
+    if A.openText(p, n, l, body) then f:Hide() end
+  end,
     "The last resort: write the macro text yourself (checked live). The macro is then frozen on level-ups.")
   f.text:SetPoint("LEFT", f.back, "RIGHT", 6, 0)
   -- the section tabs: 1 Spells (own macros: steps, filler, kind, presets) · 2–4 Targeting, Options, Preview
@@ -430,6 +458,9 @@ function A.showSection(which)
   f.spellsBox:SetShown(spells and f.own ~= nil)
   f.spellsInfo:SetShown(spells and f.own == nil)
   for _, x in ipairs(f.parts) do x:SetShown(not spells) end
+  -- one character counter: on the Spells tab of an own macro the spells box shows its own (#help 10 Nov: 167/255 was
+  -- drawn over 81/255)
+  f.info:SetShown(not (spells and f.own ~= nil))
   f.editSpells:Hide() -- the Spells tab does this now (one owner per control)
   f.tabSpells:Show(); f.tabTarget:Show()
   W.setSelected(f.tabSpells, spells); W.setSelected(f.tabTarget, not spells)
@@ -540,11 +571,30 @@ end
 local function baseOf(f)
   if f.own and ns.KeyEditor.frame and ns.KeyEditor.frame.draft then
     local _, m = Core().me()
-    local ok, r = pcall(ns.KeyEditor.preview, m, ns.KeyEditor.frame.draft, ns.Compat.playerLevel())
+    local ok, r = pcall(ns.KeyEditor.preview, m, ns.KeyEditor.frame.draft, ns.Compat.playerLevel(), f.lines)
     if ok and r and r.macro and r.macro ~= "" then return r.macro end
   end
   local d = f.name and current(f.name)
+  -- the extra-line ticks of this editor (not saved yet): the macro as it will be built with them
+  if d and d.rebuild and d.lineCtx and f.lines and next(f.lines) then
+    local _, m = Core().me()
+    local c = A.lineCtx(d.lineCtx, f.lines)
+    local ok, body = pcall(d.rebuild, c)
+    if ok and type(body) == "string" and body ~= "" then
+      if m then body = ns.Macros.localize(body, ns.Macros.nameMap(m)) end
+      return body
+    end
+  end
   return d and (d.engineBody or d.body) or ""
+end
+--- A key's context with the editor's extra-line ticks: {key = on} beats the key's own state.
+function A.lineCtx(base, ticks)
+  local c = { leader = base.leader, unit = base.unit, wand = base.wand, assist = base.assist, no = {} }
+  for k, v in pairs(base.no or {}) do c.no[k] = v end
+  for k, on in pairs(ticks or {}) do
+    if k == "assist" then c.assist = (on and not base.leader) and true or false else c.no[k] = (not on) or nil end
+  end
+  return c
 end
 A.baseOf = baseOf
 --- Log one step of an own-macro flow (the diagnose shows them: docs/feedback-2026-10-30-night.md §1).
@@ -555,6 +605,7 @@ function A.openNew(parent)
   local f = editorFrame(parent)
   f.name, f.label, f.own, f.ctx, f.touched = nil, "New macro", "new", O().ctx(), false
   f.targets, f.opts, f.base, f.help = {}, {}, "", nil
+  f.lineList, f.lines, f.linesOrig = {}, {}, {}
   f.title:SetText("Macro editor – New macro")
   ns.KeyEditor.Open(f.spellsBox, nil)
   f:Show()
@@ -586,6 +637,10 @@ function A.openEditor(parent, name, label)
   local src = (ov and ov.targets and #ov.targets > 0) and ov.targets or O().fromBody(base, f.ctx)
   for i, t in ipairs(src) do f.targets[i] = copy(t) end
   for _, k in ipairs({ "mod", "reset", "startattack", "petattack" }) do f.opts[k] = ov and ov[k] end
+  -- the extra lines this macro has, ticked as they are now
+  f.lineList = (d.rebuild and ns.Macros.linesOf(d, Core().cdb.keyLines)) or {}
+  f.lines, f.linesOrig = {}, {}
+  for _, x in ipairs(f.lineList) do f.lines[x.key] = x.on; f.linesOrig[x.key] = x.on end
   -- 1 Spells: what the macro casts
   local kind = (d.seq and d.seq.base == "priority") and "Priority" or (d.seq and "Sequence") or "Single spell"
   local names = {}
@@ -612,10 +667,11 @@ function A.refreshEditor()
   local f = A.ef
   if not (f and f:IsShown()) then return end
   f.back:SetShown(f.name ~= nil); f.text:SetShown(f.name ~= nil and A.on())
-  if f.own then
+  if f.own or (f.lines and next(f.lines)) then
     f.base = baseOf(f)
     f.help = f.base:find("help", 1, true) and true or (f.base:find("harm", 1, true) and false or nil)
   end
+  A.refreshLines()
   -- available targets: every target this client can use, in groups (Common, Squad, Party, Raid folded); Common and
   -- Squad tiles take the full width (long names), Party and Raid two columns; the list scrolls
   local W2, pitch = f.availW, A.ROW_H
@@ -691,9 +747,29 @@ function A.refreshEditor()
   if #f.targets == 0 then msg = msg .. " · no targets: WoWBoxer's own targeting stays" end
   f.info:SetText(msg)
   f.save:SetEnabled(ok and #body <= 255)
-  f.back:SetEnabled(Core().cdb.overrides[f.name] ~= nil)
+  f.back:SetEnabled(Core().cdb.overrides[f.name] ~= nil or (Core().cdb.keyLines or {})[f.name or ""] ~= nil)
 end
 A.refreshTargeting = A.refreshEditor
+--- The "Extra lines" ticks of the open editor (only the lines this macro has).
+function A.refreshLines()
+  local f = A.ef
+  if not (f and f.lineChecks) then return end
+  local list = f.lineList or {}
+  local spells = f.section == "spells"
+  for i, c in ipairs(f.lineChecks) do
+    local x = list[i]
+    c.key = x and x.key or nil
+    if x then
+      local def = ns.Macros.LINE_BY[x.key]
+      c.labelText, c.about = x.short, def.about .. " Unticked: not in this macro (beats the switch for all macros). WoWBoxer's version follows the switch again."
+      c.label:SetText(x.short)
+      if c.wbxSkinned and c.SetHitRectInsets then c:SetHitRectInsets(0, -math.ceil((c.label:GetStringWidth() or 0) + 4), 0, 0) end
+      c:SetChecked(f.lines[x.key] and true or false)
+    end
+    c:SetShown(x ~= nil and not spells)
+  end
+  f.linesNone:SetShown(#list == 0 and not spells)
+end
 --- The preview at size 9, a step smaller (down to 7) when a long macro (wand line, many targets) needs more lines than fit.
 function A.fitPreview(fs, body)
   local w, h = fs:GetWidth() or 560, fs:GetHeight() or 0
@@ -705,6 +781,12 @@ function A.fitPreview(fs, body)
     if size == 7 or h <= 0 or (fs:GetStringHeight() or 0) <= math.floor((h + 0.5) / (size + 2)) * (size + 2) then return size end
   end
 end
+--- The editor's extra-line ticks that changed become this macro's own choice.
+function A.saveLines(f)
+  for k, on in pairs(f.lines or {}) do
+    if f.linesOrig[k] ~= on then Core().setKeyLine(f.name, k, on) end
+  end
+end
 --- Save: an own macro saves its spells first (and its preset), then the targeting when it was changed here.
 function A.saveEditor()
   local f = A.ef
@@ -714,10 +796,12 @@ function A.saveEditor()
     f.name = "WBX C" .. idx
     A.flow("saved C" .. idx .. (f.touched and " with targeting" or ""))
     if f.touched and A.on() then Core().setOverride(f.name, A.draft()) end
+    A.saveLines(f)
     if ns.UI.panels and ns.UI.panels.custom then ns.UI.panels.custom.selected = f.name end
     Core().changed()
   else
     Core().setOverride(f.name, A.draft())
+    A.saveLines(f)
   end
   f:Hide()
 end
@@ -755,22 +839,34 @@ local function textFrame(parent)
   f.save:SetPoint("BOTTOMRIGHT", -12, 10)
   f.cancel = W.button(f, "Cancel", 70, 24, function() f:Hide() end, "Closes this. Nothing changes.")
   f.cancel:SetPoint("RIGHT", f.save, "LEFT", -6, 0)
-  f.back = W.button(f, "WoWBoxer's version", 140, 24, function() Core().setOverride(f.name, nil); f:Hide() end,
+  f.back = W.button(f, "WoWBoxer's version", 140, 24, function() Core().backToDefault(f.name); f:Hide() end,
     "Back to WoWBoxer's version: removes your text and unfreezes the macro.")
   f.back:SetPoint("BOTTOMLEFT", 12, 10)
   A.xf = f
   W.dialog(f, "WoWBoxerTextDialog")
   return f
 end
-function A.openText(parent, name, label)
+--- The text window for macro `name` – every kind (single spell, sequence, priority, squad keys). body = the text to
+--- start from when the macro is not in this character's list right now (an own macro just saved, a key not built at
+--- this level). Returns true when it opened.
+function A.openText(parent, name, label, body)
+  if not (name and ns.Rules.isOurs(name)) then return false end
   local d = current(name)
-  if not d then return end
-  local f = textFrame(parent)
+  local ov = Core().cdb.overrides[name]
+  local text = (d and d.body) or (ov and ov.text) or body
+  if not text or text == "" then
+    Core().print("|cffff8a80" .. tostring(label or name) .. " has no macro text yet – save its spells first.|r")
+    return false
+  end
+  local f = textFrame(parent or UIParent)
   f.name = name
   f.title:SetText("Macro text – " .. (label or name))
-  f.edit:SetText(d.body)
+  f.edit:SetText(text)
   f:Show()
+  if f.Raise then f:Raise() end
   A.refreshText()
+  A.flow("edit text " .. name)
+  return true
 end
 function A.refreshText()
   local f = A.xf
@@ -805,8 +901,16 @@ function A.menuItems(p, c)
       end
     end
   end
-  if c.name and Core().cdb.overrides[c.name] then
-    items[#items + 1] = { "Back to WoWBoxer's version", function() Core().setOverride(c.name, nil) end, "Removes your targeting or text for this macro." }
+  -- the extra lines this macro has: one click each, in Standard and Advanced (Talex, #help 10 Nov)
+  if c.name and c.d and c.d.rebuild then
+    for _, x in ipairs(ns.Macros.linesOf(c.d, Core().cdb.keyLines)) do
+      local key = x.key
+      items[#items + 1] = { (x.on and "Turn off " or "Turn on ") .. x.short .. " in this macro", function() Core().toggleKeyLine(c.name, key) end,
+        ns.Macros.LINE_BY[key].about .. " Only this macro; the switch for all macros is on the Squad page and in Setup. Press Update macros afterwards." }
+    end
+  end
+  if c.name and (Core().cdb.overrides[c.name] or (Core().cdb.keyLines or {})[c.name]) then
+    items[#items + 1] = { "Back to WoWBoxer's version", function() Core().backToDefault(c.name) end, "Removes your targeting, text and extra-line choices for this macro." }
   end
   return items
 end

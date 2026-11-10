@@ -34,6 +34,15 @@ function TM.active()
   if not m or #s.members < 2 then return false end
   return C().inParty() and true or false
 end
+--- Why the team box is not shown right now (one sentence), or "" when it is.
+function TM.whyHidden()
+  if not TM.enabled() then return "It is off: /wbx team on turns it on." end
+  local s, m = Core().me()
+  if not m then return "This character is not in a squad yet: set it up on the Squad page." end
+  if #s.members < 2 then return "It shows when your squad has two or more characters (Squad page)." end
+  if not C().inParty() then return "It shows once your squad is in a party together." end
+  return "Shown while your squad is grouped."
+end
 local function channel() return (G.IsInRaid and G.IsInRaid()) and "RAID" or "PARTY" end
 
 -- ------------------------------------------------------------------ my state

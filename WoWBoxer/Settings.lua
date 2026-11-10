@@ -26,10 +26,9 @@ ST.ITEMS = {
   { "adv", "Advanced mode", function() return b2s(st().advanced == true) end,
     function(v) local b = s2b(v); if b == nil then return false end st().advanced = b and true or nil; return true end,
     function(v) return v == "1" and "Advanced" or "Standard" end },
-  { "team", "Team messages", function() return b2s(st().team ~= false) end,
+  -- one switch for team messages and the team box (1.3.0; the old "tf" window switch is gone, an old "tf" is dropped)
+  { "team", "Team status", function() return b2s(st().team ~= false) end,
     function(v) local b = s2b(v); if b == nil then return false end st().team = b and nil or false; return true end },
-  { "tf", "Team panel window", function() return b2s(st().teamFrame ~= false) end,
-    function(v) local b = s2b(v); if b == nil then return false end st().teamFrame = b; return true end },
   { "anim", "Animations", function() return b2s(st().animations ~= false) end,
     function(v) local b = s2b(v); if b == nil then return false end st().animations = b; return true end },
   { "strip", "Sequence strip", function() return b2s(st().seqStrip ~= false) end,
@@ -44,7 +43,30 @@ ST.ITEMS = {
       return false end,
     function(v) return math.floor((tonumber(v) or 1) * 100 + 0.5) .. " %" end },
   { "rem", "Level-up reminders", function() return b2s(cdb().reminders ~= false) end,
-    function(v) local b = s2b(v); if b == nil then return false end cdb().reminders = (not b) and false or nil; return true end },
+    function(v) local b = s2b(v); if b == nil then return false end cdb().reminders = ns.State.offOrNil(b); return true end },
+  -- the extra-line switches of this character (#help 10 Nov): the lines switched OFF, "" = all on
+  { "ln", "Extra lines in macros", function()
+      local _, me = Core().me()
+      if not me then return "" end
+      local off = {}
+      for _, x in ipairs(ns.Macros.LINES) do if not ns.Macros.lineOn(x.key, me.lines, me) then off[#off + 1] = x.key end end
+      return table.concat(off, ",") end,
+    function(v)
+      if type(v) ~= "string" or v:find("[^%a,]") then return false end
+      local _, me = Core().me()
+      if not me then return false end
+      local off = {}
+      for k in v:gmatch("[^,]+") do if ns.Macros.LINE_BY[k] then off[k] = true end end
+      local t = {}
+      for _, x in ipairs(ns.Macros.LINES) do if x.key ~= "assist" and off[x.key] then t[x.key] = false end end
+      me.lines = ns.State.cleanLines(t)
+      me.assist = ns.State.offOrNil(not off.assist)
+      return true end,
+    function(v)
+      if v == "" then return "all on" end
+      local names = {}
+      for k in tostring(v):gmatch("[^,]+") do local x = ns.Macros.LINE_BY[k]; if x then names[#names + 1] = x.short end end
+      return table.concat(names, ", ") .. " off" end },
   { "ask", "Ask to replace buttons", function() return b2s(cdb().askReplace ~= false) end,
     function(v) local b = s2b(v); if b == nil then return false end cdb().askReplace = b; return true end },
   { "from", "Accept from", function() local f = st().acceptFrom; return FROM_OK[f] and f or (f == nil and "squad" or "") end,
@@ -92,7 +114,7 @@ function ST.encode()
   local parts = {}
   for _, it in ipairs(ST.ITEMS) do
     local ok, v = pcall(it[3])
-    if ok and type(v) == "string" and (v ~= "" or it[1] == "auto" or it[1] == "ov") then parts[#parts + 1] = it[1] .. "=" .. v end
+    if ok and type(v) == "string" and (v ~= "" or it[1] == "auto" or it[1] == "ov" or it[1] == "ln") then parts[#parts + 1] = it[1] .. "=" .. v end
   end
   return table.concat(parts, ";")
 end

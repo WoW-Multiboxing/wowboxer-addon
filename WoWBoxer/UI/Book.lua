@@ -706,6 +706,7 @@ local function makeCell(p, parent, small)
   b:RegisterForDrag("LeftButton")
   local themed = W.themed()
   if themed then S = small and 24 or 32 end
+  b.iconSize = S
   if themed then TH.box(b, "panel2", "lineSoft", 6) end
   b.slotBg = b:CreateTexture(nil, "BACKGROUND")
   b.slotBg:SetSize(S + 2, S + 2)
@@ -813,6 +814,31 @@ local function makeCell(p, parent, small)
     b.sub:SetPoint("TOPLEFT", b.name, "BOTTOMLEFT", 0, -3)
     b.sub:SetWidth(CELL_W - S - 13)
     b.sub.wbxCopy = "data"
+    -- the extra lines of this macro (Talex, #help 10 Nov): one small icon each, top right; a click turns the line off
+    -- in this macro (or on again). Dimmed = off here.
+    b.lineBtns = {}
+    for i = 1, 3 do
+      local lb = CreateFrame("Button", nil, b)
+      lb:SetSize(Book.LINE_ICON, Book.LINE_ICON)
+      lb:SetPoint("TOPRIGHT", b, "TOPRIGHT", -3 - (i - 1) * (Book.LINE_ICON + 2), -3)
+      lb.tex = lb:CreateTexture(nil, "ARTWORK")
+      lb.tex:SetAllPoints()
+      lb:SetScript("OnClick", function(self)
+        local c = b.cell
+        if not (c and c.name and self.key) then return end
+        Core().toggleKeyLine(c.name, self.key)
+        UI.Refresh()
+      end)
+      W.tooltip(lb, function(GT, self)
+        local def = self.key and ns.Macros.LINE_BY[self.key]
+        if not def then return false end
+        GT:AddLine(def.short .. ": " .. (self.on and "on" or "off") .. " in this macro", 1, 0.82, 0)
+        GT:AddLine(def.about, 1, 1, 1, true)
+        GT:AddLine("Click: " .. (self.on and "leave it out of" or "put it back in") .. " this macro. All macros: Squad page or Setup. Then Update macros.", 0.66, 0.6, 0.49, true)
+      end)
+      lb:Hide()
+      b.lineBtns[i] = lb
+    end
   end
   b.name.wbxName, b.name.wbxCopy = true, "data"
   b:SetScript("OnClick", function(self, button)
@@ -832,6 +858,30 @@ local function makeCell(p, parent, small)
   b:SetScript("OnDragStart", function(self) if self.cell and self.cell.kind ~= "new" then pickupCell(self.cell) end end)
   W.tooltip(b, function(GT, self) if self.cell then cellTooltip(GT, self.cell) end end)
   return b
+end
+
+--- The extra-line icons of a My macros card (only the lines this macro really has, at most three).
+Book.LINE_ICON = 13
+function Book.paintLines(p, b, c)
+  if not b.lineBtns then return end
+  local list = {}
+  if p.mode == "keys" and c.name and c.d and c.d.rebuild and not c.d.plain then
+    local ok, l = pcall(ns.Macros.linesOf, c.d, Core().cdb.keyLines)
+    if ok then list = l end
+  end
+  for i, lb in ipairs(b.lineBtns) do
+    local x = list[i]
+    lb.key, lb.on = x and x.key or nil, x and x.on or false
+    if x then
+      W.setIcon(lb.tex, ns.Macros.LINE_BY[x.key].icon)
+      if lb.tex.SetDesaturated then lb.tex:SetDesaturated(not x.on) end
+      lb.tex:SetAlpha(x.on and 1 or 0.45)
+      lb:Show()
+    else lb:Hide() end
+  end
+  local n = math.min(#list, #b.lineBtns)
+  local S = b.iconSize or 35
+  b.name:SetWidth(CELL_W - S - 13 - (n > 0 and (n * (Book.LINE_ICON + 2) + 2) or 0))
 end
 
 --- Show cell data c on button b.
@@ -859,7 +909,9 @@ local function paintCell(p, b, c)
     b.frame:SetAlpha(st.dim and 0.35 or 1)
     -- one line when the name needs two; the second line only when it adds something. The war table look shows the
     -- state there as a coloured word (§2: never colour alone); sequences and later spells keep their own line.
-    local two = (b.name:GetStringWidth() or 0) > CELL_W - 48 + 0.5
+    Book.paintLines(p, b, c) -- first: the line icons make the name narrower
+    local nameW = (b.name.GetWidth and b.name:GetWidth()) or (CELL_W - 45)
+    local two = (b.name:GetStringWidth() or 0) > nameW - 3 + 0.5
     local subText, sc = c.sub, c.badge and { 0.85, 0.72, 1 } or st.subColor or W.MUTED
     if W.themed() and not (c.d and c.d.steps and #c.d.steps > 1) and not (c.d and c.d.pending) and st.word then
       subText = (c.item and c.item.status == "update") and "Changed · update" or st.word
