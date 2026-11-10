@@ -61,8 +61,10 @@ bars = {
   The app does not rely on dx/dy yet: for a squeezed record it uses its default places (`[AFKLAR]` until dx/dy are
   checked against a big window on Forever).
 - `menu` (since 1.2.0-test.4) is the bag and menu buttons (micro buttons, bag slots, backpack). On Forever they ride
-  on the main bar to the right of bar 1 and are the first to go in a narrow window. They count only for "outside":
-  their tall frames touch the bars above by design.
+  on the main bar to the right of bar 1 and are the first to go in a narrow window. Since 1.3.0-test.3 they also
+  count as `covered` when they really lie on a bar: at least a third of a button deep in both directions (owner
+  10 Nov: on the 870x696 followers the menu, x 445–960, lay on bar 1, x 0–562, and said covered = 0). Era's tall
+  micro buttons only touch the bars above them by a few units, so they still do not count there.
 - It is computed from the real positions. Each bar keeps following the window edges it is anchored to. A smaller
   scale makes the window bigger in UI units, so a centred bar moves by half of the growth and a right-anchored bar by
   all of it. Button sizes in UI units do not change.
@@ -111,6 +113,17 @@ Model numbers from `tests/test_barfit.lua` (window sizes in UI units at scale 1)
 
 These are the old stacked-bars mock. The real Forever layout (bars 2 and 3 side by side) is in "Real numbers" above
 and in the test "the real Forever layout".
+
+## The fit offer in the game (since 1.3.0-test.3)
+At login (in the login checks, about 6 s in), when `squeezed` is true or something is outside/covered and `fitScale` is
+below the current scale, the addon shows one popup: "Action bars overlap in this window. [Fit now] sets UI Scale to
+<fitScale> · [Not now]", with a note that the app's Auto-fit does the same for all clients while they are closed.
+- Once per login (a `/reload` counts), until it fits. Never in combat: it waits for combat to end.
+- **Fit now** = `useUiScale 1` + `uiScale <fitScale>` through the Settings system (`Compat.setCVarSure`), read back as
+  a number; the chat says whether it stuck. Only after the click and out of combat (hard rule 4).
+- `fitScale = nil`: a plain notice ("even the smallest UI Scale can't fit them all"), no Fit button.
+- UI Scale is per install, so Fit now on one character changes every character of that client.
+- `[AFKLAR: that Forever and Era apply a uiScale CVar at once without the options panel]`
 
 ## Not built: the addon scaling its own bar (`bridge.barFit`, `bridge.barScale`)
 `docs/backlog.md` P3 "Fit the action bar per client" keeps those two names reserved. That would be an opt-in Setup

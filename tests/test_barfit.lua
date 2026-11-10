@@ -276,4 +276,135 @@ do
   H.ok(all:find("Bottom Left bar (bar 2): 12 buttons", 1, true) ~= nil, "/wbx barfit lists each bar")
 end
 
+-- the owner's follower (live Forever 10 Nov, 870x696 at scale 1 = 960x768 units): bar 1 pushed against the left edge,
+-- the bag and menu box at the right edge on top of bar 1. Until 1.3.0-test.3 the menu never counted as covered.
+local function ownerFollower(W)
+  foreverReal(W.env)
+  local env = W.env
+  local main, br, menu = env.MainMenuBar, env.MultiBarBottomRight, env.WbxTestMenu
+  main:ClearAllPoints(); main:SetPoint("BOTTOM", env.UIParent, "BOTTOM", -199, 2)
+  main.GetPoint = function() return "BOTTOM", env.UIParent, "BOTTOM", -320, 2 end
+  br:ClearAllPoints(); br:SetPoint("LEFT", env.MultiBarBottomLeft, "RIGHT", -186, 0)
+  br.GetPoint = function() return "LEFT", env.MultiBarBottomLeft, "RIGHT", 22, 0 end
+  -- the menu stays where its (centre) anchor puts it, 4.5 right of bar 1's anchored end; only bar 1 was pushed onto it
+  menu:ClearAllPoints(); menu:SetPoint("BOTTOMLEFT", env.UIParent, "BOTTOM", -34.5, 2)
+end
+do
+  local W, ns = boot("forever", 960, 768)
+  ownerFollower(W)
+  local m = ns.BarFit.update("test")
+  local by = {}
+  for _, b in ipairs(m.bars) do by[b.key] = b end
+  H.ok(by.menu.covered > 0, "the menu box lying on bar 1 counts as covered: " .. ns.BarFit.summary(m))
+  H.ok(by.main.covered > 0, "and bar 1 is covered by it")
+  H.eq(m.squeezed, true, "squeezed")
+  H.ok(m.fitScale and m.fitScale >= 0.70 and m.fitScale <= 0.80, "a fit scale near the app's 0.79: " .. tostring(m.fitScale))
+end
+
+-- Era: the tall micro buttons (28x58, art in the lower part) touch bar 3 above them by a few units: not covered
+do
+  local W, ns = boot("era", 1707, 960)
+  eraBars(W.env, { bottomLeft = true, bottomRight = true })
+  local b = W.env.CreateFrame("Button", "CharacterMicroButton", W.env.MainMenuBar); b:SetSize(28, 58)
+  b:SetPoint("BOTTOMLEFT", W.env.MainMenuBar, "BOTTOMLEFT", 552, 2)
+  local m = ns.BarFit.update("test")
+  H.eq(m.covered, 0, "era: a micro button touching bar 3 is not 'covered': " .. ns.BarFit.summary(m))
+  H.eq(m.squeezed, false, "era big window: nothing to fit")
+end
+
+-- the fit offer (owner 10 Nov): one popup at login when the bars overlap; nothing changes without the click
+local function offerBoot(w, h, setup)
+  local W, ns = boot("forever", w, h)
+  W.cvars.useUiScale, W.cvars.uiScale = "0", "1.0"
+  ;(setup or ownerFollower)(W)
+  W.popups = {}
+  ns.UI.Popup = function(text, buttons) W.popups[#W.popups + 1] = { text = text, buttons = buttons } end
+  return W, ns
+end
+local function click(W, label)
+  local p = W.popups[#W.popups]
+  for _, b in ipairs(p and p.buttons or {}) do if b[1] == label then b[2]() return true end end
+  return false
+end
+do
+  local W, ns = offerBoot(960, 768)
+  local BF = ns.BarFit
+  H.eq(ns.Core.loginChecks(), true, "login checks show the fit offer")
+  H.eq(#W.popups, 1, "one popup")
+  local p = W.popups[1]
+  local fit = string.format("%.2f", ns.Core.db.bridge.bars.fitScale)
+  H.ok(p.text:find("Action bars overlap in this window.", 1, true) and p.text:find("sets UI Scale to " .. fit, 1, true), "the text names the scale: " .. p.text)
+  H.ok(p.text:find("Auto-fit does the same for all clients", 1, true) ~= nil, "and mentions the window app's Auto-fit")
+  H.eq(p.buttons[1][1], "Fit now", "first button Fit now")
+  H.eq(p.buttons[2][1], "Not now", "second button Not now")
+  H.eq(W.cvars.uiScale, "1.0", "asking writes nothing (rule 4)")
+  H.eq(W.cvars.useUiScale, "0", "asking writes nothing (useUiScale)")
+  click(W, "Not now")
+  H.eq(W.cvars.uiScale, "1.0", "Not now writes nothing")
+  H.eq(BF.offer(), false, "asks once per login")
+  ns.Core.loginChecks()
+  H.eq(#W.popups, 1, "login checks do not ask again this login")
+
+  -- the next login: Fit now sets useUiScale 1 and the fit scale, read back
+  BF.asked = nil
+  H.eq(BF.offer(), true, "asks again at the next login while it does not fit")
+  click(W, "Fit now")
+  H.eq(W.cvars.useUiScale, "1", "Fit now: useUiScale 1")
+  H.eq(W.cvars.uiScale, fit, "Fit now: uiScale " .. fit)
+  local okLog = false
+  for _, e in ipairs(ns.Core.db.log) do if e.l == "info" and e.m:find("fit: useUiScale 1", 1, true) then okLog = true end end
+  H.ok(okLog, "logged with the read-back")
+end
+-- combat: the popup waits for combat to end; a click in combat is queued until then
+do
+  local W, ns = offerBoot(960, 768)
+  W.combat = true
+  H.eq(ns.BarFit.offer(), false, "in combat: no popup")
+  H.eq(#W.popups, 0, "nothing shown in combat")
+  W.combat = false
+  W.fire("PLAYER_REGEN_ENABLED")
+  H.eq(#W.popups, 1, "shown when combat ends")
+  W.combat = true
+  click(W, "Fit now")
+  H.eq(W.cvars.uiScale, "1.0", "Fit now in combat: nothing yet")
+  W.combat = false
+  W.fire("PLAYER_REGEN_ENABLED")
+  H.ok(W.cvars.uiScale ~= "1.0" and W.cvars.useUiScale == "1", "applied after combat: " .. tostring(W.cvars.uiScale))
+  H.eq(#W.popups, 1, "and not asked again")
+end
+-- bars that fit: no popup; already at the fit scale: no popup
+do
+  local W, ns = offerBoot(2244, 1200, function(W) W.env.UIParent:SetScale(0.64); foreverReal(W.env) end)
+  H.eq(ns.BarFit.offer(), false, "bars fit: no popup")
+  H.eq(#W.popups, 0, "nothing shown")
+  H.eq(ns.BarFit.needsFit({ bars = { {} }, squeezed = true, outside = 0, covered = 1, scale = 0.79, fitScale = 0.79 }), false,
+    "already at the fit scale: nothing to offer")
+  local need, fit = ns.BarFit.needsFit({ bars = { {} }, squeezed = true, outside = 3, covered = 0, scale = 1, fitScale = nil })
+  H.ok(need and fit == nil, "not even the minimum: still told")
+end
+-- not even the minimum scale fits: a plain notice, no Fit button, nothing written
+do
+  local W, ns = offerBoot(400, 300, function(W) foreverReal(W.env) end)
+  H.eq(ns.BarFit.offer(), true, "tiny window: told")
+  local p = W.popups[1]
+  H.ok(p.text:find("even the smallest UI Scale", 1, true) ~= nil, "says even the smallest scale is not enough: " .. p.text)
+  H.eq(#p.buttons, 1, "only OK")
+  click(W, "OK")
+  H.eq(W.cvars.uiScale, "1.0", "nothing written")
+end
+-- the read-back: a client that does not take the value says so in chat (no silent success)
+do
+  local W, ns = offerBoot(960, 768)
+  local printed = {}
+  W.env.DEFAULT_CHAT_FRAME = { AddMessage = function(_, t) printed[#printed + 1] = t end }
+  local set = W.env.C_CVar.SetCVar
+  W.env.C_CVar.SetCVar = function(n, v) if n == "uiScale" then return true end return set(n, v) end
+  H.eq(ns.BarFit.applyFit(0.79), false, "uiScale did not stick: not ok")
+  H.ok(table.concat(printed, "\n"):find("Could not set the UI Scale", 1, true) ~= nil, "and says so: " .. table.concat(printed, " | "))
+  W.env.C_CVar.SetCVar = set
+  H.eq(ns.BarFit.applyFit(0.79), true, "a value read back as 0.79 is ok")
+  W.env.C_CVar.SetCVar = function(n, v) if n == "uiScale" then W.cvars.uiScale = "0.790000" return true end return set(n, v) end
+  H.eq(ns.BarFit.applyFit(0.79), true, "read back as 0.790000: still ok (numeric compare)")
+end
+
 H.report("barfit")

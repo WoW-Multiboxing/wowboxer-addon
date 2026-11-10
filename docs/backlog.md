@@ -1,5 +1,11 @@
 # WoWBoxer addon – backlog
 
+## The owner: TEST BUILD 1.3.0-test.3 – fit the action bars (Forever followers at 870x696, bars 1–3 on)
+1. `/reload` a follower: one popup "Action bars overlap in this window. [Fit now] sets UI Scale to 0.79" (or close).
+2. **Not now** → nothing changes; `/reload` → it asks again.
+3. **Fit now** → chat "UI Scale is now 0.79"; bar 1, bars 2–3 and the bags no longer overlap or get cut.
+4. `/reload` that follower: no popup. (The leader's big window: no popup at any point.)
+
 ## The owner: TEST BUILD 1.3.0-test.2 – bug sweep (all three Forever clients, `/reload` each, one party)
 1. On Rip: Setup → tick Advanced (or any setting) → the card "Use the same on your other characters?" → **Send**.
 2. On Rup and Rap: the card "Rip sends WoWBoxer settings" → **Use them** → `/reload` → Advanced is still on.

@@ -888,6 +888,7 @@ function Core.loginChecks()
     Core.log("info", "login: asked to give back " .. table.concat(keys, ","))
     return true
   end
+  if ns.BarFit and ns.BarFit.offer and ns.BarFit.offer() then return true end
   if ns.Auto and ns.Auto.nudge then return ns.Auto.nudge() end
   return false
 end
@@ -1263,6 +1264,7 @@ function Core.onEvent(event, ...)
   elseif event == "CURSOR_CHANGED" then Core.onCursorChanged()
   elseif event == "PLAYER_REGEN_ENABLED" then
     Core.runQueue()
+    if ns.BarFit and ns.BarFit.afterCombat then ns.BarFit.afterCombat() end
   elseif event == "PLAYER_LEVEL_UP" then
     local lvl = ...
     Core.log("info", "level up to " .. tostring(lvl))

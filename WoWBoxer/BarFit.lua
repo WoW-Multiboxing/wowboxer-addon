@@ -13,7 +13,9 @@
   (Forever puts bar 1 two units above the bottom edge); there the bar keeps the room the game gave it. Without that,
   a bar Blizzard places at the edge never "fits" (live Forever log 6 Nov: "0 outside, 0 covered; fits all at scale none").
   The bag and menu buttons count as one more "bar" ("menu"): on Forever they ride on the main bar right of bar 1 and
-  go missing first in a narrow window. ]]
+  go missing first in a narrow window, or lie on bar 1 once the game pushes bar 1 against the left edge.
+  At login, when the bars do not fit, BF.offer asks once (a popup, out of combat) whether to set the UI scale to the
+  fit scale; only the player's click writes the CVars (hard rule 4). ]]
 local _, ns = ...
 local BF = {}
 ns.BarFit = BF
@@ -136,6 +138,15 @@ local function overlaps(a, b)
   return a[1] < b[3] - e and b[1] < a[3] - e and a[2] < b[4] - e and b[2] < a[4] - e
 end
 
+--- A real overlap for the bag and menu buttons: at least a third of the smaller button deep in both directions.
+--- Their tall frames (Era micro buttons are 58 high, the art in the lower part) touch the bars above by design, a few
+--- units deep; on Forever in a narrow window the whole menu lies on bar 1 (owner 10 Nov: menu x 445–960 on bar 1 x 0–562).
+function BF.deepOverlap(a, b)
+  local w = math.min(a[3], b[3]) - math.max(a[1], b[1])
+  local h = math.min(a[4], b[4]) - math.max(a[2], b[2])
+  return w >= math.min(a[3] - a[1], b[3] - b[1]) / 3 and h >= math.min(a[4] - a[2], b[4] - b[2]) / 3
+end
+
 --- Rects of bar i moved for a window k times smaller in scale (W / k by H / k).
 local function moved(bar, W, H, k)
   local dw, dh = W / k - W, H / k - H
@@ -176,8 +187,9 @@ function BF.problems(bars, W, H, k, margin)
   for a = 1, #all do
     for b = a + 1, #all do
       local x, y = all[a], all[b]
-      -- the menu and bag buttons only count when cut: their tall frames touch the bars above by design (Era)
-      if x.bi ~= y.bi and bars[x.bi].key ~= "menu" and bars[y.bi].key ~= "menu" and overlaps(x.r, y.r) then
+      -- the menu and bag buttons count only when they really lie on a bar: their tall frames touch the bars above (Era)
+      local menu = bars[x.bi].key == "menu" or bars[y.bi].key == "menu"
+      if x.bi ~= y.bi and overlaps(x.r, y.r) and (not menu or BF.deepOverlap(x.r, y.r)) then
         covered[x.bi] = (covered[x.bi] or 0) + 1
         covered[y.bi] = (covered[y.bi] or 0) + 1
       end
@@ -281,5 +293,66 @@ function BF.update(reason)
   local line = BF.summary(m)
   if line ~= BF.lastLine then BF.lastLine = line; Core.log("info", line .. " (" .. tostring(reason) .. ")") end
   return m
+end
+
+-- ------------------------------------------------------------------ fit offer (owner 10 Nov 2026)
+--- Does measurement m need a smaller UI scale? true, fit (nil = not even the minimum scale fits).
+function BF.needsFit(m)
+  if not (m and m.bars and #m.bars > 0) then return false end
+  if not (m.squeezed or (m.outside or 0) + (m.covered or 0) > 0) then return false end
+  if m.fitScale and m.fitScale >= (m.scale or 1) - 0.005 then return false end -- already at (or below) the fit
+  return true, m.fitScale
+end
+
+--- Set the UI scale: useUiScale 1, uiScale `fit`, through the Settings system with read-back (Compat.setCVarSure).
+--- Only from the player's click, only out of combat (Core.whenSafe). Returns ok.
+--- [AFKLAR: that the game applies uiScale at once on Forever and Era without opening the options; re-measured 1 s
+--- after UI_SCALE_CHANGED either way]
+function BF.applyFit(fit)
+  local Core, C = ns.Core, ns.Compat
+  local want = string.format("%.2f", fit)
+  local okUse, mUse = C.setCVarSure("useUiScale", "1")
+  local _, mScale, after = C.setCVarSure("uiScale", want)
+  local okScale = math.abs((tonumber(after) or -1) - fit) < 0.005 -- read back as a number ("0.79" or "0.790000")
+  Core.log(okUse and okScale and "info" or "warn", string.format("fit: useUiScale %s (%s), uiScale %s -> %s (%s)",
+    okUse and "1" or tostring(C.getCVar("useUiScale")), mUse, want, tostring(after), mScale))
+  if okUse and okScale then
+    Core.print("UI Scale is now " .. want .. ". Your action bars fit in this window.")
+  else
+    Core.print("|cffff6060Could not set the UI Scale|r (it reads " .. tostring(after) .. "). Set it to " .. want ..
+      " in Options → Graphics, or use Auto-fit in the WoWBoxer window app.")
+  end
+  return okUse and okScale
+end
+
+--- At login: when the bars overlap or are cut, ask once per login (never in combat; waits for combat to end) whether
+--- to set the UI scale to the fit scale. Nothing changes without the click. Returns true when the popup was shown.
+function BF.offer()
+  local Core, C = ns.Core, ns.Compat
+  if BF.asked or not (Core and Core.db and ns.UI and ns.UI.Popup) then return false end
+  local m = BF.update("fit check")
+  local need, fit = BF.needsFit(m)
+  if not need then return false end
+  if C.inCombat() then BF.offerWaiting = true; return false end
+  BF.asked, BF.offerWaiting = true, false
+  if fit then
+    local want = string.format("%.2f", fit)
+    ns.UI.Popup("Action bars overlap in this window.\n[Fit now] sets UI Scale to " .. want .. ".\n" ..
+      "|cffaaaaaaThe WoWBoxer window app's Auto-fit does the same for all clients while they are closed.|r", {
+      { "Fit now", function() Core.whenSafe("Fit action bars", function() BF.applyFit(fit) end) end,
+        "Turns on Use UI Scale and sets UI Scale to " .. want .. " (this game install, all its characters)." },
+      { "Not now", function() Core.log("info", "fit: not now") end, "Asks again at the next login while the bars overlap." } })
+  else
+    ns.UI.Popup("Action bars overlap in this window, and even the smallest UI Scale (" .. BF.MIN_SCALE ..
+      ") can't fit them all. Make the window larger or turn off a bar.", {
+      { "OK", function() end, "Asks again at the next login while the bars overlap." } })
+  end
+  Core.log("info", "fit: asked (" .. (fit and string.format("%.2f", fit) or "none") .. ")")
+  return true
+end
+
+--- After combat: the offer that waited for it.
+function BF.afterCombat()
+  if BF.offerWaiting then BF.offer() end
 end
 
