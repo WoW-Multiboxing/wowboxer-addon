@@ -28,7 +28,8 @@ AU.OPTIONS = {
   { "questAny", "Accept any quest", "Accepts every quest offered, not only the leader's (needs Accept quests)." },
   { "share", "Share quests", "Leader: shares every quest you accept with the party." },
   { "turnin", "Turn in quests", "Completes and turns in finished quests at the quest giver you opened." },
-  { "abandon", "Abandon together", "When the leader abandons a quest, followers abandon it too (never a completed quest)." },
+  -- modes = a dropdown card instead of an on/off tick (owner, 10 Nov 2026): Automatically · Ask on every quest · Never
+  { "abandon", "Abandon together", "When the leader abandons a quest: followers abandon it too, ask first, or keep it. Never a completed quest.", modes = "abandon" },
   { "dialog", "Follow dialogs", "Picks the leader's dialog, quest or flight choice when you have the same NPC window open." },
   { "res", "Accept resurrection", "Accepts a resurrection from a squad member.", true },
   { "summon", "Accept summons", "Accepts a summon from a squad member.", true },
@@ -52,6 +53,13 @@ for _, o in ipairs(AU.OPTIONS) do AU.BY_KEY[o[1]] = o end
 AU.PRESET_LEVELLING = { "invite", "quests", "share", "turnin", "dialog", "res", "summon", "rolecheck", "sell", "repair", "shareSell",
   "whispers", "followWarn", "warnSound" }
 AU.REWARD_RULES = { "leader", "value", "ask" }
+--- Abandon together: {value, label, the one sentence under it}. Stored as settings.auto.abandonMode.
+AU.ABANDON_MODES = {
+  { "auto", "Automatically", "Followers abandon it too, without asking." },
+  { "ask", "Ask on every quest", "Each follower asks: Abandon or Keep it." },
+  { "never", "Never", "Followers keep the quest." },
+}
+AU.ABANDON_DEFAULT = "ask"
 AU.GOLD_FLOOR = 10000     -- copper kept when repairing (1 gold)
 AU.TAXI_LIMIT = 20000     -- a synced flight costs at most 2 gold
 AU.INVITE_EVERY = 120     -- seconds between invites of the same name
@@ -64,17 +72,49 @@ local function opts()
 end
 --- Is option `key` on? (resurrect/summon default on)
 function AU.on(key)
+  if key == "abandon" then return AU.abandonMode() == "auto" end
   local v = opts()[key]
   if v == nil then return AU.BY_KEY[key] and AU.BY_KEY[key][4] == true or false end
   return v == true
 end
-function AU.set(key, v) opts()[key] = v and true or false end
---- equipAsk is a setting of Auto-equip, not an automation: "all off" leaves it as it is.
-function AU.setAll(v) for _, o in ipairs(AU.OPTIONS) do if o[1] ~= "equipAsk" then AU.set(o[1], v) end end end
+--- Abandon together. Before 1.3.0 it was an on/off tick (settings.auto.abandon): true reads as "auto", anything else as
+--- "ask". The old key is only read until the mode is first set, then dropped (a login never rewrites saved data).
+local ABANDON_OK = { auto = true, ask = true, never = true }
+function AU.abandonMode()
+  local o = opts()
+  if ABANDON_OK[o.abandonMode] then return o.abandonMode end
+  return o.abandon == true and "auto" or AU.ABANDON_DEFAULT
+end
+function AU.setAbandonMode(v)
+  if not ABANDON_OK[v] then return false end
+  local o = opts()
+  o.abandonMode, o.abandon = v, nil
+  return true
+end
+--- set("abandon", on/off) from share strings and the settings list: on = Automatically; off leaves Ask / Never as they are.
+function AU.set(key, v)
+  if key == "abandon" then
+    if v then return AU.setAbandonMode("auto") end
+    if AU.abandonMode() == "auto" then AU.setAbandonMode(AU.ABANDON_DEFAULT) end
+    return
+  end
+  opts()[key] = v and true or false
+end
+--- equipAsk is a setting of Auto-equip, not an automation: "all off" leaves it as it is. Abandon: All on = Automatically,
+--- All off = Never.
+function AU.setAll(v)
+  for _, o in ipairs(AU.OPTIONS) do if o[1] ~= "equipAsk" then AU.set(o[1], v) end end
+  AU.setAbandonMode(v and "auto" or "never")
+end
 --- WoWBoxer's recommendation (the owner, 30 Oct 2026): everything on except these three.
 AU.RECOMMENDED_OFF = { abandon = true, questAny = true, restock = true, autoEquip = true, greed = true }
-function AU.defaults() for _, o in ipairs(AU.OPTIONS) do AU.set(o[1], not AU.RECOMMENDED_OFF[o[1]]) end end
-function AU.preset() for _, o in ipairs(AU.OPTIONS) do if o[1] ~= "equipAsk" then AU.set(o[1], false) end end for _, k in ipairs(AU.PRESET_LEVELLING) do AU.set(k, true) end AU.set("chat", true) end
+function AU.defaults() for _, o in ipairs(AU.OPTIONS) do AU.set(o[1], not AU.RECOMMENDED_OFF[o[1]]) end AU.setAbandonMode(AU.ABANDON_DEFAULT) end
+function AU.preset()
+  for _, o in ipairs(AU.OPTIONS) do if o[1] ~= "equipAsk" then AU.set(o[1], false) end end
+  for _, k in ipairs(AU.PRESET_LEVELLING) do AU.set(k, true) end
+  AU.set("chat", true)
+  AU.setAbandonMode(AU.ABANDON_DEFAULT)
+end
 function AU.rewardRule() local r = db().autoReward; for _, x in ipairs(AU.REWARD_RULES) do if x == r then return r end end return "leader" end
 
 -- ------------------------------------------------------------------ who may trigger it
@@ -190,7 +230,7 @@ function AU.receive(prefix, text, _, sender)
   elseif kind == "QR" and m.leader then
     local q, i = tonumber(f[2]), tonumber(f[3])
     if q and i then AU.leaderReward[q] = i; AU.chooseReward() end
-  elseif kind == "QA" and m.leader then AU.abandonHere(tonumber(f[2]), f[3])
+  elseif kind == "QA" and m.leader then AU.abandonHere(tonumber(f[2]), f[3], m.name)
   elseif kind == "D" and m.leader then AU.applyDialog(f[2], f[3], tonumber(f[4]), f[5], m)
   end
 end
@@ -362,32 +402,121 @@ function AU.onQuestComplete() AU.completeOpen = true; AU.chooseReward() end
 function AU.leaderPicked(i)
   if AU.isLeader() and i then AU.send("QR", questId() or 0, i) end
 end
---- Leader abandoned a quest: followers drop it too (never a completed one).
-function AU.leaderAbandoned()
-  if not AU.isLeader() then return end
+--- The quest the quest log is about to abandon: id (0 when unknown) and name ("" when unknown).
+local function abandonInfo()
   local QL = G.C_QuestLog
   local id = QL and QL.GetAbandonQuest and C().safe(QL.GetAbandonQuest()) or nil
-  local name = G.GetAbandonQuestName and C().safe(G.GetAbandonQuestName()) or ""
-  AU.send("QA", id or 0, name)
-end
-function AU.abandonHere(id, name)
-  if not AU.on("abandon") or skipShift("abandon") then return end
-  local QL = G.C_QuestLog
-  if QL and QL.GetLogIndexForQuestID and id and id > 0 then
-    local idx = QL.GetLogIndexForQuestID(id)
-    if not idx then return end
-    if QL.IsComplete and QL.IsComplete(id) then return end
-    if pcall(QL.SetSelectedQuest, id) and call(QL.SetAbandonQuest) and call(QL.AbandonQuest) then AU.did("Abandoned quest " .. id .. " with the leader.") end
-  elseif G.GetNumQuestLogEntries and G.GetQuestLogTitle then
-    for i = 1, G.GetNumQuestLogEntries() do
-      local title, _, _, header, _, complete, _, qid = G.GetQuestLogTitle(i)
-      if not header and ((id and id > 0 and qid == id) or (name ~= "" and title == name)) then
-        if complete == 1 then return end
-        if pcall(G.SelectQuestLogEntry, i) and call(G.SetAbandonQuest) and call(G.AbandonQuest) then AU.did("Abandoned " .. tostring(title) .. " with the leader.") end
-        return
+  local name = G.GetAbandonQuestName and C().safe(G.GetAbandonQuestName()) or nil
+  id = tonumber(id) or 0
+  if id == 0 and G.GetQuestLogSelection and G.GetQuestLogTitle then -- Era: the selected quest log row
+    local idx = G.GetQuestLogSelection()
+    if idx and idx > 0 then
+      local title, _, _, header, _, _, _, qid = G.GetQuestLogTitle(idx)
+      if not header then
+        id = tonumber(C().safe(qid)) or 0
+        if not name or name == "" then name = C().safe(title) end
       end
     end
   end
+  if id > 0 and (not name or name == "") and QL and QL.GetTitleForQuestID then name = C().safe(QL.GetTitleForQuestID(id)) end
+  return id, tostring(name or "")
+end
+AU.abandonHooks = {}    -- which abandon functions were hooked (diagnose)
+AU.pendingAbandon = nil -- {id, name} captured on SetAbandonQuest: after AbandonQuest the client may have forgotten it
+--- Leader: the quest log asks to abandon a quest (hooked on SetAbandonQuest).
+function AU.leaderSetAbandon()
+  if not AU.isLeader() then return end
+  local id, name = abandonInfo()
+  if id > 0 or name ~= "" then AU.pendingAbandon = { id = id, name = name } end
+end
+--- Leader abandoned a quest (hooked on C_QuestLog.AbandonQuest and AbandonQuest): tell the followers, once.
+function AU.leaderAbandoned()
+  if not AU.isLeader() then return end
+  local p = AU.pendingAbandon
+  AU.pendingAbandon = nil
+  local id, name
+  if p then id, name = p.id, p.name else id, name = abandonInfo() end
+  if id == 0 and name == "" then return end
+  local key = id > 0 and tostring(id) or name
+  local last = AU.lastAbandonSent
+  if last and last.key == key and now() - last.at < 2 then return end -- both hooks fired for one abandon
+  AU.lastAbandonSent = { key = key, at = now() }
+  AU.send("QA", id, name)
+end
+--- This character's copy of a quest: {id, idx, title, complete, modern}, or nil when it is not in the quest log.
+function AU.questHere(id, name)
+  local QL = G.C_QuestLog
+  if QL and QL.GetLogIndexForQuestID and id and id > 0 then
+    local idx = QL.GetLogIndexForQuestID(id)
+    if not idx then return nil end
+    local title = QL.GetTitleForQuestID and C().safe(QL.GetTitleForQuestID(id)) or nil
+    if not title or title == "" then title = (name and name ~= "") and name or ("quest " .. id) end
+    return { id = id, idx = idx, title = tostring(title), complete = (QL.IsComplete and QL.IsComplete(id)) and true or false, modern = true }
+  elseif G.GetNumQuestLogEntries and G.GetQuestLogTitle then
+    for i = 1, (G.GetNumQuestLogEntries() or 0) do
+      local title, _, _, header, _, complete, _, qid = G.GetQuestLogTitle(i)
+      if not header and ((id and id > 0 and qid == id) or (name and name ~= "" and title == name)) then
+        return { id = qid, idx = i, title = tostring(title), complete = complete == 1 }
+      end
+    end
+  end
+  return nil
+end
+--- Abandon quest q (from questHere) on this character; why goes into the log line.
+local function dropQuest(q, why)
+  local QL = G.C_QuestLog
+  if q.modern then
+    if pcall(QL.SetSelectedQuest, q.id) and call(QL.SetAbandonQuest) and call(QL.AbandonQuest) then
+      AU.did("Abandoned quest " .. q.id .. " " .. why .. ".")
+      return true
+    end
+  elseif pcall(G.SelectQuestLogEntry, q.idx) and call(G.SetAbandonQuest) and call(G.AbandonQuest) then
+    AU.did("Abandoned " .. q.title .. " " .. why .. ".")
+    return true
+  end
+  return false
+end
+AU.abandonAsks = {} -- queued questions: {id, name, leader}
+--- Follower: the leader abandoned a quest ("QA" from the squad leader in the party). Never a completed quest.
+function AU.abandonHere(id, name, leader)
+  name = name or ""
+  local mode = AU.abandonMode()
+  if mode == "never" then
+    Core().log("info", "auto: the leader abandoned " .. (name ~= "" and name or tostring(id)) .. ", kept here (Abandon together: Never)")
+    return
+  end
+  if skipShift("abandon") then return end
+  local q = AU.questHere(id, name)
+  if not q or q.complete then return end
+  if mode == "auto" then dropQuest(q, "with the leader") return end
+  for _, x in ipairs(AU.abandonAsks) do if x.id == id and x.name == name then return end end
+  AU.abandonAsks[#AU.abandonAsks + 1] = { id = id, name = name, leader = C().baseName(leader) or "The leader" }
+  AU.nextAbandonAsk()
+end
+local function fighting() return G.InCombatLockdown and G.InCombatLockdown() and true or false end
+--- Show the next queued abandon question: out of combat, one at a time (waits while another WoWBoxer question is open).
+function AU.nextAbandonAsk()
+  local a = AU.abandonAsks[1]
+  local UI = ns.UI
+  if not (a and UI and UI.Popup) then return end
+  if fighting() or (UI.popup and UI.popup:IsShown()) then
+    if not AU.abandonWait and G.C_Timer and G.C_Timer.After then
+      AU.abandonWait = true
+      G.C_Timer.After(3, function() AU.abandonWait = nil; AU.nextAbandonAsk() end)
+    end
+    return
+  end
+  table.remove(AU.abandonAsks, 1)
+  local q = AU.questHere(a.id, a.name)
+  if not q or q.complete then return AU.nextAbandonAsk() end -- gone or finished meanwhile
+  UI.Popup(a.leader .. " abandoned " .. q.title .. ". Abandon it here too?", {
+    { "Abandon", function()
+        local x = AU.questHere(a.id, a.name)
+        if x and not x.complete then dropQuest(x, "(you clicked Abandon)") end
+        AU.nextAbandonAsk()
+      end, "Abandons the quest on this character." },
+    { "Keep it", function() Core().log("info", "auto: kept " .. q.title .. " (Abandon together: you clicked Keep it)"); AU.nextAbandonAsk() end,
+      "Keeps the quest on this character." } })
 end
 
 -- ------------------------------------------------------------------ 3. dialog sync (gossip, quest lists, flights)
@@ -713,7 +842,17 @@ function AU.Init()
     elseif G.SelectGossipActiveQuest then pcall(hook, "SelectGossipActiveQuest", function(i) AU.leaderChose("c", i, tostring(i)) end) end
     if G.TakeTaxiNode then pcall(hook, "TakeTaxiNode", function(i) if not AU.applying then AU.leaderChose("t", i, G.TaxiNodeName and G.TaxiNodeName(i)) end end) end
     if G.GetQuestReward then pcall(hook, "GetQuestReward", function(i) AU.leaderPicked(i) end) end
-    if G.AbandonQuest then pcall(hook, "AbandonQuest", function() AU.leaderAbandoned() end) end
+    -- abandon: Forever's quest log uses C_QuestLog, Era the globals; the quest is captured on SetAbandonQuest
+    local QL, hk = G.C_QuestLog, AU.abandonHooks
+    local function setA() pcall(AU.leaderSetAbandon) end
+    local function didA() pcall(AU.leaderAbandoned) end
+    if QL and QL.SetAbandonQuest then hk["C_QuestLog.SetAbandonQuest"] = (pcall(hook, QL, "SetAbandonQuest", setA)) end
+    if G.SetAbandonQuest then hk.SetAbandonQuest = (pcall(hook, "SetAbandonQuest", setA)) end
+    if QL and QL.AbandonQuest then hk["C_QuestLog.AbandonQuest"] = (pcall(hook, QL, "AbandonQuest", didA)) end
+    if G.AbandonQuest then hk.AbandonQuest = (pcall(hook, "AbandonQuest", didA)) end
+    local found = {}
+    for _, k in ipairs({ "C_QuestLog.SetAbandonQuest", "SetAbandonQuest", "C_QuestLog.AbandonQuest", "AbandonQuest" }) do if hk[k] then found[#found + 1] = k end end
+    Core().log("info", "auto: abandon hooks " .. (#found > 0 and table.concat(found, ", ") or "none"))
   end
   if G.C_Timer and G.C_Timer.NewTicker then G.C_Timer.NewTicker(30, function() pcall(AU.inviteMissing) end) end
 end

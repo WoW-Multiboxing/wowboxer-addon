@@ -74,7 +74,8 @@ the boring parts (invites, quests, dialogs, vendor, loot) with WoW's own addon A
    - Auto-share quests the leader accepts (`QuestLogPushQuest`).
    - Auto-turn-in and complete (`CompleteQuest`, `GetQuestReward`). If there is a choice of reward, pick by rule:
      the leader's choice, best vendor value, or ask.
-   - Abandon on all characters (option, never for completed quests).
+   - Abandon on all characters: Automatically, Ask on every quest (default; the follower clicks Abandon / Keep it) or
+     Never (owner, 10 Nov 2026). Never for completed quests.
    - Hold **Shift** to skip the automation this time (as MAMA does).
 3. **Dialog sync:**
    - When the leader picks a gossip option, a quest from a list or a flight path, followers with the **same NPC window

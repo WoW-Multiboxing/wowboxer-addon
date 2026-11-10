@@ -282,8 +282,8 @@ do
   ns.UI.panels.setup.autoBtn:Click()
   local f = ns.AutomationPage.frame
   local subs = 0
-  for _, o in ipairs(ns.Auto.OPTIONS) do if o[6] then subs = subs + 1 end end
-  H.ok(f:IsShown() and #f.ticks == #ns.Auto.OPTIONS - subs and ns.UI.current == "automation", "the Automation bookmark: one tick per option (Warning sound inside Follow warning)")
+  for _, o in ipairs(ns.Auto.OPTIONS) do if o[6] or o.modes then subs = subs + 1 end end
+  H.ok(f:IsShown() and #f.ticks == #ns.Auto.OPTIONS - subs and ns.UI.current == "automation", "the Automation bookmark: one tick per option (Warning sound inside Follow warning; Abandon together is a dropdown)")
   f.preset:Click()
   local on = {}
   for _, c in ipairs(f.ticks) do

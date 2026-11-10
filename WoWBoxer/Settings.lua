@@ -85,6 +85,10 @@ ST.ITEMS = {
       for _, o in ipairs(AU().OPTIONS) do AU().set(o[1], want[o[1]] == true) end
       return true end,
     function(v) local n = 0; for _ in tostring(v):gmatch("[^,]+") do n = n + 1 end return n .. " on" end },
+  -- after "auto" (its on/off for abandon is Automatically or not; this is the full choice)
+  { "abd", "Abandon together", function() return AU().abandonMode() end,
+    function(v) return AU().setAbandonMode(v) end,
+    function(v) for _, m in ipairs(AU().ABANDON_MODES) do if m[1] == v then return m[2] end end return v end },
   { "ov", "Accept from per row", function()
       local t, out = st().acceptOverride, {}
       if type(t) == "table" then

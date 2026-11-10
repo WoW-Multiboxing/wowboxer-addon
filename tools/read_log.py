@@ -101,6 +101,11 @@ def main():
                 for it in (ex if isinstance(ex, list) else []):
                     print(f"     {it.get('name')} id {it.get('id')} {it.get('rank') or ''} {('level ' + str(it.get('level'))) if it.get('level') else ''}"
                           f"{' (future)' if it.get('future') else ''}")
+            au = d.get("auto") if isinstance(d.get("auto"), dict) else {}
+            if "abandonHooks" in au:
+                hk = au.get("abandonHooks") or {}
+                found = [k for k, v in (hk.items() if isinstance(hk, dict) else []) if v]
+                print(f"   abandon together: {au.get('abandonMode')}, hooks {', '.join(sorted(found)) or 'none'}")
             for k in ("binds", "seqCheck", "cvarProbe"):
                 if d.get(k):
                     print(f"   {k} {d.get(k)}")

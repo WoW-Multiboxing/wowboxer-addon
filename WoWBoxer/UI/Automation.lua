@@ -27,6 +27,45 @@ function AP.setFrom(v)
   UI.Refresh()
 end
 
+--- The full help of a dropdown option (Abandon together): what each choice does, for the tooltip.
+local function modesTip(o)
+  local t = { o[3] }
+  for _, m in ipairs(AU().ABANDON_MODES) do t[#t + 1] = m[2] .. ": " .. m[3] end
+  return table.concat(t, "\n")
+end
+--- A card with a dropdown instead of a switch (Abandon together, owner 10 Nov 2026): the option's name, the dropdown at
+--- the right and one muted line saying what the chosen value does.
+local function modeCard(p, o, col, row, pitch, cardH, themed)
+  local c = { key = o[1], opt = o }
+  c.dd = W.dropdown(p, { width = 140,
+    values = function() local v = {}; for _, m in ipairs(AU().ABANDON_MODES) do v[#v + 1] = { m[1], m[2], m[3] } end return v end,
+    get = function() return AU().abandonMode() end,
+    set = function(v) if AU().setAbandonMode(v) then ns.Core.log("info", "automation " .. o[1] .. " " .. v) end UI.Refresh() end })
+  W.ddTip(c.dd, o[2], function() return modesTip(o) end)
+  if themed then
+    c.card = W.card(p)
+    c.card:SetPoint("TOPLEFT", col * 336, -32 - row * pitch)
+    c.card:SetSize(328, cardH)
+    c.label = W.line(c.card, "GameFontNormal", 12, W.GOLD) -- on the card, so the card never covers it
+    ns.Theme.font(c.label, "bold", 12)
+    c.label:SetPoint("TOPLEFT", c.card, "TOPLEFT", 10, cardH < 35 and -3 or -4)
+    c.line = W.line(c.card, "GameFontHighlightSmall", 10, W.MUTED)
+    c.line:SetPoint("BOTTOMLEFT", c.card, "BOTTOMLEFT", 10, cardH < 35 and 3 or 5)
+    c.dd:SetPoint("RIGHT", c.card, "RIGHT", -8, 0)
+  else
+    c.label = W.line(p, "GameFontNormal", nil, W.GOLD)
+    c.label:SetPoint("TOPLEFT", 2 + col * 336, -36 - row * pitch)
+    c.line = W.line(p, "GameFontHighlightSmall", 10, W.MUTED)
+    c.line:SetPoint("TOPLEFT", 2 + col * 336, -34 - row * pitch - 19)
+    c.dd:SetPoint("TOPLEFT", 186 + col * 336, -32 - row * pitch)
+  end
+  c.label:SetWidth(170); c.line:SetWidth(170)
+  c.label:SetText(o[2])
+  c.label.wbxCopy = "label"
+  c.line.wbxCopy = "data"
+  return c
+end
+
 function tab.build(p)
   p.title = W.text(p, "GameFontNormalLarge", 15, W.GOLD)
   p.title:SetPoint("TOPLEFT", 2, -2)
@@ -42,7 +81,7 @@ function tab.build(p)
   local fl = W.labelled(p, "Accept from", p.from)
   fl:SetPoint("TOPRIGHT", p, "TOPRIGHT", -200, -6)
   W.ddTip(p.from, "Accept from", "Who the accepting automations react to: your WoWBoxer squad in your party (safest), also your friends and guild, or everyone.")
-  p.ticks = {}
+  p.ticks, p.modes = {}, {}
   local shown, subs = {}, {}
   for _, o in ipairs(AU().OPTIONS) do if o[6] then subs[o[6]] = o else shown[#shown + 1] = o end end
   local per = math.ceil(#shown / 2)
@@ -53,6 +92,7 @@ function tab.build(p)
   local cardH = pitch - 3
   for i, o in ipairs(shown) do
     local col, row = math.floor((i - 1) / per), (i - 1) % per
+    if o.modes then p.modes[#p.modes + 1] = modeCard(p, o, col, row, pitch, cardH, themed); p[o.modes] = p.modes[#p.modes] else
     local function onClick(_, v) AU().set(o[1], v); ns.Core.log("info", "automation " .. o[1] .. (v and " on" or " off")); UI.Refresh() end
     local c
     if themed then
@@ -111,6 +151,7 @@ function tab.build(p)
       W.ddTip(c.own, "Accept from (this one)", "Advanced: this automation uses its own choice instead of the one at the top.")
     end
     p.ticks[#p.ticks + 1] = c
+    end
   end
   p.reward = W.dropdown(p, { width = 170,
     values = function() return { { "leader", "Reward: the leader's pick", "Followers take the reward the leader took." },
@@ -124,7 +165,7 @@ function tab.build(p)
   W.primary(p.preset)
   p.preset:SetPoint("BOTTOMLEFT", 0, 2)
   p.defaults = W.button(p, "Default", 70, 24, function() AU().defaults(); ns.Core.log("info", "automation: default"); UI.Refresh() end,
-    "WoWBoxer's recommendation: everything on except Accept any quest, Abandon together, Restock reagents and Auto-equip.")
+    "WoWBoxer's recommendation: everything on except Accept any quest, Restock reagents and Auto-equip. Abandon together asks.")
   p.defaults:SetPoint("LEFT", p.preset, "RIGHT", 8, 0)
   p.allOn = W.button(p, "All on", 70, 24, function() AU().setAll(true); UI.Refresh() end, "Turns every automation on.")
   p.allOn:SetPoint("LEFT", p.defaults, "RIGHT", 6, 0)
@@ -137,6 +178,11 @@ end
 function tab.refresh(p)
   local adv = ns.Advanced and ns.Advanced.on()
   p.from.Refresh(); p.reward.Refresh()
+  for _, c in ipairs(p.modes) do
+    c.dd.Refresh()
+    local v = AU().abandonMode()
+    for _, m in ipairs(AU().ABANDON_MODES) do if m[1] == v then c.line:SetText(m[3]) end end
+  end
   for _, c in ipairs(p.ticks) do
     local o = c.opt
     c:SetChecked(AU().on(c.key))

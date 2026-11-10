@@ -1,5 +1,11 @@
 # WoWBoxer addon – backlog
 
+## The owner: TEST BUILD 1.3.0-test.6 – Abandon together dropdown (Forever, /reload each, one party, a shared quest)
+1. Automation page: the *Abandon together* dropdown shows *Ask on every quest*.
+2. Leader abandons a shared quest → each follower gets the question; *Abandon* drops it, *Keep it* keeps it.
+3. Switch to *Automatically* → the next abandon drops it on the followers with no question.
+4. Switch to *Never* → the followers keep it.
+
 ## The owner: TEST BUILD 1.3.0-test.5 – every spell in All spells + Auto-equip questions off (Forever, /reload each)
 1. Priest Rup: All spells shows *Divine Grace* (and every other new spell); drag it to a bar → the macro works; hover an item in the equip question → its stats.
 2. Log in on all three Forever characters, open All spells, `/reload` (saves `diag.extraSpells`: spells still missing from the data).
