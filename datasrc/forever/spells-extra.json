@@ -1,0 +1,38 @@
+{
+ "_about": "WoW Forever class spells the frozen seed (vendor/companion, pre-launch) does not have. Names, spell IDs per rank, trainer levels, icons (file IDs) and race masks: Blizzard client tables of WoW Forever build 1.60.1.70862 (SkillLineAbility, SpellLevels, SpellMisc, Spell via wago.tools). Category and action (the macro rule) are WoWBoxer's, from the spell's own tooltip text. Cross-checked with the per-class spell lists of talentsforever.com (beta client 1.60.1.70755). gate talent with no talent key: the spell comes from a talent that is not in the pre-launch talent trees yet, so only the live spellbook says when the character has it. Sources per spell: docs/forever-new-spells.md. cast/cd/dur = seconds (SpellCastTimes, SpellCooldowns, SpellDuration of rank 1). Merged by tools/build_data.js after the seed's spells.",
+ "warrior": [
+  { "name": "Reckless Swings", "category": "Buff", "action": "self", "level": 25, "gate": "talent", "cast": 0, "cd": 15, "dur": 8, "forever": "new", "icon": 132334, "ranks": [[1329555, 25]] }
+ ],
+ "paladin": [
+  { "name": "Oath of Light", "category": "Buff", "action": "friendlymain", "level": 25, "gate": "talent", "cast": 0, "cd": 0, "dur": 300, "forever": "new", "icon": 135909, "ranks": [[1328548, 25]] }
+ ],
+ "rogue": [
+  { "name": "Shank", "category": "Damage", "action": "melee", "level": 24, "gate": "trainer", "cast": 0, "cd": 10, "dur": 0, "forever": "new", "icon": 132323, "ranks": [[1329283, 24], [1329549, 44]] },
+  { "name": "Death Mark", "category": "Damage", "action": "melee", "level": 40, "gate": "talent", "cast": 0, "cd": 10, "dur": 6, "forever": "new", "icon": 132094, "ranks": [[1316709, 40], [1325756, 48], [1325757, 56], [1325758, 60]] }
+ ],
+ "priest": [
+  { "name": "Divine Grace", "category": "Heal", "action": "friendlytarget", "level": 10, "gate": "trainer", "cast": 0, "cd": 600, "dur": 0, "forever": "new", "icon": 1022949, "lock": { "races": ["human"] },
+    "ranks": [[1277370, 10], [1277371, 18], [1277372, 26], [1277374, 34], [1277376, 42], [1277377, 50], [1277378, 58]] },
+  { "name": "Feedback", "category": "Defense", "action": "self", "level": 20, "gate": "trainer", "cast": 0, "cd": 180, "dur": 15, "forever": "changed", "icon": 136189, "lock": { "races": ["human"] },
+    "ranks": [[13896, 20], [19271, 30], [19273, 40], [19274, 50], [19275, 60]] },
+  { "name": "Desperate Prayer", "category": "Heal", "action": "self", "level": 10, "gate": "trainer", "cast": 0, "cd": 600, "dur": 0, "forever": "changed", "icon": 135954, "lock": { "races": ["dwarf"] },
+    "ranks": [[13908, 10], [19236, 18], [19238, 26], [19240, 34], [19241, 42], [19242, 50], [19243, 58]] },
+  { "name": "Chastise", "category": "Damage", "action": "ranged", "level": 20, "gate": "trainer", "cast": 0, "cd": 120, "dur": 2, "forever": "new", "icon": 135886, "lock": { "races": ["dwarf"] },
+    "ranks": [[1277331, 20], [1277332, 30], [1277333, 40], [1277334, 50], [1277335, 60]] },
+  { "name": "Starshards", "category": "Damage", "action": "ranged", "level": 10, "gate": "trainer", "cast": 0, "cd": 30, "dur": 6, "forever": "changed", "icon": 135753, "lock": { "races": ["nightelf"] },
+    "ranks": [[10797, 10], [19296, 18], [19299, 26], [19302, 34], [19303, 42], [19304, 50], [19305, 58]] },
+  { "name": "Elune's Grace", "category": "Defense", "action": "self", "level": 20, "gate": "trainer", "cast": 0, "cd": 300, "dur": 15, "forever": "changed", "icon": 135900, "lock": { "races": ["nightelf"] },
+    "ranks": [[2651, 20]] },
+  { "name": "Confounding Flash", "category": "Control", "action": "self", "level": 10, "gate": "trainer", "cast": 0.5, "cd": 120, "dur": 3, "forever": "new", "icon": 571554, "lock": { "races": ["gnome"] },
+    "ranks": [[1277455, 10]] },
+  { "name": "Contingency Plan", "category": "Defense", "action": "friendlymain", "level": 20, "gate": "trainer", "cast": 0, "cd": 600, "dur": 30, "forever": "new", "icon": 458722, "lock": { "races": ["gnome"] },
+    "ranks": [[1277462, 20], [1277634, 30], [1277638, 40], [1277639, 50], [1277640, 60]] },
+  { "name": "Hex of Weakness", "category": "Debuff", "action": "ranged", "level": 10, "gate": "trainer", "cast": 0, "cd": 0, "dur": 120, "forever": "changed", "icon": 136157, "lock": { "races": ["troll"] },
+    "ranks": [[9035, 10], [19281, 20], [19282, 30], [19283, 40], [19284, 50], [19285, 60]] },
+  { "name": "Shadowguard", "category": "Buff", "action": "self", "level": 20, "gate": "trainer", "cast": 0, "cd": 0, "dur": 600, "forever": "changed", "icon": 136051, "lock": { "races": ["troll"] },
+    "ranks": [[18137, 20], [19308, 28], [19309, 36], [19310, 44], [19311, 52], [19312, 60]] }
+ ],
+ "shaman": [
+  { "name": "Totemic Call", "category": "Totem", "action": "self", "level": 22, "gate": "trainer", "cast": 0, "cd": 30, "dur": 1, "forever": "new", "icon": 538574, "ranks": [[437009, 22]] }
+ ]
+}

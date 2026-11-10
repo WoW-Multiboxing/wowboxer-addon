@@ -58,8 +58,8 @@ function C.inCombat() return InCombatLockdown() and true or false end
 -- ------------------------------------------------------------------ spellbook
 --- Set of spell names the player knows (from the spellbook). nil if no spellbook API was found.
 --- Cached until the spellbook changes (Core calls C.invalidateSpellbook on SPELLS_CHANGED / LEARNED_* / level-up).
-local bookCache, bookSource
-function C.invalidateSpellbook() bookCache, bookSource = nil, nil end
+local bookCache, bookSource, itemsCache
+function C.invalidateSpellbook() bookCache, bookSource, itemsCache = nil, nil, nil end
 function C.knownSpellNames()
   if bookCache ~= nil then return bookCache or nil, bookSource end
   local names, src = C.scanSpellbook()
@@ -105,6 +105,78 @@ function C.scanSpellbook()
     return names, "GetSpellTabInfo"
   end
   return nil, "none"
+end
+--- Every active spell of the class tabs of the spellbook (owner, 10 Nov 2026: All spells must show every spell):
+--- { {name, id, rank, icon, future, level}, ... } in book order, or nil without a spellbook API. Skips the first tab
+--- (General: professions, mounts, toys, Attack), hidden/off-spec/guild lines and passives. future = the book's "learn
+--- later" entry (Enum.SpellBookItemType.FutureSpell / "FUTURESPELL"); level from GetSpellLevelLearned.
+--- [AFKLAR: whether Forever lists future spells in the book at all – check diag.extraSpells after a login]
+--- Cached with the name scan (C.invalidateSpellbook).
+local function passiveOf(id, j, bank)
+  local CS = G.C_Spell
+  if CS and CS.IsSpellPassive and id then local ok, p = pcall(CS.IsSpellPassive, id); if ok and p ~= nil then return p and true or false end end
+  if G.IsPassiveSpell then local ok, p = pcall(G.IsPassiveSpell, j, bank); if ok then return p and true or false end end
+  return false
+end
+local function levelOf(id)
+  local CS = G.C_Spell
+  local f = (CS and CS.GetSpellLevelLearned) or G.GetSpellLevelLearned
+  if not (f and id) then return nil end
+  local ok, l = pcall(f, id)
+  return ok and type(l) == "number" and l > 0 and l or nil
+end
+function C.spellbookItems()
+  if itemsCache ~= nil then return itemsCache or nil end
+  local out = {}
+  local SB = G.C_SpellBook
+  if SB and SB.GetNumSpellBookSkillLines and SB.GetSpellBookSkillLineInfo and SB.GetSpellBookItemInfo then
+    local bank = (G.Enum and G.Enum.SpellBookSpellBank and G.Enum.SpellBookSpellBank.Player) or 0
+    local T = G.Enum and G.Enum.SpellBookItemType or {}
+    local SPELL, FUTURE = T.Spell or 1, T.FutureSpell or 2
+    for i = 2, SB.GetNumSpellBookSkillLines() do -- 1 = General
+      local okL, info = pcall(SB.GetSpellBookSkillLineInfo, i)
+      if okL and type(info) == "table" and not info.shouldHide and not info.isGuild and not info.offSpecID then
+        local off, num = info.itemIndexOffset or 0, info.numSpellBookItems or 0
+        for j = off + 1, off + num do
+          local ok, it = pcall(SB.GetSpellBookItemInfo, j, bank)
+          if ok and type(it) == "table" and (it.itemType == SPELL or it.itemType == FUTURE) and not it.isOffSpec then
+            local id = C.safe(it.spellID) or C.safe(it.actionID)
+            local name = C.safe(it.name)
+            local passive = it.isPassive
+            if passive == nil then passive = passiveOf(id, j, bank) end
+            if type(name) == "string" and id and not passive then
+              local future = it.itemType == FUTURE
+              local rank = C.safe(it.subName)
+              out[#out + 1] = { name = name, id = id, rank = rank ~= "" and rank or nil, icon = C.safe(it.iconID), future = future or nil, level = future and levelOf(id) or nil }
+            end
+          end
+        end
+      end
+    end
+  elseif G.GetNumSpellTabs and G.GetSpellTabInfo and G.GetSpellBookItemName and G.GetSpellBookItemInfo then
+    local bank = G.BOOKTYPE_SPELL or "spell"
+    for i = 2, G.GetNumSpellTabs() do -- 1 = General
+      local _, _, off, num, _, offSpec = G.GetSpellTabInfo(i)
+      if not (offSpec and offSpec ~= 0) then
+        for j = (off or 0) + 1, (off or 0) + (num or 0) do
+          local kind, id = G.GetSpellBookItemInfo(j, bank)
+          if (kind == "SPELL" or kind == "FUTURESPELL") and id then
+            local name, rank = G.GetSpellBookItemName(j, bank)
+            if type(name) == "string" and not passiveOf(nil, j, bank) then
+              local future = kind == "FUTURESPELL"
+              out[#out + 1] = { name = name, id = id, rank = rank ~= "" and rank or nil, icon = G.GetSpellBookItemTexture and G.GetSpellBookItemTexture(j, bank) or nil,
+                future = future or nil, level = future and levelOf(id) or nil }
+            end
+          end
+        end
+      end
+    end
+  else
+    itemsCache = false
+    return nil
+  end
+  itemsCache = out
+  return out
 end
 --- Is any rank of a data spell known by ID? (talent spells and spells missing from the book scan)
 function C.knowsAnyRank(spell)

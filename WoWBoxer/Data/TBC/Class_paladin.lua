@@ -967,7 +967,7 @@ D.spells.paladin = {
   durSec=0
  },
  {
-  id="",
+  id="paladin-crusader-strike",
   name="Crusader Strike",
   category="Damage",
   action="melee",
@@ -984,7 +984,7 @@ D.spells.paladin = {
   durSec=0
  },
  {
-  id="",
+  id="paladin-avenger-s-shield",
   name="Avenger's Shield",
   category="Damage",
   action="ranged",
@@ -1003,7 +1003,7 @@ D.spells.paladin = {
   durSec=0
  },
  {
-  id="",
+  id="paladin-righteous-defense",
   name="Righteous Defense",
   category="Defense",
   action="friendlymain",
@@ -1019,7 +1019,7 @@ D.spells.paladin = {
   durSec=0
  },
  {
-  id="",
+  id="paladin-seal-of-vengeance",
   name="Seal of Vengeance",
   category="Buff",
   action="self",
@@ -1036,7 +1036,7 @@ D.spells.paladin = {
   durSec=0
  },
  {
-  id="",
+  id="paladin-seal-of-corruption",
   name="Seal of Corruption",
   category="Buff",
   action="self",
@@ -1053,7 +1053,7 @@ D.spells.paladin = {
   durSec=0
  },
  {
-  id="",
+  id="paladin-seal-of-blood",
   name="Seal of Blood",
   category="Buff",
   action="self",
@@ -1071,7 +1071,7 @@ D.spells.paladin = {
   durSec=0
  },
  {
-  id="",
+  id="paladin-seal-of-the-martyr",
   name="Seal of the Martyr",
   category="Buff",
   action="self",
@@ -1089,7 +1089,7 @@ D.spells.paladin = {
   durSec=0
  },
  {
-  id="",
+  id="paladin-avenging-wrath",
   name="Avenging Wrath",
   category="Buff",
   action="self",
@@ -1105,7 +1105,7 @@ D.spells.paladin = {
   durSec=0
  },
  {
-  id="",
+  id="paladin-crusader-aura",
   name="Crusader Aura",
   category="Buff",
   action="self",
@@ -1121,7 +1121,7 @@ D.spells.paladin = {
   durSec=0
  },
  {
-  id="",
+  id="paladin-sanctity-aura",
   name="Sanctity Aura",
   category="Buff",
   action="self",
@@ -1138,7 +1138,7 @@ D.spells.paladin = {
   durSec=0
  },
  {
-  id="",
+  id="paladin-turn-evil",
   name="Turn Evil",
   category="Control",
   action="hostile",
@@ -1154,7 +1154,7 @@ D.spells.paladin = {
   durSec=0
  },
  {
-  id="",
+  id="paladin-blessing-of-salvation",
   name="Blessing of Salvation",
   category="Buff",
   action="friendlyself",
@@ -1170,7 +1170,7 @@ D.spells.paladin = {
   durSec=0
  },
  {
-  id="",
+  id="paladin-blessing-of-sanctuary",
   name="Blessing of Sanctuary",
   category="Buff",
   action="friendlyself",
@@ -1191,7 +1191,7 @@ D.spells.paladin = {
   durSec=0
  },
  {
-  id="",
+  id="paladin-greater-blessing-of-salvation",
   name="Greater Blessing of Salvation",
   category="Buff",
   action="friendlyself",
@@ -1207,7 +1207,7 @@ D.spells.paladin = {
   durSec=0
  },
  {
-  id="",
+  id="paladin-greater-blessing-of-sanctuary",
   name="Greater Blessing of Sanctuary",
   category="Buff",
   action="friendlyself",
@@ -1217,6 +1217,39 @@ D.spells.paladin = {
   ranks={
    {r=1,l=60,id=25899},
    {r=2,l=70,id=27169}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="paladin-sense-undead",
+  name="Sense Undead",
+  category="Utility",
+  action="self",
+  icon=135974,
+  level=20,
+  gate="trainer",
+  ranks={
+   {r=1,l=20,id=5502}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="paladin-summon-charger",
+  name="Summon Charger",
+  category="Mount",
+  action="self",
+  icon=132226,
+  level=60,
+  gate="trainer",
+  ranks={
+   {r=1,l=60,id=23214},
+   {r=2,l=60,id=34767}
   },
   castFirst=1.5,
   castLast=1.5,

@@ -977,7 +977,7 @@ D.spells.shaman = {
   durSec=0
  },
  {
-  id="",
+  id="shaman-fire-nova-totem",
   name="Fire Nova Totem",
   category="Totem",
   action="self",
@@ -997,7 +997,7 @@ D.spells.shaman = {
   durSec=0
  },
  {
-  id="",
+  id="shaman-tranquil-air-totem",
   name="Tranquil Air Totem",
   category="Totem",
   action="self",

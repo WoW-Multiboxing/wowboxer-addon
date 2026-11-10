@@ -89,11 +89,12 @@ function tab.build(p)
     local sub = subs[o[1]]
     if sub then
       -- a small on/off button for the sub-option (Warning sound inside Follow warning)
-      c.sub = W.button(p, "Sound on", 72, 18, function()
+      local names = sub[7] or { "Sound on", "Sound off" }
+      c.sub = W.button(p, names[1], 72, 18, function()
         local v = not AU().on(sub[1]); AU().set(sub[1], v)
         ns.Core.log("info", "automation " .. sub[1] .. (v and " on" or " off")); UI.Refresh()
       end, { sub[2], sub[3] })
-      c.sub.key = sub[1]
+      c.sub.key, c.sub.names = sub[1], names
       if themed then c.sub:SetPoint("RIGHT", c.card, "RIGHT", -44, 0)
       else c.sub:SetPoint("TOPLEFT", 230 + col * 336, -34 - row * pitch) end
     end
@@ -143,7 +144,7 @@ function tab.refresh(p)
     if AU().ACCEPTS[c.key] then text = "Accepts from: " .. AU().FROM_SHORT[AU().acceptFrom(c.key)] .. " · " .. text end
     c.line:SetText(text)
     if c.own then c.own:SetShown(adv and true or false); c.own.Refresh() end
-    if c.sub then W.setLabel(c.sub, AU().on(c.sub.key) and "Sound on" or "Sound off") end
+    if c.sub then W.setLabel(c.sub, AU().on(c.sub.key) and c.sub.names[1] or c.sub.names[2]) end
     local narrow = (c.own and adv) or c.sub
     if c.card then c.line:SetWidth(narrow and 132 or 222); c.label:SetWidth(narrow and 132 or 222)
     else c.line:SetWidth(narrow and 170 or 306) end

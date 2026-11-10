@@ -1,5 +1,11 @@
 # WoWBoxer addon – backlog
 
+## The owner: TEST BUILD 1.3.0-test.5 – every spell in All spells + Auto-equip questions off (Forever, /reload each)
+1. Priest Rup: All spells shows *Divine Grace* (and every other new spell); drag it to a bar → the macro works; hover an item in the equip question → its stats.
+2. Log in on all three Forever characters, open All spells, `/reload` (saves `diag.extraSpells`: spells still missing from the data).
+3. Loot a bind-on-equip item → the question has the tick *Don't ask me again*; tick it → the next BoE stays in the bag, no question.
+4. Automation → Auto-equip card says *Ask off*; click it (*Ask on*) → it asks again for new items.
+
 ## The owner: TEST BUILD 1.3.0-test.4 – #help fixes + Extra lines + Auto greed (Forever, /reload each, one party)
 1. Mage follower: Setup → Extra lines → untick *Wand* → Update macros: no `!Shoot` left; tick it again, then click the wand icon on one card → only that macro loses it.
 2. Hunter follower: My macros → Assist macro says `/assist party<N>` where the leader really is in that window.

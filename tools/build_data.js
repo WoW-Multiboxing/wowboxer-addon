@@ -21,6 +21,7 @@ const GAMES = [
   { key: 'tbc', dir: 'TBC', title: 'TBC Anniversary', client: 'tbc', build: '2.5.6.70577' },
 ];
 const { D, E, K } = load();
+const EXTRA = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'datasrc', 'forever', 'spells-extra.json'), 'utf8'));
 
 const KEYWORDS = new Set('and break do else elseif end false for function if in local nil not or repeat return then true until while goto'.split(' '));
 function luaStr(s) {
@@ -98,6 +99,15 @@ function filesFor(g) {
     const T = D.talents[cls];
     const talents = { trees: T.trees.map(t => ({ n: t.n, f: t.f, i: t.i })), nodes: T.nodes.map(n => ({ k: n.k, n: n.n, t: n.t, r: n.r, c: n.c, m: n.m, i: n.i, f: n.f })), arrows: T.arrows };
     const spells = D.spells.filter(s => s.cls === cls).map(spellOut);
+    // Forever spells the pre-launch seed lacks (datasrc/forever/spells-extra.json, client tables; owner 10 Nov 2026)
+    for (const x of (EXTRA[cls] || [])) {
+      if (spells.some(s => s.name === x.name)) throw new Error('spells-extra: ' + cls + ' ' + x.name + ' is already in the seed');
+      const base = { id: cls + '-' + x.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''), name: x.name,
+        category: x.category, action: x.action, icon: x.icon, level: x.level, gate: x.gate, lock: x.lock, forever: x.forever,
+        ranks: x.ranks.map(([id, l], i) => ({ r: i + 1, l, id })) };
+      // seconds from the client tables (the seed's tooltip parser has no tooltips for these)
+      spells.push(Object.assign(spellOut(base), { castFirst: x.cast, castLast: x.cast, cdSec: x.cd, durSec: x.dur }));
+    }
     const guides = D.guides.filter(g => g.cls === cls).map(guideOut);
     const name = 'Class_' + cls + '.lua';
     files[name] = header(g) + guard(g) + 'local D = ns.Data\n' +
@@ -196,7 +206,7 @@ function filesForClient(g) {
       if (!tb) { problems.push(cls + ': ' + name + ' is not a spell of this game'); return; }
       const o = spellOut(base);
       o.id = cls + '-' + name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-      if (base.name === name) o.id = base.id; // keep the seed's id (extras and overrides refer to it)
+      if (base.name === name && base.id) o.id = base.id; // keep the seed's id (extras and overrides refer to it); new spells get their own
       o.name = name;
       o.ranks = tb.map(([id, l], i) => ({ r: i + 1, l: Math.max(1, l), id }));
       o.level = Math.max(1, tb[0][1]);

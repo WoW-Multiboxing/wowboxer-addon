@@ -67,11 +67,51 @@ function K.wandOf(m)
     ranks = { { r = 1, id = 5019 } } }
   return wandCache[m.cls]
 end
---- Spells an own macro can use: the class spells plus Shoot for wand classes.
+--- Spells of the live spellbook that the data does not have (owner, 10 Nov 2026: "All spells must contain EVERY
+--- spell"; the Forever seed predates launch). Only for the character that is logged in (its book is the one read).
+--- Each is a spell like the data's: cast by name (the client picks the highest rank), plain on the bar (the spell
+--- itself, so the game's own targeting), fromBook = true. future = the book lists it for a later level.
+--- Returns {} on other members, in tests without a book, or when everything is in the data.
+local bookMemo = setmetatable({}, { __mode = "k" })
+function K.bookSpells(m)
+  local cdb = ns.Core and ns.Core.cdb
+  if not (m and cdb and m.id ~= nil and m.id == cdb.memberId) then return {} end
+  local items = ns.Compat.spellbookItems and ns.Compat.spellbookItems()
+  if not items or #items == 0 then return {} end
+  local per = bookMemo[items]
+  if not per then per = {}; bookMemo[items] = per end
+  local key = tostring(m.cls) .. ":" .. tostring(m.race) .. ":" .. tostring(m.level)
+  if per[key] then return per[key] end
+  local have = {}
+  for _, s in ipairs(D().spells[m.cls] or {}) do have[s.name] = true end -- every data spell, also other races' (no doubles)
+  for _, s in ipairs(K.racialsOf(m)) do have[s.name] = true end
+  local w = K.wandOf(m)
+  if w then have[w.name] = true end
+  local out, byName = {}, {}
+  for _, it in ipairs(items) do
+    if not have[it.name] then
+      local s = byName[it.name]
+      if not s then
+        local lvl = it.future and (it.level or false) or math.min(m.level or 1, it.level or 1)
+        s = { id = "book-" .. tostring(it.id), cls = m.cls, name = it.name, category = "Utility", action = "self", icon = it.icon,
+          level = lvl or 999, gate = it.future and "book" or "trainer", fromBook = true, future = it.future, ranks = {} }
+        byName[it.name] = s
+        out[#out + 1] = s
+      elseif s.future and not it.future then -- a rank known now: the spell is learned
+        s.future, s.gate, s.level = nil, "trainer", math.min(m.level or 1, s.level)
+      end
+      s.ranks[#s.ranks + 1] = { r = #s.ranks + 1, id = it.id, l = it.future and it.level or nil }
+    end
+  end
+  per[key] = out
+  return out
+end
+--- Spells an own macro can use: the class spells plus Shoot for wand classes, plus the book's extra spells.
 function K.customSpellsOf(m)
   local out = K.spellsOf(m)
   local w = K.wandOf(m)
   if w then out[#out + 1] = w end
+  for _, s in ipairs(K.bookSpells(m)) do out[#out + 1] = s end
   return out
 end
 

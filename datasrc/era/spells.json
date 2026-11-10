@@ -224,6 +224,14 @@
    "Sanctity Aura": {
     "action": "self",
     "category": "Buff"
+   },
+   "Sense Undead": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Summon Charger": {
+    "action": "self",
+    "category": "Mount"
    }
   },
   "hunter": {
@@ -307,6 +315,66 @@
    "Curse of Idiocy": {
     "action": "petattack",
     "category": "Debuff"
+   },
+   "Create Healthstone (Minor)": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Create Healthstone (Lesser)": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Create Healthstone (Greater)": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Create Healthstone (Major)": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Create Soulstone (Minor)": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Create Soulstone (Lesser)": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Create Soulstone (Greater)": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Create Soulstone (Major)": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Create Firestone (Lesser)": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Create Firestone (Greater)": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Create Firestone (Major)": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Create Spellstone (Greater)": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Create Spellstone (Major)": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Detect Lesser Invisibility": {
+    "action": "friendlyself",
+    "category": "Buff"
+   },
+   "Detect Greater Invisibility": {
+    "action": "friendlyself",
+    "category": "Buff"
    }
   },
   "druid": {
@@ -318,6 +386,74 @@
     "action": "self",
     "category": "Buff",
     "form": "Cat Form"
+   }
+  },
+  "mage": {
+   "Detect Magic": {
+    "action": "hostile",
+    "category": "Utility"
+   }
+  },
+  "rogue": {
+   "Instant Poison II": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Instant Poison III": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Instant Poison IV": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Instant Poison V": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Instant Poison VI": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Deadly Poison II": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Deadly Poison III": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Deadly Poison IV": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Deadly Poison V": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Crippling Poison II": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Mind-numbing Poison II": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Mind-numbing Poison III": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Wound Poison II": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Wound Poison III": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Wound Poison IV": {
+    "action": "self",
+    "category": "Utility"
    }
   }
  }

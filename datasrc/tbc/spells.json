@@ -336,6 +336,14 @@
    "Greater Blessing of Sanctuary": {
     "action": "friendlyself",
     "category": "Buff"
+   },
+   "Sense Undead": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Summon Charger": {
+    "action": "self",
+    "category": "Mount"
    }
   },
   "hunter": {
@@ -392,6 +400,86 @@
    "Cloak of Shadows": {
     "action": "self",
     "category": "Defense"
+   },
+   "Instant Poison II": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Instant Poison III": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Instant Poison IV": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Instant Poison V": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Instant Poison VI": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Instant Poison VII": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Deadly Poison II": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Deadly Poison III": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Deadly Poison IV": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Deadly Poison V": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Deadly Poison VI": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Deadly Poison VII": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Crippling Poison II": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Mind-numbing Poison II": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Mind-numbing Poison III": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Wound Poison II": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Wound Poison III": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Wound Poison IV": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Wound Poison V": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Anesthetic Poison": {
+    "action": "self",
+    "category": "Utility"
    }
   },
   "priest": {
@@ -545,6 +633,10 @@
    "Tranquil Air Totem": {
     "action": "self",
     "category": "Totem"
+   },
+   "Totemic Call": {
+    "action": "self",
+    "category": "Totem"
    }
   },
   "mage": {
@@ -581,6 +673,70 @@
     "category": "Utility"
    },
    "Ritual of Refreshment": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Teleport: Exodar": {
+    "action": "self",
+    "category": "Utility",
+    "lock": {
+     "faction": "alliance"
+    }
+   },
+   "Portal: Exodar": {
+    "action": "self",
+    "category": "Utility",
+    "lock": {
+     "faction": "alliance"
+    }
+   },
+   "Teleport: Theramore": {
+    "action": "self",
+    "category": "Utility",
+    "lock": {
+     "faction": "alliance"
+    }
+   },
+   "Portal: Theramore": {
+    "action": "self",
+    "category": "Utility",
+    "lock": {
+     "faction": "alliance"
+    }
+   },
+   "Teleport: Silvermoon": {
+    "action": "self",
+    "category": "Utility",
+    "lock": {
+     "faction": "horde"
+    }
+   },
+   "Portal: Silvermoon": {
+    "action": "self",
+    "category": "Utility",
+    "lock": {
+     "faction": "horde"
+    }
+   },
+   "Teleport: Stonard": {
+    "action": "self",
+    "category": "Utility",
+    "lock": {
+     "faction": "horde"
+    }
+   },
+   "Portal: Stonard": {
+    "action": "self",
+    "category": "Utility",
+    "lock": {
+     "faction": "horde"
+    }
+   },
+   "Teleport: Shattrath": {
+    "action": "self",
+    "category": "Utility"
+   },
+   "Portal: Shattrath": {
     "action": "self",
     "category": "Utility"
    }

@@ -831,7 +831,7 @@ D.spells.rogue = {
   durSec=0
  },
  {
-  id="",
+  id="rogue-shiv",
   name="Shiv",
   category="Damage",
   action="melee",
@@ -847,7 +847,7 @@ D.spells.rogue = {
   durSec=0
  },
  {
-  id="",
+  id="rogue-envenom",
   name="Envenom",
   category="Damage",
   action="melee",
@@ -865,7 +865,7 @@ D.spells.rogue = {
   durSec=0
  },
  {
-  id="",
+  id="rogue-deadly-throw",
   name="Deadly Throw",
   category="Damage",
   action="ranged",
@@ -881,7 +881,7 @@ D.spells.rogue = {
   durSec=0
  },
  {
-  id="",
+  id="rogue-shadowstep",
   name="Shadowstep",
   category="Utility",
   action="hostile",
@@ -898,7 +898,7 @@ D.spells.rogue = {
   durSec=0
  },
  {
-  id="",
+  id="rogue-cloak-of-shadows",
   name="Cloak of Shadows",
   category="Defense",
   action="self",
@@ -907,6 +907,326 @@ D.spells.rogue = {
   gate="trainer",
   ranks={
    {r=1,l=66,id=31224}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="rogue-instant-poison-ii",
+  name="Instant Poison II",
+  category="Utility",
+  action="self",
+  icon=132273,
+  level=28,
+  gate="trainer",
+  ranks={
+   {r=1,l=28,id=8687}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="rogue-instant-poison-iii",
+  name="Instant Poison III",
+  category="Utility",
+  action="self",
+  icon=132273,
+  level=36,
+  gate="trainer",
+  ranks={
+   {r=1,l=36,id=8691}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="rogue-instant-poison-iv",
+  name="Instant Poison IV",
+  category="Utility",
+  action="self",
+  icon=132273,
+  level=44,
+  gate="trainer",
+  ranks={
+   {r=1,l=44,id=11341}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="rogue-instant-poison-v",
+  name="Instant Poison V",
+  category="Utility",
+  action="self",
+  icon=132273,
+  level=52,
+  gate="trainer",
+  ranks={
+   {r=1,l=52,id=11342}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="rogue-instant-poison-vi",
+  name="Instant Poison VI",
+  category="Utility",
+  action="self",
+  icon=132273,
+  level=60,
+  gate="trainer",
+  ranks={
+   {r=1,l=60,id=11343}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="rogue-instant-poison-vii",
+  name="Instant Poison VII",
+  category="Utility",
+  action="self",
+  icon=132273,
+  level=68,
+  gate="trainer",
+  ranks={
+   {r=1,l=68,id=26892}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="rogue-deadly-poison-ii",
+  name="Deadly Poison II",
+  category="Utility",
+  action="self",
+  icon=132290,
+  level=38,
+  gate="trainer",
+  ranks={
+   {r=1,l=38,id=2837}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="rogue-deadly-poison-iii",
+  name="Deadly Poison III",
+  category="Utility",
+  action="self",
+  icon=132290,
+  level=46,
+  gate="trainer",
+  ranks={
+   {r=1,l=46,id=11357}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="rogue-deadly-poison-iv",
+  name="Deadly Poison IV",
+  category="Utility",
+  action="self",
+  icon=132290,
+  level=54,
+  gate="trainer",
+  ranks={
+   {r=1,l=54,id=11358}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="rogue-deadly-poison-v",
+  name="Deadly Poison V",
+  category="Utility",
+  action="self",
+  icon=132290,
+  level=60,
+  gate="trainer",
+  ranks={
+   {r=1,l=60,id=25347}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="rogue-deadly-poison-vi",
+  name="Deadly Poison VI",
+  category="Utility",
+  action="self",
+  icon=132290,
+  level=62,
+  gate="trainer",
+  ranks={
+   {r=1,l=62,id=26969}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="rogue-deadly-poison-vii",
+  name="Deadly Poison VII",
+  category="Utility",
+  action="self",
+  icon=132290,
+  level=70,
+  gate="trainer",
+  ranks={
+   {r=1,l=70,id=27282}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="rogue-crippling-poison-ii",
+  name="Crippling Poison II",
+  category="Utility",
+  action="self",
+  icon=132274,
+  level=50,
+  gate="trainer",
+  ranks={
+   {r=1,l=50,id=3421}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="rogue-mind-numbing-poison-ii",
+  name="Mind-numbing Poison II",
+  category="Utility",
+  action="self",
+  icon=136066,
+  level=38,
+  gate="trainer",
+  ranks={
+   {r=1,l=38,id=8694}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="rogue-mind-numbing-poison-iii",
+  name="Mind-numbing Poison III",
+  category="Utility",
+  action="self",
+  icon=136066,
+  level=52,
+  gate="trainer",
+  ranks={
+   {r=1,l=52,id=11400}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="rogue-wound-poison-ii",
+  name="Wound Poison II",
+  category="Utility",
+  action="self",
+  icon=134197,
+  level=40,
+  gate="trainer",
+  ranks={
+   {r=1,l=40,id=13228}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="rogue-wound-poison-iii",
+  name="Wound Poison III",
+  category="Utility",
+  action="self",
+  icon=134197,
+  level=48,
+  gate="trainer",
+  ranks={
+   {r=1,l=48,id=13229}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="rogue-wound-poison-iv",
+  name="Wound Poison IV",
+  category="Utility",
+  action="self",
+  icon=134197,
+  level=56,
+  gate="trainer",
+  ranks={
+   {r=1,l=56,id=13230}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="rogue-wound-poison-v",
+  name="Wound Poison V",
+  category="Utility",
+  action="self",
+  icon=134197,
+  level=64,
+  gate="trainer",
+  ranks={
+   {r=1,l=64,id=27283}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="rogue-anesthetic-poison",
+  name="Anesthetic Poison",
+  category="Utility",
+  action="self",
+  icon=136093,
+  level=68,
+  gate="trainer",
+  ranks={
+   {r=1,l=68,id=26786}
   },
   castFirst=1.5,
   castLast=1.5,

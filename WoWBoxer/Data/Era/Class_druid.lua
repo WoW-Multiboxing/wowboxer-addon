@@ -1132,7 +1132,7 @@ D.spells.druid = {
   durSec=0
  },
  {
-  id="",
+  id="druid-faerie-fire-feral",
   name="Faerie Fire (Feral)",
   category="Debuff",
   action="ranged",
@@ -1152,7 +1152,7 @@ D.spells.druid = {
   durSec=0
  },
  {
-  id="",
+  id="druid-tiger-s-fury",
   name="Tiger's Fury",
   category="Buff",
   action="self",

@@ -998,7 +998,7 @@ D.spells.priest = {
   durSec=0
  },
  {
-  id="",
+  id="priest-circle-of-healing",
   name="Circle of Healing",
   category="Heal",
   action="friendlymain",
@@ -1019,7 +1019,7 @@ D.spells.priest = {
   durSec=0
  },
  {
-  id="",
+  id="priest-vampiric-touch",
   name="Vampiric Touch",
   category="Damage",
   action="ranged",
@@ -1039,7 +1039,7 @@ D.spells.priest = {
   durSec=0
  },
  {
-  id="",
+  id="priest-pain-suppression",
   name="Pain Suppression",
   category="Defense",
   action="friendlymain",
@@ -1057,7 +1057,7 @@ D.spells.priest = {
   durSec=0
  },
  {
-  id="",
+  id="priest-mass-dispel",
   name="Mass Dispel",
   category="Utility",
   action="ground",
@@ -1073,7 +1073,7 @@ D.spells.priest = {
   durSec=0
  },
  {
-  id="",
+  id="priest-shadowfiend",
   name="Shadowfiend",
   category="Utility",
   action="ranged",
@@ -1089,7 +1089,7 @@ D.spells.priest = {
   durSec=0
  },
  {
-  id="",
+  id="priest-chastise",
   name="Chastise",
   category="Damage",
   action="ranged",
@@ -1111,7 +1111,7 @@ D.spells.priest = {
   durSec=0
  },
  {
-  id="",
+  id="priest-starshards",
   name="Starshards",
   category="Damage",
   action="ranged",
@@ -1135,7 +1135,7 @@ D.spells.priest = {
   durSec=0
  },
  {
-  id="",
+  id="priest-hex-of-weakness",
   name="Hex of Weakness",
   category="Debuff",
   action="ranged",
@@ -1158,7 +1158,7 @@ D.spells.priest = {
   durSec=0
  },
  {
-  id="",
+  id="priest-desperate-prayer",
   name="Desperate Prayer",
   category="Heal",
   action="self",
@@ -1182,7 +1182,7 @@ D.spells.priest = {
   durSec=0
  },
  {
-  id="",
+  id="priest-consume-magic",
   name="Consume Magic",
   category="Utility",
   action="self",
@@ -1199,7 +1199,7 @@ D.spells.priest = {
   durSec=0
  },
  {
-  id="",
+  id="priest-symbol-of-hope",
   name="Symbol of Hope",
   category="Utility",
   action="self",
@@ -1216,7 +1216,7 @@ D.spells.priest = {
   durSec=0
  },
  {
-  id="",
+  id="priest-elune-s-grace",
   name="Elune's Grace",
   category="Defense",
   action="self",
@@ -1233,7 +1233,7 @@ D.spells.priest = {
   durSec=0
  },
  {
-  id="",
+  id="priest-feedback",
   name="Feedback",
   category="Defense",
   action="self",
@@ -1255,7 +1255,7 @@ D.spells.priest = {
   durSec=0
  },
  {
-  id="",
+  id="priest-shadowguard",
   name="Shadowguard",
   category="Buff",
   action="self",

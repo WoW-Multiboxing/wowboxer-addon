@@ -1180,7 +1180,7 @@ D.spells.mage = {
   durSec=0
  },
  {
-  id="",
+  id="mage-molten-armor",
   name="Molten Armor",
   category="Buff",
   action="self",
@@ -1196,7 +1196,7 @@ D.spells.mage = {
   durSec=0
  },
  {
-  id="",
+  id="mage-spellsteal",
   name="Spellsteal",
   category="Utility",
   action="hostile",
@@ -1212,7 +1212,7 @@ D.spells.mage = {
   durSec=0
  },
  {
-  id="",
+  id="mage-invisibility",
   name="Invisibility",
   category="Defense",
   action="self",
@@ -1228,7 +1228,7 @@ D.spells.mage = {
   durSec=0
  },
  {
-  id="",
+  id="mage-dragon-s-breath",
   name="Dragon's Breath",
   category="Damage",
   action="self",
@@ -1248,7 +1248,7 @@ D.spells.mage = {
   durSec=0
  },
  {
-  id="",
+  id="mage-slow",
   name="Slow",
   category="Control",
   action="hostile",
@@ -1265,7 +1265,7 @@ D.spells.mage = {
   durSec=0
  },
  {
-  id="",
+  id="mage-icy-veins",
   name="Icy Veins",
   category="Buff",
   action="self",
@@ -1282,7 +1282,7 @@ D.spells.mage = {
   durSec=0
  },
  {
-  id="",
+  id="mage-summon-water-elemental",
   name="Summon Water Elemental",
   category="Pet",
   action="self",
@@ -1299,7 +1299,7 @@ D.spells.mage = {
   durSec=0
  },
  {
-  id="",
+  id="mage-conjure-mana-emerald",
   name="Conjure Mana Emerald",
   category="Utility",
   action="self",
@@ -1315,7 +1315,7 @@ D.spells.mage = {
   durSec=0
  },
  {
-  id="",
+  id="mage-ritual-of-refreshment",
   name="Ritual of Refreshment",
   category="Utility",
   action="self",
@@ -1324,6 +1324,176 @@ D.spells.mage = {
   gate="trainer",
   ranks={
    {r=1,l=70,id=43987}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="mage-teleport-exodar",
+  name="Teleport: Exodar",
+  category="Utility",
+  action="self",
+  icon=135756,
+  level=20,
+  gate="trainer",
+  lock={faction="alliance"},
+  ranks={
+   {r=1,l=20,id=32271}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="mage-portal-exodar",
+  name="Portal: Exodar",
+  category="Utility",
+  action="self",
+  icon=135742,
+  level=40,
+  gate="trainer",
+  lock={faction="alliance"},
+  ranks={
+   {r=1,l=40,id=32266}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="mage-teleport-theramore",
+  name="Teleport: Theramore",
+  category="Utility",
+  action="self",
+  icon=135764,
+  level=35,
+  gate="trainer",
+  lock={faction="alliance"},
+  ranks={
+   {r=1,l=35,id=49359}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="mage-portal-theramore",
+  name="Portal: Theramore",
+  category="Utility",
+  action="self",
+  icon=135749,
+  level=35,
+  gate="trainer",
+  lock={faction="alliance"},
+  ranks={
+   {r=1,l=35,id=49360}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="mage-teleport-silvermoon",
+  name="Teleport: Silvermoon",
+  category="Utility",
+  action="self",
+  icon=135761,
+  level=20,
+  gate="trainer",
+  lock={faction="horde"},
+  ranks={
+   {r=1,l=20,id=32272}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="mage-portal-silvermoon",
+  name="Portal: Silvermoon",
+  category="Utility",
+  action="self",
+  icon=135746,
+  level=40,
+  gate="trainer",
+  lock={faction="horde"},
+  ranks={
+   {r=1,l=40,id=32267}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="mage-teleport-stonard",
+  name="Teleport: Stonard",
+  category="Utility",
+  action="self",
+  icon=135762,
+  level=35,
+  gate="trainer",
+  lock={faction="horde"},
+  ranks={
+   {r=1,l=35,id=49358}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="mage-portal-stonard",
+  name="Portal: Stonard",
+  category="Utility",
+  action="self",
+  icon=135747,
+  level=35,
+  gate="trainer",
+  lock={faction="horde"},
+  ranks={
+   {r=1,l=35,id=49361}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="mage-teleport-shattrath",
+  name="Teleport: Shattrath",
+  category="Utility",
+  action="self",
+  icon=135760,
+  level=60,
+  gate="trainer",
+  ranks={
+   {r=1,l=60,id=33690},
+   {r=2,l=60,id=35715}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="mage-portal-shattrath",
+  name="Portal: Shattrath",
+  category="Utility",
+  action="self",
+  icon=135745,
+  level=65,
+  gate="trainer",
+  ranks={
+   {r=1,l=65,id=33691},
+   {r=2,l=65,id=35717}
   },
   castFirst=1.5,
   castLast=1.5,

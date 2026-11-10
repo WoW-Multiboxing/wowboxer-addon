@@ -971,6 +971,44 @@ D.spells.rogue = {
   castLast=3,
   cdSec=0,
   durSec=0
+ },
+ {
+  id="rogue-shank",
+  name="Shank",
+  category="Damage",
+  action="melee",
+  icon=132323,
+  level=24,
+  gate="trainer",
+  forever="new",
+  ranks={
+   {r=1,l=24,id=1329283},
+   {r=2,l=44,id=1329549}
+  },
+  castFirst=0,
+  castLast=0,
+  cdSec=10,
+  durSec=0
+ },
+ {
+  id="rogue-death-mark",
+  name="Death Mark",
+  category="Damage",
+  action="melee",
+  icon=132094,
+  level=40,
+  gate="talent",
+  forever="new",
+  ranks={
+   {r=1,l=40,id=1316709},
+   {r=2,l=48,id=1325756},
+   {r=3,l=56,id=1325757},
+   {r=4,l=60,id=1325758}
+  },
+  castFirst=0,
+  castLast=0,
+  cdSec=10,
+  durSec=6
  }
 }
 D.guides.rogue = {

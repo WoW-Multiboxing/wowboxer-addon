@@ -894,7 +894,7 @@ D.spells.priest = {
   durSec=0
  },
  {
-  id="",
+  id="priest-starshards",
   name="Starshards",
   category="Damage",
   action="ranged",
@@ -917,7 +917,7 @@ D.spells.priest = {
   durSec=0
  },
  {
-  id="",
+  id="priest-hex-of-weakness",
   name="Hex of Weakness",
   category="Debuff",
   action="ranged",
@@ -939,7 +939,7 @@ D.spells.priest = {
   durSec=0
  },
  {
-  id="",
+  id="priest-desperate-prayer",
   name="Desperate Prayer",
   category="Heal",
   action="self",
@@ -962,7 +962,7 @@ D.spells.priest = {
   durSec=0
  },
  {
-  id="",
+  id="priest-elune-s-grace",
   name="Elune's Grace",
   category="Defense",
   action="self",
@@ -983,7 +983,7 @@ D.spells.priest = {
   durSec=0
  },
  {
-  id="",
+  id="priest-feedback",
   name="Feedback",
   category="Defense",
   action="self",
@@ -1004,7 +1004,7 @@ D.spells.priest = {
   durSec=0
  },
  {
-  id="",
+  id="priest-shadowguard",
   name="Shadowguard",
   category="Buff",
   action="self",

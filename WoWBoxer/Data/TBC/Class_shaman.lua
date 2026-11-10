@@ -1051,7 +1051,7 @@ D.spells.shaman = {
   durSec=0
  },
  {
-  id="",
+  id="shaman-earth-shield",
   name="Earth Shield",
   category="Heal",
   action="friendlymain",
@@ -1071,7 +1071,7 @@ D.spells.shaman = {
   durSec=0
  },
  {
-  id="",
+  id="shaman-shamanistic-rage",
   name="Shamanistic Rage",
   category="Defense",
   action="self",
@@ -1089,7 +1089,7 @@ D.spells.shaman = {
   durSec=0
  },
  {
-  id="",
+  id="shaman-bloodlust",
   name="Bloodlust",
   category="Buff",
   action="self",
@@ -1106,7 +1106,7 @@ D.spells.shaman = {
   durSec=0
  },
  {
-  id="",
+  id="shaman-heroism",
   name="Heroism",
   category="Buff",
   action="self",
@@ -1123,7 +1123,7 @@ D.spells.shaman = {
   durSec=0
  },
  {
-  id="",
+  id="shaman-totem-of-wrath",
   name="Totem of Wrath",
   category="Totem",
   action="self",
@@ -1141,7 +1141,7 @@ D.spells.shaman = {
   durSec=0
  },
  {
-  id="",
+  id="shaman-wrath-of-air-totem",
   name="Wrath of Air Totem",
   category="Totem",
   action="self",
@@ -1157,7 +1157,7 @@ D.spells.shaman = {
   durSec=0
  },
  {
-  id="",
+  id="shaman-earth-elemental-totem",
   name="Earth Elemental Totem",
   category="Totem",
   action="self",
@@ -1173,7 +1173,7 @@ D.spells.shaman = {
   durSec=0
  },
  {
-  id="",
+  id="shaman-fire-elemental-totem",
   name="Fire Elemental Totem",
   category="Totem",
   action="self",
@@ -1189,7 +1189,7 @@ D.spells.shaman = {
   durSec=0
  },
  {
-  id="",
+  id="shaman-fire-nova-totem",
   name="Fire Nova Totem",
   category="Totem",
   action="self",
@@ -1211,7 +1211,7 @@ D.spells.shaman = {
   durSec=0
  },
  {
-  id="",
+  id="shaman-tranquil-air-totem",
   name="Tranquil Air Totem",
   category="Totem",
   action="self",
@@ -1220,6 +1220,22 @@ D.spells.shaman = {
   gate="trainer",
   ranks={
    {r=1,l=50,id=25908}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="shaman-totemic-call",
+  name="Totemic Call",
+  category="Totem",
+  action="self",
+  icon=136233,
+  level=30,
+  gate="trainer",
+  ranks={
+   {r=1,l=30,id=36936}
   },
   castFirst=1.5,
   castLast=1.5,

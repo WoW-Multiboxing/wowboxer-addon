@@ -1147,6 +1147,23 @@ D.spells.paladin = {
   castLast=1.5,
   cdSec=0,
   durSec=0
+ },
+ {
+  id="paladin-oath-of-light",
+  name="Oath of Light",
+  category="Buff",
+  action="friendlymain",
+  icon=135909,
+  level=25,
+  gate="talent",
+  forever="new",
+  ranks={
+   {r=1,l=25,id=1328548}
+  },
+  castFirst=0,
+  castLast=0,
+  cdSec=0,
+  durSec=300
  }
 }
 D.guides.paladin = {

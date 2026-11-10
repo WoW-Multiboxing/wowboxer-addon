@@ -1114,7 +1114,7 @@ D.spells.warlock = {
   durSec=0
  },
  {
-  id="",
+  id="warlock-unstable-affliction",
   name="Unstable Affliction",
   category="Damage",
   action="petattack",
@@ -1134,7 +1134,7 @@ D.spells.warlock = {
   durSec=0
  },
  {
-  id="",
+  id="warlock-seed-of-corruption",
   name="Seed of Corruption",
   category="Damage",
   action="petattack",
@@ -1151,7 +1151,7 @@ D.spells.warlock = {
   durSec=0
  },
  {
-  id="",
+  id="warlock-shadowfury",
   name="Shadowfury",
   category="Control",
   action="ground",
@@ -1170,7 +1170,7 @@ D.spells.warlock = {
   durSec=0
  },
  {
-  id="",
+  id="warlock-fel-armor",
   name="Fel Armor",
   category="Buff",
   action="self",
@@ -1187,7 +1187,7 @@ D.spells.warlock = {
   durSec=0
  },
  {
-  id="",
+  id="warlock-summon-felguard",
   name="Summon Felguard",
   category="Pet",
   action="self",
@@ -1204,7 +1204,7 @@ D.spells.warlock = {
   durSec=0
  },
  {
-  id="",
+  id="warlock-soulshatter",
   name="Soulshatter",
   category="Utility",
   action="self",
@@ -1220,7 +1220,7 @@ D.spells.warlock = {
   durSec=0
  },
  {
-  id="",
+  id="warlock-ritual-of-souls",
   name="Ritual of Souls",
   category="Utility",
   action="self",

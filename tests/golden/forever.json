@@ -41401,6 +41401,12 @@
        "plain":true
       },
       {
+       "icon":132323,
+       "id":"rogue-shank",
+       "name":"WBX Shank",
+       "pending":24
+      },
+      {
        "icon":"spell_nature_sleep",
        "id":"racial-human-perception",
        "name":"WBX Perception",
@@ -41667,6 +41673,12 @@
        "plain":true
       },
       {
+       "icon":132323,
+       "id":"rogue-shank",
+       "name":"WBX Shank",
+       "pending":24
+      },
+      {
        "icon":"spell_nature_sleep",
        "id":"racial-human-perception",
        "name":"WBX Perception",
@@ -41930,6 +41942,12 @@
        "name":"WBX Sebacious Po",
        "pending":60,
        "plain":true
+      },
+      {
+       "icon":132323,
+       "id":"rogue-shank",
+       "name":"WBX Shank",
+       "pending":24
       },
       {
        "icon":"spell_nature_sleep",
@@ -42196,6 +42214,12 @@
        "plain":true
       },
       {
+       "icon":132323,
+       "id":"rogue-shank",
+       "name":"WBX Shank",
+       "pending":24
+      },
+      {
        "icon":"spell_nature_sleep",
        "id":"racial-human-perception",
        "name":"WBX Perception",
@@ -42455,6 +42479,12 @@
        "name":"WBX Sebacious Po",
        "pending":60,
        "plain":true
+      },
+      {
+       "icon":132323,
+       "id":"rogue-shank",
+       "name":"WBX Shank",
+       "pending":24
       },
       {
        "icon":"spell_nature_sleep",
@@ -42717,6 +42747,12 @@
        "plain":true
       },
       {
+       "icon":132323,
+       "id":"rogue-shank",
+       "name":"WBX Shank",
+       "pending":24
+      },
+      {
        "icon":"spell_nature_sleep",
        "id":"racial-human-perception",
        "name":"WBX Perception",
@@ -42973,6 +43009,12 @@
        "name":"WBX Sebacious Po",
        "pending":60,
        "plain":true
+      },
+      {
+       "icon":132323,
+       "id":"rogue-shank",
+       "name":"WBX Shank",
+       "pending":24
       },
       {
        "icon":"spell_nature_sleep",
@@ -43232,6 +43274,12 @@
        "plain":true
       },
       {
+       "icon":132323,
+       "id":"rogue-shank",
+       "name":"WBX Shank",
+       "pending":24
+      },
+      {
        "icon":"spell_nature_sleep",
        "id":"racial-human-perception",
        "name":"WBX Perception",
@@ -43488,6 +43536,12 @@
        "plain":true
       },
       {
+       "icon":132323,
+       "id":"rogue-shank",
+       "name":"WBX Shank",
+       "pending":24
+      },
+      {
        "icon":"spell_nature_sleep",
        "id":"racial-human-perception",
        "name":"WBX Perception",
@@ -43739,6 +43793,12 @@
        "plain":true
       },
       {
+       "icon":132323,
+       "id":"rogue-shank",
+       "name":"WBX Shank",
+       "pending":24
+      },
+      {
        "icon":"spell_nature_sleep",
        "id":"racial-human-perception",
        "name":"WBX Perception",
@@ -43988,6 +44048,12 @@
        "plain":true
       },
       {
+       "icon":132323,
+       "id":"rogue-shank",
+       "name":"WBX Shank",
+       "pending":24
+      },
+      {
        "icon":"spell_nature_sleep",
        "id":"racial-human-perception",
        "name":"WBX Perception",
@@ -44234,6 +44300,11 @@
        "name":"WBX Sebacious Po",
        "pending":60,
        "plain":true
+      },
+      {
+       "icon":134400,
+       "id":"rogue-shank",
+       "name":"WBX Shank"
       },
       {
        "icon":"spell_nature_sleep",
@@ -44483,6 +44554,11 @@
        "plain":true
       },
       {
+       "icon":134400,
+       "id":"rogue-shank",
+       "name":"WBX Shank"
+      },
+      {
        "icon":"spell_nature_sleep",
        "id":"racial-human-perception",
        "name":"WBX Perception",
@@ -44724,6 +44800,11 @@
        "name":"WBX Sebacious Po",
        "pending":60,
        "plain":true
+      },
+      {
+       "icon":134400,
+       "id":"rogue-shank",
+       "name":"WBX Shank"
       },
       {
        "icon":"spell_nature_sleep",
@@ -44968,6 +45049,11 @@
        "plain":true
       },
       {
+       "icon":134400,
+       "id":"rogue-shank",
+       "name":"WBX Shank"
+      },
+      {
        "icon":"spell_nature_sleep",
        "id":"racial-human-perception",
        "name":"WBX Perception",
@@ -45206,6 +45292,11 @@
        "name":"WBX Sebacious Po",
        "pending":60,
        "plain":true
+      },
+      {
+       "icon":134400,
+       "id":"rogue-shank",
+       "name":"WBX Shank"
       },
       {
        "icon":"spell_nature_sleep",
@@ -45447,6 +45538,11 @@
        "plain":true
       },
       {
+       "icon":134400,
+       "id":"rogue-shank",
+       "name":"WBX Shank"
+      },
+      {
        "icon":"spell_nature_sleep",
        "id":"racial-human-perception",
        "name":"WBX Perception",
@@ -45683,6 +45779,11 @@
        "name":"WBX Sebacious Po",
        "pending":60,
        "plain":true
+      },
+      {
+       "icon":134400,
+       "id":"rogue-shank",
+       "name":"WBX Shank"
       },
       {
        "icon":"spell_nature_sleep",
@@ -45922,6 +46023,11 @@
        "plain":true
       },
       {
+       "icon":134400,
+       "id":"rogue-shank",
+       "name":"WBX Shank"
+      },
+      {
        "icon":"spell_nature_sleep",
        "id":"racial-human-perception",
        "name":"WBX Perception",
@@ -46154,6 +46260,11 @@
        "id":"rogue-sebacious-poison",
        "name":"WBX Sebacious Po",
        "plain":true
+      },
+      {
+       "icon":134400,
+       "id":"rogue-shank",
+       "name":"WBX Shank"
       },
       {
        "icon":"spell_nature_sleep",
@@ -46402,6 +46513,19 @@
        "plain":true
       },
       {
+       "icon":1022949,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace",
+       "pending":10
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
+       "pending":20,
+       "plain":true
+      },
+      {
        "icon":"spell_nature_sleep",
        "id":"racial-human-perception",
        "name":"WBX Perception",
@@ -46637,6 +46761,19 @@
        "id":"priest-prayer-of-spirit",
        "name":"WBX Prayer of Sp",
        "pending":60,
+       "plain":true
+      },
+      {
+       "icon":1022949,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace",
+       "pending":10
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
+       "pending":20,
        "plain":true
       },
       {
@@ -46877,6 +47014,19 @@
        "plain":true
       },
       {
+       "icon":1022949,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace",
+       "pending":10
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
+       "pending":20,
+       "plain":true
+      },
+      {
        "icon":"spell_nature_sleep",
        "id":"racial-human-perception",
        "name":"WBX Perception",
@@ -47109,6 +47259,19 @@
        "id":"priest-prayer-of-spirit",
        "name":"WBX Prayer of Sp",
        "pending":60,
+       "plain":true
+      },
+      {
+       "icon":1022949,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace",
+       "pending":10
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
+       "pending":20,
        "plain":true
       },
       {
@@ -47345,6 +47508,18 @@
        "plain":true
       },
       {
+       "icon":134400,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace"
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
+       "pending":20,
+       "plain":true
+      },
+      {
        "icon":"spell_nature_sleep",
        "id":"racial-human-perception",
        "name":"WBX Perception",
@@ -47574,6 +47749,18 @@
        "id":"priest-prayer-of-spirit",
        "name":"WBX Prayer of Sp",
        "pending":60,
+       "plain":true
+      },
+      {
+       "icon":134400,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace"
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
+       "pending":20,
        "plain":true
       },
       {
@@ -47807,6 +47994,18 @@
        "plain":true
       },
       {
+       "icon":134400,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace"
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
+       "pending":20,
+       "plain":true
+      },
+      {
        "icon":"spell_nature_sleep",
        "id":"racial-human-perception",
        "name":"WBX Perception",
@@ -48033,6 +48232,18 @@
        "id":"priest-prayer-of-spirit",
        "name":"WBX Prayer of Sp",
        "pending":60,
+       "plain":true
+      },
+      {
+       "icon":134400,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace"
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
+       "pending":20,
        "plain":true
       },
       {
@@ -48264,6 +48475,18 @@
        "plain":true
       },
       {
+       "icon":134400,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace"
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
+       "pending":20,
+       "plain":true
+      },
+      {
        "icon":"spell_nature_sleep",
        "id":"racial-human-perception",
        "name":"WBX Perception",
@@ -48483,6 +48706,17 @@
        "id":"priest-prayer-of-spirit",
        "name":"WBX Prayer of Sp",
        "pending":60,
+       "plain":true
+      },
+      {
+       "icon":134400,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace"
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
        "plain":true
       },
       {
@@ -48707,6 +48941,17 @@
        "plain":true
       },
       {
+       "icon":134400,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace"
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
+       "plain":true
+      },
+      {
        "icon":"spell_nature_sleep",
        "id":"racial-human-perception",
        "name":"WBX Perception",
@@ -48924,6 +49169,17 @@
        "id":"priest-prayer-of-spirit",
        "name":"WBX Prayer of Sp",
        "pending":60,
+       "plain":true
+      },
+      {
+       "icon":134400,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace"
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
        "plain":true
       },
       {
@@ -49146,6 +49402,17 @@
        "plain":true
       },
       {
+       "icon":134400,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace"
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
+       "plain":true
+      },
+      {
        "icon":"spell_nature_sleep",
        "id":"racial-human-perception",
        "name":"WBX Perception",
@@ -49364,6 +49631,17 @@
        "plain":true
       },
       {
+       "icon":134400,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace"
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
+       "plain":true
+      },
+      {
        "icon":"spell_nature_sleep",
        "id":"racial-human-perception",
        "name":"WBX Perception",
@@ -49575,6 +49853,17 @@
        "id":"priest-prayer-of-spirit",
        "name":"WBX Prayer of Sp",
        "pending":60,
+       "plain":true
+      },
+      {
+       "icon":134400,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace"
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
        "plain":true
       },
       {
@@ -49790,6 +50079,17 @@
        "plain":true
       },
       {
+       "icon":134400,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace"
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
+       "plain":true
+      },
+      {
        "icon":"spell_nature_sleep",
        "id":"racial-human-perception",
        "name":"WBX Perception",
@@ -49998,6 +50298,17 @@
        "id":"priest-prayer-of-spirit",
        "name":"WBX Prayer of Sp",
        "pending":60,
+       "plain":true
+      },
+      {
+       "icon":134400,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace"
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
        "plain":true
       },
       {
@@ -50210,6 +50521,17 @@
        "plain":true
       },
       {
+       "icon":134400,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace"
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
+       "plain":true
+      },
+      {
        "icon":"spell_nature_sleep",
        "id":"racial-human-perception",
        "name":"WBX Perception",
@@ -50415,6 +50737,17 @@
        "id":"priest-prayer-of-spirit",
        "name":"WBX Prayer of Sp",
        "pending":60,
+       "plain":true
+      },
+      {
+       "icon":134400,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace"
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
        "plain":true
       },
       {
@@ -50625,6 +50958,17 @@
        "plain":true
       },
       {
+       "icon":134400,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace"
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
+       "plain":true
+      },
+      {
        "icon":"spell_nature_sleep",
        "id":"racial-human-perception",
        "name":"WBX Perception",
@@ -50828,6 +51172,17 @@
        "icon":"spell_holy_prayerofspirit",
        "id":"priest-prayer-of-spirit",
        "name":"WBX Prayer of Sp",
+       "plain":true
+      },
+      {
+       "icon":134400,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace"
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
        "plain":true
       },
       {
@@ -51076,6 +51431,19 @@
        "plain":true
       },
       {
+       "icon":1022949,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace",
+       "pending":10
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
+       "pending":20,
+       "plain":true
+      },
+      {
        "icon":"spell_nature_sleep",
        "id":"racial-human-perception",
        "name":"WBX Perception",
@@ -51310,6 +51678,19 @@
        "id":"priest-prayer-of-spirit",
        "name":"WBX Prayer of Sp",
        "pending":60,
+       "plain":true
+      },
+      {
+       "icon":1022949,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace",
+       "pending":10
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
+       "pending":20,
        "plain":true
       },
       {
@@ -51549,6 +51930,19 @@
        "plain":true
       },
       {
+       "icon":1022949,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace",
+       "pending":10
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
+       "pending":20,
+       "plain":true
+      },
+      {
        "icon":"spell_nature_sleep",
        "id":"racial-human-perception",
        "name":"WBX Perception",
@@ -51780,6 +52174,19 @@
        "id":"priest-prayer-of-spirit",
        "name":"WBX Prayer of Sp",
        "pending":60,
+       "plain":true
+      },
+      {
+       "icon":1022949,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace",
+       "pending":10
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
+       "pending":20,
        "plain":true
       },
       {
@@ -52015,6 +52422,18 @@
        "plain":true
       },
       {
+       "icon":134400,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace"
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
+       "pending":20,
+       "plain":true
+      },
+      {
        "icon":"spell_nature_sleep",
        "id":"racial-human-perception",
        "name":"WBX Perception",
@@ -52243,6 +52662,18 @@
        "id":"priest-prayer-of-spirit",
        "name":"WBX Prayer of Sp",
        "pending":60,
+       "plain":true
+      },
+      {
+       "icon":134400,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace"
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
+       "pending":20,
        "plain":true
       },
       {
@@ -52475,6 +52906,18 @@
        "plain":true
       },
       {
+       "icon":134400,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace"
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
+       "pending":20,
+       "plain":true
+      },
+      {
        "icon":"spell_nature_sleep",
        "id":"racial-human-perception",
        "name":"WBX Perception",
@@ -52700,6 +53143,18 @@
        "id":"priest-prayer-of-spirit",
        "name":"WBX Prayer of Sp",
        "pending":60,
+       "plain":true
+      },
+      {
+       "icon":134400,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace"
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
+       "pending":20,
        "plain":true
       },
       {
@@ -52930,6 +53385,18 @@
        "plain":true
       },
       {
+       "icon":134400,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace"
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
+       "pending":20,
+       "plain":true
+      },
+      {
        "icon":"spell_nature_sleep",
        "id":"racial-human-perception",
        "name":"WBX Perception",
@@ -53148,6 +53615,17 @@
        "id":"priest-prayer-of-spirit",
        "name":"WBX Prayer of Sp",
        "pending":60,
+       "plain":true
+      },
+      {
+       "icon":134400,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace"
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
        "plain":true
       },
       {
@@ -53370,6 +53848,17 @@
        "plain":true
       },
       {
+       "icon":134400,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace"
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
+       "plain":true
+      },
+      {
        "icon":"spell_nature_sleep",
        "id":"racial-human-perception",
        "name":"WBX Perception",
@@ -53585,6 +54074,17 @@
        "id":"priest-prayer-of-spirit",
        "name":"WBX Prayer of Sp",
        "pending":60,
+       "plain":true
+      },
+      {
+       "icon":134400,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace"
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
        "plain":true
       },
       {
@@ -53805,6 +54305,17 @@
        "plain":true
       },
       {
+       "icon":134400,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace"
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
+       "plain":true
+      },
+      {
        "icon":"spell_nature_sleep",
        "id":"racial-human-perception",
        "name":"WBX Perception",
@@ -54015,6 +54526,17 @@
        "id":"priest-prayer-of-spirit",
        "name":"WBX Prayer of Sp",
        "pending":60,
+       "plain":true
+      },
+      {
+       "icon":134400,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace"
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
        "plain":true
       },
       {
@@ -54229,6 +54751,17 @@
        "plain":true
       },
       {
+       "icon":134400,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace"
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
+       "plain":true
+      },
+      {
        "icon":"spell_nature_sleep",
        "id":"racial-human-perception",
        "name":"WBX Perception",
@@ -54436,6 +54969,17 @@
        "id":"priest-prayer-of-spirit",
        "name":"WBX Prayer of Sp",
        "pending":60,
+       "plain":true
+      },
+      {
+       "icon":134400,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace"
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
        "plain":true
       },
       {
@@ -54647,6 +55191,17 @@
        "plain":true
       },
       {
+       "icon":134400,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace"
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
+       "plain":true
+      },
+      {
        "icon":"spell_nature_sleep",
        "id":"racial-human-perception",
        "name":"WBX Perception",
@@ -54851,6 +55406,17 @@
        "id":"priest-prayer-of-spirit",
        "name":"WBX Prayer of Sp",
        "pending":60,
+       "plain":true
+      },
+      {
+       "icon":134400,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace"
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
        "plain":true
       },
       {
@@ -55060,6 +55626,17 @@
        "plain":true
       },
       {
+       "icon":134400,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace"
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
+       "plain":true
+      },
+      {
        "icon":"spell_nature_sleep",
        "id":"racial-human-perception",
        "name":"WBX Perception",
@@ -55262,6 +55839,17 @@
        "icon":"spell_holy_prayerofspirit",
        "id":"priest-prayer-of-spirit",
        "name":"WBX Prayer of Sp",
+       "plain":true
+      },
+      {
+       "icon":134400,
+       "id":"priest-divine-grace",
+       "name":"WBX Divine Grace"
+      },
+      {
+       "icon":136189,
+       "id":"priest-feedback",
+       "name":"WBX Feedback",
        "plain":true
       },
       {
@@ -55630,6 +56218,13 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "pending":22,
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -55983,6 +56578,13 @@
        "id":"shaman-grace-of-air-totem",
        "name":"WBX Grace of Air",
        "pending":42,
+       "plain":true
+      },
+      {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "pending":22,
        "plain":true
       },
       {
@@ -56341,6 +56943,13 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "pending":22,
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -56694,6 +57303,13 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "pending":22,
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -57043,6 +57659,13 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "pending":22,
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -57386,6 +58009,13 @@
        "id":"shaman-grace-of-air-totem",
        "name":"WBX Grace of Air",
        "pending":42,
+       "plain":true
+      },
+      {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "pending":22,
        "plain":true
       },
       {
@@ -57734,6 +58364,13 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "pending":22,
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -58078,6 +58715,13 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "pending":22,
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -58415,6 +59059,13 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "pending":22,
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -58745,6 +59396,12 @@
        "id":"shaman-grace-of-air-totem",
        "name":"WBX Grace of Air",
        "pending":42,
+       "plain":true
+      },
+      {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
        "plain":true
       },
       {
@@ -59079,6 +59736,12 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -59407,6 +60070,12 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -59729,6 +60398,12 @@
        "id":"shaman-grace-of-air-totem",
        "name":"WBX Grace of Air",
        "pending":42,
+       "plain":true
+      },
+      {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
        "plain":true
       },
       {
@@ -60056,6 +60731,12 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -60371,6 +61052,12 @@
        "id":"shaman-grace-of-air-totem",
        "name":"WBX Grace of Air",
        "pending":42,
+       "plain":true
+      },
+      {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
        "plain":true
       },
       {
@@ -60690,6 +61377,12 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -61002,6 +61695,12 @@
        "id":"shaman-grace-of-air-totem",
        "name":"WBX Grace of Air",
        "pending":42,
+       "plain":true
+      },
+      {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
        "plain":true
       },
       {
@@ -61319,6 +62018,12 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -61629,6 +62334,12 @@
        "id":"shaman-grace-of-air-totem",
        "name":"WBX Grace of Air",
        "pending":42,
+       "plain":true
+      },
+      {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
        "plain":true
       },
       {
@@ -61943,6 +62654,12 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -62250,6 +62967,12 @@
        "icon":"spell_nature_invisibilitytotem",
        "id":"shaman-grace-of-air-totem",
        "name":"WBX Grace of Air",
+       "plain":true
+      },
+      {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
        "plain":true
       },
       {
@@ -62603,6 +63326,13 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "pending":22,
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -62941,6 +63671,13 @@
        "id":"shaman-grace-of-air-totem",
        "name":"WBX Grace of Air",
        "pending":42,
+       "plain":true
+      },
+      {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "pending":22,
        "plain":true
       },
       {
@@ -63284,6 +64021,13 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "pending":22,
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -63622,6 +64366,13 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "pending":22,
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -63956,6 +64707,13 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "pending":22,
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -64284,6 +65042,13 @@
        "id":"shaman-grace-of-air-totem",
        "name":"WBX Grace of Air",
        "pending":42,
+       "plain":true
+      },
+      {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "pending":22,
        "plain":true
       },
       {
@@ -64617,6 +65382,13 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "pending":22,
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -64946,6 +65718,13 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "pending":22,
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -65268,6 +66047,13 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "pending":22,
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -65583,6 +66369,12 @@
        "id":"shaman-grace-of-air-totem",
        "name":"WBX Grace of Air",
        "pending":42,
+       "plain":true
+      },
+      {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
        "plain":true
       },
       {
@@ -65903,6 +66695,12 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -66219,6 +67017,12 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -66532,6 +67336,12 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -66842,6 +67652,12 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -67144,6 +67960,12 @@
        "id":"shaman-grace-of-air-totem",
        "name":"WBX Grace of Air",
        "pending":42,
+       "plain":true
+      },
+      {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
        "plain":true
       },
       {
@@ -67450,6 +68272,12 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -67749,6 +68577,12 @@
        "id":"shaman-grace-of-air-totem",
        "name":"WBX Grace of Air",
        "pending":42,
+       "plain":true
+      },
+      {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
        "plain":true
       },
       {
@@ -68053,6 +68887,12 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -68350,6 +69190,12 @@
        "id":"shaman-grace-of-air-totem",
        "name":"WBX Grace of Air",
        "pending":42,
+       "plain":true
+      },
+      {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
        "plain":true
       },
       {
@@ -68651,6 +69497,12 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -68945,6 +69797,12 @@
        "icon":"spell_nature_invisibilitytotem",
        "id":"shaman-grace-of-air-totem",
        "name":"WBX Grace of Air",
+       "plain":true
+      },
+      {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
        "plain":true
       },
       {
@@ -69298,6 +70156,13 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "pending":22,
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -69636,6 +70501,13 @@
        "id":"shaman-grace-of-air-totem",
        "name":"WBX Grace of Air",
        "pending":42,
+       "plain":true
+      },
+      {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "pending":22,
        "plain":true
       },
       {
@@ -69979,6 +70851,13 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "pending":22,
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -70317,6 +71196,13 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "pending":22,
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -70651,6 +71537,13 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "pending":22,
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -70979,6 +71872,13 @@
        "id":"shaman-grace-of-air-totem",
        "name":"WBX Grace of Air",
        "pending":42,
+       "plain":true
+      },
+      {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "pending":22,
        "plain":true
       },
       {
@@ -71312,6 +72212,13 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "pending":22,
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -71641,6 +72548,13 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "pending":22,
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -71963,6 +72877,13 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "pending":22,
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -72278,6 +73199,12 @@
        "id":"shaman-grace-of-air-totem",
        "name":"WBX Grace of Air",
        "pending":42,
+       "plain":true
+      },
+      {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
        "plain":true
       },
       {
@@ -72598,6 +73525,12 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -72912,6 +73845,12 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -73223,6 +74162,12 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -73525,6 +74470,12 @@
        "id":"shaman-grace-of-air-totem",
        "name":"WBX Grace of Air",
        "pending":42,
+       "plain":true
+      },
+      {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
        "plain":true
       },
       {
@@ -73831,6 +74782,12 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -74130,6 +75087,12 @@
        "id":"shaman-grace-of-air-totem",
        "name":"WBX Grace of Air",
        "pending":42,
+       "plain":true
+      },
+      {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
        "plain":true
       },
       {
@@ -74434,6 +75397,12 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -74731,6 +75700,12 @@
        "id":"shaman-grace-of-air-totem",
        "name":"WBX Grace of Air",
        "pending":42,
+       "plain":true
+      },
+      {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
        "plain":true
       },
       {
@@ -75032,6 +76007,12 @@
        "plain":true
       },
       {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
+       "plain":true
+      },
+      {
        "icon":"racial_dwarf_findtreasure",
        "id":"racial-dwarf-find-treasure",
        "name":"WBX Find Treasur",
@@ -75326,6 +76307,12 @@
        "icon":"spell_nature_invisibilitytotem",
        "id":"shaman-grace-of-air-totem",
        "name":"WBX Grace of Air",
+       "plain":true
+      },
+      {
+       "icon":538574,
+       "id":"shaman-totemic-call",
+       "name":"WBX Totemic Call",
        "plain":true
       },
       {
@@ -289389,6 +290376,14 @@
     "name":"Mass Salvation"
    },
    {
+    "action":"friendlymain",
+    "gate":"talent",
+    "id":"paladin-oath-of-light",
+    "level":25,
+    "macros":["#showtooltip Oath of Light\n/cast [@mouseover,help,nodead][help,nodead][@player] Oath of Light","#showtooltip Oath of Light\n/cast [@mouseover,help,nodead][@party1,help,nodead][@player] Oath of Light","#showtooltip Oath of Light\n/cast [@mouseover,help,nodead][@party2,help,nodead][@player] Oath of Light","#showtooltip Oath of Light\n/cast [@mouseover,help,nodead][@party3,help,nodead][@player] Oath of Light","#showtooltip Oath of Light\n/cast [@mouseover,help,nodead][@party4,help,nodead][@player] Oath of Light","#showtooltip Oath of Light\n/cast [@mouseover,help,nodead][@focus,help,nodead][@player] Oath of Light"],
+    "name":"Oath of Light"
+   },
+   {
     "action":"self",
     "gate":"racial",
     "id":"racial-human-perception",
@@ -289861,6 +290856,86 @@
     "level":60,
     "macros":["#showtooltip Prayer of Spirit\n/cast Prayer of Spirit","#showtooltip Prayer of Spirit\n/cast Prayer of Spirit","#showtooltip Prayer of Spirit\n/cast Prayer of Spirit","#showtooltip Prayer of Spirit\n/cast Prayer of Spirit","#showtooltip Prayer of Spirit\n/cast Prayer of Spirit","#showtooltip Prayer of Spirit\n/cast Prayer of Spirit"],
     "name":"Prayer of Spirit"
+   },
+   {
+    "action":"friendlytarget",
+    "gate":"trainer",
+    "id":"priest-divine-grace",
+    "level":10,
+    "macros":["#showtooltip Divine Grace\n/cast [@mouseover,help,nodead][help,nodead] Divine Grace","#showtooltip Divine Grace\n/cast [@mouseover,help,nodead][help,nodead] Divine Grace","#showtooltip Divine Grace\n/cast [@mouseover,help,nodead][help,nodead] Divine Grace","#showtooltip Divine Grace\n/cast [@mouseover,help,nodead][help,nodead] Divine Grace","#showtooltip Divine Grace\n/cast [@mouseover,help,nodead][help,nodead] Divine Grace","#showtooltip Divine Grace\n/cast [@mouseover,help,nodead][help,nodead] Divine Grace"],
+    "name":"Divine Grace"
+   },
+   {
+    "action":"self",
+    "gate":"trainer",
+    "id":"priest-feedback",
+    "level":20,
+    "macros":["#showtooltip Feedback\n/cast Feedback","#showtooltip Feedback\n/cast Feedback","#showtooltip Feedback\n/cast Feedback","#showtooltip Feedback\n/cast Feedback","#showtooltip Feedback\n/cast Feedback","#showtooltip Feedback\n/cast Feedback"],
+    "name":"Feedback"
+   },
+   {
+    "action":"self",
+    "gate":"trainer",
+    "id":"priest-desperate-prayer",
+    "level":10,
+    "macros":["#showtooltip Desperate Prayer\n/cast Desperate Prayer","#showtooltip Desperate Prayer\n/cast Desperate Prayer","#showtooltip Desperate Prayer\n/cast Desperate Prayer","#showtooltip Desperate Prayer\n/cast Desperate Prayer","#showtooltip Desperate Prayer\n/cast Desperate Prayer","#showtooltip Desperate Prayer\n/cast Desperate Prayer"],
+    "name":"Desperate Prayer"
+   },
+   {
+    "action":"ranged",
+    "gate":"trainer",
+    "id":"priest-chastise",
+    "level":20,
+    "macros":["#showtooltip Chastise\n/cast [@mouseover,harm,nodead][harm,nodead] Chastise","#showtooltip Chastise\n/cast [@mouseover,harm,nodead][@party1target,harm,nodead][harm,nodead] Chastise","#showtooltip Chastise\n/cast [@mouseover,harm,nodead][@party2target,harm,nodead][harm,nodead] Chastise","#showtooltip Chastise\n/cast [@mouseover,harm,nodead][@party3target,harm,nodead][harm,nodead] Chastise","#showtooltip Chastise\n/cast [@mouseover,harm,nodead][@party4target,harm,nodead][harm,nodead] Chastise","#showtooltip Chastise\n/cast [@mouseover,harm,nodead][@focustarget,harm,nodead][harm,nodead] Chastise"],
+    "name":"Chastise"
+   },
+   {
+    "action":"ranged",
+    "gate":"trainer",
+    "id":"priest-starshards",
+    "level":10,
+    "macros":["#showtooltip Starshards\n/cast [@mouseover,harm,nodead][harm,nodead] Starshards","#showtooltip Starshards\n/cast [@mouseover,harm,nodead][@party1target,harm,nodead][harm,nodead] Starshards","#showtooltip Starshards\n/cast [@mouseover,harm,nodead][@party2target,harm,nodead][harm,nodead] Starshards","#showtooltip Starshards\n/cast [@mouseover,harm,nodead][@party3target,harm,nodead][harm,nodead] Starshards","#showtooltip Starshards\n/cast [@mouseover,harm,nodead][@party4target,harm,nodead][harm,nodead] Starshards","#showtooltip Starshards\n/cast [@mouseover,harm,nodead][@focustarget,harm,nodead][harm,nodead] Starshards"],
+    "name":"Starshards"
+   },
+   {
+    "action":"self",
+    "gate":"trainer",
+    "id":"priest-elune-s-grace",
+    "level":20,
+    "macros":["#showtooltip Elune's Grace\n/cast Elune's Grace","#showtooltip Elune's Grace\n/cast Elune's Grace","#showtooltip Elune's Grace\n/cast Elune's Grace","#showtooltip Elune's Grace\n/cast Elune's Grace","#showtooltip Elune's Grace\n/cast Elune's Grace","#showtooltip Elune's Grace\n/cast Elune's Grace"],
+    "name":"Elune's Grace"
+   },
+   {
+    "action":"self",
+    "gate":"trainer",
+    "id":"priest-confounding-flash",
+    "level":10,
+    "macros":["#showtooltip Confounding Flash\n/cast Confounding Flash","#showtooltip Confounding Flash\n/cast Confounding Flash","#showtooltip Confounding Flash\n/cast Confounding Flash","#showtooltip Confounding Flash\n/cast Confounding Flash","#showtooltip Confounding Flash\n/cast Confounding Flash","#showtooltip Confounding Flash\n/cast Confounding Flash"],
+    "name":"Confounding Flash"
+   },
+   {
+    "action":"friendlymain",
+    "gate":"trainer",
+    "id":"priest-contingency-plan",
+    "level":20,
+    "macros":["#showtooltip Contingency Plan\n/cast [@mouseover,help,nodead][help,nodead][@player] Contingency Plan","#showtooltip Contingency Plan\n/cast [@mouseover,help,nodead][@party1,help,nodead][@player] Contingency Plan","#showtooltip Contingency Plan\n/cast [@mouseover,help,nodead][@party2,help,nodead][@player] Contingency Plan","#showtooltip Contingency Plan\n/cast [@mouseover,help,nodead][@party3,help,nodead][@player] Contingency Plan","#showtooltip Contingency Plan\n/cast [@mouseover,help,nodead][@party4,help,nodead][@player] Contingency Plan","#showtooltip Contingency Plan\n/cast [@mouseover,help,nodead][@focus,help,nodead][@player] Contingency Plan"],
+    "name":"Contingency Plan"
+   },
+   {
+    "action":"ranged",
+    "gate":"trainer",
+    "id":"priest-hex-of-weakness",
+    "level":10,
+    "macros":["#showtooltip Hex of Weakness\n/cast [@mouseover,harm,nodead][harm,nodead] Hex of Weakness","#showtooltip Hex of Weakness\n/cast [@mouseover,harm,nodead][@party1target,harm,nodead][harm,nodead] Hex of Weakness","#showtooltip Hex of Weakness\n/cast [@mouseover,harm,nodead][@party2target,harm,nodead][harm,nodead] Hex of Weakness","#showtooltip Hex of Weakness\n/cast [@mouseover,harm,nodead][@party3target,harm,nodead][harm,nodead] Hex of Weakness","#showtooltip Hex of Weakness\n/cast [@mouseover,harm,nodead][@party4target,harm,nodead][harm,nodead] Hex of Weakness","#showtooltip Hex of Weakness\n/cast [@mouseover,harm,nodead][@focustarget,harm,nodead][harm,nodead] Hex of Weakness"],
+    "name":"Hex of Weakness"
+   },
+   {
+    "action":"self",
+    "gate":"trainer",
+    "id":"priest-shadowguard",
+    "level":20,
+    "macros":["#showtooltip Shadowguard\n/cast Shadowguard","#showtooltip Shadowguard\n/cast Shadowguard","#showtooltip Shadowguard\n/cast Shadowguard","#showtooltip Shadowguard\n/cast Shadowguard","#showtooltip Shadowguard\n/cast Shadowguard","#showtooltip Shadowguard\n/cast Shadowguard"],
+    "name":"Shadowguard"
    },
    {
     "action":"self",
@@ -290431,6 +291506,22 @@
     "level":60,
     "macros":["#showtooltip Sebacious Poison\n/cast Sebacious Poison","#showtooltip Sebacious Poison\n/cast Sebacious Poison","#showtooltip Sebacious Poison\n/cast Sebacious Poison","#showtooltip Sebacious Poison\n/cast Sebacious Poison","#showtooltip Sebacious Poison\n/cast Sebacious Poison","#showtooltip Sebacious Poison\n/cast Sebacious Poison"],
     "name":"Sebacious Poison"
+   },
+   {
+    "action":"melee",
+    "gate":"trainer",
+    "id":"rogue-shank",
+    "level":24,
+    "macros":["#showtooltip Shank\n/startattack [harm,nodead]\n/cast [harm,nodead] Shank","#showtooltip Shank\n/startattack [@mouseover,harm,nodead][@party1target,harm,nodead][harm,nodead]\n/cast [@mouseover,harm,nodead][@party1target,harm,nodead][harm,nodead] Shank","#showtooltip Shank\n/startattack [@mouseover,harm,nodead][@party2target,harm,nodead][harm,nodead]\n/cast [@mouseover,harm,nodead][@party2target,harm,nodead][harm,nodead] Shank","#showtooltip Shank\n/startattack [@mouseover,harm,nodead][@party3target,harm,nodead][harm,nodead]\n/cast [@mouseover,harm,nodead][@party3target,harm,nodead][harm,nodead] Shank","#showtooltip Shank\n/startattack [@mouseover,harm,nodead][@party4target,harm,nodead][harm,nodead]\n/cast [@mouseover,harm,nodead][@party4target,harm,nodead][harm,nodead] Shank","#showtooltip Shank\n/startattack [@mouseover,harm,nodead][@focustarget,harm,nodead][harm,nodead]\n/cast [@mouseover,harm,nodead][@focustarget,harm,nodead][harm,nodead] Shank"],
+    "name":"Shank"
+   },
+   {
+    "action":"melee",
+    "gate":"talent",
+    "id":"rogue-death-mark",
+    "level":40,
+    "macros":["#showtooltip Death Mark\n/startattack [harm,nodead]\n/cast [harm,nodead] Death Mark","#showtooltip Death Mark\n/startattack [@mouseover,harm,nodead][@party1target,harm,nodead][harm,nodead]\n/cast [@mouseover,harm,nodead][@party1target,harm,nodead][harm,nodead] Death Mark","#showtooltip Death Mark\n/startattack [@mouseover,harm,nodead][@party2target,harm,nodead][harm,nodead]\n/cast [@mouseover,harm,nodead][@party2target,harm,nodead][harm,nodead] Death Mark","#showtooltip Death Mark\n/startattack [@mouseover,harm,nodead][@party3target,harm,nodead][harm,nodead]\n/cast [@mouseover,harm,nodead][@party3target,harm,nodead][harm,nodead] Death Mark","#showtooltip Death Mark\n/startattack [@mouseover,harm,nodead][@party4target,harm,nodead][harm,nodead]\n/cast [@mouseover,harm,nodead][@party4target,harm,nodead][harm,nodead] Death Mark","#showtooltip Death Mark\n/startattack [@mouseover,harm,nodead][@focustarget,harm,nodead][harm,nodead]\n/cast [@mouseover,harm,nodead][@focustarget,harm,nodead][harm,nodead] Death Mark"],
+    "name":"Death Mark"
    },
    {
     "action":"self",
@@ -291177,6 +292268,14 @@
     "level":42,
     "macros":["#showtooltip Grace of Air Totem\n/cast Grace of Air Totem","#showtooltip Grace of Air Totem\n/cast Grace of Air Totem","#showtooltip Grace of Air Totem\n/cast Grace of Air Totem","#showtooltip Grace of Air Totem\n/cast Grace of Air Totem","#showtooltip Grace of Air Totem\n/cast Grace of Air Totem","#showtooltip Grace of Air Totem\n/cast Grace of Air Totem"],
     "name":"Grace of Air Totem"
+   },
+   {
+    "action":"self",
+    "gate":"trainer",
+    "id":"shaman-totemic-call",
+    "level":22,
+    "macros":["#showtooltip Totemic Call\n/cast Totemic Call","#showtooltip Totemic Call\n/cast Totemic Call","#showtooltip Totemic Call\n/cast Totemic Call","#showtooltip Totemic Call\n/cast Totemic Call","#showtooltip Totemic Call\n/cast Totemic Call","#showtooltip Totemic Call\n/cast Totemic Call"],
+    "name":"Totemic Call"
    },
    {
     "action":"self",
@@ -292293,6 +293392,14 @@
     "level":40,
     "macros":["#showtooltip Shield Slam\n/startattack [harm,nodead]\n/cast [harm,nodead] Shield Slam","#showtooltip Shield Slam\n/startattack [@mouseover,harm,nodead][@party1target,harm,nodead][harm,nodead]\n/cast [@mouseover,harm,nodead][@party1target,harm,nodead][harm,nodead] Shield Slam","#showtooltip Shield Slam\n/startattack [@mouseover,harm,nodead][@party2target,harm,nodead][harm,nodead]\n/cast [@mouseover,harm,nodead][@party2target,harm,nodead][harm,nodead] Shield Slam","#showtooltip Shield Slam\n/startattack [@mouseover,harm,nodead][@party3target,harm,nodead][harm,nodead]\n/cast [@mouseover,harm,nodead][@party3target,harm,nodead][harm,nodead] Shield Slam","#showtooltip Shield Slam\n/startattack [@mouseover,harm,nodead][@party4target,harm,nodead][harm,nodead]\n/cast [@mouseover,harm,nodead][@party4target,harm,nodead][harm,nodead] Shield Slam","#showtooltip Shield Slam\n/startattack [@mouseover,harm,nodead][@focustarget,harm,nodead][harm,nodead]\n/cast [@mouseover,harm,nodead][@focustarget,harm,nodead][harm,nodead] Shield Slam"],
     "name":"Shield Slam"
+   },
+   {
+    "action":"self",
+    "gate":"talent",
+    "id":"warrior-reckless-swings",
+    "level":25,
+    "macros":["#showtooltip Reckless Swings\n/cast Reckless Swings","#showtooltip Reckless Swings\n/cast Reckless Swings","#showtooltip Reckless Swings\n/cast Reckless Swings","#showtooltip Reckless Swings\n/cast Reckless Swings","#showtooltip Reckless Swings\n/cast Reckless Swings","#showtooltip Reckless Swings\n/cast Reckless Swings"],
+    "name":"Reckless Swings"
    },
    {
     "action":"self",

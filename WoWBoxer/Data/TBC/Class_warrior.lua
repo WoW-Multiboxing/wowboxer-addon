@@ -876,7 +876,7 @@ D.spells.warrior = {
   durSec=0
  },
  {
-  id="",
+  id="warrior-devastate",
   name="Devastate",
   category="Damage",
   action="melee",
@@ -895,7 +895,7 @@ D.spells.warrior = {
   durSec=0
  },
  {
-  id="",
+  id="warrior-intervene",
   name="Intervene",
   category="Defense",
   action="friendlymain",
@@ -911,7 +911,7 @@ D.spells.warrior = {
   durSec=0
  },
  {
-  id="",
+  id="warrior-spell-reflection",
   name="Spell Reflection",
   category="Defense",
   action="self",
@@ -927,7 +927,7 @@ D.spells.warrior = {
   durSec=0
  },
  {
-  id="",
+  id="warrior-commanding-shout",
   name="Commanding Shout",
   category="Buff",
   action="self",
@@ -943,7 +943,7 @@ D.spells.warrior = {
   durSec=0
  },
  {
-  id="",
+  id="warrior-rampage",
   name="Rampage",
   category="Buff",
   action="self",

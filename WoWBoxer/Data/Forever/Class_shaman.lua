@@ -1189,6 +1189,23 @@ D.spells.shaman = {
   castLast=1.5,
   cdSec=0,
   durSec=0
+ },
+ {
+  id="shaman-totemic-call",
+  name="Totemic Call",
+  category="Totem",
+  action="self",
+  icon=538574,
+  level=22,
+  gate="trainer",
+  forever="new",
+  ranks={
+   {r=1,l=22,id=437009}
+  },
+  castFirst=0,
+  castLast=0,
+  cdSec=30,
+  durSec=1
  }
 }
 D.guides.shaman = {

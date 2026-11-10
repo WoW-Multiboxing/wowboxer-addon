@@ -298,4 +298,74 @@ do
   H.ok(E.score({ ITEM_MOD_INTELLECT_SHORT = 1 }, rel) > E.score({ RESISTANCE0_NAME = 40 }, rel), "1 Intellect is worth more than 40 armour to a priest")
 end
 
+-- ------------------------------------------------------------------ 9. the questions can be turned off (owner, 10 Nov 2026)
+-- "Don't ask me again – keep these in the bag" in the popup; "Ask about bind-on-equip and unclear items" under Auto-equip
+do
+  local W, ns = onBoot()
+  local AU, o = ns.Auto, nil
+  H.ok(AU.on("equipAsk"), "Ask about… is on by default")
+  W.inv[6] = item(W, 900, "Old Belt", "INVTYPE_WAIST", { ITEM_MOD_STRENGTH_SHORT = 3 }); ns.Equip.noteWorn()
+  -- ask on → popup, with the tick and the two items as rows
+  arrive(W, 1, item(W, 901, "Fine Belt", "INVTYPE_WAIST", { ITEM_MOD_STRENGTH_SHORT = 9 }, { boe = true }))
+  o = ns.UI.popup
+  H.ok(popupShown(ns), "ask on: bind on equip asked")
+  H.ok(o.check and o.check:IsShown() and not o.check:GetChecked(), "the popup has the tick, not ticked")
+  H.eq(o.check and o.check.label:GetText(), ns.Equip.DONT_ASK, "tick label")
+  H.ok(o.items[1]:IsShown() and o.items[1].name:GetText():find("Fine Belt", 1, true) ~= nil, "row 1: the new item")
+  H.ok(o.items[2] and o.items[2]:IsShown() and o.items[2].name:GetText():find("Old Belt", 1, true) ~= nil, "row 2: the item worn now")
+  -- hover: the game's item tooltip (bag item for the new one, the worn slot for the old one)
+  local GT, seen = W.env.GameTooltip, {}
+  GT.SetBagItem = function(_, b, s) seen[#seen + 1] = "bag" .. b .. ":" .. s; return true end
+  GT.SetInventoryItem = function(_, u, s) seen[#seen + 1] = "inv" .. s; return true end
+  o.items[1]:GetScript("OnEnter")(o.items[1]); o.items[1]:GetScript("OnLeave")(o.items[1])
+  o.items[2]:GetScript("OnEnter")(o.items[2])
+  H.eq(table.concat(seen, ","), "bag0:1,inv6", "hover shows the new item's and the worn item's tooltip")
+  -- ticked + Keep in bag → that answer, and the setting is off
+  o.check:SetChecked(true)
+  H.ok(click(ns, "Keep in bag"), "Keep in bag with the tick")
+  H.eq(#W.equipped, 0, "kept")
+  H.ok(not AU.on("equipAsk"), "the tick turned Ask about… off")
+  -- setting off → the next one stays in the bag: no popup, one log line, the chat line (Chat line option)
+  AU.set("chat", true)
+  arrive(W, 2, item(W, 902, "Other BoE Belt", "INVTYPE_WAIST", { ITEM_MOD_STRENGTH_SHORT = 8 }, { boe = true }))
+  H.ok(not popupShown(ns), "ask off: no popup")
+  H.eq(#W.equipped, 0, "ask off: not equipped")
+  local logged = false
+  for _, e in ipairs(ns.Core.db.log) do if e.m:find("Kept", 1, true) and e.m:find("Other BoE Belt", 1, true) then logged = true end end
+  H.ok(logged, "ask off: one log line")
+  H.ok(W.chatHas("Kept .*Other BoE Belt.* in your bag"), "ask off: the chat line")
+  -- an unclear (mixed) item is kept too
+  W.inv[1] = item(W, 910, "Old Helm", "INVTYPE_HEAD", { ITEM_MOD_STRENGTH_SHORT = 3, ITEM_MOD_STAMINA_SHORT = 3 }); ns.Equip.noteWorn()
+  arrive(W, 3, item(W, 911, "Odd Helm", "INVTYPE_HEAD", { ITEM_MOD_STRENGTH_SHORT = 6, ITEM_MOD_STAMINA_SHORT = 1 }))
+  H.ok(not popupShown(ns) and #W.equipped == 0, "ask off: an unclear item stays in the bag too")
+  -- strictly better, not bind on equip → still equipped by itself
+  arrive(W, 4, item(W, 903, "Better Belt", "INVTYPE_WAIST", { ITEM_MOD_STRENGTH_SHORT = 5 }))
+  H.eq(W.inv[6] and W.equipped[1] and W.equipped[1][1], W.inv[6], "ask off: a strictly better item still equips")
+  H.ok(W.inv[6]:find("Better Belt", 1, true) ~= nil, "the better belt is worn")
+  -- back on (the Automation page's button) → asks again for new items
+  ns.UI.Open("automation")
+  local f = ns.AutomationPage.frame
+  local card
+  for _, c in ipairs(f.ticks) do if c.key == "autoEquip" then card = c end end
+  H.ok(card and card.sub and card.sub:GetText() == "Ask off", "Automation page: the Auto-equip card's button says Ask off")
+  card.sub:Click()
+  H.ok(AU.on("equipAsk") and card.sub:GetText() == "Ask on", "the button turns Ask about… on again")
+  H.ok(AU.on("autoEquip"), "Auto-equip itself stays on")
+  arrive(W, 5, item(W, 904, "Third BoE Belt", "INVTYPE_WAIST", { ITEM_MOD_STRENGTH_SHORT = 12 }, { boe = true }))
+  H.ok(popupShown(ns) and popupText(ns):find("Third BoE Belt", 1, true) ~= nil, "on again: asks again")
+  H.ok(not ns.UI.popup.check:GetChecked(), "the tick starts unticked")
+  -- ticked + Equip → equips it, and the setting is off
+  ns.UI.popup.check:SetChecked(true)
+  click(ns, "Equip")
+  H.ok(W.inv[6]:find("Third BoE Belt", 1, true) ~= nil, "ticked + Equip: equipped")
+  H.ok(not AU.on("equipAsk"), "ticked + Equip: Ask about… off")
+  -- other popups keep their old look (no tick, no rows)
+  ns.UI.Popup("Plain question", { { "OK", function() end } })
+  H.ok(not ns.UI.popup.check:IsShown() and not ns.UI.popup.items[1]:IsShown(), "a plain popup has no tick and no item rows")
+  ns.UI.popup:Hide()
+  -- Turn all off / the levelling preset never touch this setting
+  AU.set("equipAsk", true); AU.setAll(false)
+  H.ok(AU.on("equipAsk"), "all off leaves Ask about… as it was")
+end
+
 H.report("equip")

@@ -69,6 +69,20 @@ function Core.playerInfo()
   return { name = C.playerName(), cls = C.playerClass(), race = C.playerRace(), level = C.playerLevel(), faction = C.playerFaction() }
 end
 --- squad, member for this character (synced with the live character), or nil
+--- The spellbook's spells the data lacks, for the diagnose (owner, 10 Nov 2026): {{name, id, rank, level?, future?}}.
+--- Read-only; WoWBoxerDB.diag[char].extraSpells, listed by tools/read_log.py.
+function Core.extraSpellsDiag()
+  local _, m = Core.me()
+  local out = {}
+  for _, s in ipairs(m and K.bookSpells(m) or {}) do
+    for _, r in ipairs(s.ranks) do
+      local rank
+      for _, it in ipairs(C.spellbookItems() or {}) do if it.id == r.id then rank = it.rank end end
+      out[#out + 1] = { name = s.name, id = r.id, rank = rank, level = r.l, future = s.future and true or nil }
+    end
+  end
+  return out
+end
 function Core.me()
   local db, cdb = Core.db, Core.cdb
   if not db then return nil end
@@ -1145,6 +1159,8 @@ function Core.selftest(quiet)
   r.ui = { dropdown = (ns.Widgets and ns.Widgets.hasBlizzardDropdown and ns.Widgets.hasBlizzardDropdown()) and "blizzard" or "own" }
   r.ui.helpPlate = (ns.Help and ns.Help.blizzard and ns.Help.blizzard()) and "blizzard" or "own"
   r.ui.helpUsed = ns.Help and ns.Help.diag or nil
+  local okX, extra = pcall(Core.extraSpellsDiag)
+  r.extraSpells = okX and extra or { error = tostring(extra) }
   db.diag[Core.charKey or "?"] = r
   Core.log("info", "selftest written to WoWBoxerDB.diag[" .. tostring(Core.charKey) .. "]")
   if ns.Squad and ns.Team then

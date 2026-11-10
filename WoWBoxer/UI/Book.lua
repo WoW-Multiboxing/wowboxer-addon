@@ -293,6 +293,8 @@ function Book.setSquadKey(key, on)
   Core().changed()
 end
 
+--- Tooltip line of a spell WoWBoxer only knows from the game's spellbook (not in its data).
+Book.FROM_BOOK = "From your spellbook"
 --- "Rank 3 of 7 · next rank at 30" for a spell with ranks (nil without).
 function Book.rankLine(s, level)
   local ranks = s.ranks or {}
@@ -350,6 +352,17 @@ function Book.spellSections(ctx, q)
   local wand = ns.Kit.wandOf(m)
   if wand and Book.matches(wand, q) then learned.cells[#learned.cells + 1] = cell(wand, nil) end
   local later = {}
+  -- spells of the live spellbook the data lacks (owner, 10 Nov 2026): learned ones here, the book's future ones below
+  local book = ns.Kit.bookSpells(m)
+  for _, s in ipairs(book) do
+    if not s.future and Book.matches(s, q) then local c = cell(s, nil); c.fromBook = true; learned.cells[#learned.cells + 1] = c end
+  end
+  for i, s in ipairs(book) do
+    if s.future and Book.matches(s, q) then
+      local p = M.pendingOf(m, s, ctx.level, ctx.live)
+      if type(p) == "number" then later[#later + 1] = { s = s, p = p, i = 10000 + i } end
+    end
+  end
   for i, s in ipairs(ns.Kit.spellsOf(m)) do
     if not shown[s] and s.action ~= "passive" and Book.matches(s, q) then
       local p = M.pendingOf(m, s, ctx.level, ctx.live)
@@ -673,6 +686,7 @@ local function cellTooltip(GT, c)
   end
   local sp = c.spell or (d and d.spell)
   if sp then local rl = Book.rankLine(sp, ns.Compat.playerLevel()); if rl then GT:AddLine(rl, 0.8, 0.8, 0.8, true) end end
+  if sp and sp.fromBook then GT:AddLine(Book.FROM_BOOK, 0.66, 0.78, 0.9, true) end
   if d and d.body then for line in (d.body .. "\n"):gmatch("([^\n]*)\n") do if line ~= "" then GT:AddLine(line, 0.56, 0.85, 0.45) end end end
   if c.item and c.item.why then GT:AddLine(c.item.why, 1, 0.54, 0.5, true) end
   local slotLine = c.item and Book.slotText(c.item)

@@ -1060,7 +1060,7 @@ D.spells.hunter = {
   durSec=0
  },
  {
-  id="",
+  id="hunter-wyvern-sting",
   name="Wyvern Sting",
   category="Control",
   action="hostile",

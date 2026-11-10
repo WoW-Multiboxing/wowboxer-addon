@@ -1084,7 +1084,7 @@ D.spells.hunter = {
   durSec=0
  },
  {
-  id="",
+  id="hunter-steady-shot",
   name="Steady Shot",
   category="Damage",
   action="petattack",
@@ -1100,7 +1100,7 @@ D.spells.hunter = {
   durSec=0
  },
  {
-  id="",
+  id="hunter-kill-command",
   name="Kill Command",
   category="Damage",
   action="petattack",
@@ -1116,7 +1116,7 @@ D.spells.hunter = {
   durSec=0
  },
  {
-  id="",
+  id="hunter-silencing-shot",
   name="Silencing Shot",
   category="Control",
   action="hostile",
@@ -1133,7 +1133,7 @@ D.spells.hunter = {
   durSec=0
  },
  {
-  id="",
+  id="hunter-wyvern-sting",
   name="Wyvern Sting",
   category="Control",
   action="hostile",
@@ -1157,7 +1157,7 @@ D.spells.hunter = {
   durSec=0
  },
  {
-  id="",
+  id="hunter-misdirection",
   name="Misdirection",
   category="Utility",
   action="friendlymain",
@@ -1173,7 +1173,7 @@ D.spells.hunter = {
   durSec=0
  },
  {
-  id="",
+  id="hunter-snake-trap",
   name="Snake Trap",
   category="Control",
   action="ground",
@@ -1189,7 +1189,7 @@ D.spells.hunter = {
   durSec=0
  },
  {
-  id="",
+  id="hunter-aspect-of-the-viper",
   name="Aspect of the Viper",
   category="Buff",
   action="self",
@@ -1205,7 +1205,7 @@ D.spells.hunter = {
   durSec=0
  },
  {
-  id="",
+  id="hunter-the-beast-within",
   name="The Beast Within",
   category="Buff",
   action="self",

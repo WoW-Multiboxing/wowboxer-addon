@@ -95,6 +95,12 @@ def main():
                 print(f"   fly {d.get('fly')}")
             if d.get("talents"):
                 print(f"   talents {d.get('talents')}")
+            if "extraSpells" in d:
+                ex = d.get("extraSpells") or []
+                print(f"   spellbook spells not in the data: {len(ex) if isinstance(ex, list) else ex}")
+                for it in (ex if isinstance(ex, list) else []):
+                    print(f"     {it.get('name')} id {it.get('id')} {it.get('rank') or ''} {('level ' + str(it.get('level'))) if it.get('level') else ''}"
+                          f"{' (future)' if it.get('future') else ''}")
             for k in ("binds", "seqCheck", "cvarProbe"):
                 if d.get(k):
                     print(f"   {k} {d.get(k)}")

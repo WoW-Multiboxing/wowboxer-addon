@@ -915,7 +915,7 @@ D.spells.paladin = {
   durSec=0
  },
  {
-  id="",
+  id="paladin-blessing-of-salvation",
   name="Blessing of Salvation",
   category="Buff",
   action="friendlyself",
@@ -931,7 +931,7 @@ D.spells.paladin = {
   durSec=0
  },
  {
-  id="",
+  id="paladin-blessing-of-sanctuary",
   name="Blessing of Sanctuary",
   category="Buff",
   action="friendlyself",
@@ -951,7 +951,7 @@ D.spells.paladin = {
   durSec=0
  },
  {
-  id="",
+  id="paladin-greater-blessing-of-salvation",
   name="Greater Blessing of Salvation",
   category="Buff",
   action="friendlyself",
@@ -967,7 +967,7 @@ D.spells.paladin = {
   durSec=0
  },
  {
-  id="",
+  id="paladin-greater-blessing-of-sanctuary",
   name="Greater Blessing of Sanctuary",
   category="Buff",
   action="friendlyself",
@@ -983,7 +983,7 @@ D.spells.paladin = {
   durSec=0
  },
  {
-  id="",
+  id="paladin-sanctity-aura",
   name="Sanctity Aura",
   category="Buff",
   action="self",
@@ -993,6 +993,38 @@ D.spells.paladin = {
   talent="sanctity-aura",
   ranks={
    {r=1,l=30,id=20218}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="paladin-sense-undead",
+  name="Sense Undead",
+  category="Utility",
+  action="self",
+  icon=135974,
+  level=20,
+  gate="trainer",
+  ranks={
+   {r=1,l=20,id=5502}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="paladin-summon-charger",
+  name="Summon Charger",
+  category="Mount",
+  action="self",
+  icon=132226,
+  level=60,
+  gate="trainer",
+  ranks={
+   {r=1,l=60,id=23214}
   },
   castFirst=1.5,
   castLast=1.5,

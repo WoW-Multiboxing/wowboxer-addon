@@ -415,7 +415,25 @@ end
 -- ------------------------------------------------------------------ a small question (login fixes, nudges)
 --- UI.Popup(text, {{label, fn, tip}, …}): one sentence and up to three buttons, under the top centre. A click on any
 --- button closes it; nothing happens without a click.
-function UI.Popup(text, buttons)
+--- extra (optional): { items = { {link, label, bag, slot} | {link, label, inv} }, check = {label, tip} } – item rows that
+--- show the game's item tooltip (stats and all) on hover (owner, 10 Nov 2026), and a tick box under them; the tick's
+--- state is o.check:GetChecked() when a button runs. Without extra the popup is as before.
+local function itemIcon(link)
+  local CI = _G.C_Item
+  local f = (CI and CI.GetItemIconByID) or _G.GetItemIcon
+  if not (f and link) then return nil end
+  local ok, t = pcall(f, link)
+  return ok and t or nil
+end
+local function itemTip(GT, r)
+  local ok = false
+  if r.bag and r.slot and GT.SetBagItem then ok = pcall(GT.SetBagItem, GT, r.bag, r.slot) end
+  if not ok and r.inv and GT.SetInventoryItem then ok = pcall(GT.SetInventoryItem, GT, "player", r.inv) end
+  if (not ok or (GT.NumLines and GT:NumLines() == 0)) and r.link and GT.SetHyperlink then ok = pcall(GT.SetHyperlink, GT, r.link) end
+  if not ok then GT:AddLine(r.link or "?") end
+end
+UI.itemTip = itemTip
+function UI.Popup(text, buttons, extra)
   local o = UI.popup
   if not o then
     o = W.window(UIParent)
@@ -438,6 +456,54 @@ function UI.Popup(text, buttons)
     W.dialog(o, "WoWBoxerPopup")
   end
   o.text:SetText(text)
+  extra = extra or {}
+  o.items = o.items or {}
+  local th = math.ceil(o.text:GetStringHeight() or 14)
+  local y = -14 - th - 8
+  for i = 1, math.max(#o.items, #(extra.items or {})) do
+    local r, d = o.items[i], (extra.items or {})[i]
+    if d and not r then
+      r = CreateFrame("Button", nil, o)
+      r:SetSize(392, 22)
+      r.icon = W.icon(r, 20, true)
+      r.icon:SetPoint("LEFT", 0, 0)
+      r.label = W.text(r, "GameFontHighlightSmall", nil, W.MUTED)
+      r.label:SetPoint("LEFT", r.icon, "RIGHT", 6, 0)
+      r.label:SetWidth(52)
+      r.label:SetJustifyH("LEFT")
+      r.name = W.line(r, "GameFontHighlight")
+      r.name:SetPoint("LEFT", r.label, "RIGHT", 4, 0)
+      r.name:SetPoint("RIGHT", r, "RIGHT", 0, 0)
+      r.name:SetJustifyH("LEFT")
+      W.tooltip(r, function(GT, self) itemTip(GT, self.item) end)
+      o.items[i] = r
+    end
+    if r then
+      r:SetShown(d ~= nil)
+      if d then
+        r.item = d
+        r:ClearAllPoints(); r:SetPoint("TOPLEFT", 14, y)
+        W.setIcon(r.icon, itemIcon(d.link))
+        r.label:SetText(d.label or "")
+        r.name:SetText(d.link or "")
+        y = y - 24
+      end
+    end
+  end
+  if extra.check and not o.check then
+    o.check = W.check(o, "", nil)
+    o.check.label.wbxCopy = "guide" -- the owner's wording (10 Nov 2026), a sentence like the question above
+  end
+  if o.check then
+    o.check:SetShown(extra.check ~= nil)
+    o.check:SetChecked(false)
+    if extra.check then
+      o.check.label:SetText(extra.check[1])
+      W.tip(o.check, extra.check[1], extra.check[2])
+      o.check:ClearAllPoints(); o.check:SetPoint("TOPLEFT", 10, y - 2)
+      y = y - 28
+    end
+  end
   local prev
   for i, b in ipairs(o.btns) do
     local d = buttons[i]
@@ -449,8 +515,7 @@ function UI.Popup(text, buttons)
       prev = b
     end
   end
-  local th = o.text:GetStringHeight() or 14
-  o:SetHeight(math.ceil(th) + 14 + 12 + 24 + 14)
+  o:SetHeight(-y + 12 + 24 + 6)
   o:Show()
   return o
 end

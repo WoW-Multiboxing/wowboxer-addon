@@ -1189,7 +1189,7 @@ D.spells.druid = {
   durSec=0
  },
  {
-  id="",
+  id="druid-mangle-cat",
   name="Mangle (Cat)",
   category="Damage",
   action="melee",
@@ -1208,7 +1208,7 @@ D.spells.druid = {
   durSec=0
  },
  {
-  id="",
+  id="druid-mangle-bear",
   name="Mangle (Bear)",
   category="Damage",
   action="melee",
@@ -1227,7 +1227,7 @@ D.spells.druid = {
   durSec=0
  },
  {
-  id="",
+  id="druid-maim",
   name="Maim",
   category="Control",
   action="melee",
@@ -1244,7 +1244,7 @@ D.spells.druid = {
   durSec=0
  },
  {
-  id="",
+  id="druid-tiger-s-fury",
   name="Tiger's Fury",
   category="Buff",
   action="self",
@@ -1264,7 +1264,7 @@ D.spells.druid = {
   durSec=0
  },
  {
-  id="",
+  id="druid-faerie-fire-feral",
   name="Faerie Fire (Feral)",
   category="Debuff",
   action="ranged",
@@ -1285,7 +1285,7 @@ D.spells.druid = {
   durSec=0
  },
  {
-  id="",
+  id="druid-lifebloom",
   name="Lifebloom",
   category="Heal",
   action="friendlymain",
@@ -1301,7 +1301,7 @@ D.spells.druid = {
   durSec=0
  },
  {
-  id="",
+  id="druid-cyclone",
   name="Cyclone",
   category="Control",
   action="hostile",
@@ -1317,7 +1317,7 @@ D.spells.druid = {
   durSec=0
  },
  {
-  id="",
+  id="druid-force-of-nature",
   name="Force of Nature",
   category="Pet",
   action="self",
@@ -1334,7 +1334,7 @@ D.spells.druid = {
   durSec=0
  },
  {
-  id="",
+  id="druid-tree-of-life",
   name="Tree of Life",
   category="Buff",
   action="self",
@@ -1351,7 +1351,7 @@ D.spells.druid = {
   durSec=0
  },
  {
-  id="",
+  id="druid-flight-form",
   name="Flight Form",
   category="Mount",
   action="self",
@@ -1367,7 +1367,7 @@ D.spells.druid = {
   durSec=0
  },
  {
-  id="",
+  id="druid-swift-flight-form",
   name="Swift Flight Form",
   category="Mount",
   action="self",

@@ -874,6 +874,23 @@ D.spells.warrior = {
   castLast=1.5,
   cdSec=6,
   durSec=0
+ },
+ {
+  id="warrior-reckless-swings",
+  name="Reckless Swings",
+  category="Buff",
+  action="self",
+  icon=132334,
+  level=25,
+  gate="talent",
+  forever="new",
+  ranks={
+   {r=1,l=25,id=1329555}
+  },
+  castFirst=0,
+  castLast=0,
+  cdSec=15,
+  durSec=8
  }
 }
 D.guides.warrior = {

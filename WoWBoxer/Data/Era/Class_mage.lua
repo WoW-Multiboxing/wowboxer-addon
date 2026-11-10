@@ -1089,6 +1089,22 @@ D.spells.mage = {
   castLast=1.5,
   cdSec=0,
   durSec=0
+ },
+ {
+  id="mage-detect-magic",
+  name="Detect Magic",
+  category="Utility",
+  action="hostile",
+  icon=135899,
+  level=16,
+  gate="trainer",
+  ranks={
+   {r=1,l=16,id=2855}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
  }
 }
 D.guides.mage = {

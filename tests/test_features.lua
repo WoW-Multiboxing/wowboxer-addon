@@ -763,7 +763,7 @@ do
   for i = 2, #secs[2].cells do H.ok(secs[2].cells[i].pending >= secs[2].cells[i - 1].pending, "sorted by unlock level") end
   -- a spell of level <= 20 not in the spellbook: at your trainer, greyed but not locked
   local trainer
-  for _, s in ipairs(ns.Data.spells.priest) do if s.level <= 20 and s.gate == "trainer" and s.action ~= "passive" then trainer = s end end
+  for _, s in ipairs(ns.Data.spells.priest) do if s.level <= 20 and s.gate == "trainer" and s.action ~= "passive" and ns.Kit.raceOk(s, Core.compute().member) then trainer = s end end -- a spell of this race (racials are in the data too)
   W.known[trainer.name] = nil; W.fire("SPELLS_CHANGED"); W.flush()
   secs = ns.Book.spellSections(Core.compute())
   local tc

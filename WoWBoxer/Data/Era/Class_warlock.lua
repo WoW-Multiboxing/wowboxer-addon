@@ -1062,7 +1062,7 @@ D.spells.warlock = {
   durSec=0
  },
  {
-  id="",
+  id="warlock-curse-of-shadow",
   name="Curse of Shadow",
   category="Debuff",
   action="petattack",
@@ -1079,7 +1079,7 @@ D.spells.warlock = {
   durSec=0
  },
  {
-  id="",
+  id="warlock-curse-of-idiocy",
   name="Curse of Idiocy",
   category="Debuff",
   action="petattack",
@@ -1088,6 +1088,246 @@ D.spells.warlock = {
   gate="trainer",
   ranks={
    {r=1,l=38,id=1010}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="warlock-create-healthstone-minor",
+  name="Create Healthstone (Minor)",
+  category="Utility",
+  action="self",
+  icon=135230,
+  level=10,
+  gate="trainer",
+  ranks={
+   {r=1,l=10,id=6201}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="warlock-create-healthstone-lesser",
+  name="Create Healthstone (Lesser)",
+  category="Utility",
+  action="self",
+  icon=135230,
+  level=22,
+  gate="trainer",
+  ranks={
+   {r=1,l=22,id=6202}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="warlock-create-healthstone-greater",
+  name="Create Healthstone (Greater)",
+  category="Utility",
+  action="self",
+  icon=135230,
+  level=46,
+  gate="trainer",
+  ranks={
+   {r=1,l=46,id=11729}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="warlock-create-healthstone-major",
+  name="Create Healthstone (Major)",
+  category="Utility",
+  action="self",
+  icon=135230,
+  level=58,
+  gate="trainer",
+  ranks={
+   {r=1,l=58,id=11730}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="warlock-create-soulstone-minor",
+  name="Create Soulstone (Minor)",
+  category="Utility",
+  action="self",
+  icon=136210,
+  level=18,
+  gate="trainer",
+  ranks={
+   {r=1,l=18,id=693}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="warlock-create-soulstone-lesser",
+  name="Create Soulstone (Lesser)",
+  category="Utility",
+  action="self",
+  icon=136210,
+  level=30,
+  gate="trainer",
+  ranks={
+   {r=1,l=30,id=20752}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="warlock-create-soulstone-greater",
+  name="Create Soulstone (Greater)",
+  category="Utility",
+  action="self",
+  icon=136210,
+  level=50,
+  gate="trainer",
+  ranks={
+   {r=1,l=50,id=20756}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="warlock-create-soulstone-major",
+  name="Create Soulstone (Major)",
+  category="Utility",
+  action="self",
+  icon=136210,
+  level=60,
+  gate="trainer",
+  ranks={
+   {r=1,l=60,id=20757}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="warlock-create-firestone-lesser",
+  name="Create Firestone (Lesser)",
+  category="Utility",
+  action="self",
+  icon=132386,
+  level=28,
+  gate="trainer",
+  ranks={
+   {r=1,l=28,id=6366}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="warlock-create-firestone-greater",
+  name="Create Firestone (Greater)",
+  category="Utility",
+  action="self",
+  icon=132386,
+  level=46,
+  gate="trainer",
+  ranks={
+   {r=1,l=46,id=17952}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="warlock-create-firestone-major",
+  name="Create Firestone (Major)",
+  category="Utility",
+  action="self",
+  icon=132386,
+  level=56,
+  gate="trainer",
+  ranks={
+   {r=1,l=56,id=17953}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="warlock-create-spellstone-greater",
+  name="Create Spellstone (Greater)",
+  category="Utility",
+  action="self",
+  icon=134131,
+  level=48,
+  gate="trainer",
+  ranks={
+   {r=1,l=48,id=17727}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="warlock-create-spellstone-major",
+  name="Create Spellstone (Major)",
+  category="Utility",
+  action="self",
+  icon=134131,
+  level=60,
+  gate="trainer",
+  ranks={
+   {r=1,l=60,id=17728}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="warlock-detect-lesser-invisibility",
+  name="Detect Lesser Invisibility",
+  category="Buff",
+  action="friendlyself",
+  icon=136153,
+  level=26,
+  gate="trainer",
+  ranks={
+   {r=1,l=26,id=132}
+  },
+  castFirst=1.5,
+  castLast=1.5,
+  cdSec=0,
+  durSec=0
+ },
+ {
+  id="warlock-detect-greater-invisibility",
+  name="Detect Greater Invisibility",
+  category="Buff",
+  action="friendlyself",
+  icon=136152,
+  level=50,
+  gate="trainer",
+  ranks={
+   {r=1,l=50,id=11743}
   },
   castFirst=1.5,
   castLast=1.5,

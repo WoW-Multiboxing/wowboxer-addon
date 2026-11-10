@@ -42,6 +42,8 @@ AU.OPTIONS = {
   -- [6] = shown as a small Sound button inside that option's card, not as a card of its own
   { "warnSound", "Warning sound", "Plays the raid-warning sound with the follow warning and GM whispers (/wbx sound toggles it).", true, true, "followWarn" },
   { "autoEquip", "Auto-equip", "Equips new items that are clearly better; asks for bind-on-equip items and when unsure. Off by default." },
+  -- [7] = the sub-button's labels {on, off} (default "Sound on"/"Sound off"); owner, 10 Nov 2026: turn the questions off
+  { "equipAsk", "Ask about bind-on-equip and unclear items", "On: asks Equip / Keep in bag. Off: keeps those items in your bag without asking.", true, true, "autoEquip", { "Ask on", "Ask off" } },
   { "greed", "Auto greed", "In 5-player dungeons: Greed on grey and white items, and on better items you can't use or that are no upgrade. Never Need; bind on pickup stays yours. Off by default." },
   { "chat", "Chat line", "Writes one chat line for each automatic action." },
 }
@@ -67,11 +69,12 @@ function AU.on(key)
   return v == true
 end
 function AU.set(key, v) opts()[key] = v and true or false end
-function AU.setAll(v) for _, o in ipairs(AU.OPTIONS) do AU.set(o[1], v) end end
+--- equipAsk is a setting of Auto-equip, not an automation: "all off" leaves it as it is.
+function AU.setAll(v) for _, o in ipairs(AU.OPTIONS) do if o[1] ~= "equipAsk" then AU.set(o[1], v) end end end
 --- WoWBoxer's recommendation (the owner, 30 Oct 2026): everything on except these three.
 AU.RECOMMENDED_OFF = { abandon = true, questAny = true, restock = true, autoEquip = true, greed = true }
 function AU.defaults() for _, o in ipairs(AU.OPTIONS) do AU.set(o[1], not AU.RECOMMENDED_OFF[o[1]]) end end
-function AU.preset() for _, o in ipairs(AU.OPTIONS) do AU.set(o[1], false) end for _, k in ipairs(AU.PRESET_LEVELLING) do AU.set(k, true) end AU.set("chat", true) end
+function AU.preset() for _, o in ipairs(AU.OPTIONS) do if o[1] ~= "equipAsk" then AU.set(o[1], false) end end for _, k in ipairs(AU.PRESET_LEVELLING) do AU.set(k, true) end AU.set("chat", true) end
 function AU.rewardRule() local r = db().autoReward; for _, x in ipairs(AU.REWARD_RULES) do if x == r then return r end end return "leader" end
 
 -- ------------------------------------------------------------------ who may trigger it

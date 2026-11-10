@@ -4,7 +4,8 @@
     least one is higher, nothing it wears now is lost) → equipped, one log/chat line;
   - bind on equip (not bound yet) → always asked first (equipping binds it to you);
   - in doubt (some stats up, some down; trinkets; weapon layout changes; effects WoWBoxer can't compare; no stats
-    on this client) → asked: Equip / Keep in bag – but only when it could be an upgrade: a trade-off must come out
+    on this client) → asked: Equip / Keep in bag (or, with "Ask about…" off, kept in the bag without a question:
+    owner, 10 Nov 2026) – but only when it could be an upgrade: a trade-off must come out
     ahead in a weighted score for your class and role (E.score), a lower-quality item (white next to green) clearly
     ahead (25 %), and trinkets / unreadable items must not be a lower quality or item level;
   - worse, or not for you (red text in its tooltip: armour type, level, class) → nothing. Too high a level: looked
@@ -375,10 +376,31 @@ function E.equip(bag, slot, link, inv)
   return true
 end
 
+--- The question popup's tick (owner, 10 Nov 2026): with any button it turns "Ask about…" off.
+E.DONT_ASK = "Don't ask me again – keep these in the bag"
+E.DONT_ASK_TIP = "From now on bind-on-equip and unclear items stay in your bag without a question. Turn it on again under Auto-equip (Automation)."
+--- A question that is not asked ("Ask about…" off): the item stays in the bag; one log line (+ the Chat line option).
+function E.keep(q)
+  AU().did("Kept " .. q.link .. " in your bag")
+end
+--- The tick: ticked + a button = "Ask about…" off from now on.
+local function tickedOff()
+  local o = ns.UI and ns.UI.popup
+  if o and o.check and o.check:IsShown() and o.check:GetChecked() then
+    AU().set("equipAsk", false)
+    Core().log("info", "automation equipAsk off (don't ask me again)")
+    if ns.UI.Refresh then pcall(ns.UI.Refresh) end
+  end
+end
 --- Show the next queued question (one at a time; waits while another WoWBoxer question is open).
 function E.nextAsk()
   local q = E.asks[1]
   if not q then return end
+  if not AU().on("equipAsk") then -- "Ask about…" off: the waiting questions are answered "keep" too
+    table.remove(E.asks, 1)
+    E.keep(q)
+    return E.nextAsk()
+  end
   local UI = ns.UI
   if not (UI and UI.Popup) then return end
   if UI.popup and UI.popup:IsShown() then
@@ -386,8 +408,12 @@ function E.nextAsk()
     return
   end
   table.remove(E.asks, 1)
+  -- the items as rows: hover shows the game's tooltip with all stats (owner, 10 Nov 2026)
+  local rows = { { link = q.link, label = "New", bag = q.bag, slot = q.slot } }
+  if q.old then rows[2] = { link = q.old, label = "Worn now", inv = q.inv } end
   UI.Popup(q.text, {
     { "Equip", function()
+      tickedOff()
       if C().inCombat() then
         Core().print("Auto-equip: in combat – equips " .. q.link .. " when the fight ends.")
         E.afterCombat = E.afterCombat or {}
@@ -397,8 +423,9 @@ function E.nextAsk()
       end
       E.nextAsk()
     end, "Puts it on now." },
-    { "Keep in bag", function() Core().log("info", "equip: kept " .. q.link .. " in the bag"); E.nextAsk() end,
-      "Leaves it in your bag. WoWBoxer won't ask about it again." } })
+    { "Keep in bag", function() tickedOff(); Core().log("info", "equip: kept " .. q.link .. " in the bag"); E.nextAsk() end,
+      "Leaves it in your bag. WoWBoxer won't ask about it again." } },
+    { items = rows, check = { E.DONT_ASK, E.DONT_ASK_TIP } })
   Core().log("info", "equip: asked about " .. q.link .. " (" .. q.why .. ")")
 end
 
@@ -414,7 +441,7 @@ function E.consider(bag, slot, link)
   if d.act == "equip" then
     if E.equip(bag, slot, link, d.slot) then AU().did("equipped " .. link .. (d.old and (" (better than " .. d.old.link .. ")") or "")) end
   elseif d.act == "ask" then
-    E.asks[#E.asks + 1] = { bag = bag, slot = slot, link = link, inv = d.slot, why = d.why, text = E.question(d, it) }
+    E.asks[#E.asks + 1] = { bag = bag, slot = slot, link = link, inv = d.slot, why = d.why, text = E.question(d, it), old = d.old and d.old.link or nil }
     E.nextAsk()
   else
     Core().log("info", "equip: " .. link .. " – " .. tostring(d.why))
