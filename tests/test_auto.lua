@@ -298,7 +298,7 @@ do
   H.ok(not ns.Auto.on("warnSound") and fw.sub:GetText():find("Sound off", 1, true), "the button turns the sound off, warning stays on")
   H.ok(ns.Auto.on("followWarn"), "Follow warning still on")
   fw.sub:Click()
-  H.eq(table.concat(on, ","), "invite,quests,share,turnin,dialog,res,summon,rolecheck,sell,repair,shareSell,whispers,followWarn,warnSound,equipAsk,chat", "Default squad values preset (Ask about… is a setting of Auto-equip, on by default)")
+  H.eq(table.concat(on, ","), "invite,quests,share,turnin,dialog,res,summon,rolecheck,sell,repair,shareSell,whispers,followWarn,warnSound,questCheck,equipAsk,chat", "Default squad values preset (Ask about… is a setting of Auto-equip, on by default)")
   f.allOff:Click()
   for _, c in ipairs(f.ticks) do H.ok(not c:GetChecked(), "All off: " .. c.key) end
   f.allOn:Click()
