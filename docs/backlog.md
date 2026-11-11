@@ -1,5 +1,11 @@
 # WoWBoxer addon – backlog
 
+## The owner: TEST BUILD 1.3.0-test.7 – Forever talents and guides from the live client (Paladin, Priest, Warlock; /reload each)
+1. Talents tab → the next point matches the game's talent window (same talent, same row).
+2. Guide list shows the updated guides; your old choice is still selected (or one "updated" line in chat).
+3. After the `/reload`, Claude runs `read_log.py` → diag.talentTree saved, 0 differences.
+4. Macros and sequence keys still work as before.
+
 ## The owner: TEST BUILD 1.3.0-test.6 – Abandon together dropdown (Forever, /reload each, one party, a shared quest)
 1. Automation page: the *Abandon together* dropdown shows *Ask on every quest*.
 2. Leader abandons a shared quest → each follower gets the question; *Abandon* drops it, *Keep it* keeps it.
