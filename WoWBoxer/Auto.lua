@@ -40,6 +40,7 @@ AU.OPTIONS = {
   { "shareSell", "Share sell list", "Keeps the sell list the same on every squad window (/wbx sell add [item]); each sells at its own merchant." },
   { "whispers", "Forward whispers", "Followers' whispers show in the leader's chat; GM whispers are tagged, with a sound.", true, true },
   { "followWarn", "Follow warning", "Warning on the leader when a follower stops following (not in combat, zoning, death, flights).", true, true },
+  { "questCheck", "Quest check", "Warning on the leader when a follower did not get a quest you accepted, or still has one you turned in.", true, true },
   -- [6] = shown as a small Sound button inside that option's card, not as a card of its own
   { "warnSound", "Warning sound", "Plays the raid-warning sound with the follow warning and GM whispers (/wbx sound toggles it).", true, true, "followWarn" },
   { "autoEquip", "Auto-equip", "Equips new items that are clearly better; asks for bind-on-equip items and when unsure. Off by default." },
@@ -51,7 +52,7 @@ AU.OPTIONS = {
 AU.BY_KEY = {}
 for _, o in ipairs(AU.OPTIONS) do AU.BY_KEY[o[1]] = o end
 AU.PRESET_LEVELLING = { "invite", "quests", "share", "turnin", "dialog", "res", "summon", "rolecheck", "sell", "repair", "shareSell",
-  "whispers", "followWarn", "warnSound" }
+  "whispers", "followWarn", "questCheck", "warnSound" }
 AU.REWARD_RULES = { "leader", "value", "ask" }
 --- Abandon together: {value, label, the one sentence under it}. Stored as settings.auto.abandonMode.
 AU.ABANDON_MODES = {

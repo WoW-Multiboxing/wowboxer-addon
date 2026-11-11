@@ -1256,6 +1256,7 @@ function Core.slash(msg)
       chat(string.format("  %s: %d buttons, %d outside, %d under another bar (%s)", b.label, b.buttons, b.outside, b.covered, b.anchor))
     end
   elseif cmd == "sell" then if ns.Relay then ns.Relay.slash(rest) end
+  elseif cmd == "questcheck" or cmd == "qc" then if ns.Relay then ns.Relay.questStatus() end
   elseif cmd == "team" then
     -- one switch (Talex, #help 10 Nov: "team off" then "team on" did not bring the box back – `on and nil or false`
     -- is always false in Lua, and the window had a second switch of its own)

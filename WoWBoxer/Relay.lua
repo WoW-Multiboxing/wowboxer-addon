@@ -6,6 +6,9 @@
     warning + sound. Not after a loading screen, while dead, on a flight, or when the leader flies / just zoned.
   - Shared sell list (option "shareSell"): the sell list (settings.sellList) is the same on every squad window; the
     newest edit wins. Each window still only sells when IT opens a merchant (Auto.onMerchant).
+  - Quest check (option "questCheck", on): followers send their quest log ids (K|i|n|ids, on change and every 20 s);
+    the leader warns 8 s after accepting a quest a follower does not have, and 12 s after turning in a quest a
+    follower still has. Display only – nothing is accepted, shared or abandoned here.
   Messages (prefix WBXR) come only from squad members in the party and are data: a fixed format, cleaned text,
   never code. Nothing here casts, targets, moves, follows or presses a key. ]]
 local _, ns = ...
@@ -20,6 +23,12 @@ RL.ZONE_QUIET = 8          -- seconds after a loading screen without warnings
 RL.WARN_EVERY = 6          -- seconds between two warnings for the same follower
 RL.SELL_MAX = 100          -- items on the sell list
 RL.CHUNK = 200
+RL.QC_ACCEPT = 8           -- seconds after the leader accepts a quest before followers are checked
+RL.QC_TURNIN = 12          -- seconds after the leader turns in a quest before followers are checked
+RL.QC_COALESCE = 2         -- seconds a follower waits so several log changes become one message
+RL.QC_HEARTBEAT = 20       -- seconds between two full quest-log sends from a follower
+RL.QC_FRESH = 45           -- a follower's log older than this is not judged
+RL.QC_IDS = 230            -- characters of ids per message part
 
 local function Core() return ns.Core end
 local function C() return ns.Compat end
@@ -207,6 +216,9 @@ function RL.receive(prefix, text, _, sender)
   elseif kind == "L|" then
     local at, i, n, part = text:match("^L|(%d+)|(%d+)|(%d+)|(.*)$")
     if at then RL.receiveSell(m, tonumber(at), tonumber(i), tonumber(n), part) end
+  elseif kind == "K|" then
+    local i, n, part = text:match("^K|(%d+)|(%d+)|([%d,]*)$")
+    if i then RL.receiveQuestLog(m, tonumber(i), tonumber(n), part) end
   end
 end
 
@@ -229,6 +241,141 @@ function RL.slash(rest)
   end
 end
 
+-- ------------------------------------------------------------------ 4. quest check (the leader sees who missed a quest)
+RL.logs = {}        -- leader: follower name -> {ids = {id = true}, at = time}
+RL.titles = {}      -- quest id -> title, from this client's own log (names for the warnings)
+RL.qcWarned = {}    -- "accept:id:name" / "turnin:id:name" -> true (one warning each)
+RL.qcInbox = {}     -- leader: sender -> {at, n, parts}
+RL.qcSendAt = nil   -- follower: time of the pending coalesced send
+RL.qcLastSend = -1e9
+--- This character's quest log as {id = title}, both APIs (Auto.questIds gives the ids only).
+function RL.questLog()
+  local out = {}
+  local QL = G.C_QuestLog
+  if QL and QL.GetNumQuestLogEntries and QL.GetInfo then
+    local ok, n = pcall(QL.GetNumQuestLogEntries)
+    for i = 1, (ok and n or 0) do
+      local okI, info = pcall(QL.GetInfo, i)
+      if okI and info and info.questID and not info.isHeader then out[info.questID] = C().safe(info.title) or ("quest " .. info.questID) end
+    end
+  elseif G.GetNumQuestLogEntries and G.GetQuestLogTitle then
+    local ok, n = pcall(G.GetNumQuestLogEntries)
+    for i = 1, (ok and n or 0) do
+      local r = { pcall(G.GetQuestLogTitle, i) }
+      if r[1] and not r[5] and r[9] then out[r[9]] = C().safe(r[2]) or ("quest " .. r[9]) end -- title(2), isHeader(5), questID(9)
+    end
+  end
+  for id, t in pairs(out) do RL.titles[id] = tostring(t) end
+  return out
+end
+local function questName(id) return RL.titles[id] or ("quest " .. tostring(id)) end
+local function qcOn() return AU().on("questCheck") and squadSize() >= 2 end
+--- Follower: send the whole quest log now ("K|i|n|id,id,…").
+function RL.sendQuestLog()
+  RL.qcSendAt = nil
+  if not qcOn() or iAmLeader() or not C().inParty() then return 0 end
+  local ids = {}
+  for id in pairs(RL.questLog()) do ids[#ids + 1] = tostring(math.floor(tonumber(id) or 0)) end
+  table.sort(ids, function(a, b) return tonumber(a) < tonumber(b) end)
+  local text = table.concat(ids, ",")
+  local parts = {}
+  repeat
+    parts[#parts + 1] = text:sub(1, RL.QC_IDS)
+    text = text:sub(RL.QC_IDS + 1)
+  until text == ""
+  for i, part in ipairs(parts) do send("K|" .. i .. "|" .. #parts .. "|" .. part) end
+  RL.qcLastSend = now()
+  return #parts
+end
+--- Follower: the quest log changed – send it in a moment (several changes become one send).
+function RL.questLogChanged()
+  if not qcOn() or iAmLeader() then return end
+  if RL.qcSendAt then return end
+  RL.qcSendAt = now()
+  if G.C_Timer and G.C_Timer.After then G.C_Timer.After(RL.QC_COALESCE, RL.sendQuestLog) else RL.sendQuestLog() end
+end
+--- Leader: a follower's quest log part arrived.
+function RL.receiveQuestLog(from, i, n, part)
+  if not iAmLeader() or not AU().on("questCheck") then return false end
+  local box = RL.qcInbox[from.name]
+  if not box or box.n ~= n or now() - box.at > 10 then box = { at = now(), n = n, parts = {} }; RL.qcInbox[from.name] = box end
+  box.parts[i] = part
+  for k = 1, n do if not box.parts[k] then return true end end
+  local ids = {}
+  for id in table.concat(box.parts):gmatch("%d+") do ids[tonumber(id)] = true end
+  RL.logs[from.name] = { ids = ids, at = now() }
+  RL.qcInbox[from.name] = nil
+  return true
+end
+local function qcFollowers()
+  local s, me = Core().me()
+  local out = {}
+  for _, m in ipairs(s and s.members or {}) do
+    if m ~= me and ns.Squad.unitOf(m.name) then out[#out + 1] = m.name end
+  end
+  return out
+end
+--- Leader: who still has / does not have quest id (fresh logs only). Returns names.
+function RL.questMissing(id, wantHas)
+  local out = {}
+  for _, name in ipairs(qcFollowers()) do
+    local l = RL.logs[name]
+    if l and now() - l.at <= RL.QC_FRESH and (l.ids[id] == true) == wantHas then out[#out + 1] = name end
+  end
+  return out
+end
+local function qcWarn(key, text)
+  if RL.qcWarned[key] then return false end
+  RL.qcWarned[key] = true
+  RL.warn(text)
+  RL.sound()
+  Core().log("info", "relay: " .. text)
+  return true
+end
+--- Leader: a quest was accepted here; check the followers in a moment.
+function RL.onQuestAccepted(id)
+  RL.questLog()
+  if not (iAmLeader() and qcOn()) or not id or id <= 0 then return end
+  local function check()
+    local names = RL.questMissing(id, false)
+    for _, name in ipairs(names) do
+      qcWarn("accept:" .. id .. ":" .. name, name .. " doesn't have " .. questName(id) .. " – share it from your quest log or let " .. name .. " pick it up.")
+    end
+  end
+  if G.C_Timer and G.C_Timer.After then G.C_Timer.After(RL.QC_ACCEPT, check) else check() end
+end
+--- Leader: a quest was turned in here; check the followers in a moment.
+function RL.onQuestTurnedIn(id)
+  if not (iAmLeader() and qcOn()) or not id or id <= 0 then return end
+  local function check()
+    local names = RL.questMissing(id, true)
+    for _, name in ipairs(names) do
+      qcWarn("turnin:" .. id .. ":" .. name, name .. " still has " .. questName(id) .. " – not turned in yet.")
+    end
+  end
+  if G.C_Timer and G.C_Timer.After then G.C_Timer.After(RL.QC_TURNIN, check) else check() end
+end
+--- "/wbx questcheck": what the leader sees.
+function RL.questStatus()
+  if not iAmLeader() then Core().print("Quest check: this window is a follower; it sends its quest log to the leader" .. (qcOn() and "." or " (option off).")); return end
+  local mine = RL.questLog()
+  local n = 0
+  for _ in pairs(mine) do n = n + 1 end
+  Core().print("Quest check (" .. (AU().on("questCheck") and "on" or "off") .. "): you have " .. n .. " quests.")
+  for _, name in ipairs(qcFollowers()) do
+    local l = RL.logs[name]
+    if not l then Core().print("  " .. name .. ": no quest log received yet.")
+    else
+      local missing, extra, c = {}, {}, 0
+      for id in pairs(mine) do if not l.ids[id] then missing[#missing + 1] = questName(id) end end
+      for id in pairs(l.ids) do c = c + 1; if not mine[id] then extra[#extra + 1] = questName(id) end end
+      Core().print(string.format("  %s: %d quests, %ds ago%s%s", name, c, math.floor(now() - l.at),
+        #missing > 0 and (" – missing: " .. table.concat(missing, ", ")) or "",
+        #extra > 0 and (" – has but you don't: " .. table.concat(extra, ", ")) or ""))
+    end
+  end
+end
+
 -- ------------------------------------------------------------------ events
 local f = CreateFrame("Frame")
 RL.frame = f
@@ -237,7 +384,13 @@ function RL.Init()
   local regp = (CI and CI.RegisterAddonMessagePrefix) or G.RegisterAddonMessagePrefix
   if regp then pcall(regp, RL.PREFIX) end
   for _, ev in ipairs({ "CHAT_MSG_ADDON", "CHAT_MSG_WHISPER", "AUTOFOLLOW_END", "PLAYER_ENTERING_WORLD", "LOADING_SCREEN_DISABLED",
-    "GROUP_ROSTER_UPDATE" }) do pcall(f.RegisterEvent, f, ev) end
+    "GROUP_ROSTER_UPDATE", "QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "QUEST_LOG_UPDATE" }) do pcall(f.RegisterEvent, f, ev) end
+  -- follower heartbeat: the whole quest log every QC_HEARTBEAT seconds while grouped (cheap: one short message)
+  if G.C_Timer and G.C_Timer.NewTicker then
+    pcall(G.C_Timer.NewTicker, RL.QC_HEARTBEAT, function()
+      if Core().db and now() - RL.qcLastSend >= RL.QC_HEARTBEAT - 1 then pcall(RL.sendQuestLog) end
+    end)
+  end
 end
 RL.announcedAt = -1e9
 f:SetScript("OnEvent", function(_, event, a, b, c, d, e, g)
@@ -250,6 +403,12 @@ f:SetScript("OnEvent", function(_, event, a, b, c, d, e, g)
     elseif event == "GROUP_ROSTER_UPDATE" then
       -- someone joined: offer our list once a minute (the newest list wins on every window)
       if now() - RL.announcedAt > 60 then RL.announcedAt = now(); RL.sendSellList() end
+      RL.questLogChanged()
+    elseif event == "QUEST_ACCEPTED" then
+      -- retail: questID; Classic: questLogIndex, questID
+      RL.onQuestAccepted(tonumber(b or a)); RL.questLogChanged()
+    elseif event == "QUEST_TURNED_IN" then RL.onQuestTurnedIn(tonumber(a)); RL.questLogChanged()
+    elseif event == "QUEST_REMOVED" or event == "QUEST_LOG_UPDATE" then RL.questLogChanged()
     end
   end)
   if not ok then Core().log("error", "relay " .. event .. ": " .. tostring(err)) end

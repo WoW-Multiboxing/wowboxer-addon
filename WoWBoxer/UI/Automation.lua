@@ -48,9 +48,9 @@ local function modeCard(p, o, col, row, pitch, cardH, themed)
     c.card:SetSize(328, cardH)
     c.label = W.line(c.card, "GameFontNormal", 12, W.GOLD) -- on the card, so the card never covers it
     ns.Theme.font(c.label, "bold", 12)
-    c.label:SetPoint("TOPLEFT", c.card, "TOPLEFT", 10, cardH < 35 and -3 or -4)
+    c.label:SetPoint("TOPLEFT", c.card, "TOPLEFT", 10, cardH < 33 and -2 or (cardH < 35 and -3 or -4))
     c.line = W.line(c.card, "GameFontHighlightSmall", 10, W.MUTED)
-    c.line:SetPoint("BOTTOMLEFT", c.card, "BOTTOMLEFT", 10, cardH < 35 and 3 or 5)
+    c.line:SetPoint("BOTTOMLEFT", c.card, "BOTTOMLEFT", 10, cardH < 33 and 2 or (cardH < 35 and 3 or 5))
     c.dd:SetPoint("RIGHT", c.card, "RIGHT", -8, 0)
   else
     c.label = W.line(p, "GameFontNormal", nil, W.GOLD)
@@ -90,6 +90,8 @@ function tab.build(p)
   local _, ph = UI.PanelSize()
   local pitch = math.max(33, math.min(38, math.floor(((ph or 420) - 32 - 36) / per)))
   local cardH = pitch - 3
+  -- 11 cards per column (pitch 33, card 30): the name and its line sit at 2 px from the card's edges, else at 3-5
+  local top, bottom = cardH < 33 and -2 or (cardH < 35 and -3 or -4), cardH < 33 and 2 or (cardH < 35 and 3 or 5)
   for i, o in ipairs(shown) do
     local col, row = math.floor((i - 1) / per), (i - 1) % per
     if o.modes then p.modes[#p.modes + 1] = modeCard(p, o, col, row, pitch, cardH, themed); p[o.modes] = p.modes[#p.modes] else
@@ -104,13 +106,13 @@ function tab.build(p)
       c:SetPoint("LEFT", card, "LEFT", 10, 0)
       c.card = card
       c.label:ClearAllPoints()
-      c.label:SetPoint("TOPLEFT", card, "TOPLEFT", 66, cardH < 35 and -3 or -4)
+      c.label:SetPoint("TOPLEFT", card, "TOPLEFT", 66, top)
       ns.Theme.font(c.label, "bold", 12)
       c.label:SetWordWrap(false); if c.label.SetMaxLines then c.label:SetMaxLines(1) end
       c.label.wbxTrunc = true
       c.label:SetWidth(222)
       c.line = W.line(card, "GameFontHighlightSmall", 10, W.MUTED)
-      c.line:SetPoint("BOTTOMLEFT", card, "BOTTOMLEFT", 66, cardH < 35 and 3 or 5)
+      c.line:SetPoint("BOTTOMLEFT", card, "BOTTOMLEFT", 66, bottom)
       c.line:SetWidth(222)
       -- ON / OFF at the right of the card; the card lifts while ON (§2 "On and off")
       c.word:ClearAllPoints()

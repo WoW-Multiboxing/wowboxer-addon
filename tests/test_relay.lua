@@ -202,4 +202,78 @@ do
   H.eq(ns.TeamFrame.bagsText(nil), "", "unknown: empty")
 end
 
+-- ------------------------------------------------------------------ quest check: who missed a quest
+do
+  -- follower: sends its quest log (Classic API) on change, coalesced, and never acts
+  local W, ns = boot("Anna")
+  local RL, AU = ns.Relay, ns.Auto
+  H.ok(AU.on("questCheck"), "quest check is on by default (display only)")
+  local LOG = { 100, 200, 300 }
+  W.env.C_QuestLog = nil
+  W.env.GetNumQuestLogEntries = function() return #LOG end
+  W.env.GetQuestLogTitle = function(i) return "Quest " .. LOG[i], 10, nil, false, false, false, nil, LOG[i] end
+  W.sent = {}
+  W.fire("QUEST_LOG_UPDATE"); W.fire("QUEST_LOG_UPDATE"); W.fire("QUEST_ACCEPTED", 3, 300)
+  H.eq(relayed(W, "K|"), nil, "nothing goes out before the coalescing timer")
+  W.flush()
+  H.eq(relayed(W, "K|"), "K|1|1|100,200,300", "one message with the whole quest log, sorted ids")
+  local n = 0
+  for _, m in ipairs(W.sent) do if m.prefix == "WBXR" and m.msg:sub(1, 2) == "K|" then n = n + 1 end end
+  H.eq(n, 1, "three log changes become one send")
+  LOG = {}
+  for i = 1, 60 do LOG[i] = 10000 + i end
+  W.sent = {}
+  W.fire("QUEST_LOG_UPDATE"); W.flush()
+  local parts = {}
+  for _, m in ipairs(W.sent) do if m.prefix == "WBXR" and m.msg:sub(1, 2) == "K|" then parts[#parts + 1] = m.msg end end
+  H.ok(#parts >= 2 and parts[1]:match("^K|1|" .. #parts .. "|") ~= nil, "a long log goes in numbered parts")
+  AU.set("questCheck", false); W.sent = {}
+  W.fire("QUEST_LOG_UPDATE"); W.flush()
+  H.eq(relayed(W, "K|"), nil, "option off: the follower sends nothing")
+  H.eq(#W.acted, 0, "the follower never acts")
+end
+do
+  -- leader: warns 8 s after an accept a follower lacks, 12 s after a turn-in a follower still has; once each
+  local W, ns = boot("Dorin")
+  local RL, AU = ns.Relay, ns.Auto
+  local LOG = { 100, 200 }
+  W.env.C_QuestLog = nil
+  W.env.GetNumQuestLogEntries = function() return #LOG end
+  W.env.GetQuestLogTitle = function(i) return "Quest " .. LOG[i], 10, nil, false, false, false, nil, LOG[i] end
+  W.now = 1000
+  deliver(W, "Anna", "K|1|1|100")          -- Anna has 100 only
+  deliver(W, "Bo", "K|1|2|100,")           -- Bo's log in two parts
+  deliver(W, "Bo", "K|2|2|200")
+  H.ok(RL.logs.Anna and RL.logs.Anna.ids[100] and not RL.logs.Anna.ids[200], "Anna's log stored")
+  H.ok(RL.logs.Bo and RL.logs.Bo.ids[200], "Bo's two parts joined")
+  deliver(W, "Stranger", "K|1|1|100,200")
+  H.eq(RL.logs.Stranger, nil, "a non-member's log is dropped")
+  W.warnings = {}
+  W.fire("QUEST_ACCEPTED", 2, 200)
+  H.eq(#W.warnings, 0, "no warning before the 8 s check")
+  W.flush()
+  H.eq(W.warnings[1], "Anna doesn't have Quest 200 – share it from your quest log or let Anna pick it up.", "Anna lacks the quest the leader accepted")
+  H.eq(#W.warnings, 1, "Bo has it: no warning for Bo")
+  H.ok(#W.sounds > 0, "with a sound")
+  W.warnings = {}
+  W.fire("QUEST_ACCEPTED", 2, 200); W.flush()
+  H.eq(#W.warnings, 0, "the same miss is warned once")
+  -- turn-in: Bo still has 100
+  LOG = { 200 }
+  W.fire("QUEST_TURNED_IN", 100, 500, 0); W.flush()
+  H.eq(#W.warnings, 2, "both followers still have the turned-in quest")
+  H.ok(W.warnings[1]:find("still has Quest 100", 1, true) ~= nil, "turn-in warning names the quest")
+  -- stale logs are not judged
+  W.now = 1000 + RL.QC_FRESH + 1
+  W.warnings = {}
+  LOG = { 200, 300 }
+  W.fire("QUEST_ACCEPTED", 2, 300); W.flush()
+  H.eq(#W.warnings, 0, "a follower log older than QC_FRESH is not judged")
+  AU.set("questCheck", false); W.now = 1000
+  deliver(W, "Anna", "K|1|1|100")
+  W.fire("QUEST_ACCEPTED", 2, 300); W.flush()
+  H.eq(#W.warnings, 0, "option off on the leader: no warnings")
+  H.eq(#W.acted, 0, "the leader never acts")
+end
+
 os.exit(H.report("relay") and 0 or 1)
