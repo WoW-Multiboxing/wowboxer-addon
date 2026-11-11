@@ -77,6 +77,26 @@ data (pets' Beast Training spells aside). The race masks come from `SkillLineAbi
 - The level of a rank the client gives as 0 (Reckless Swings, Oath of Light): the talent row's level from
   talentsforever.com (25).
 
+### Rerun on the live client (11 Nov 2026, build 1.60.1.70888)
+
+The talents-and-guides rerun (`docs/talents-rerun-2026-11-11.md`, `docs/forever-talent-diff.md`) now reads Forever's
+spell ranks and trainer levels from the client tables too (`tools/fetch_client.py forever`), not from the seed.
+
+- **Nothing new is missing.** Every active spell of a Forever class skill line in build 70888 is in the data. What
+  the tables still have that the data does not: pet abilities and pet training (Bite, Claw, Dash, the resistances,
+  Great Stamina …), effects and procs (Abolish Poison Effect, Lightwell Renew, Bane of Doom Effect, Chilled,
+  Clearcasting), talent passives (Hack and Slash, Weaponmaster, Pyroclasm, Magic Absorption) and Season of Discovery
+  leftovers with no trainer row (Aspect of the Falcon/Viper, Black Arrow, Heart of the Lion, Shadowfiend, Felfire,
+  Metamorphosis : Demon Charge). The same rules as above leave them out.
+- **The extras here are now talents of the live trees:** Reckless Swings (Fury row 4, level 25), Oath of Light
+  (Holy row 4, 25), Death Mark (Subtlety row 7, 40). Their talent keys come from the live tree, and the level is
+  never before the row.
+- **Gone from Forever** (no talent and no trainer in 70888; Wowhead's Forever class abilities agree): Lava Burst,
+  Berserk, Binding Heal. Removed from the data. **Renamed:** Elemental Mastery → Lightning Mastery (the same spell 16166).
+- **Changed levels and ranks** (the client wins): see `docs/forever-talent-diff.md` §4.4, e.g. Righteous Fury 10 (was 16),
+  Holy Shield 30 (Protection row 5), Stormstrike 40 (Enhancement row 7), Lacerate a Feral talent from 25, Ferocious Bite
+  a new rank at 24, Exorcism, Seal of Righteousness and Touch of Weakness with every rank's ID.
+
 ## Classic Era (`datasrc/era/spells.json` → new)
 
 Same method, client build 1.15.9.70576. Ranks and levels come from the client.

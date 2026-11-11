@@ -58,7 +58,8 @@ races, sequences).
 `/wbx discord` · `/wbx youtube` · `/wbx website` · `/wbx help` (help on Discord) · `/wbx report` (Report a problem)
 
 ## Credits and licence
-MIT licence. Talent data: Zephras (zephras.com), CC BY 4.0, changed by WoWBoxer; The Forever Era.
+MIT licence. WoW Forever talent trees: Blizzard client tables, checked against Wowhead. Other data: Zephras
+(zephras.com), CC BY 4.0, changed by WoWBoxer; The Forever Era.
 World of Warcraft and its names and icons are © Blizzard Entertainment. WoWBoxer is a free fan project and is not
 affiliated with or endorsed by Blizzard.
 

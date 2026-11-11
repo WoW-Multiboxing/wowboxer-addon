@@ -89,8 +89,27 @@ Wowhead's Forever trees and WoWBoxer's data (Zephras + The Forever Era) agree on
 
 Re-check both trees on the launch client ([AFKLAR]) and correct the data. Add a note in row A.
 
+**Settled 11 Nov 2026:** the live client (build 1.60.1.70888) and Wowhead agree on every tree; the data now comes from
+the client (`docs/forever-talent-diff.md`).
+
 ## 6. Tests
 
 - Port the round-trip test to `tests/` in Lua: all guides, the example link, bad links, a class mismatch, a link
   without order, a rank clamp, more than 51 points, and the newer-version error.
 - UI test: Import → preview → Save as → the build shows under "My builds" → Use → the Talents tab shows its next point.
+
+## 7. After WoW Forever's live trees (11 Nov 2026)
+
+- Wowhead's Forever calculator now writes links with the hash version **`vkndmh`** (the live trees, row then column).
+  `vendor/wowhead/forever-trees.json` has that layout, checked against the client by node ID.
+- **Older links** (`v2`, made before the change) still read: Wowhead keeps two older layouts for `v2`, and WoWBoxer
+  does what Wowhead does. It takes the first layout the digits fit that is also legal, else the first they fit, then
+  matches the talents by name. A talent that is gone is left out ("Arcane Focus is not in WoW Forever's live talents –
+  left out"), and points that no longer fit a row or prerequisite are dropped with one warning. The preview says
+  "Older Wowhead link (v2 …)".
+- **The example link** in §0 still decodes: Druid 11/4/0, 15 points, the same click order (Improved Wrath, Genesis,
+  Improved Wrath ×3 … Ferocity at 24), with the "older link" line. As a current link it is
+  `…/talent-calc/druid/vkndmh410222-4_t0/0abaaaDEF1aaaa`; **Copy Wowhead link** writes that format.
+- Era and TBC keep the `v2` format of the classic calculators.
+- Tests: `tests/test_wowhead.lua` (round trip over every guide in the new format, the example in both formats, a gone
+  talent, points that no longer fit).
