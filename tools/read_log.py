@@ -11,7 +11,67 @@ import json
 import os
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from fetch_client import GRID_X, GRID_Y, STEP, SNAP  # noqa: E402  (the same grid as the data)
+
 WOW = r"C:\Program Files (x86)\World of Warcraft"
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def forever_data():
+    """WoWBoxer's Forever talent data source (datasrc/forever/blizzard-<build>.json, the newest build)."""
+    files = sorted(glob.glob(os.path.join(ROOT, "datasrc", "forever", "blizzard-*.json")))
+    return json.load(open(files[-1], encoding="utf-8")) if files else None
+
+
+def cell(x, y):
+    """(tree 0-2, row, column) of a C_Traits node position, or None when it is off the grid (parked)."""
+    if not isinstance(x, (int, float)) or not isinstance(y, (int, float)):
+        return None
+    t = max([i for i, gx in enumerate(GRID_X) if x >= gx - STEP // 2] or [0])
+    c = int(round((x - GRID_X[t]) / float(STEP))) + 1
+    r = int(round((y - GRID_Y) / float(STEP))) + 1
+    on = abs(x - (GRID_X[t] + (c - 1) * STEP)) <= SNAP and abs(y - (GRID_Y + (r - 1) * STEP)) <= SNAP
+    return (t, r, c) if on and 1 <= c <= 4 and 1 <= r <= 7 else None
+
+
+def compare_talent_tree(tree, data):
+    """Differences between diag.talentTree (the live tree, C_Traits) and WoWBoxer's data. Returns (cls, lines, spent)."""
+    nodes = [n for n in (tree.get("nodes") or []) if isinstance(n, dict)]
+    live = {n.get("id"): n for n in nodes}
+    cls = tree.get("cls")
+    if cls not in (data.get("talents") or {}):  # older diag: the class whose node IDs match best
+        cls = max(data["talents"], key=lambda c: sum(1 for x in data["talents"][c] if x["node"] in live))
+    ours = {x["node"]: x for x in data["talents"][cls]}
+    parked = {x["node"] for x in (data.get("parked") or {}).get(cls, [])}
+    out, spent = [], [0, 0, 0]
+    for nid, n in sorted(live.items(), key=lambda kv: (kv[1].get("y") or 0, kv[1].get("x") or 0)):
+        where = cell(n.get("x"), n.get("y"))
+        name = n.get("name") or "?"
+        x = ours.get(nid)
+        if not x:
+            if nid in parked:
+                if n.get("visible") is True or (n.get("spent") or 0) > 0:
+                    out.append("%s (node %s): shown in game but parked off the grid in the data" % (name, nid))
+                continue
+            if where is None and n.get("visible") is not True:
+                continue  # parked in game too
+            out.append("%s (node %s): in the game at %s, not in WoWBoxer's data" % (name, nid, where and "tree %d row %d col %d" % (where[0] + 1, where[1], where[2])))
+            continue
+        if where:
+            spent[where[0]] += n.get("spent") or 0
+        if name != x["n"]:
+            out.append("%s (node %s): the game calls it %r" % (x["n"], nid, name))
+        if n.get("max") is not None and n.get("max") != x["m"]:
+            out.append("%s: max rank %s in the game, %s in the data" % (x["n"], n.get("max"), x["m"]))
+        if where and where != (x["t"], x["r"], x["c"]):
+            out.append("%s: tree %d row %d col %d in the game, tree %d row %d col %d in the data" % (x["n"], where[0] + 1, where[1], where[2], x["t"] + 1, x["r"], x["c"]))
+        if (n.get("spent") or 0) > x["m"]:
+            out.append("%s: %s points spent, max %s" % (x["n"], n.get("spent"), x["m"]))
+    for nid, x in ours.items():
+        if nid not in live:
+            out.append("%s (node %s): in the data, not in the game's tree" % (x["n"], nid))
+    return cls, out, spent
 
 
 def lua_to_py(v):
@@ -95,6 +155,17 @@ def main():
                 print(f"   fly {d.get('fly')}")
             if d.get("talents"):
                 print(f"   talents {d.get('talents')}")
+            tt = d.get("talentTree")
+            if isinstance(tt, dict) and tt.get("nodes"):
+                fd = forever_data()
+                if fd:
+                    cls, diff, spent = compare_talent_tree(tt, fd)
+                    print(f"   talent tree (C_Traits, {len(tt['nodes'])} nodes) vs data build {fd.get('build')}: {cls}, "
+                          f"spent {spent[0]}/{spent[1]}/{spent[2]}, {len(diff)} difference(s)")
+                    for line in diff:
+                        print(f"     {line}")
+            elif isinstance(tt, dict) and tt.get("error"):
+                print(f"   talent tree: error {tt.get('error')}")
             if "extraSpells" in d:
                 ex = d.get("extraSpells") or []
                 print(f"   spellbook spells not in the data: {len(ex) if isinstance(ex, list) else ex}")

@@ -1,6 +1,9 @@
 -- Wowhead talent links (docs/talent-import.md §6), ported from docs/patches/wowhead_import.test.js: every guide is
 -- written as a Wowhead link (with and without whole-talent tokens) and must read back to the same order; the example
 -- link; bad links; a class mismatch; a link without order; a rank clamp; more than 51 points; a newer format.
+-- WoW Forever's live trees (11 Nov 2026): links use Wowhead's current hash version; older "v2" links (before the live
+-- trees) are read with Wowhead's older layouts and matched by name, gone talents and points that no longer fit are
+-- left out with a warning (docs/talent-import.md §7).
 local dir = (arg[0]:match("^(.*)/[^/]+$") or ".")
 local H = dofile(dir .. "/harness.lua")
 local Mock = dofile(dir .. "/wowmock.lua")
@@ -29,11 +32,15 @@ for _, cls in ipairs(D.classOrder) do
 end
 H.eq(fail, 0, "round trip: every guide reads back to the same order (" .. pass .. " links, " .. skip .. " skipped: talent only in WoWBoxer's data)")
 H.ok(pass >= 100, "round trip covers the guides (" .. pass .. ")")
-H.ok(skip > 0 and skip <= 12, "only the Mage guides with Arcane Focus are skipped (" .. skip .. ")")
+H.eq(skip, 0, "no guide is skipped: Wowhead's calculator and the live trees have the same talents")
+local HV = D.wowhead.hashVersion
+H.ok(HV ~= "v2" and D.wowhead.layouts and D.wowhead.layouts.v2 and #D.wowhead.layouts.v2 >= 1, "current hash version " .. tostring(HV) .. ", older v2 layouts kept")
 
--- the example (the owner's druid link)
+-- the example (the owner's druid link, made before the live trees: Wowhead's v2 layout)
 local EX = "https://www.wowhead.com/forever/talent-calc/druid/v2410222-4_t0/0abaaaDEF1aaaa"
+local EX_NOW = "https://www.wowhead.com/forever/talent-calc/druid/" .. HV .. "410222-4_t0/0abaaaDEF1aaaa"
 local ex = WH.import(EX)
+H.ok(#ex.warnings == 1 and ex.warnings[1]:find("Older Wowhead link (v2", 1, true), "example: read as an older link: " .. table.concat(ex.warnings, "; "))
 H.eq(ex.cls, "druid", "example: druid")
 H.eq(ex.split, "11/4/0", "example: 11/4/0")
 H.eq(ex.points, 15, "example: 15 points")
@@ -44,6 +51,18 @@ for i = 1, 5 do names[i] = T.byKey[ex.order[i]].n end
 H.eq(table.concat(names, ","), "Improved Wrath,Genesis,Improved Wrath,Improved Wrath,Improved Wrath", "example: levels 10–14")
 H.eq(T.byKey[ex.order[15]].n, "Ferocity", "example: level 24 Ferocity")
 H.eq(E.levelForPoint(14, ex.talented), 24, "example: the 15th point at level 24")
+local now = WH.import(EX_NOW)
+H.ok(not now.error and #now.warnings == 0 and table.concat(now.order, ",") == table.concat(ex.order, ","), "the same build as a current link: same order, no warnings")
+
+-- older links: a talent that is gone is left out with a warning; points that no longer fit are dropped with a warning
+-- (Mage Arcane v2 layout: Wand Specialization, Arcane Focus, Improved Channeling, ...; Arcane Focus is gone)
+local old = WH.import("https://www.wowhead.com/forever/talent-calc/mage/v2255")
+local said = table.concat(old.warnings or { old.error or "" }, "; ")
+H.ok(not old.error and old.points == 7 and said:find("Arcane Focus is not in WoW Forever's live talents", 1, true), "older link: Arcane Focus left out, the rest kept: " .. said)
+-- Wand 2, Arcane Focus 5, Arcane Subtlety 2 (row 2): without Arcane Focus, Arcane Subtlety no longer reaches its row
+local tm = WH.import("https://www.wowhead.com/forever/talent-calc/mage/v225002")
+local tw = table.concat(tm.warnings or { tm.error or "" }, "; ")
+H.ok(not tm.error and tm.points == 2 and tw:find("2 points no longer fit the live trees – left out: Arcane Subtlety", 1, true), "older link: points that no longer fit are left out: " .. tw)
 
 -- bad links
 for _, b in ipairs({
@@ -63,7 +82,7 @@ end
 ns.Core.ensureMe()
 local _, m = ns.Core.me()
 H.eq(m.cls, "druid", "this character is a druid")
-local mage = WH.import("https://www.wowhead.com/forever/talent-calc/mage/v2" .. "5")
+local mage = WH.import("https://www.wowhead.com/forever/talent-calc/mage/" .. HV .. "2")
 H.ok(mage.cls == "mage" and not mage.error, "another class's link: the build is for that class (" .. tostring(mage.cls) .. ")")
 
 -- no order: points only → rows first, "order by WoWBoxer"
@@ -72,16 +91,16 @@ H.eq(nord.kind, "final-derived", "no order: final-derived")
 H.ok(not nord.hasOrder and nord.split == "11/4/0" and nord.points == 15, "no order: same points")
 H.eq(E.validateOrder(T, nord.order), nil, "no order: a legal order")
 
--- rank clamp: Incineration has 5 ranks on Wowhead and 3 here (Mage Fire, docs §5)
+-- rank clamp: a digit above the talent's max rank (Mage Fire: Incineration has 5 ranks, Flame Throwing 2)
 local fireIdx
 for i, w in ipairs(D.wowhead.trees.mage[2]) do if w.n == "Incineration" then fireIdx = i end end
 local fireNode
 for _, n in ipairs(D.talents.mage.nodes) do if n.n == "Incineration" then fireNode = n end end
-H.ok(fireIdx and fireNode and fireNode.m < 5, "data: Incineration " .. tostring(fireNode and fireNode.m) .. " ranks here")
-local digits = string.rep("0", fireIdx - 1) .. "5"
-local clamp = WH.import("https://www.wowhead.com/forever/talent-calc/mage/v2-" .. digits)
+H.ok(fireIdx and fireNode and fireNode.m == 5, "data: Incineration " .. tostring(fireNode and fireNode.m) .. " ranks (the live client and Wowhead agree)")
+local wand = D.wowhead.trees.mage[1][1]
+local clamp = WH.import("https://www.wowhead.com/forever/talent-calc/mage/" .. HV .. "5")
 local warned = false
-for _, w in ipairs(clamp.warnings or {}) do if w:find("Incineration: 5 points on Wowhead, max " .. fireNode.m .. " here", 1, true) then warned = true end end
+for _, w in ipairs(clamp.warnings or {}) do if w:find(wand.n .. ": 5 points on Wowhead, max " .. wand.m .. " here", 1, true) then warned = true end end
 H.ok(warned, "rank clamp warned: " .. table.concat(clamp.warnings or { clamp.error or "" }, "; "))
 
 -- more than 51 points: every talent at max rank in all three trees
@@ -91,15 +110,15 @@ for t = 1, 3 do
   for _, w in ipairs(D.wowhead.trees.druid[t]) do s = s .. tostring(w.m) end
   all[t] = s
 end
-local big = WH.import("https://www.wowhead.com/forever/talent-calc/druid/v2" .. table.concat(all, "-"))
+local big = WH.import("https://www.wowhead.com/forever/talent-calc/druid/" .. HV .. table.concat(all, "-"))
 local cut = false
 for _, w in ipairs(big.warnings or {}) do if w:find("More than 51 points", 1, true) then cut = true end end
 H.ok(big.error or (cut and big.points == 51), "over 51 points: cut to 51 (or refused): " .. tostring(big.error or big.points))
 
 -- Talented rank from the link
 H.eq(WH.import("https://www.wowhead.com/forever/talent-calc/druid/v2410222-4_t3/0abaaaDEF1aaaa").talented, 3, "the t option = Talented rank")
--- the encoder writes the example back
-H.eq(WH.encode("druid", ex.order, 0, true), "https://www.wowhead.com/forever/talent-calc/druid/v2410222-4_t0/0abaaaDEF1aaaa", "encode: the example link again")
+-- the encoder writes the example in the current format
+H.eq(WH.encode("druid", ex.order, 0, true), EX_NOW, "encode: the example as a current link")
 
 -- the Talents tab: Import → preview → Save as → My builds → Use → its next point; Rename, Delete; share string
 do
@@ -133,7 +152,7 @@ do
   H.ok(p.nextName:GetText() ~= nil and p.kind:GetText():find("Your build", 1, true), "the Talents tab shows it: " .. tostring(p.kind:GetText()))
   H.ok(p.renBtn:IsShown() and p.delBtn:IsShown(), "Rename / Delete on your own build")
   -- Wowhead link of the build
-  H.eq(tab.copyLink(), EX, "Copy Wowhead link gives the link back")
+  H.eq(tab.copyLink(), EX_NOW, "Copy Wowhead link gives the build as a current link")
   -- rename
   p.renBtn:Click(); p.renBox:SetText("Boomkin 15"); p.renBox._scripts.OnEnterPressed(p.renBox)
   H.eq(list[1].label, "Boomkin 15", "renamed")
@@ -147,7 +166,7 @@ do
   H.ok(not str:find("wowhead", 1, true), "no link text in the share string")
   -- a druid link while this character is a druid is usable; a mage link only saves
   tab.openImport(p)
-  f.link:SetText("https://www.wowhead.com/forever/talent-calc/mage/v25"); f.link._scripts.OnTextChanged(f.link)
+  f.link:SetText("https://www.wowhead.com/forever/talent-calc/mage/" .. HV .. "2"); f.link._scripts.OnTextChanged(f.link)
   H.ok(f.save:IsEnabled() and not f.use:IsEnabled(), "another class: Save as only")
   f.save:Click()
   H.ok(f.status:GetText():find("Saved for Mage – pick it on a Mage", 1, true), "Saved for Mage – pick it on a Mage")

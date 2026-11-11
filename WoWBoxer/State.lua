@@ -96,6 +96,8 @@ function S.newMember(o)
   local roles = D().classes[cls].roles
   local role = E.contains(roles, o.role) and o.role or roles[1]
   local guide = (type(o.guide) == "string" and K.guide(cls, o.guide)) and o.guide or K.defaultGuideFor(cls, role)
+  -- a saved guide that is gone (the game's talents changed): the default, and one chat line after login
+  if type(o.guide) == "string" and o.guide ~= "" and guide ~= o.guide then S.guidesGone = (S.guidesGone or 0) + 1 end
   local pins = {}
   if type(o.pins) == "table" then for _, p in ipairs(o.pins) do if type(p) == "string" and #pins < 24 then pins[#pins + 1] = p end end end
   local name = R.cleanText(o.name, 24)
@@ -334,15 +336,23 @@ function S.cleanBuilds(t)
     local list = {}
     for _, b in ipairs(type(t[cls]) == "table" and t[cls] or {}) do
       if type(b) == "table" and #list < S.BUILDS_MAX then
-        local order = S.sanitizeOrder(cls, b.order or {})
+        -- a build the live trees no longer hold is kept as saved (orig) with a warning (stale); WoWBoxer plans with
+        -- the part that still fits (order). It heals by itself when the data holds it again.
+        local raw = {}
+        for _, k in ipairs(type(b.orig) == "table" and b.orig or (type(b.order) == "table" and b.order or {})) do
+          if type(k) == "string" and #k <= 64 and #raw < E.maxPoints() then raw[#raw + 1] = k end
+        end
+        local order = S.sanitizeOrder(cls, raw)
+        local stale = K.orderProblem(cls, raw)
         local id = (type(b.id) == "string" and b.id:find("^u%w+$") and #b.id <= 24) and b.id or S.uid("u")
-        if #order > 0 then
+        if #raw > 0 then
           local name = R.cleanText(b.label or b.name, 40)
           local link = (type(b.link) == "string" and #b.link <= 300 and b.link:find("^https://www%.wowhead%.com/")) and b.link or nil
           local saved = (type(b.saved) == "string" and b.saved:find("^%d%d%d%d%-%d%d%-%d%d$")) and b.saved or nil
           list[#list + 1] = { id = id, label = (name and name ~= "") and name or "My build", kind = b.kind == "exact-order" and "exact-order" or "final-derived",
             order = order, talented = clampT(b.talented), link = link, saved = saved, user = true,
             source = { site = link and "Imported from Wowhead" or "Your build", url = link, updated = saved } }
+          if stale then list[#list].orig, list[#list].stale = raw, stale end
         end
       end
     end

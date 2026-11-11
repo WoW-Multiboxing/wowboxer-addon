@@ -428,6 +428,46 @@ function C.talentRanks()
   return nil, "none"
 end
 
+--- WoW Forever: the live talent tree of this character as the game shows it (docs/talents-rerun-2026-11-11.md §2.1.5),
+--- for the diagnose (diag.talentTree; tools/read_log.py compares it with WoWBoxer's data). Read-only: only
+--- GetActiveConfigID / GetConfigInfo / GetTreeNodes / GetNodeInfo / GetEntryInfo / GetDefinitionInfo.
+--- Returns {configID, trees = {treeID, ...}, nodes = {{id, x, y, max, spent, name, spell, visible}, ...}} or nil.
+function C.talentTreeDump()
+  local CT, TR = G.C_ClassTalents, G.C_Traits
+  if not (CT and CT.GetActiveConfigID and TR and TR.GetConfigInfo and TR.GetTreeNodes and TR.GetNodeInfo) then return nil end
+  local ok, configID = pcall(CT.GetActiveConfigID)
+  configID = ok and C.safe(configID) or nil
+  local config = configID and select(2, pcall(TR.GetConfigInfo, configID))
+  if type(config) ~= "table" or type(config.treeIDs) ~= "table" then return nil end
+  local out = { configID = configID, trees = {}, nodes = {} }
+  for _, treeID in ipairs(config.treeIDs) do
+    treeID = C.safe(treeID)
+    out.trees[#out.trees + 1] = treeID
+    local okN, nodes = pcall(TR.GetTreeNodes, treeID)
+    for _, nodeID in ipairs(okN and type(nodes) == "table" and nodes or {}) do
+      local okI, node = pcall(TR.GetNodeInfo, configID, C.safe(nodeID))
+      if okI and type(node) == "table" then
+        local spent = C.safe(node.ranksPurchased)
+        if type(spent) ~= "number" or spent == 0 then spent = C.safe(node.currentRank) end
+        local row = { id = C.safe(node.ID) or C.safe(nodeID), x = C.safe(node.posX), y = C.safe(node.posY), max = C.safe(node.maxRanks),
+          spent = type(spent) == "number" and spent or 0, visible = C.safe(node.isVisible) }
+        local entryID = type(node.activeEntry) == "table" and node.activeEntry.entryID or (type(node.entryIDs) == "table" and node.entryIDs[1]) or nil
+        if entryID and TR.GetEntryInfo and TR.GetDefinitionInfo then
+          local okE, entry = pcall(TR.GetEntryInfo, configID, C.safe(entryID))
+          local okD, def = pcall(TR.GetDefinitionInfo, okE and type(entry) == "table" and C.safe(entry.definitionID) or nil)
+          if okD and type(def) == "table" then
+            row.spell = C.safe(def.spellID)
+            row.name = C.safe(def.overrideName) or spellName(row.spell)
+            if row.max == nil and okE and type(entry) == "table" then row.max = C.safe(entry.maxRanks) end
+          end
+        end
+        out.nodes[#out.nodes + 1] = row
+      end
+    end
+  end
+  return out
+end
+
 -- Frames of the extra bars (same names in Classic Era and the modern UI). Bar 1 is always shown.
 local BAR_FRAME = { [61] = "MultiBarBottomLeft", [49] = "MultiBarBottomRight", [25] = "MultiBarRight", [37] = "MultiBarLeft" }
 --- false when the bar starting at `first` exists but is hidden (not enabled in the interface options / Edit Mode).

@@ -1107,7 +1107,7 @@ function Core.selftest(quiet)
   -- what can only be seen in play (left open here, results go into LOG.md)
   local sq = { names = {}, open = { "combo points for followers with Take the leader's target off", "!Auto Shot after Aimed Shot (clip?)",
     "warrior priority lines fall through (Execute / Overpower / Victory Rush)" } }
-  for _, n in ipairs({ "Primal Bite", "Arcane Wrath", "Frostfire Bolt", "Riptide", "Lava Burst", "Stormstrike", "Hemorrhage" }) do
+  for _, n in ipairs({ "Primal Bite", "Arcane Wrath", "Frostfire Bolt", "Riptide", "Lightning Mastery", "Stormstrike", "Hemorrhage" }) do
     local found
     for _, cls in ipairs(ns.Data.classOrder) do
       for _, s in ipairs(ns.Data.spells[cls] or {}) do if not found and s.name == n then found = s end end
@@ -1162,6 +1162,12 @@ function Core.selftest(quiet)
   r.ui.helpUsed = ns.Help and ns.Help.diag or nil
   local okX, extra = pcall(Core.extraSpellsDiag)
   r.extraSpells = okX and extra or { error = tostring(extra) }
+  -- the live talent tree (C_Traits, read-only): tools/read_log.py compares it with WoWBoxer's talent data
+  local okT, tree = pcall(C.talentTreeDump)
+  if okT and tree then
+    tree.cls, tree.level, tree.build = ctx and ctx.member.cls or nil, C.safe(C.playerLevel()), ns.Data.meta and ns.Data.meta.build or nil
+    r.talentTree = tree
+  elseif not okT then r.talentTree = { error = tostring(tree) } end
   db.diag[Core.charKey or "?"] = r
   Core.log("info", "selftest written to WoWBoxerDB.diag[" .. tostring(Core.charKey) .. "]")
   if ns.Squad and ns.Team then
@@ -1321,6 +1327,10 @@ function Core.onEvent(event, ...)
   elseif event == "PLAYER_LOGIN" then
     Core.charKey = (C.playerName() or "?") .. "-" .. (GetRealmName and GetRealmName() or "?")
     Core.writeBridge("login")
+    if S.guidesGone and S.guidesGone > 0 then
+      S.guidesGone = nil
+      chat("Your talent guide was updated for " .. ((ns.Data.game and ns.Data.game.name) or "the game") .. "'s live talents.")
+    end
     if not Core.cdb.welcomed then
       Core.cdb.welcomed = true
       chat("loaded. Type |cffffd100/wbx|r or click the minimap button to set up this character's macros.")

@@ -338,6 +338,29 @@ function K.defaultGuideFor(cls, role)
   return c[1] and c[1].id or def
 end
 
+--- Why a saved talent order no longer fits this game's trees (talents gone, too many ranks, a row or prerequisite it
+--- breaks), or nil when it fits. Shown on own builds that the live trees changed (never changed silently).
+function K.orderProblem(cls, order)
+  local T = K.tree(cls)
+  if not T or type(order) ~= "table" then return nil end
+  local gone, seen, over, c = {}, {}, {}, {}
+  for _, k in ipairs(order) do
+    if not T.byKey[k] then if not seen[k] then seen[k] = true; gone[#gone + 1] = k end
+    else c[k] = (c[k] or 0) + 1 end
+  end
+  for k, n in pairs(c) do if n > T.byKey[k].m then over[#over + 1] = T.byKey[k].n .. " " .. n .. "/" .. T.byKey[k].m end end
+  table.sort(over)
+  local parts = {}
+  if #gone > 0 then parts[#parts + 1] = "not in this game's talents any more: " .. table.concat(gone, ", ") end
+  if #over > 0 then parts[#parts + 1] = "more ranks than the talent has: " .. table.concat(over, ", ") end
+  if #parts == 0 then
+    local bad = E.validateOrder(T, order)
+    if bad then parts[#parts + 1] = "point " .. (bad.index + 1) .. " breaks a talent rule (" .. bad.reason .. ")" end
+  end
+  if #parts == 0 then return nil end
+  return "This build needs an update for the live talents – " .. table.concat(parts, "; ") .. ". WoWBoxer uses the points that still fit."
+end
+
 --- The member's talent plan: own build if any, else the selected guide's order.
 function K.plan(m)
   if m.build and #m.build > 0 then return m.build, "build" end

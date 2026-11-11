@@ -11,4 +11,10 @@ for t in tests/test_*.lua; do
   echo "== $t ($LUA)"
   $LUA "$t" || fail=1
 done
+# Python tests (tools: read_log's talent-tree comparison)
+for t in tests/test_*.py; do
+  [ -f "$t" ] || continue
+  echo "== $t (python)"
+  python "$t" || fail=1
+done
 exit $fail

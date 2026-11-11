@@ -100,8 +100,10 @@ D.sequences = {
       { id = "dps", label = "Damage", kind = "sequence", aim = "harm",
         tiers = {
           simple = { steps = { { s = "Flame Shock", k = "dot" } }, filler = { "Lightning Bolt" } },
-          medium = { steps = { { s = "Flame Shock", k = "dot" }, { s = "Lava Burst", k = "cd" } }, filler = { "Lightning Bolt" } },
-          advanced = { steps = { { s = "Flame Shock", k = "dot" }, { s = "Lava Burst", k = "cd" }, { s = "Chain Lightning", k = "cd" } }, filler = { "Lightning Bolt" } } } } } },
+          -- Lava Burst left WoW Forever with the live talents (11 Nov 2026): Chain Lightning takes its step (no Earth
+          -- Shock: it shares the shock cooldown with Flame Shock, so a sequence would wait on it)
+          medium = { steps = { { s = "Flame Shock", k = "dot" }, { s = "Chain Lightning", k = "cd" } }, filler = { "Lightning Bolt" } },
+          advanced = { steps = { { s = "Flame Shock", k = "dot" }, { s = "Chain Lightning", k = "cd" } }, filler = { "Lightning Bolt" } } } } } },
   druid = {
     tank = {
       { id = "dps", label = "Threat", kind = "priority", aim = "melee", tip = "Swipe",

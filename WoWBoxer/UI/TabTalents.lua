@@ -26,7 +26,7 @@ function tab.build(p)
       if not m then return v end
       if m.build and #m.build > 0 then v[#v + 1] = { OWN, (m.buildName or "Own build") .. " (from your squad)", "The build that came with your squad (" .. #m.build .. " points)." } end
       for _, g in ipairs(ns.Kit.guidesOf(m.cls)) do
-        v[#v + 1] = { g.id, g.user and ("My build: " .. g.label .. " (yours)") or (g.label .. (g.default and " *" or "")), tab.guideTip(g) }
+        v[#v + 1] = { g.id, g.user and ("My build: " .. g.label .. " (yours)" .. (g.stale and " |cffd9b36c– needs update|r" or "")) or (g.label .. (g.default and " *" or "")), tab.guideTip(g) }
       end
       return v
     end,
@@ -277,6 +277,7 @@ local KIND_SHORT = { ["exact-order"] = "Exact order", ["final-derived"] = "Final
 function tab.guideTip(g)
   local src = g.source or {}
   local parts = { (KIND_SHORT[g.kind] or g.kind or "?") .. "." }
+  if g.stale then parts[1] = "|cffd9b36c" .. g.stale .. "|r " .. parts[1] end
   parts[#parts + 1] = "Source: " .. (src.site or "?") .. (src.author and (", " .. src.author) or "") .. (src.updated and (" (" .. src.updated .. ")") or "") .. "."
   if src.scope then parts[#parts + 1] = "Levels " .. src.scope .. "." end
   if src.url then parts[#parts + 1] = src.url end
@@ -295,11 +296,12 @@ function tab.comingText()
   local name = ns.Data.game and ns.Data.game.name or "this game"
   return "Talent guides for " .. name .. " are coming. Meanwhile import a Wowhead link (Import) or follow your own plan."
 end
---- The talent data credit of this game (exact wording for Forever and Era: Zephras CC BY 4.0).
+--- The talent data credit of this game. Forever: the live client's trees (11 Nov 2026); the seed's other data still
+--- carries the Zephras CC BY 4.0 credit (docs/compliance.md).
 function tab.creditText()
   local g = ns.Data.game
   if g and (g.key == "tbc" or g.key == "era") then return "Talent data: Blizzard client tables (build " .. tostring(ns.Data.meta.build) .. "). Names (c) Blizzard Entertainment." end
-  return "Talent data: Zephras (zephras.com), CC BY 4.0, changed by WoWBoxer; The Forever Era"
+  return "Talent trees: Blizzard client tables (build " .. tostring(ns.Data.meta.build) .. "), checked against Wowhead. Other data: Zephras (zephras.com), CC BY 4.0, changed by WoWBoxer; The Forever Era"
 end
 --- The level "Plan ahead" looks to (default: 5 levels on, at most the max level).
 function tab.planTo()
@@ -335,6 +337,7 @@ function tab.refresh(p)
   local level = ns.Compat.playerLevel()
   local warn = tab.treesMatch() and "" or "|cffd9b36c(WoW: Forever talents – this client differs)|r "
   if kind == "build" then p.kind:SetText(warn .. (m.buildName or "Your own build") .. " (" .. #order .. " points, from your squad)")
+  elseif g and g.user and g.stale then p.kind:SetText(warn .. "|cffd9b36cYour build needs an update for the live talents|r (hover the Guide list for what changed)")
   elseif g and g.user then p.kind:SetText(warn .. "Your build · " .. (KIND_SHORT[g.kind] or g.kind))
   elseif not g and #K.dataGuidesOf(m.cls) == 0 then p.kind:SetText(tab.comingText())
   else p.kind:SetText(warn .. (g and (KIND[g.kind] or g.kind) or "No guide")) end

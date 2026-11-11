@@ -277,7 +277,7 @@ do
   H.ok(#vals > 1, "several guides to pick from")
   H.ok(vals[1][3]:find("Source: ", 1, true) and (vals[1][3]:find("order", 1, true) or vals[1][3]:find("Priorities", 1, true) or vals[1][3]:find("Adaptation", 1, true)),
     "each guide's tooltip has its type and source: " .. vals[1][3])
-  H.ok(p.source:GetText():find("Zephras (zephras.com), CC BY 4.0, changed by WoWBoxer; The Forever Era", 1, true), "the data credit")
+  H.ok(p.source:GetText():find("Talent trees: Blizzard client tables (build 1.60.1.70888)", 1, true) and p.source:GetText():find("Zephras (zephras.com), CC BY 4.0, changed by WoWBoxer; The Forever Era", 1, true), "the data credit")
   p.ahead.select(30)
   H.eq(ns.Core.cdb.planTo, 30, "plan to level 30")
   local _, m = ns.Core.me()
