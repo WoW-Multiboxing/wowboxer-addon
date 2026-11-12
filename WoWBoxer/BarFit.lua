@@ -543,8 +543,69 @@ end
 BF.managed = {}      -- [root frame] = { points = {{GetPoint}}, scale = n, name = "MainMenuBar" } – the frame's own layout
 BF.hooked = {}       -- [root frame] = true once the SetPoint/SetScale hooks are on
 BF.state = { mode = "off" }
+local write -- our own writes (below)
+BF.target = {}       -- [root frame] = { scale, x, y } – where the fit put it (BOTTOMLEFT to UIParent's BOTTOM)
 
 local function Core() return ns.Core end
+
+--- Something on the cursor (a spell, item or macro being dragged).
+function BF.cursorBusy()
+  local f = G().GetCursorInfo
+  if type(f) ~= "function" then return false end
+  local ok, kind = pcall(f)
+  return ok and kind ~= nil
+end
+
+--- Everything that decides the layout, as one string: window size, UI scale, which bars and side frames are shown,
+--- the smallest size. Our own writes never change it, so the same string means the fitted layout still holds.
+BF.SIG_FRAMES = { "MainMenuBar", "MainActionBar", "MultiBarBottomLeft", "MultiBarBottomRight", "MultiBarRight", "MultiBarLeft",
+  "MultiBar5", "MultiBar6", "MultiBar7", "MicroMenuContainer", "BagsBar", "MainStatusTrackingBarContainer",
+  "SecondaryStatusTrackingBarContainer", "MainMenuExpBar", "ReputationWatchBar", "ChatFrame1", "PlayerFrame" }
+function BF.signature()
+  local g = G()
+  local U = g.UIParent
+  local parts = {}
+  if U and U.GetWidth then
+    parts[1] = math.floor((num(U:GetWidth()) or 0) + 0.5) .. "x" .. math.floor((num(U:GetHeight()) or 0) + 0.5)
+    parts[2] = math.floor(eff(U) * 1000 + 0.5)
+  end
+  parts[#parts + 1] = math.floor(BF.fitMin() * 100 + 0.5)
+  for _, n in ipairs(BF.SIG_FRAMES) do
+    local f = g[n]
+    local v = "-"
+    if type(f) == "table" and f.IsShown then v = f:IsShown() and "1" or "0" end
+    parts[#parts + 1] = v
+  end
+  return table.concat(parts, ",")
+end
+
+--- Put every fitted frame back where the fit placed it, if the game moved it (no measuring, no restore round).
+function BF.reapply()
+  if ns.Compat.inCombat() then return end
+  write(function()
+    for root, t in pairs(BF.target) do
+      if BF.managed[root] then
+        local p, rel, rp, x, y = root:GetPoint(1)
+        local n = (root.GetNumPoints and root:GetNumPoints()) or 0
+        local sc = num(root.GetScale and root:GetScale()) or 1
+        if math.abs(sc - t.scale) > 0.001 then root:SetScale(t.scale) end
+        if n ~= 1 or p ~= "BOTTOMLEFT" or rel ~= G().UIParent or rp ~= "BOTTOM"
+          or math.abs((num(x) or 0) - t.x) > 0.01 or math.abs((num(y) or 0) - t.y) > 0.01 then
+          root:ClearAllPoints()
+          root:SetPoint("BOTTOMLEFT", G().UIParent, "BOTTOM", t.x, t.y)
+        end
+      end
+    end
+  end)
+end
+
+--- The cursor changed: once the drag is over, check the layout (it was frozen while something was held).
+function BF.onCursor()
+  if BF.afterDrag and not BF.cursorBusy() then
+    BF.afterDrag = nil
+    BF.request("drag ended")
+  end
+end
 function BF.fitOn() local c = Core() and Core().cdb; return not (c and c.barFit == false) end
 function BF.fitMin()
   local c = Core() and Core().cdb
@@ -565,7 +626,7 @@ local function editMode()
 end
 
 --- Our own writes, so the hooks can tell them from Blizzard's re-layouts.
-local function write(fn)
+function write(fn) -- the local declared above
   BF.writing = true
   local ok, err = pcall(fn)
   BF.writing = false
@@ -578,10 +639,26 @@ end
 local function onBlizzardMove(root, what)
   if BF.writing then return end
   local m = BF.managed[root]
+  local t = BF.target[root]
   if m then
-    m[what] = nil
-    if m.points == nil and m.scale == nil then BF.managed[root] = nil end
+    -- what the game set is the frame's own layout now (restore puts that back, never our old copy); the game
+    -- setting our own place again (re-anchoring from where the frame is) is not a new layout
+    if what == "points" then
+      local pts = {}
+      for i = 1, (root.GetNumPoints and root:GetNumPoints()) or 0 do pts[i] = { root:GetPoint(i) } end
+      local p = pts[1]
+      local ours = t and #pts == 1 and p[1] == "BOTTOMLEFT" and p[2] == G().UIParent and p[3] == "BOTTOM"
+        and math.abs((num(p[4]) or 0) - t.x) < 0.01 and math.abs((num(p[5]) or 0) - t.y) < 0.01
+      if ours then return end
+      if #pts > 0 then m.points = pts end
+    else
+      local sc = num(root.GetScale and root:GetScale())
+      if t and sc and math.abs(sc - t.scale) < 0.001 then return end
+      if sc then m.scale = sc; BF.forceNext = true end -- a new own scale: measure again
+    end
   end
+  -- mid-drag: straight back to our place, so nothing moves under the cursor (no round, no fight counted)
+  if m and BF.cursorBusy() then BF.afterDrag = true; BF.reapply(); return end
   local now = (G().GetTime and G().GetTime()) or 0
   if BF.fightAt and now - BF.fightAt < 10 then BF.fights = (BF.fights or 0) + 1 else BF.fightAt, BF.fights = now, 1 end
   if BF.fights > 6 then
@@ -611,7 +688,7 @@ function BF.restore(reason)
       if m.scale then root:SetScale(m.scale) end
     end
   end)
-  BF.managed = {}
+  BF.managed, BF.target, BF.lastSig = {}, {}, nil
   if Core() then Core().log("info", "bar fit: default layout (" .. tostring(reason) .. ")") end
   return true
 end
@@ -641,6 +718,22 @@ function BF.fitNow(reason)
   if editMode() then BF.restore("Edit Mode"); BF.state = { mode = "editmode" }; return nil, "Edit Mode" end
   if BF.gaveUp then return nil, "gave up" end
   if ns.Compat.inCombat() then BF.pending = "fit"; return nil, "combat" end
+  -- a spell, item or macro on the cursor: the bars stay exactly where they are until it is dropped (moving them
+  -- under the cursor would drop it on the wrong slot); a frame the game moved meanwhile gets our place back
+  if BF.cursorBusy() then
+    BF.afterDrag = true
+    BF.reapply()
+    return nil, "dragging"
+  end
+  -- nothing that decides the layout changed (a bar refresh, a drag, the game re-anchoring a bar): keep the layout,
+  -- no restore-and-measure round that would make the bars jump
+  local sig = BF.signature()
+  local force = BF.forceNext
+  BF.forceNext = nil
+  if not force and next(BF.managed) ~= nil and sig == BF.lastSig then
+    BF.reapply()
+    return BF.lastPlan, "unchanged"
+  end
   -- always from the frames' own layout: put them back, and measure on the next round, once the game has placed them
   -- [AFKLAR: whether GetLeft already reads the new place in the same frame; one round later is safe either way]
   if next(BF.managed) ~= nil then
@@ -664,13 +757,17 @@ function BF.fitNow(reason)
         local L = p.X + (rr[1] - u.box[1]) * s
         local B = p.Y + (rr[2] - u.box[2]) * s
         local k = u.k * s
-        root:SetScale(u.scale * s)
+        local t = { scale = u.scale * s, x = (L - W / 2) / k, y = B / k }
+        BF.target[root] = t
+        root:SetScale(t.scale)
         root:ClearAllPoints()
-        root:SetPoint("BOTTOMLEFT", G().UIParent, "BOTTOM", (L - W / 2) / k, B / k)
+        root:SetPoint("BOTTOMLEFT", G().UIParent, "BOTTOM", t.x, t.y)
       end
     end)
     for _, u in ipairs(units) do hook(u.root) end
   end
+  BF.lastSig = sig
+  BF.lastPlan = plan
   local names = {}
   for _, u in ipairs(units) do names[#names + 1] = u.name end
   BF.state = { mode = plan.mode, scale = plan.scale, units = #units, w = math.floor(W + 0.5), h = math.floor(H + 0.5) }

@@ -1,5 +1,11 @@
 # WoWBoxer addon – backlog
 
+## The owner: TEST BUILD 1.3.0-test.10 – bars stay put while you drag a spell (Forever clients, /reload each)
+1. Drag a spell from the spellbook onto bar 2 or 3, and move a spell between slots → no bar moves or changes size.
+2. The followers still show the bars fitted (smaller, nothing on top of another).
+3. Turn bar 3 off and on (Options → Action Bars) → the bars refit within a second.
+4. Tell me → I read the log (`bar fit:` lines, no blocked errors).
+
 ## The owner: TEST BUILD 1.3.0-test.9 – action bars fit each window (your 3 Forever clients as they are, /reload each)
 1. The two 1280x1392 followers: bar 1, bars 2–3 and the bags sit side by side, a bit smaller, nothing on top of another; no popup.
 2. Setup → untick *Fit action bars* → the game's own layout is back; tick it → fitted again.

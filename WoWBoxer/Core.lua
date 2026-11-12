@@ -1395,8 +1395,10 @@ function Core.onEvent(event, ...)
     -- the window app (Auto-fit) or the player changed the window or the UI scale: measure again once it settles
     if C_Timer and C_Timer.After and ns.BarFit then C_Timer.After(1, function() ns.BarFit.update(event); ns.BarFit.request(event) end) end
   elseif event == "EDIT_MODE_LAYOUTS_UPDATED" then
-    if ns.BarFit then ns.BarFit.request(event) end
-  elseif event == "CURSOR_CHANGED" then Core.onCursorChanged()
+    if ns.BarFit then ns.BarFit.forceNext = true; ns.BarFit.request(event) end
+  elseif event == "CURSOR_CHANGED" then
+    Core.onCursorChanged()
+    if ns.BarFit and ns.BarFit.onCursor then ns.BarFit.onCursor() end
   elseif event == "PLAYER_REGEN_ENABLED" then
     Core.runQueue()
     if ns.BarFit and ns.BarFit.afterCombat then ns.BarFit.afterCombat() end

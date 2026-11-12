@@ -295,7 +295,8 @@ do
   -- the game re-anchors bar 2 (an Edit Mode re-layout): that is its own layout now, and it is fitted from there
   local bl = W.env.MultiBarBottomLeft
   bl:ClearAllPoints(); bl:SetPoint("BOTTOMLEFT", W.env.UIParent, "BOTTOM", -579, 72)
-  H.eq(ns.BarFit.managed[bl] and ns.BarFit.managed[bl].points, nil, "the game's points are kept, not overwritten later")
+  local own = ns.BarFit.managed[bl] and ns.BarFit.managed[bl].points
+  H.ok(own and own[1][4] == -579 and own[1][5] == 72, "the game's points are its own layout now (restore puts them back)")
   for _ = 1, 4 do W.flush() end
   o, e = check(W, w, h)
   H.eq(o + e, 0, "fitted again after the game's re-layout")
@@ -354,6 +355,55 @@ for _, centred in ipairs({ true, false }) do
     H.ok(x[2] >= b1[4] - 0.5 and x[4] <= b2[2] + 0.5, who .. "still between bar 1 and bar 2")
     H.ok(x[1] >= 0 and x[3] <= w, who .. "inside the window")
   end
+end
+
+-- 10. Dragging a spell onto a bar (owner 12 Nov: "it moves when you try to move a spell"): the bars stay exactly where
+-- they are while something is on the cursor, and a bar refresh that changes nothing never restores-and-refits
+do
+  local w, h = units(1280, 1392, 0.69)
+  local W, ns = boot("forever", w, h)
+  W.now = 100
+  forever(W.env, { bottomLeft = true, bottomRight = true })
+  W.env.MultiActionBar_Update = function() end -- the game's bar refresh (hooked by Init)
+  ns.BarFit.inited = nil; ns.BarFit.Init()
+  local st = fit(W, ns)
+  H.eq(st.mode, "scale", "fitted before the drag")
+  local before = snapshot(W.env)
+  local restores = 0
+  local orig = ns.BarFit.restore
+  ns.BarFit.restore = function(...) if next(ns.BarFit.managed) then restores = restores + 1 end return orig(...) end
+  local function same(what)
+    local now = snapshot(W.env)
+    local diff = {}
+    for k, v in pairs(before) do if now[k] ~= v then diff[#diff + 1] = k .. " " .. v .. " -> " .. tostring(now[k]) end end
+    H.eq(table.concat(diff, "; "), "", what)
+  end
+  -- a spell on the cursor: the game refreshes the bars (grid shown) and even re-anchors one
+  W.cursor = { kind = "spell" }
+  W.env.MultiActionBar_Update()
+  for _ = 1, 4 do W.flush() end
+  same("spell on the cursor, bars refreshed: nothing moved")
+  local bl = W.env.MultiBarBottomLeft
+  bl:ClearAllPoints(); bl:SetPoint("BOTTOMLEFT", W.env.UIParent, "BOTTOM", -579, 72)
+  same("the game re-anchored bar 2 mid-drag: put straight back, nothing moved")
+  for _ = 1, 4 do W.flush() end
+  same("still nothing moved a moment later")
+  -- dropped: the layout still holds (same window, same bars) – checked, not redone
+  W.cursor = nil
+  W.fire("CURSOR_CHANGED")
+  for _ = 1, 4 do W.flush() end
+  same("spell dropped: nothing moved")
+  for _ = 1, 3 do W.env.MultiActionBar_Update(); for _ = 1, 4 do W.flush() end end
+  same("bar refreshes without a change: nothing moved")
+  H.eq(restores, 0, "no restore-and-refit round for a drag or a refresh")
+  H.ok(not ns.BarFit.gaveUp, "a drag is not a fight with the game")
+  -- a real change still refits
+  W.env.MultiBarBottomRight:Hide()
+  for _ = 1, 4 do W.flush() end
+  H.ok(restores >= 1, "bar 3 turned off: refitted from the game's layout")
+  local o, e = check(W, w, h)
+  H.eq(o + e, 0, "and everything fits")
+  ns.BarFit.restore = orig
 end
 
 H.report("barlayout")
