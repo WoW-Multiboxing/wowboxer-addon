@@ -67,6 +67,10 @@ ST.ITEMS = {
       local names = {}
       for k in tostring(v):gmatch("[^,]+") do local x = ns.Macros.LINE_BY[k]; if x then names[#names + 1] = x.short end end
       return table.concat(names, ", ") .. " off" end },
+  { "fit", "Fit action bars", function() return b2s(cdb().barFit ~= false) end,
+    function(v) local b = s2b(v); if b == nil then return false end
+      if ns.BarFit and ns.BarFit.setFit then ns.BarFit.setFit(b) elseif b then cdb().barFit = nil else cdb().barFit = false end
+      return true end },
   { "ask", "Ask to replace buttons", function() return b2s(cdb().askReplace ~= false) end,
     function(v) local b = s2b(v); if b == nil then return false end cdb().askReplace = b; return true end },
   { "from", "Accept from", function() local f = st().acceptFrom; return FROM_OK[f] and f or (f == nil and "squad" or "") end,

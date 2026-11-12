@@ -114,18 +114,32 @@ Model numbers from `tests/test_barfit.lua` (window sizes in UI units at scale 1)
 These are the old stacked-bars mock. The real Forever layout (bars 2 and 3 side by side) is in "Real numbers" above
 and in the test "the real Forever layout".
 
-## The fit offer in the game (since 1.3.0-test.3)
-At login (in the login checks, about 6 s in), when `squeezed` is true or something is outside/covered and `fitScale` is
-below the current scale, the addon shows one popup: "Action bars overlap in this window. [Fit now] sets UI Scale to
-<fitScale> · [Not now]", with a note that the app's Auto-fit does the same for all clients while they are closed.
-- Once per login (a `/reload` counts), until it fits. Never in combat: it waits for combat to end.
-- **Fit now** = `useUiScale 1` + `uiScale <fitScale>` through the Settings system (`Compat.setCVarSure`), read back as
-  a number; the chat says whether it stuck. Only after the click and out of combat (hard rule 4).
-- `fitScale = nil`: a plain notice ("even the smallest UI Scale can't fit them all"), no Fit button.
-- UI Scale is per install, so Fit now on one character changes every character of that client.
-- `[AFKLAR: that Forever and Era apply a uiScale CVar at once without the options panel]`
-
-## Not built: the addon scaling its own bar (`bridge.barFit`, `bridge.barScale`)
-`docs/backlog.md` P3 "Fit the action bar per client" keeps those two names reserved. That would be an opt-in Setup
-switch with which the addon scales the bars itself (hard rule 4: it changes bars, so the player clicks it on). It
-needs the owner's go-ahead. Until then `barFit`/`barScale` are never written, and the app's Auto-fit owns the UI scale.
+## The addon fits the bars itself (since 1.3.0-test.9, owner 12 Nov 2026)
+UI Scale is one value per install and never below 0.64, so it cannot fit every window shape (owner 12 Nov: two
+1280x1392 followers, "even the smallest UI Scale (0.64) can't fit them all"). The login popup of test.3–test.7 is
+gone. Instead the addon lays out the bottom bars of each window (`WoWBoxer/BarFit.lua`, second half):
+- **When:** login, `/reload`, `DISPLAY_SIZE_CHANGED`, `UI_SCALE_CHANGED`, `EDIT_MODE_LAYOUTS_UPDATED`, a bottom or side
+  bar shown or hidden, Edit Mode closed, and a bar moved by the game itself (post-hooks on `SetPoint`/`SetScale`).
+- **What:** the bottom group = bar 1, bars 2–3, the bag and menu buttons and the XP bar, as the frames under UIParent
+  that hold them (Era: the 1024-wide main bar holds bar 1, bars 2–3, bags and menu; Forever: each Edit Mode bar).
+  1. It fits as it is (inside `GetScreenWidth()` with a 4-unit margin, nothing on the chat or unit frames): nothing
+     changes.
+  2. Otherwise every unit is scaled by the same factor around the bottom centre, just enough to fit.
+  3. Below the smallest size (`/wbx barfit min`, default 70 %) the rows of the default layout wrap into more rows
+     (bar 2 above bar 1, bar 3 above bar 2, the bags above the menu), at the largest size that fits.
+  4. Nothing fits even stacked: the default layout stays and one chat line says so ("make the window wider, move the
+     chat up or turn off a bar"). A stack never lies on the chat, the unit frames or the side bars unless they
+     already overlapped the default layout. On Era the 1024-wide main bar is one piece, so it can only be scaled.
+- **Rules:** only out of combat (waits for `PLAYER_REGEN_ENABLED`); only `SetScale`/`SetPoint` on those frames (no
+  CVar, no saved Edit Mode layout: nothing persists after the addon is off); nothing while Bartender4, Dominos, ElvUI
+  or another bar addon is loaded, or while Edit Mode is open (the game's layout is back for editing); off = every
+  frame back to its own points and scale. When the game keeps moving a bar back (more than 6 times in 10 s) it stops
+  until `/reload`.
+- **Setting:** *Setup → Fit action bars* ("Fit action bars to this window"), on by default, per character;
+  `/wbx barfit on|off`, `/wbx barfit min 50–100`; `/wbx barfit` prints what it did.
+- **Bridge (the handshake reserved in the backlog):** `bridge.barFit = true` while it is on (false when off or a bar
+  addon owns the bars), `bridge.barScale` = the size it used (nil = fits as it is, or nothing fits),
+  `bridge.barMode = "none" | "scale" | "stack" | "nofit"`. **For the window app:** while `barFit` is true, leave UI
+  Scale alone for that client; `bridge.bars` (the measurement) is taken after the layout.
+- `[AFKLAR: SetScale/SetPoint on Forever's Edit Mode bars out of combat without taint warnings, and that the hooks see
+  every re-layout of the game – checked in TEST BUILD 1.3.0-test.9]`

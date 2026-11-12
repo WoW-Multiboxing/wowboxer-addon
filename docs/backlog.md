@@ -1,5 +1,11 @@
 # WoWBoxer addon – backlog
 
+## The owner: TEST BUILD 1.3.0-test.9 – action bars fit each window (your 3 Forever clients as they are, /reload each)
+1. The two 1280x1392 followers: bar 1, bars 2–3 and the bags sit side by side, a bit smaller, nothing on top of another; no popup.
+2. Setup → untick *Fit action bars* → the game's own layout is back; tick it → fitted again.
+3. Resize one follower window narrower (or turn bar 3 off and on) → the bars refit within a second.
+4. Tell me → I read the log (`bar fit:` lines, no taint/blocked errors).
+
 ## The owner: TEST BUILD 1.3.0-test.7 – Forever talents and guides from the live client (Paladin, Priest, Warlock; /reload each)
 1. Talents tab → the next point matches the game's talent window (same talent, same row).
 2. Guide list shows the updated guides; your old choice is still selected (or one "updated" line in chat).

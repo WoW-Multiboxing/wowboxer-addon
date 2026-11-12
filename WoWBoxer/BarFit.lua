@@ -1,9 +1,9 @@
---[[ WoWBoxer – measures the action bars for the window app's Auto-fit (WS-C; owner bug 6 Nov 2026: with bars 2 and 3
-  on, some buttons are missing in the smaller windows of a layout).
-  Read only: it reads where every action button of every visible bar really is (after Edit Mode on Forever, the
+--[[ WoWBoxer – measures the action bars (WS-C; owner bug 6 Nov 2026: with bars 2 and 3 on, some buttons are missing
+  in the smaller windows of a layout) and, since 12 Nov 2026, fits them to each window (second half of this file).
+  The measurement reads where every action button of every visible bar really is (after Edit Mode on Forever, the
   classic layout on Era/TBC), counts the buttons that are outside the window or under another bar, and works out the
-  largest UI scale at which every visible bar fits. Nothing on the bars changes (hard rule 4); the result goes into
-  our own SavedVariables (WoWBoxerDB.bridge.bars, contract in docs/bridge.md) and the log.
+  largest UI scale at which every visible bar fits. It goes into our own SavedVariables (WoWBoxerDB.bridge.bars,
+  contract in docs/bridge.md) and the log.
 
   The fit model: each bar keeps its anchor to the window (left/centre/right, bottom/middle/top, found from its
   anchor chain up to UIParent). A smaller UI scale makes the window larger in UI units (W / k), so a centred bar moves
@@ -14,8 +14,7 @@
   a bar Blizzard places at the edge never "fits" (live Forever log 6 Nov: "0 outside, 0 covered; fits all at scale none").
   The bag and menu buttons count as one more "bar" ("menu"): on Forever they ride on the main bar right of bar 1 and
   go missing first in a narrow window, or lie on bar 1 once the game pushes bar 1 against the left edge.
-  At login, when the bars do not fit, BF.offer asks once (a popup, out of combat) whether to set the UI scale to the
-  fit scale; only the player's click writes the CVars (hard rule 4). ]]
+  (Until 1.3.0-test.7 a login popup offered to lower the shared UI Scale; the per-window fit below replaces it.) ]]
 local _, ns = ...
 local BF = {}
 ns.BarFit = BF
@@ -295,64 +294,475 @@ function BF.update(reason)
   return m
 end
 
--- ------------------------------------------------------------------ fit offer (owner 10 Nov 2026)
---- Does measurement m need a smaller UI scale? true, fit (nil = not even the minimum scale fits).
-function BF.needsFit(m)
-  if not (m and m.bars and #m.bars > 0) then return false end
-  if not (m.squeezed or (m.outside or 0) + (m.covered or 0) > 0) then return false end
-  if m.fitScale and m.fitScale >= (m.scale or 1) - 0.005 then return false end -- already at (or below) the fit
-  return true, m.fitScale
+-- ------------------------------------------------------------------ fit the bars to this window (owner 12 Nov 2026)
+--[[ UI Scale is one value for every client of an install (and never below 0.64), so it cannot fit every window shape
+  (owner 12 Nov: two 1280x1392 followers, "even the smallest UI Scale can't fit them all"). Instead WoWBoxer lays the
+  bottom bars out for each window itself:
+  1. It finds the bottom group: bar 1, the bottom-left and bottom-right bars, the bag and menu buttons and the XP bar,
+     each as the frame that holds them under UIParent (a "unit": on Era the 1024-wide main bar art holds bar 1, the
+     bags and the menu; on Forever each Edit Mode bar is its own unit).
+  2. If the group does not fit the window's width (GetScreenWidth) it scales every unit by the same factor around the
+     bottom centre, just enough to fit. Below the smallest size (setting, 70 %) it stacks the units instead: each row
+     of the default layout wraps into more rows (bar 2 above bar 1, bar 3 above bar 2, the bags above …), at the
+     largest size that fits. Never onto the chat, the unit frames or the side bars, unless they already sat there.
+  3. Nothing fits even stacked: the default layout stays and one chat line says so (no popup).
+  Rules: only out of combat (it waits for PLAYER_REGEN_ENABLED), only SetScale/SetPoint on the bar frames (never a
+  protected action, a CVar or a saved Edit Mode layout; nothing persists), off when Bartender4, Dominos or another
+  bar addon is loaded, paused while Edit Mode is open, and every frame goes back to its own points and scale when the
+  setting is turned off. Setting "Fit action bars to this window" (Setup, on by default, per character).
+  [AFKLAR: that SetScale/SetPoint on Forever's Edit Mode bars out of combat causes no taint warnings, and that
+  Blizzard's own re-layouts are all caught by the SetPoint/SetScale hooks – both checked in the owner's test build] ]]
+
+BF.FIT_MIN, BF.FIT_FLOOR = 0.70, 0.50
+BF.BOTTOM_KEYS = { main = true, bottomLeft = true, bottomRight = true, menu = true }
+--- XP and reputation bars: they ride with the group when they sit at the bottom (Era: inside the main bar already)
+BF.STATUS_NAMES = { "MainStatusTrackingBarContainer", "SecondaryStatusTrackingBarContainer", "StatusTrackingBarManager",
+  "MainMenuExpBar", "ReputationWatchBar" }
+--- The frames the bars must not be moved onto (when they did not already overlap the default layout)
+BF.OBSTACLE_NAMES = { "ChatFrame1", "PlayerFrame", "TargetFrame", "FocusFrame", "PartyFrame", "CompactPartyFrame",
+  "PartyMemberFrame1", "PartyMemberFrame2", "PartyMemberFrame3", "PartyMemberFrame4" }
+--- Bar addons that own the bars: WoWBoxer does nothing while one is loaded
+BF.BAR_ADDONS = { "Bartender4", "Dominos", "ElvUI", "Tukui", "NDui", "Neuron", "MoveAny", "SpartanUI", "LUI", "RealUI",
+  "ConsolePort_Bar", "Bartender4_Classic" }
+
+local function eff(f) return num(f and f.GetEffectiveScale and f:GetEffectiveScale()) or 1 end
+local function union(list)
+  local l, b, r, t = math.huge, math.huge, -math.huge, -math.huge
+  for _, x in ipairs(list) do l = math.min(l, x[1]); b = math.min(b, x[2]); r = math.max(r, x[3]); t = math.max(t, x[4]) end
+  return { l, b, r, t }
+end
+local function shift(r, dx, dy) return { r[1] - dx, r[2] - dy, r[3] - dx, r[4] - dy } end
+local function frameName(f)
+  if type(f) ~= "table" or not f.GetName then return "?" end
+  local ok, n = pcall(f.GetName, f)
+  return ok and type(n) == "string" and n or "?"
 end
 
---- Set the UI scale: useUiScale 1, uiScale `fit`, through the Settings system with read-back (Compat.setCVarSure).
---- Only from the player's click, only out of combat (Core.whenSafe). Returns ok.
---- [AFKLAR: that the game applies uiScale at once on Forever and Era without opening the options; re-measured 1 s
---- after UI_SCALE_CHANGED either way]
-function BF.applyFit(fit)
-  local Core, C = ns.Core, ns.Compat
-  local want = string.format("%.2f", fit)
-  local okUse, mUse = C.setCVarSure("useUiScale", "1")
-  local _, mScale, after = C.setCVarSure("uiScale", want)
-  local okScale = math.abs((tonumber(after) or -1) - fit) < 0.005 -- read back as a number ("0.79" or "0.790000")
-  Core.log(okUse and okScale and "info" or "warn", string.format("fit: useUiScale %s (%s), uiScale %s -> %s (%s)",
-    okUse and "1" or tostring(C.getCVar("useUiScale")), mUse, want, tostring(after), mScale))
-  if okUse and okScale then
-    Core.print("UI Scale is now " .. want .. ". Your action bars fit in this window.")
-  else
-    Core.print("|cffff6060Could not set the UI Scale|r (it reads " .. tostring(after) .. "). Set it to " .. want ..
-      " in Options → Graphics, or use Auto-fit in the WoWBoxer window app.")
+--- The frame right under UIParent that holds f (what moves when the bar moves), or nil.
+function BF.rootOf(f)
+  local UIParent = G().UIParent
+  for _ = 1, 20 do
+    if type(f) ~= "table" or not f.GetParent then return nil end
+    local p = f:GetParent()
+    if p == UIParent then return f end
+    if not p then return nil end
+    f = p
   end
-  return okUse and okScale
+  return nil
 end
 
---- At login: when the bars overlap or are cut, ask once per login (never in combat; waits for combat to end) whether
---- to set the UI scale to the fit scale. Nothing changes without the click. Returns true when the popup was shown.
-function BF.offer()
-  local Core, C = ns.Core, ns.Compat
-  if BF.asked or not (Core and Core.db and ns.UI and ns.UI.Popup) then return false end
-  local m = BF.update("fit check")
-  local need, fit = BF.needsFit(m)
-  if not need then return false end
-  if C.inCombat() then BF.offerWaiting = true; return false end
-  BF.asked, BF.offerWaiting = true, false
-  if fit then
-    local want = string.format("%.2f", fit)
-    ns.UI.Popup("Action bars overlap in this window.\n[Fit now] sets UI Scale to " .. want .. ".\n" ..
-      "|cffaaaaaaThe WoWBoxer window app's Auto-fit does the same for all clients while they are closed.|r", {
-      { "Fit now", function() Core.whenSafe("Fit action bars", function() BF.applyFit(fit) end) end,
-        "Turns on Use UI Scale and sets UI Scale to " .. want .. " (this game install, all its characters)." },
-      { "Not now", function() Core.log("info", "fit: not now") end, "Asks again at the next login while the bars overlap." } })
-  else
-    ns.UI.Popup("Action bars overlap in this window, and even the smallest UI Scale (" .. BF.MIN_SCALE ..
-      ") can't fit them all. Make the window larger or turn off a bar.", {
-      { "OK", function() end, "Asks again at the next login while the bars overlap." } })
+--- The bottom group as units and the rects to keep clear, all in UI units where their anchors put them (pushes
+--- undone). Returns units, obstacles, W, H, why (why = a reason nothing can be fitted).
+function BF.collect()
+  local g = G()
+  local UIParent = g.UIParent
+  if not (UIParent and UIParent.GetWidth) then return nil, nil, 0, 0, "no UIParent" end
+  local ui = eff(UIParent)
+  local W, H = num(UIParent:GetWidth()) or 0, num(UIParent:GetHeight()) or 0
+  local units, byRoot, obstacles = {}, {}, {}
+  local function unitFor(root)
+    local u = byRoot[root]
+    if not u then u = { root = root, name = frameName(root), keys = {}, rects = {} }; byRoot[root] = u; units[#units + 1] = u end
+    return u
   end
-  Core.log("info", "fit: asked (" .. (fit and string.format("%.2f", fit) or "none") .. ")")
+  for _, def in ipairs(BF.BARS) do
+    for _, name in ipairs(buttonNames(def)) do
+      local btn = g[name]
+      local shown
+      if def.names then shown = btn and btn.IsVisible and btn:IsVisible() and btn.GetLeft and true or false
+      else shown = counted(btn) end
+      local r = shown and rectOf(btn, ui)
+      if r then
+        if BF.BOTTOM_KEYS[def.key] then
+          local root = BF.rootOf(btn)
+          if root then local u = unitFor(root); u.keys[def.key] = true; u.rects[#u.rects + 1] = r end
+        else
+          obstacles[#obstacles + 1] = { key = def.key, r = r }
+        end
+      end
+    end
+  end
+  if not byRoot[BF.rootOf(g.ActionButton1) or false] then return nil, nil, W, H, "bar 1 not found" end
+  for _, name in ipairs(BF.STATUS_NAMES) do
+    local f = g[name]
+    if type(f) == "table" and f.IsVisible and f:IsVisible() and f.GetLeft then
+      local r, root = rectOf(f, ui), BF.rootOf(f)
+      if r and root and r[2] < H * 0.35 and r[3] - r[1] > 1 then local u = unitFor(root); u.keys.status = true; u.rects[#u.rects + 1] = r end
+    end
+  end
+  local keep = {}
+  for _, u in ipairs(units) do
+    local root = u.root
+    local dx, dy = BF.pushOf(root, ui, W, H)
+    if math.abs(dx) < 0.5 then dx = 0 end
+    if math.abs(dy) < 0.5 then dy = 0 end
+    for i, r in ipairs(u.rects) do u.rects[i] = shift(r, dx, dy) end
+    local box = union(u.rects)
+    local rr = rectOf(root, ui)
+    if rr then
+      rr = shift(rr, dx, dy)
+      -- the unit's own art (Era's 1024-wide main bar, Forever's end caps) stays visible when it is about the bar's size
+      if rr[3] - rr[1] <= (box[3] - box[1]) * 1.25 + 60 and rr[4] - rr[2] <= (box[4] - box[2]) + 60 then
+        box = union({ box, rr })
+      end
+    end
+    u.box, u.rootRect = box, rr
+    u.h, u.v = BF.anchorOf(root)
+    u.scale = num(root.GetScale and root:GetScale()) or 1
+    u.k = eff(root) / ui
+    u.points = {}
+    for i = 1, (root.GetNumPoints and root:GetNumPoints()) or 0 do u.points[i] = { root:GetPoint(i) } end
+    u.ok = rr ~= nil and u.h == "center" and u.v == "bottom" and box[2] < H * 0.35 and rr[4] - rr[2] < 400 and #u.points > 0
+    if u.ok then keep[#keep + 1] = u
+    elseif u.keys.main then return nil, nil, W, H, "bar 1 is not at the bottom centre (" .. u.name .. ", " .. u.h .. "/" .. u.v .. ")"
+    elseif u.keys.status and not (u.keys.bottomLeft or u.keys.bottomRight or u.keys.menu) then
+      -- an XP bar on its own frame that does not follow the bottom centre: left alone, and no obstacle either (it sits
+      -- between the bar rows, so as an obstacle it would block every smaller layout)
+    else for _, r in ipairs(u.rects) do obstacles[#obstacles + 1] = { key = u.name, r = r } end end
+  end
+  for _, name in ipairs(BF.OBSTACLE_NAMES) do
+    local f = g[name]
+    if type(f) == "table" and f.IsVisible and f:IsVisible() and f.GetLeft and not byRoot[f] then
+      local r = rectOf(f, ui)
+      if r and r[3] - r[1] > 1 and r[4] - r[2] > 1 then obstacles[#obstacles + 1] = { key = name, r = r } end
+    end
+  end
+  return keep, obstacles, W, H, nil
+end
+
+-- the rects of unit u placed with its box at X, Y at size s
+local function placed(u, X, Y, s, r)
+  local b = u.box
+  return { X + (r[1] - b[1]) * s, Y + (r[2] - b[2]) * s, X + (r[3] - b[1]) * s, Y + (r[4] - b[2]) * s }
+end
+
+--- Stacked places for size s (natural rows wrap to the window): {[i] = {x, y}} with x relative to the centre, y from
+--- the bottom, both in the units' own size; nil when a unit alone is wider than the window.
+function BF.stackPlaces(units, W, s, margin)
+  local A = (W - 2 * margin) / s
+  local order = {}
+  for i = 1, #units do order[i] = i end
+  table.sort(order, function(a, b)
+    local x, y = units[a].box, units[b].box
+    if math.abs(x[2] - y[2]) >= 12 then return x[2] < y[2] end
+    return x[1] < y[1]
+  end)
+  local rows = {}
+  for _, i in ipairs(order) do
+    local bx = units[i].box
+    local row = rows[#rows]
+    if row and math.abs(bx[2] - row.b) < 12 then row.items[#row.items + 1] = i; row.t = math.max(row.t, bx[4])
+    else rows[#rows + 1] = { b = bx[2], t = bx[4], items = { i } } end
+  end
+  local places, top, prevT = {}, nil, nil
+  for _, row in ipairs(rows) do
+    local lines, line, prev = {}, { w = 0, h = 0, items = {} }, nil
+    for _, i in ipairs(row.items) do
+      local bx = units[i].box
+      local w = bx[3] - bx[1]
+      if w > A + 0.01 then return nil end
+      local gap = prev and math.max(2, math.min(24, bx[1] - units[prev].box[3])) or 0
+      if #line.items > 0 and line.w + gap + w > A then lines[#lines + 1] = line; line = { w = 0, h = 0, items = {} }; gap = 0 end
+      line.items[#line.items + 1] = { i = i, off = line.w + gap }
+      line.w, line.h = line.w + gap + w, math.max(line.h, bx[4] - bx[2])
+      prev = i
+    end
+    lines[#lines + 1] = line
+    for li, ln in ipairs(lines) do
+      local y
+      if not top then y = row.b
+      elseif li == 1 then y = top + math.max(4, math.min(40, row.b - prevT))
+      else y = top + 4 end
+      for _, it in ipairs(ln.items) do places[it.i] = { x = -ln.w / 2 + it.off, y = y } end
+      top = y + ln.h
+    end
+    prevT = row.t
+  end
+  return places
+end
+
+--- The layout for this window: {mode = "none"|"scale"|"stack"|"nofit", scale, place = {[i] = {X, Y}} (box corner in
+--- UI units)}. Pure: units/obstacles from BF.collect, W x H the window in UI units.
+function BF.plan(units, obstacles, W, H, minScale, margin)
+  margin = margin or BF.MARGIN
+  minScale = minScale or BF.FIT_MIN
+  if not units or #units == 0 or W <= 0 or H <= 0 then return { mode = "none", scale = 1 } end
+  local all = {}
+  for _, u in ipairs(units) do all[#all + 1] = u.box end
+  local g = union(all)
+  -- an obstacle that already overlaps the default layout is the player's own arrangement: it does not count
+  local obs = {}
+  for _, o in ipairs(obstacles or {}) do
+    local hit = false
+    for _, u in ipairs(units) do for _, r in ipairs(u.rects) do if overlaps(o.r, r) then hit = true end end end
+    if not hit then obs[#obs + 1] = o.r end
+  end
+  local function fits(place, s)
+    for i, u in ipairs(units) do
+      local p = place[i]
+      local b = placed(u, p.X, p.Y, s, u.box)
+      if b[1] < margin - 0.5 or b[3] > W - margin + 0.5 or b[4] > H * 0.5 then return false end
+      for _, r in ipairs(u.rects) do
+        local q = placed(u, p.X, p.Y, s, r)
+        for _, o in ipairs(obs) do if overlaps(q, o) then return false end end
+      end
+    end
+    return true
+  end
+  if g[1] >= margin - 0.5 and g[3] <= W - margin + 0.5 then
+    local place = {}
+    for i, u in ipairs(units) do place[i] = { X = u.box[1], Y = u.box[2] } end
+    if fits(place, 1) then return { mode = "none", scale = 1 } end
+  end
+  local cx = (g[1] + g[3]) / 2
+  local function steps(fn)
+    local s = 1
+    while s >= minScale - 1e-9 do
+      local r = fn(math.floor(s * 100 + 0.5) / 100)
+      if r then return r end
+      s = s - BF.STEP
+    end
+  end
+  local best = steps(function(s)
+    local place = {}
+    for i, u in ipairs(units) do place[i] = { X = W / 2 + (u.box[1] - cx) * s, Y = u.box[2] * s } end
+    if fits(place, s) then return { mode = "scale", scale = s, place = place } end
+  end)
+  if best then return best end
+  best = steps(function(s)
+    local p = BF.stackPlaces(units, W, s, margin)
+    if not p then return nil end
+    local place = {}
+    for i in ipairs(units) do place[i] = { X = W / 2 + p[i].x * s, Y = p[i].y * s } end
+    if fits(place, s) then return { mode = "stack", scale = s, place = place } end
+  end)
+  return best or { mode = "nofit", scale = 1 }
+end
+
+-- ------------------------------------------------------------------ applying it
+BF.managed = {}      -- [root frame] = { points = {{GetPoint}}, scale = n, name = "MainMenuBar" } – the frame's own layout
+BF.hooked = {}       -- [root frame] = true once the SetPoint/SetScale hooks are on
+BF.state = { mode = "off" }
+
+local function Core() return ns.Core end
+function BF.fitOn() local c = Core() and Core().cdb; return not (c and c.barFit == false) end
+function BF.fitMin()
+  local c = Core() and Core().cdb
+  local v = tonumber(c and c.barFitMin) or BF.FIT_MIN
+  return math.max(BF.FIT_FLOOR, math.min(1, v))
+end
+--- The loaded bar addon that owns the bars, or nil.
+function BF.barAddon()
+  local C = ns.Compat
+  for _, n in ipairs(BF.BAR_ADDONS) do if C and C.addonState(n) == "loaded" then return n end end
+  return nil
+end
+local function editMode()
+  local E = G().EditModeManagerFrame
+  if not E then return false end
+  if E.IsEditModeActive then local ok, a = pcall(E.IsEditModeActive, E); if ok then return a and true or false end end
+  return E.IsShown and E:IsShown() and true or false
+end
+
+--- Our own writes, so the hooks can tell them from Blizzard's re-layouts.
+local function write(fn)
+  BF.writing = true
+  local ok, err = pcall(fn)
+  BF.writing = false
+  if not ok and Core() then Core().log("warn", "bar fit write: " .. tostring(err)) end
+  return ok
+end
+
+--- Blizzard moved or scaled a frame we manage (Edit Mode, a bar turned on): what it set is the frame's own layout
+--- now (never put our old copy back over it); fit again. A game that keeps moving the bars back wins after 6 rounds.
+local function onBlizzardMove(root, what)
+  if BF.writing then return end
+  local m = BF.managed[root]
+  if m then
+    m[what] = nil
+    if m.points == nil and m.scale == nil then BF.managed[root] = nil end
+  end
+  local now = (G().GetTime and G().GetTime()) or 0
+  if BF.fightAt and now - BF.fightAt < 10 then BF.fights = (BF.fights or 0) + 1 else BF.fightAt, BF.fights = now, 1 end
+  if BF.fights > 6 then
+    if not BF.gaveUp and Core() then BF.gaveUp = true; Core().log("warn", "bar fit: the game keeps moving " .. frameName(root) .. " back; stopped until /reload") end
+    BF.restore("gave up")
+    return
+  end
+  BF.request("moved by the game: " .. frameName(root))
+end
+local function hook(root)
+  if BF.hooked[root] or not G().hooksecurefunc then return end
+  BF.hooked[root] = true
+  pcall(G().hooksecurefunc, root, "SetPoint", function(self) onBlizzardMove(self, "points") end)
+  pcall(G().hooksecurefunc, root, "SetScale", function(self) onBlizzardMove(self, "scale") end)
+end
+
+--- Put every frame back to its own points and scale. Out of combat only (returns false in combat).
+function BF.restore(reason)
+  if next(BF.managed) == nil then return true end
+  if ns.Compat.inCombat() then BF.pending = "restore"; return false end
+  write(function()
+    for root, m in pairs(BF.managed) do
+      if m.points then
+        root:ClearAllPoints()
+        for _, p in ipairs(m.points) do root:SetPoint(p[1], p[2], p[3], p[4], p[5]) end
+      end
+      if m.scale then root:SetScale(m.scale) end
+    end
+  end)
+  BF.managed = {}
+  if Core() then Core().log("info", "bar fit: default layout (" .. tostring(reason) .. ")") end
   return true
 end
 
---- After combat: the offer that waited for it.
-function BF.afterCombat()
-  if BF.offerWaiting then BF.offer() end
+local function bridge(on, plan)
+  local c = Core()
+  if not (c and c.db) then return end
+  local b = type(c.db.bridge) == "table" and c.db.bridge or {}
+  -- the window app's handshake (docs/bridge.md): while this is on it leaves UI Scale alone for this client
+  b.barFit = on and true or false
+  b.barScale = on and plan and plan.mode ~= "nofit" and plan.scale or nil
+  b.barMode = plan and plan.mode or nil
+  c.db.bridge = b
 end
 
+--- Lay the bars out for this window now (from their own layout). Returns the plan, or nil and why.
+function BF.fitNow(reason)
+  local c = Core()
+  if not (c and c.db) then return nil, "not loaded" end
+  if not BF.fitOn() then BF.restore("off"); BF.state = { mode = "off" }; bridge(false); return nil, "off" end
+  local addon = BF.barAddon()
+  if addon then
+    BF.restore("bar addon"); BF.state = { mode = "addon", addon = addon }; bridge(false)
+    if BF.lastWhy ~= addon then BF.lastWhy = addon; c.log("info", "bar fit: " .. addon .. " owns the bars, nothing done") end
+    return nil, addon
+  end
+  if editMode() then BF.restore("Edit Mode"); BF.state = { mode = "editmode" }; return nil, "Edit Mode" end
+  if BF.gaveUp then return nil, "gave up" end
+  if ns.Compat.inCombat() then BF.pending = "fit"; return nil, "combat" end
+  -- always from the frames' own layout: put them back, and measure on the next round, once the game has placed them
+  -- [AFKLAR: whether GetLeft already reads the new place in the same frame; one round later is safe either way]
+  if next(BF.managed) ~= nil then
+    BF.restore("refit")
+    BF.request(reason)
+    return nil, "restoring"
+  end
+  local units, obstacles, W, H, why = BF.collect()
+  if not units then
+    BF.state = { mode = "none", why = why }; bridge(true, nil)
+    if BF.lastWhy ~= why then BF.lastWhy = why; c.log("info", "bar fit: " .. tostring(why)) end
+    return nil, why
+  end
+  local plan = BF.plan(units, obstacles, W, H, BF.fitMin(), BF.MARGIN)
+  if plan.mode == "scale" or plan.mode == "stack" then
+    write(function()
+      for i, u in ipairs(units) do
+        local p, root, s = plan.place[i], u.root, plan.scale
+        BF.managed[root] = BF.managed[root] or { points = u.points, scale = u.scale, name = u.name }
+        local rr = u.rootRect
+        local L = p.X + (rr[1] - u.box[1]) * s
+        local B = p.Y + (rr[2] - u.box[2]) * s
+        local k = u.k * s
+        root:SetScale(u.scale * s)
+        root:ClearAllPoints()
+        root:SetPoint("BOTTOMLEFT", G().UIParent, "BOTTOM", (L - W / 2) / k, B / k)
+      end
+    end)
+    for _, u in ipairs(units) do hook(u.root) end
+  end
+  local names = {}
+  for _, u in ipairs(units) do names[#names + 1] = u.name end
+  BF.state = { mode = plan.mode, scale = plan.scale, units = #units, w = math.floor(W + 0.5), h = math.floor(H + 0.5) }
+  bridge(true, plan)
+  local line = string.format("bar fit: %s at %d %% in %dx%d (%s)", plan.mode, math.floor(plan.scale * 100 + 0.5),
+    BF.state.w, BF.state.h, table.concat(names, ", "))
+  if line ~= BF.lastLine2 then BF.lastLine2 = line; c.log("info", line .. " (" .. tostring(reason) .. ")") end
+  if plan.mode == "nofit" then
+    local key = BF.state.w .. "x" .. BF.state.h
+    if BF.hinted ~= key then
+      BF.hinted = key
+      c.print("Your action bars don't fit this window, even stacked. Make the window wider, move the chat up or turn off a bar.")
+    end
+  end
+  BF.update(reason)
+  return plan
+end
+
+--- Fit again a moment later (many events come at once; Blizzard's own layout settles first).
+function BF.request(reason)
+  if BF.waiting then return end
+  BF.waiting = true
+  local function run()
+    BF.waiting = false
+    local ok, err = pcall(BF.fitNow, reason)
+    if not ok and Core() then Core().log("error", "bar fit: " .. tostring(err)) end
+  end
+  if G().C_Timer and G().C_Timer.After then G().C_Timer.After(0.2, run) else run() end
+end
+
+--- The setting (Setup, /wbx barfit on|off): off puts the default layout back at once (or after combat).
+function BF.setFit(on)
+  local c = Core()
+  if on then c.cdb.barFit = nil else c.cdb.barFit = false end
+  if on then BF.gaveUp, BF.fights = nil, 0; BF.request("turned on")
+  else BF.restore("turned off"); BF.state = { mode = "off" }; bridge(false) end
+end
+
+--- Hooks that tell us when bars come and go and when Edit Mode opens and closes (post-hooks only: no taint).
+function BF.Init()
+  if BF.inited then return end
+  BF.inited = true
+  local g = G()
+  for _, n in ipairs({ "MultiBarBottomLeft", "MultiBarBottomRight", "MultiBarRight", "MultiBarLeft", "MultiBar5", "MultiBar6",
+    "MultiBar7", "MainMenuBarBackpackButton", "MainStatusTrackingBarContainer", "MainMenuExpBar" }) do
+    local f = g[n]
+    if type(f) == "table" and f.HookScript then
+      pcall(f.HookScript, f, "OnShow", function() BF.request("shown: " .. n) end)
+      pcall(f.HookScript, f, "OnHide", function() BF.request("hidden: " .. n) end)
+    end
+  end
+  local E = g.EditModeManagerFrame
+  if type(E) == "table" and E.HookScript then
+    pcall(E.HookScript, E, "OnShow", function() BF.restore("Edit Mode opened"); BF.state = { mode = "editmode" } end)
+    pcall(E.HookScript, E, "OnHide", function() BF.request("Edit Mode closed") end)
+  end
+  if g.hooksecurefunc and type(g.MultiActionBar_Update) == "function" then
+    pcall(g.hooksecurefunc, "MultiActionBar_Update", function() BF.request("bars changed") end)
+  end
+end
+
+--- Login, /reload, a new window size or UI scale.
+function BF.offer()
+  BF.request("login")
+  return false -- never blocks the other login checks: there is no popup any more
+end
+
+--- Does measurement m need a smaller UI scale? (for the bridge and /wbx barfit) true, fit.
+function BF.needsFit(m)
+  if not (m and m.bars and #m.bars > 0) then return false end
+  if not (m.squeezed or (m.outside or 0) + (m.covered or 0) > 0) then return false end
+  if m.fitScale and m.fitScale >= (m.scale or 1) - 0.005 then return false end
+  return true, m.fitScale
+end
+
+--- After combat: whatever waited for it.
+function BF.afterCombat()
+  local p = BF.pending
+  BF.pending = nil
+  if p == "restore" and not BF.fitOn() then BF.restore("after combat")
+  elseif p then BF.request("after combat") end
+end
+
+--- One line for /wbx barfit.
+function BF.fitSummary()
+  local s = BF.state or {}
+  if not BF.fitOn() then return "Fit action bars: off (/wbx barfit on)" end
+  if s.mode == "addon" then return "Fit action bars: " .. s.addon .. " owns the bars – nothing done" end
+  if s.mode == "editmode" then return "Fit action bars: paused while Edit Mode is open" end
+  if s.mode == "scale" then return string.format("Fit action bars: scaled to %d %% for this %dx%d window", math.floor(s.scale * 100 + 0.5), s.w, s.h) end
+  if s.mode == "stack" then return string.format("Fit action bars: stacked at %d %% for this %dx%d window", math.floor(s.scale * 100 + 0.5), s.w, s.h) end
+  if s.mode == "nofit" then return "Fit action bars: they don't fit this window even stacked – default layout kept" end
+  if s.why then return "Fit action bars: on – " .. s.why end
+  return string.format("Fit action bars: on – they fit as they are (smallest size %d %%)", math.floor(BF.fitMin() * 100 + 0.5))
+end

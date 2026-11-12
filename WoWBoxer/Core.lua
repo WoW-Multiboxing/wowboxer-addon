@@ -1201,7 +1201,7 @@ local HELP = {
   "/wbx shots – screenshots of every WoWBoxer page (for the website; read-only)",
   "/wbx log [n] – show the last n log lines; /wbx debug – toggle debug messages",
   "/wbx sound – warning sound on/off (follow warning, GM whispers); the warning text stays",
-  "/wbx barfit – which action bars are visible and whether every button fits in this window (read-only)",
+  "/wbx barfit – how the action bars are fitted to this window; /wbx barfit on|off; /wbx barfit min 70 (smallest size before stacking, %)",
   "/wbx names – how the game names your party and which squad member each one matches (read-only)",
 }
 --- /wbx names: the names exactly as the game gives them, the squad match per member, and the send results.
@@ -1250,8 +1250,24 @@ function Core.slash(msg)
     if ns.UI and ns.UI.Refresh and ns.UI.frame and ns.UI.frame:IsShown() then ns.UI.Refresh() end
   elseif cmd == "names" then for _, l in ipairs(Core.namesReport()) do chat(l) end
   elseif cmd == "barfit" then
-    local m = ns.BarFit and ns.BarFit.update("/wbx barfit")
-    chat(ns.BarFit and ns.BarFit.summary(m) or "bars: not measured")
+    local BF = ns.BarFit
+    local arg1, arg2 = (rest or ""):match("^(%S*)%s*(%S*)")
+    if arg1 == "on" or arg1 == "off" then
+      BF.setFit(arg1 == "on")
+      chat("Fit action bars to this window: " .. arg1 .. (arg1 == "off" and " – the default layout is back." or "."))
+      if ns.UI and ns.UI.Refresh and ns.UI.frame and ns.UI.frame:IsShown() then ns.UI.Refresh() end
+      return
+    elseif arg1 == "min" then
+      local v = tonumber(arg2)
+      if not v or v < BF.FIT_FLOOR * 100 or v > 100 then chat("Use /wbx barfit min 50–100 (now " .. math.floor(BF.fitMin() * 100 + 0.5) .. ").") return end
+      Core.cdb.barFitMin = (math.abs(v / 100 - BF.FIT_MIN) > 0.001) and v / 100 or nil
+      chat("Smallest bar size before stacking: " .. math.floor(v + 0.5) .. " %.")
+      BF.request("/wbx barfit min")
+      return
+    end
+    local m = BF and BF.update("/wbx barfit")
+    chat(BF.fitSummary())
+    chat(BF and BF.summary(m) or "bars: not measured")
     for _, b in ipairs(m and m.bars or {}) do
       chat(string.format("  %s: %d buttons, %d outside, %d under another bar (%s)", b.label, b.buttons, b.outside, b.covered, b.anchor))
     end
@@ -1339,6 +1355,7 @@ function Core.onEvent(event, ...)
     safeRegister("PLAYER_LOGOUT")
     safeRegister("UI_SCALE_CHANGED")
     safeRegister("DISPLAY_SIZE_CHANGED")
+    safeRegister("EDIT_MODE_LAYOUTS_UPDATED")
     Core.log("info", "login " .. Core.charKey .. " " .. C.buildString() .. " (" .. C.game() .. ", toc " .. C.interface() .. ")")
     safeRegister("PLAYER_LEVEL_UP")
     safeRegister("PLAYER_REGEN_ENABLED")
@@ -1360,6 +1377,7 @@ function Core.onEvent(event, ...)
     if ns.Equip and ns.Equip.Init then ns.Equip.Init() end
     if ns.Loot and ns.Loot.Init then ns.Loot.Init() end
     if ns.Relay and ns.Relay.Init then ns.Relay.Init() end
+    if ns.BarFit and ns.BarFit.Init then ns.BarFit.Init() end
     if C_Timer and C_Timer.After then C_Timer.After(3, function() Core.checkOffer("login") end) end
     if C_Timer and C_Timer.After then C_Timer.After(6, function() local ok, err = pcall(Core.loginChecks); if not ok then Core.log("error", "login checks: " .. tostring(err)) end end) end
     -- read-only diagnose a few seconds after login, so a /reload is enough to see how the addon behaves in this client
@@ -1375,7 +1393,9 @@ function Core.onEvent(event, ...)
     if ns.BarFit then ns.BarFit.update("logout") end
   elseif event == "UI_SCALE_CHANGED" or event == "DISPLAY_SIZE_CHANGED" then
     -- the window app (Auto-fit) or the player changed the window or the UI scale: measure again once it settles
-    if C_Timer and C_Timer.After and ns.BarFit then C_Timer.After(1, function() ns.BarFit.update(event) end) end
+    if C_Timer and C_Timer.After and ns.BarFit then C_Timer.After(1, function() ns.BarFit.update(event); ns.BarFit.request(event) end) end
+  elseif event == "EDIT_MODE_LAYOUTS_UPDATED" then
+    if ns.BarFit then ns.BarFit.request(event) end
   elseif event == "CURSOR_CHANGED" then Core.onCursorChanged()
   elseif event == "PLAYER_REGEN_ENABLED" then
     Core.runQueue()

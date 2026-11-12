@@ -521,7 +521,13 @@ function Mock.new(H, opts)
   end
   env.DEFAULT_CHAT_FRAME = { AddMessage = function(_, msg) W.chat[#W.chat + 1] = msg end }
   env.SlashCmdList = {}
-  env.hooksecurefunc = function() end
+  -- a real post-hook (the bar fit hooks SetPoint/SetScale on the bar frames to see Blizzard's re-layouts)
+  env.hooksecurefunc = function(t, name, fn)
+    if type(t) == "string" then t, name, fn = env, t, name end
+    local orig = t[name]
+    if type(orig) ~= "function" then return end
+    t[name] = function(...) local r = { orig(...) }; fn(...); return unpack(r) end
+  end
   env.ACCEPT, env.CANCEL, env.OKAY, env.CLOSE, env.YES, env.NO = "Accept", "Cancel", "Okay", "Close", "Yes", "No"
   env.GetCurrentBindingSet = function() return W.bindingSet or 1 end
   -- key bindings: W.bindings[key] = command
