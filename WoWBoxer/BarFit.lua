@@ -677,6 +677,12 @@ end
 
 --- Put every frame back to its own points and scale. Out of combat only (returns false in combat).
 function BF.restore(reason)
+  local BL = ns.BarLayout
+  if BL and BL.available() then
+    -- Edit Mode clients: our layout off, the player's own layout active again
+    if ns.Compat.inCombat() then BF.pending = "restore"; return false end
+    return BL.off(reason)
+  end
   if next(BF.managed) == nil then return true end
   if ns.Compat.inCombat() then BF.pending = "restore"; return false end
   write(function()
@@ -698,7 +704,7 @@ local function bridge(on, plan)
   if not (c and c.db) then return end
   local b = type(c.db.bridge) == "table" and c.db.bridge or {}
   -- the window app's handshake (docs/bridge.md): while this is on it leaves UI Scale alone for this client
-  b.barFit = on and true or false
+  b.barFit = on and "addon" or false
   b.barScale = on and plan and plan.mode ~= "nofit" and plan.scale or nil
   b.barMode = plan and plan.mode or nil
   c.db.bridge = b
@@ -708,6 +714,7 @@ end
 function BF.fitNow(reason)
   local c = Core()
   if not (c and c.db) then return nil, "not loaded" end
+  if ns.BarLayout and ns.BarLayout.available() then return BF.layoutNow(reason) end
   if not BF.fitOn() then BF.restore("off"); BF.state = { mode = "off" }; bridge(false); return nil, "off" end
   local addon = BF.barAddon()
   if addon then
@@ -786,6 +793,25 @@ function BF.fitNow(reason)
   return plan
 end
 
+--- Edit Mode clients (Forever, Classic Era 1.15.9): an Edit Mode layout of our own does the work (BarLayout.lua).
+function BF.layoutNow(reason)
+  local BL, c = ns.BarLayout, Core()
+  if not BF.fitOn() then BF.restore("off"); BF.state = { mode = "off" }; return nil, "off" end
+  local addon = BF.barAddon()
+  if addon then
+    BF.restore("bar addon"); BF.state = { mode = "addon", addon = addon }
+    if BF.lastWhy ~= addon then BF.lastWhy = addon; c.log("info", "bar fit: " .. addon .. " owns the bars, nothing done") end
+    return nil, addon
+  end
+  if editMode() then return nil, "Edit Mode" end
+  if ns.Compat.inCombat() then BF.pending = "fit"; return nil, "combat" end
+  if BF.cursorBusy() then BF.afterDrag = true; return nil, "dragging" end
+  local st = BL.fit(reason)
+  BF.state = st
+  BF.update(reason)
+  return st
+end
+
 --- Fit again a moment later (many events come at once; Blizzard's own layout settles first).
 function BF.request(reason)
   if BF.waiting then return end
@@ -802,7 +828,10 @@ end
 function BF.setFit(on)
   local c = Core()
   if on then c.cdb.barFit = nil else c.cdb.barFit = false end
-  if on then BF.gaveUp, BF.fights = nil, 0; BF.request("turned on")
+  if on then
+    BF.gaveUp, BF.fights = nil, 0
+    if ns.BarLayout then ns.BarLayout.setPaused(false); ns.BarLayout.lastInputs = nil end
+    BF.request("turned on")
   else BF.restore("turned off"); BF.state = { mode = "off" }; bridge(false) end
 end
 
@@ -821,8 +850,17 @@ function BF.Init()
   end
   local E = g.EditModeManagerFrame
   if type(E) == "table" and E.HookScript then
-    pcall(E.HookScript, E, "OnShow", function() BF.restore("Edit Mode opened"); BF.state = { mode = "editmode" } end)
-    pcall(E.HookScript, E, "OnHide", function() BF.request("Edit Mode closed") end)
+    local BL = ns.BarLayout
+    if BL and BL.available() then
+      -- our own apply opens and closes Edit Mode: not the player's
+      pcall(E.HookScript, E, "OnHide", function()
+        if BL.applying then return end
+        BL.onLayoutsUpdated(); BL.lastInputs = nil; BF.request("Edit Mode closed")
+      end)
+    else
+      pcall(E.HookScript, E, "OnShow", function() BF.restore("Edit Mode opened"); BF.state = { mode = "editmode" } end)
+      pcall(E.HookScript, E, "OnHide", function() BF.request("Edit Mode closed") end)
+    end
   end
   if g.hooksecurefunc and type(g.MultiActionBar_Update) == "function" then
     pcall(g.hooksecurefunc, "MultiActionBar_Update", function() BF.request("bars changed") end)
@@ -860,6 +898,9 @@ function BF.fitSummary()
   if s.mode == "scale" then return string.format("Fit action bars: scaled to %d %% for this %dx%d window", math.floor(s.scale * 100 + 0.5), s.w, s.h) end
   if s.mode == "stack" then return string.format("Fit action bars: stacked at %d %% for this %dx%d window", math.floor(s.scale * 100 + 0.5), s.w, s.h) end
   if s.mode == "nofit" then return "Fit action bars: they don't fit this window even stacked – default layout kept" end
+  if s.mode == "fits" then return string.format("Fit action bars: on – the game's own layout fits this %dx%d window, nothing changed", s.w or 0, s.h or 0) end
+  if s.mode == "layout" then return string.format("Fit action bars: %s at %d %% for this %dx%d window (Edit Mode layout \"WoWBoxer\")", s.arrangement or "?", s.pct or 100, s.w or 0, s.h or 0) end
+  if s.mode == "paused" then return "Fit action bars: paused – you picked the Edit Mode layout \"" .. tostring(s.layout) .. "\" (untick and tick to resume)" end
   if s.why then return "Fit action bars: on – " .. s.why end
   return string.format("Fit action bars: on – they fit as they are (smallest size %d %%)", math.floor(BF.fitMin() * 100 + 0.5))
 end

@@ -76,6 +76,7 @@ Auto.lua
 Equip.lua
 Loot.lua
 Relay.lua
+BarLayout.lua
 BarFit.lua
 UI\Theme.lua
 UI\Widgets.lua

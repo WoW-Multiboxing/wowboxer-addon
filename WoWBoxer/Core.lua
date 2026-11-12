@@ -1395,6 +1395,7 @@ function Core.onEvent(event, ...)
     -- the window app (Auto-fit) or the player changed the window or the UI scale: measure again once it settles
     if C_Timer and C_Timer.After and ns.BarFit then C_Timer.After(1, function() ns.BarFit.update(event); ns.BarFit.request(event) end) end
   elseif event == "EDIT_MODE_LAYOUTS_UPDATED" then
+    if ns.BarLayout and ns.BarLayout.onLayoutsUpdated then ns.BarLayout.onLayoutsUpdated() end
     if ns.BarFit then ns.BarFit.forceNext = true; ns.BarFit.request(event) end
   elseif event == "CURSOR_CHANGED" then
     Core.onCursorChanged()

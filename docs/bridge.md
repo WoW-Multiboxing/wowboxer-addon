@@ -114,32 +114,37 @@ Model numbers from `tests/test_barfit.lua` (window sizes in UI units at scale 1)
 These are the old stacked-bars mock. The real Forever layout (bars 2 and 3 side by side) is in "Real numbers" above
 and in the test "the real Forever layout".
 
-## The addon fits the bars itself (since 1.3.0-test.9, owner 12 Nov 2026)
+## The addon lays the bars out per window (since 1.3.0-test.11, owner 12 Nov 2026)
 UI Scale is one value per install and never below 0.64, so it cannot fit every window shape (owner 12 Nov: two
-1280x1392 followers, "even the smallest UI Scale (0.64) can't fit them all"). The login popup of test.3–test.7 is
-gone. Instead the addon lays out the bottom bars of each window (`WoWBoxer/BarFit.lua`, second half):
-- **When:** login, `/reload`, `DISPLAY_SIZE_CHANGED`, `UI_SCALE_CHANGED`, `EDIT_MODE_LAYOUTS_UPDATED`, a bottom or side
-  bar shown or hidden, Edit Mode closed, and a bar moved by the game itself (post-hooks on `SetPoint`/`SetScale`).
-- **What:** the bottom group = bar 1, bars 2–3, the bag and menu buttons and the XP bar, as the frames under UIParent
-  that hold them (Era: the 1024-wide main bar holds bar 1, bars 2–3, bags and menu; Forever: each Edit Mode bar).
-  1. It fits as it is (inside `GetScreenWidth()` with a 4-unit margin, nothing on the chat or unit frames): nothing
-     changes.
-  2. Otherwise every unit is scaled by the same factor around the bottom centre, just enough to fit.
-  3. Below the smallest size (`/wbx barfit min`, default 70 %) the rows of the default layout wrap into more rows
-     (bar 2 above bar 1, bar 3 above bar 2, the bags above the menu), at the largest size that fits.
-  4. Nothing fits even stacked: the default layout stays and one chat line says so ("make the window wider, move the
-     chat up or turn off a bar"). A stack never lies on the chat, the unit frames or the side bars unless they
-     already overlapped the default layout. On Era the 1024-wide main bar is one piece, so it can only be scaled.
-- **Rules:** only out of combat (waits for `PLAYER_REGEN_ENABLED`); only `SetScale`/`SetPoint` on those frames (no
-  CVar, no saved Edit Mode layout: nothing persists after the addon is off); nothing while Bartender4, Dominos, ElvUI
-  or another bar addon is loaded, or while Edit Mode is open (the game's layout is back for editing); off = every
-  frame back to its own points and scale. When the game keeps moving a bar back (more than 6 times in 10 s) it stops
-  until `/reload`.
+1280x1392 followers, "even the smallest UI Scale (0.64) can't fit them all"). There is no login popup any more.
+test.9/10 scaled Blizzard's bar frames by hand; Edit Mode kept moving them back and the XP bar broke (owner's
+screenshots 12 Nov 11:10). Since test.11 the addon works **through Edit Mode** (`WoWBoxer/BarLayout.lua`) on every
+client that has it (Forever, Classic Era 1.15.9; probed at runtime):
+- **What:** a Character layout "WoWBoxer" (each window is one character) = a copy of the layout that was active, with
+  only the bottom group changed: bar 1, bars 2–3, the stance and pet bars, the micro menu, the bags, the XP and
+  reputation bars. Blizzard's own buttons (keybinds, macros, action slots unchanged), art, vehicle/override bars.
+  1. The game's own layout fits the window (no button outside, none on another bar): nothing is written.
+  2. Otherwise the arrangement and icon size with the largest icons (Edit Mode's sizes, 100 % down to 50 %, fewest
+     rows on a tie): **2 rows** (bar 1 + menu + bags, the XP bar, bars 2 + 3), **3 rows** (bars 2 and 3 on their own
+     rows) or **4 rows** (menu + bags at the bottom), centred at the bottom; the XP/reputation bar sized to the button
+     area; stance and pet bars above the top row; never onto the chat, the unit frames or the side bars, never above
+     45 % of the window. Era's gryphons stay where the rows above fit between them (else Edit Mode's *hide bar art*).
+  3. Nothing fits even at 50 %: nothing is written, one chat line says so.
+- **Applying:** `C_EditMode.SaveLayouts` (+ `SetActiveLayout` the first time), then Edit Mode is opened and closed
+  through `ShowUIPanel`/`HideUIPanel`, so Blizzard's secure code applies it (as LibEditModeOverride does). Only out of
+  combat, never while Edit Mode is open or while something is on the cursor, nothing with Bartender4/Dominos/ElvUI.
+  Saved and applied only when the layout really changes. **Off** = the layout that was active before is active again
+  and "WoWBoxer" is deleted. The player picks another layout in Edit Mode: WoWBoxer leaves it (paused until the
+  setting is ticked again).
+- **When:** login, `/reload`, `DISPLAY_SIZE_CHANGED`, `UI_SCALE_CHANGED`, `EDIT_MODE_LAYOUTS_UPDATED`, bars shown or
+  hidden, Edit Mode closed, a drag ended.
 - **Setting:** *Setup → Fit action bars* ("Fit action bars to this window"), on by default, per character;
-  `/wbx barfit on|off`, `/wbx barfit min 50–100`; `/wbx barfit` prints what it did.
-- **Bridge (the handshake reserved in the backlog):** `bridge.barFit = true` while it is on (false when off or a bar
-  addon owns the bars), `bridge.barScale` = the size it used (nil = fits as it is, or nothing fits),
-  `bridge.barMode = "none" | "scale" | "stack" | "nofit"`. **For the window app:** while `barFit` is true, leave UI
-  Scale alone for that client; `bridge.bars` (the measurement) is taken after the layout.
-- `[AFKLAR: SetScale/SetPoint on Forever's Edit Mode bars out of combat without taint warnings, and that the hooks see
-  every re-layout of the game – checked in TEST BUILD 1.3.0-test.9]`
+  `/wbx barfit on|off`, `/wbx barfit min 50–100` (smallest icon size); `/wbx barfit` prints what it did.
+- **Bridge:** `bridge.barFit = "addon"` while it is on (**for the window app: then never lower UI Scale for that
+  client**; `false` when off, paused or a bar addon owns the bars), `bridge.barMode = "fits" | "layout" | "nofit" |
+  "paused" | "off"`, `bridge.barRows` (2–4), `bridge.barScale` (icon size, 0.5–1.0), `bridge.barLayout` (diagnose:
+  window, plan, per-system sizes and places, obstacles). `bridge.bars` (the measurement) is taken after the layout.
+  Until test.10 `barFit` was `true`; treat `true` the same as `"addon"`.
+- Clients without Edit Mode keep the old per-frame scale (BarFit.lua second half; only where one frame holds the bars).
+- `[AFKLAR: Forever accepts a Character layout saved by an addon and applies it on the open/close without "blocked
+  action" warnings, and Blizzard's bar widths match buttons × icon size + padding – checked in TEST BUILD 1.3.0-test.11]`

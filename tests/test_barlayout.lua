@@ -171,7 +171,7 @@ for _, gm in ipairs(GAMES) do
         else
           H.ok(o0 + e0 > 0 or st.mode ~= "none", who .. "it needed fitting")
           H.ok(st.scale >= 0.70 - 1e-6 and st.scale <= 1, who .. "the size is " .. st.scale .. " (never below 70 %)")
-          H.eq(ns.Core.db.bridge.barFit, true, who .. "the window app is told (bridge.barFit)")
+          H.eq(ns.Core.db.bridge.barFit, "addon", who .. "the window app is told (bridge.barFit)")
           H.eq(ns.Core.db.bridge.barScale, st.scale, who .. "and the size (bridge.barScale)")
           -- turning it off puts back exactly the game's layout
           ns.BarFit.setFit(false)
