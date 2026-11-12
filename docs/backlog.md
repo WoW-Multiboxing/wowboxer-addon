@@ -1,6 +1,6 @@
 # WoWBoxer addon – backlog
 
-## The owner: TEST BUILD 1.3.0-test.11 – bars laid out per window through Edit Mode (all 3 Forever clients, /reload each)
+## The owner: TEST BUILD 1.3.0-test.11 – bars laid out per window through Edit Mode (restart all 3 Forever clients – a new file, /reload is not enough)
 1. The two 1280x1392 followers: bar 1 + menu + bags, the XP bar across, bars 2 + 3 above – smaller, nothing on top of another; the leader unchanged.
 2. Drag a spell onto bar 3 and back: nothing moves.
 3. Setup → untick *Fit action bars* → your old layout is back; tick it → laid out again.
