@@ -814,6 +814,7 @@ end
 
 --- Fit again a moment later (many events come at once; Blizzard's own layout settles first).
 function BF.request(reason)
+  if ns.Probe then ns.Probe.note("fit", reason) end
   if BF.waiting then return end
   BF.waiting = true
   local function run()

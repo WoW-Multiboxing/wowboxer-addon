@@ -17,7 +17,8 @@ function TF.Build()
   if TF.frame then return TF.frame end
   local f = W.box(UIParent, 0.07, 0.055, 0.035, 0.85)
   f:SetSize(TF.WIDTH, 30)
-  f:SetFrameStrata("MEDIUM")
+  -- below the action bars (MEDIUM): where the panel is dragged near a bar, the buttons keep the mouse (bug 12 Nov 2026)
+  f:SetFrameStrata("LOW")
   f:SetClampedToScreen(true)
   f:EnableMouse(true)
   f:SetMovable(true)
@@ -77,6 +78,7 @@ function TF.bagsText(x)
 end
 
 function TF.Refresh()
+  if ns.Probe then ns.Probe.note("team") end
   local TM = ns.Team
   if not TM or not ns.Core.db then return end
   local show = TM.active() -- one switch: settings.team (TM.enabled); shown only while the squad is grouped
@@ -94,8 +96,10 @@ function TF.Refresh()
     r.flags:SetText(#parts > 0 and table.concat(parts, ", ") or "|cff8fbf6aok|r")
   end
   for i = #rows + 1, #f.rows do f.rows[i]:Hide() end
-  f:SetHeight(28 + #rows * ROW_H)
-  f:Show()
+  -- only touch the size when it changes, and Show only when hidden: a refresh never re-lays the panel out
+  local h = 28 + #rows * ROW_H
+  if f.wbxHeight ~= h then f.wbxHeight = h; f:SetHeight(h) end
+  if not f:IsShown() then f:Show() end
 end
 
 --- The team status switch (one for sending and the window): on = nil (the default), off = false.

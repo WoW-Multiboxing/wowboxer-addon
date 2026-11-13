@@ -71,5 +71,18 @@ ok(c == 'warlock' and diff == [], 'without cls the class is found by node IDs')
 ok(read_log.cell(102800, 5740) is None and read_log.cell(9080, 2130) == (2, 1, 1) and read_log.cell(2220, 3320) == (0, 3, 3),
    'grid: parked positions are off the grid, a few units off still snap')
 
+# /wbx probe hover: the last run, per second (tooltip changes, foci, bar fit and team panel calls)
+plog = [{'m': 'probe: hover start (5 s, 10 per second)'}]
+for i in range(1, 21):
+    tip = 'BtnA' if i % 2 else '-'
+    why = ' why=fit:bars changed' if i == 3 else ''
+    plog.append({'m': f'probe: t={i / 10:.1f} foci=BtnA@MEDIUM:4>XP tip={tip} fit={1 if i == 3 else 0} team={1 if i == 12 else 0}{why}'})
+plog.append({'m': 'probe: done'})
+summ = read_log.probe_summary(plog)
+ok(len(summ) == 5 and 's0: 10 samples, tooltip changed 9x' in summ[1] and 'bar fit 1/s' in summ[1]
+   and 'fit:bars changed x1' in summ[1] and 'team panel 1/s' in summ[3] and 'BtnA@MEDIUM:4>XP x10' in summ[2],
+   'probe summary per second: ' + ' | '.join(summ))
+ok(read_log.probe_summary([{'m': 'login'}]) == [], 'no probe run: nothing printed')
+
 print('%d failed' % fails if fails else 'all passed')
 sys.exit(1 if fails else 0)

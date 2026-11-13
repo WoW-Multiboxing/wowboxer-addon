@@ -449,6 +449,7 @@ local function applyNow()
     end
   end
   BL.applyLater = nil
+  if ns.Probe then ns.Probe.note("apply", "Edit Mode apply") end
   BL.applying = true
   local ok, err = pcall(function()
     -- LibEditModeOverride's guard: a tainted dropdown list would taint Edit Mode's own dropdown

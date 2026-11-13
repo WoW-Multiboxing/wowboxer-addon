@@ -9,6 +9,7 @@ import argparse
 import glob
 import json
 import os
+import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -107,6 +108,44 @@ def macros_cache(path):
     return out
 
 
+PROBE_RE = re.compile(r"^probe: t=([\d.]+) foci=(\S+) tip=(\S+) fit=(\d+) team=(\d+)(?: why=(.*))?$")
+
+
+def probe_summary(log):
+    """The last /wbx probe hover run, per second: tooltip owner changes, foci seen, bar fit and team panel calls."""
+    start = None
+    for i, e in enumerate(log):
+        if str(e.get("m", "")).startswith("probe: hover start"):
+            start = i
+    if start is None:
+        return []
+    secs = {}
+    for e in log[start + 1:]:
+        m = PROBE_RE.match(str(e.get("m", "")))
+        if not m:
+            continue
+        sec = int((float(m.group(1)) - 0.05) // 1)
+        b = secs.setdefault(sec, {"n": 0, "tips": [], "foci": {}, "fit": 0, "team": 0, "why": {}})
+        b["n"] += 1
+        b["tips"].append(m.group(3))
+        b["foci"][m.group(2)] = b["foci"].get(m.group(2), 0) + 1
+        b["fit"] += int(m.group(4))
+        b["team"] += int(m.group(5))
+        for w in (m.group(6) or "").split(";"):
+            if w:
+                b["why"][w] = b["why"].get(w, 0) + 1
+    out = ["=== hover probe (per second)"]
+    for sec in sorted(secs):
+        b = secs[sec]
+        changes = sum(1 for x, y in zip(b["tips"], b["tips"][1:]) if x != y)
+        foci = ", ".join(f"{k} x{v}" for k, v in sorted(b["foci"].items(), key=lambda kv: -kv[1]))
+        why = ", ".join(f"{k} x{v}" for k, v in b["why"].items()) or "-"
+        out.append(f"   s{sec}: {b['n']} samples, tooltip changed {changes}x ({' '.join(dict.fromkeys(b['tips']))}), "
+                   f"bar fit {b['fit']}/s, team panel {b['team']}/s; why: {why}")
+        out.append(f"        foci: {foci}")
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--client", default="_classic_era_")
@@ -189,6 +228,8 @@ def main():
         print(f"-- log (last {a.log} of {len(log)})")
         for e in log[-a.log:]:
             print(f"   {e.get('t')} {e.get('c')} {e.get('l')}: {e.get('m')}")
+        for line in probe_summary(log):
+            print(line)
     if not found:
         print(f"No WoWBoxer.lua under {wtf} yet (log in with the addon enabled, then /reload).")
     # taint: lines that name WoWBoxer in Logs\taint.log (after /console taintLog 1)

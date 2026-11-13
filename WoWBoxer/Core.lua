@@ -1201,6 +1201,7 @@ local HELP = {
   "/wbx shots – screenshots of every WoWBoxer page (for the website; read-only)",
   "/wbx log [n] – show the last n log lines; /wbx debug – toggle debug messages",
   "/wbx sound – warning sound on/off (follow warning, GM whispers); the warning text stays",
+  "/wbx probe hover – log for 5 s what is under the mouse (read-only, for flicker reports)",
   "/wbx barfit – how the action bars are fitted to this window; /wbx barfit on|off; /wbx barfit min 70 (smallest size before stacking, %)",
   "/wbx names – how the game names your party and which squad member each one matches (read-only)",
 }
@@ -1281,6 +1282,8 @@ function Core.slash(msg)
     if ns.TeamFrame then ns.TeamFrame.SetShown(on) else Core.db.settings.team = S.offOrNil(on and true or false) end
     if not on then chat("Team status off: nothing is sent or shown.")
     else chat("Team status on. " .. (ns.Team and ns.Team.whyHidden and ns.Team.whyHidden() or "")) end
+  elseif cmd == "probe" then
+    if rest == "hover" and ns.Probe then ns.Probe.hover() else chat("/wbx probe hover – log what is under the mouse for 5 s (read-only)") end
   elseif cmd == "audit" then
     if ns.UI then ns.UI.Open() end
     local res = ns.Audit and ns.Audit.run()
