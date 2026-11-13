@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Runs the same checks as CI before every push (enable once: git config core.hooksPath .githooks).
+# Skip in an emergency with: git push --no-verify
+exec bash "$(git rev-parse --show-toplevel)/tools/check.sh"

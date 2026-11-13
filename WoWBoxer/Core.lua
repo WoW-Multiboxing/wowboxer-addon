@@ -1163,11 +1163,11 @@ function Core.selftest(quiet)
   local okX, extra = pcall(Core.extraSpellsDiag)
   r.extraSpells = okX and extra or { error = tostring(extra) }
   -- the live talent tree (C_Traits, read-only): tools/read_log.py compares it with WoWBoxer's talent data
-  local okT, tree = pcall(C.talentTreeDump)
-  if okT and tree then
+  local okTree, tree = pcall(C.talentTreeDump)
+  if okTree and tree then
     tree.cls, tree.level, tree.build = ctx and ctx.member.cls or nil, C.safe(C.playerLevel()), ns.Data.meta and ns.Data.meta.build or nil
     r.talentTree = tree
-  elseif not okT then r.talentTree = { error = tostring(tree) } end
+  elseif not okTree then r.talentTree = { error = tostring(tree) } end
   db.diag[Core.charKey or "?"] = r
   Core.log("info", "selftest written to WoWBoxerDB.diag[" .. tostring(Core.charKey) .. "]")
   if ns.Squad and ns.Team then

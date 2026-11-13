@@ -135,12 +135,12 @@ function M.linesOf(d, keyLines)
   local function with(no, assist)
     return { leader = base.leader, unit = base.unit, wand = base.wand, assist = assist, no = no }
   end
-  local follower = not base.leader
-  local full = d.rebuild(with({}, follower))
+  local isFollower = not base.leader
+  local full = d.rebuild(with({}, isFollower))
   local per = keyLines and keyLines[d.name] or {}
   local out = {}
   for _, x in ipairs(M.LINES) do
-    local no, assist = {}, follower
+    local no, assist = {}, isFollower
     if x.key == "assist" then assist = false else no[x.key] = true end
     if d.rebuild(with(no, assist)) ~= full then
       local on
@@ -245,7 +245,6 @@ function M.desired(m, L, opts)
   opts = opts or {}
   L = L or m.level
   local live = opts.live
-  local ctx = K.memberCtx(m)
   -- extra lines (Talex, #help 10 Nov): this character's switches (opts.lines) and each key's own choice (opts.keyLines)
   local lines, keyLines = opts.lines or m.lines or {}, opts.keyLines or {}
   local function ctxFor(name) return K.keyCtx(m, lines, name and keyLines[name]) end

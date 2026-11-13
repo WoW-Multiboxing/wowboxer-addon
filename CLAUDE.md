@@ -62,6 +62,8 @@ and import/export of setups as a string shared with the website/companion.
 python tools/lint51.py && node tools/build_data.js --check && node tools/export_vectors.js
 bash tests/run_all.sh          # Lua 5.1; on Windows falls back to python tools/lua.py (lupa)
 node share/test.js
+# or all of the above in one go: bash tools/check.sh (also the pre-push hook: git config core.hooksPath .githooks)
+# luacheck runs when installed (%LOCALAPPDATA%\wowboxer-tools\luacheck\luacheck.exe); CI fails on any warning
 ```
 Releasing: `docs/release.md` (tag → CI → CurseForge). **Test first:** every change goes to the owner as a local
 test build (`tools/install.ps1`, TEST BUILD label) with a ≤4-line checklist; a release tag is only pushed after the owner

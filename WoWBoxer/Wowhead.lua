@@ -192,18 +192,18 @@ function WH.import(link)
   if bad then
     local fixed = E.repairOrder(T, order)
     if not fixed and old then -- an older link: keep every point that still fits, in order, as Wowhead does
-      local rest, c, out = {}, {}, {}
-      for i, k in ipairs(order) do rest[i] = k end
+      local left, c, out = {}, {}, {}
+      for i, k in ipairs(order) do left[i] = k end
       local moved = true
       while moved do
         moved = false
-        for i, k in ipairs(rest) do
-          if not E.addBlocker(T, c, k) then out[#out + 1] = k; c[k] = (c[k] or 0) + 1; table.remove(rest, i); moved = true; break end
+        for i, k in ipairs(left) do
+          if not E.addBlocker(T, c, k) then out[#out + 1] = k; c[k] = (c[k] or 0) + 1; table.remove(left, i); moved = true; break end
         end
       end
       local gone, seenK = {}, {}
-      for _, k in ipairs(rest) do if not seenK[k] then seenK[k] = true; gone[#gone + 1] = T.byKey[k].n end end
-      warn[#warn + 1] = #rest .. " point" .. (#rest == 1 and "" or "s") .. " no longer fit the live trees – left out: " .. table.concat(gone, ", ")
+      for _, k in ipairs(left) do if not seenK[k] then seenK[k] = true; gone[#gone + 1] = T.byKey[k].n end end
+      warn[#warn + 1] = #left .. " point" .. (#left == 1 and "" or "s") .. " no longer fit the live trees – left out: " .. table.concat(gone, ", ")
       if #out == 0 then return { error = "Nothing in this older link fits the live talents" } end
       fixed = out
     end
