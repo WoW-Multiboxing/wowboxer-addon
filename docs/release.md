@@ -74,6 +74,19 @@ canonical URLs with `\` on Windows only; Vercel's build on Linux is the gate.)
   off, wago upload; run 41666187120, after dry run 41665510973). addons.wago.io/addons/rNkgpzNa shows 1.0.0 stable for
   Forever 1.60.1, Classic 1.15.9 and TBC (bc) 2.5.6. From the next tag on, every release goes to both automatically.
 
+## Discord (WS-H, added 13 Nov 2026)
+The last step of `release.yml` runs `tools/discord-announce.mjs` (a copy of the master in the project folder's
+`99_Noter/discord-setup/announcer/` – update it there first, then copy it here unchanged), only on a real tag push:
+- plain tag `vX.Y.Z` → #announcements with an @Updates ping (CurseForge + wowboxer.com/addon/ links);
+- `-beta`/`-rc` tag → #beta with an @Beta testers ping (how to pick Beta in the CurseForge app);
+- `-alpha`/`-test` tags are never posted; a manual run (workflow_dispatch) never posts, so a re-run can't post twice.
+Secrets `DISCORD_WEBHOOK_ANNOUNCEMENTS`, `DISCORD_WEBHOOK_BETA`, `DISCORD_WEBHOOK_TEST` and variables
+`DISCORD_ROLE_UPDATES`, `DISCORD_ROLE_BETA` come from the owner's one-time `Connect-Announcer.cmd`. Until they exist the
+step prints a notice and is skipped; it never fails a release (`continue-on-error`).
+The post's 3–5 lines come from `dist/CHANGELOG.md` (= `docs/changes/<version>.md`): start the bullets that matter with a
+**bold** lead. To check the webhooks: Actions → discord-test → Run workflow (posts to the private #bot-test, no pings;
+the log must say "posted to DISCORD_WEBHOOK_TEST").
+
 ## Project page text
 
 **Summary** (≤ 100 characters): Multiboxing in the game: the right keys for every character, role and level.

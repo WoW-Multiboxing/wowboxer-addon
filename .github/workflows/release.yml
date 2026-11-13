@@ -100,3 +100,15 @@ jobs:
           WAGO_PROJECT_ID: ${{ vars.WAGO_PROJECT_ID }}
           DRY: ${{ inputs.wago == 'dry-run' && '--dry-run' || '' }}
         run: python3 .release-tools/tools/wago_upload.py $DRY "dist/WoWBoxer-${TAG#v}.zip" "${TAG#v}" dist/CHANGELOG.md
+      # Discord (WS-H, 99_Noter/Prompts-H-2026-11-02.md §E): plain tag -> #announcements + @Updates, -beta/-rc -> #beta
+      # + @Beta testers, -alpha/-test never. Only on a real tag push (a manual re-run would post twice). Without the
+      # webhook secrets the script prints a notice and exits 0; continue-on-error keeps Discord from failing a release.
+      - name: Discord announcement
+        if: success() && github.event_name == 'push'
+        continue-on-error: true
+        env:
+          DISCORD_WEBHOOK_ANNOUNCEMENTS: ${{ secrets.DISCORD_WEBHOOK_ANNOUNCEMENTS }}
+          DISCORD_WEBHOOK_BETA: ${{ secrets.DISCORD_WEBHOOK_BETA }}
+          DISCORD_ROLE_UPDATES: ${{ vars.DISCORD_ROLE_UPDATES }}
+          DISCORD_ROLE_BETA: ${{ vars.DISCORD_ROLE_BETA }}
+        run: node .release-tools/tools/discord-announce.mjs release --product addon --tag "$TAG" --notes-file dist/CHANGELOG.md

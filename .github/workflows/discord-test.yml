@@ -1,0 +1,27 @@
+name: discord-test
+# Posts a release announcement to the private #bot-test channel (DISCORD_WEBHOOK_TEST, no role pings) to check the
+# announcer after the webhooks are connected. Never posts to #announcements or #beta.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to announce as a test, e.g. v1.0.0 or v1.3.0-beta.1"
+        required: true
+        default: v1.0.0
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ inputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Discord test post
+        env:
+          DISCORD_WEBHOOK_TEST: ${{ secrets.DISCORD_WEBHOOK_TEST }}
+        run: |
+          VER="${TAG#v}"; BASE="${VER%%-*}"
+          NOTES="docs/changes/$VER.md"; [ -f "$NOTES" ] || NOTES="docs/changes/$BASE.md"
+          node tools/discord-announce.mjs release --test --product addon --tag "$TAG" --notes-file "$NOTES"
