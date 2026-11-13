@@ -1,6 +1,6 @@
 # WoWBoxer addon – backlog
 
-## The owner: TEST BUILD 1.3.0-test.12 – tooltip flicker at the bar ends (Forever, /reload each client)
+## The owner: TEST BUILD 1.3.0-test.12 – tooltip flicker at the bar ends (restart the Forever clients – a new file, /reload is not enough)
 1. Hover the outer buttons at the right end of the bottom bars (near bags / XP bar / team panel) → the tooltip should stay put.
 2. If it still flickers: keep the mouse on that button, type `/wbx probe hover`, hold still 5 s until "probe done", then /reload.
 3. Drag the WoWBoxer team panel near the bars → the bar buttons stay on top and keep their tooltips; the panel still drags.
