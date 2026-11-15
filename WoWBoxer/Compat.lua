@@ -179,13 +179,63 @@ function C.spellbookItems()
   return out
 end
 --- Is any rank of a data spell known by ID? (talent spells and spells missing from the book scan)
-function C.knowsAnyRank(spell)
-  local f = G.IsPlayerSpell or G.IsSpellKnown
-  if not f or not spell or not spell.ranks then return false end
-  for _, r in ipairs(spell.ranks) do
-    if r.id then local ok, yes = pcall(f, r.id); if ok and yes then return true end end
+local function knowsId(id)
+  if not id then return false end
+  for _, key in ipairs({ "IsPlayerSpell", "IsSpellKnown" }) do
+    local f = G[key]
+    if f then
+      local ok, yes = pcall(f, id)
+      if ok and not C.isSecret(yes) and yes then return true end
+    end
   end
   return false
+end
+function C.knowsAnyRank(spell)
+  if not spell or not spell.ranks then return false end
+  for _, r in ipairs(spell.ranks) do
+    if knowsId(r.id) then return true end
+  end
+  return false
+end
+
+--- Match a client spellbook entry to a data spell without assuming the client's language.
+function C.spellMatches(spell, name, id)
+  if not spell then return false end
+  name, id = C.safe(name), C.safe(id)
+  if name and name == spell.name then return true end
+  for _, r in ipairs(spell.ranks or {}) do
+    if id and r.id == id then return true end
+    if name and r.id and C.spellName(r.id) == name then return true end
+  end
+  return false
+end
+
+--- Known by a learned rank or by the client's name in the active spellbook (not a future entry).
+function C.knowsSpell(spell, names)
+  if not spell then return false end
+  names = names or C.knownSpellNames()
+  if names and names[spell.name] then return true end
+  if C.knowsAnyRank(spell) then return true end
+  if not names then return false end
+  for _, r in ipairs(spell.ranks or {}) do
+    local name = r.id and C.spellName(r.id)
+    if name and names[name] then return true end
+  end
+  return false
+end
+
+--- Translate from any available rank; missing/uncached first-rank data must not block later ranks.
+function C.localSpellName(spell)
+  if not spell then return nil end
+  local names, fallback = C.knownSpellNames(), nil
+  for _, r in ipairs(spell.ranks or {}) do
+    local name = r.id and C.spellName(r.id)
+    if name then
+      if names and names[name] then return name end
+      fallback = fallback or name
+    end
+  end
+  return fallback
 end
 
 -- ------------------------------------------------------------------ plain spells on the bar
@@ -194,22 +244,34 @@ function C.isRankOf(id, spell)
   for _, r in ipairs(spell and spell.ranks or {}) do if r.id and r.id == id then return true end end
   return false
 end
---- The spell ID to put on the bar for data spell `spell`: its highest rank the character knows; when the client only
---- knows the spell by name (spellbook scan), the highest rank up to the player's level. nil = not known.
+--- The spell ID to put on the bar: a learned data rank, else the actual learned spellbook entry.
+--- Older name-only APIs fall back to the highest data rank up to the player's level. nil = not known.
 function C.bestRankId(spell)
   if not (spell and spell.ranks and #spell.ranks > 0) then return nil end
-  local f = G.IsPlayerSpell or G.IsSpellKnown
-  if f then
-    for i = #spell.ranks, 1, -1 do
-      local id = spell.ranks[i].id
-      if id then local ok, yes = pcall(f, id); if ok and yes then return id end end
+  for i = #spell.ranks, 1, -1 do
+    local id = spell.ranks[i].id
+    if knowsId(id) then return id end
+  end
+  local best, bestRank, hasEntry = nil, -1, false
+  for _, it in ipairs(C.spellbookItems() or {}) do
+    if C.spellMatches(spell, it.name, it.id) then
+      hasEntry = true
+      if not it.future then
+        local rank = tonumber(type(it.rank) == "string" and it.rank:match("%d+") or nil)
+        if not rank then
+          for i, r in ipairs(spell.ranks) do if r.id == it.id then rank = r.r or i; break end end
+        end
+        rank = rank or 0
+        if rank > bestRank then best, bestRank = it.id, rank end
+      end
     end
   end
+  if hasEntry then return best end -- never guess a higher, untrained rank from the player's level
   local names = C.knownSpellNames()
-  if names and names[spell.name] then
-    local lvl, best = C.playerLevel() or 1, nil
-    for _, r in ipairs(spell.ranks) do if r.id and (r.l == nil or r.l <= lvl) then best = r.id end end
-    return best or spell.ranks[1].id
+  if C.knowsSpell(spell, names) then
+    local lvl, fallback = C.playerLevel() or 1, nil
+    for _, r in ipairs(spell.ranks) do if r.id and (r.l == nil or r.l <= lvl) then fallback = r.id end end
+    return fallback or spell.ranks[1].id
   end
   return nil
 end
@@ -392,7 +454,11 @@ function C.talentRanks()
     configID = ok and C.safe(configID) or nil
     local config = configID and select(2, pcall(TR.GetConfigInfo, configID))
     if type(config) == "table" and type(config.treeIDs) == "table" then
-      local out = {}
+      local out, namesByNode = {}, {}
+      local talents = ns.Data.talents and ns.Data.talents[C.playerClass()]
+      for _, n in ipairs(talents and talents.nodes or {}) do
+        if n.node then namesByNode[n.node] = n.n end
+      end
       for _, treeID in ipairs(config.treeIDs) do
         local okN, nodes = pcall(TR.GetTreeNodes, C.safe(treeID))
         for _, nodeID in ipairs(okN and type(nodes) == "table" and nodes or {}) do
@@ -404,7 +470,9 @@ function C.talentRanks()
               local entryID = node.activeEntry and node.activeEntry.entryID or node.entryIDs[1]
               local okE, entry = pcall(TR.GetEntryInfo, configID, entryID)
               local okD, def = pcall(TR.GetDefinitionInfo, okE and type(entry) == "table" and entry.definitionID or nil)
-              local name = okD and type(def) == "table" and (C.safe(def.overrideName) or spellName(C.safe(def.spellID))) or nil
+              -- Trait node IDs identify the talent regardless of the client's language. Keep unknown nodes'
+              -- own names so the read-back still reports data that needs updating.
+              local name = namesByNode[C.safe(nodeID)] or (okD and type(def) == "table" and (C.safe(def.overrideName) or spellName(C.safe(def.spellID))) or nil)
               if name then out[name] = (out[name] or 0) + rank end
             end
           end

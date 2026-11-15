@@ -73,4 +73,49 @@ do
   H.ok(body:find("Smite", 1, true) ~= nil, "enUS: unchanged")
 end
 
+-- 4. A German Paladin's real book names and IDs drive recognition and macro text.
+do
+  local W = Mock.new(H, { name = "Sankt", class = "PALADIN", race = "Scourge", level = 3 })
+  W.env.GetLocale = function() return "deDE" end
+  W.known = { ["Siegel der Rechtschaffenheit"] = true, ["Heiliges Licht"] = true, ["Aura der Hingabe"] = true }
+  W.knownIds = { [20154] = true, [635] = true, [465] = true }
+  local names = { [20154] = "Siegel der Rechtschaffenheit", [635] = "Heiliges Licht", [465] = "Aura der Hingabe" }
+  W.env.C_Spell.GetSpellName = function(id) return names[id] end
+  local ns = H.loadAddon({ env = W.env })
+  W.fire("ADDON_LOADED", "WoWBoxer"); W.fire("PLAYER_LOGIN")
+  ns.UI.Open("keys")
+  local ctx = ns.Core.compute()
+  local seal
+  for _, s in ipairs(ns.Data.spells.paladin) do if s.name == "Seal of Righteousness" then seal = s end end
+  H.eq(seal.ranks[1].id, 20154, "Seal rank 1 retains the actual learned ID")
+  H.ok(ctx.live(seal.name, seal), "German Seal is recognized by its real ID")
+  H.eq(ns.Macros.pendingOf(ctx.member, seal, 3, ctx.live), nil, "learned Seal is not a trainer spell")
+  H.eq(ns.Macros.pendingOf(ctx.member, ns.Kit.engage(), 3, ctx.live), nil, "Engage Target is not a trainer spell")
+  H.eq(ns.Macros.nameMap(ctx.member)[seal.name], names[20154], "Seal macro translation")
+  H.eq(ns.Macros.localize("/cast Seal of Righteousness", ns.Macros.nameMap(ctx.member)),
+    "/cast Siegel der Rechtschaffenheit", "Seal cast uses the client's name")
+  for _, s in ipairs(ctx.missing) do
+    H.ok(s.name ~= seal.name and s.name ~= "Holy Light" and s.name ~= "Devotion Aura", "known German spell not reported missing: " .. s.name)
+  end
+end
+
+-- 5. Missing/unloaded first-rank names do not permanently poison the translation map.
+do
+  local W = Mock.new(H, { class = "PRIEST", race = "Scourge", level = 60 })
+  W.env.GetLocale = function() return "deDE" end
+  local names = {}
+  W.env.C_Spell.GetSpellName = function(id) return names[id] end
+  local ns = H.loadAddon({ env = W.env })
+  local m = { cls = "priest", race = "undead", level = 60 }
+  H.eq(ns.Macros.nameMap(m), nil, "unloaded names produce no translation yet")
+  names[1316995] = "Sühne"
+  H.eq(ns.Macros.nameMap(m)["Penance"], "Sühne", "a later rank resolves after the initial empty lookup")
+  names[19253] = "Berührung der Schwäche"
+  H.eq(ns.Macros.nameMap(m)["Touch of Weakness"], names[19253], "partial maps refresh when another spell loads")
+  local byName = {}
+  for _, s in ipairs(ns.Data.spells.priest) do byName[s.name] = s end
+  H.ok(ns.Compat.isRankOf(19253, byName["Touch of Weakness"]) and ns.Compat.isRankOf(19254, byName["Touch of Weakness"]), "upper Touch of Weakness ranks retained")
+  H.ok(ns.Compat.isRankOf(1316995, byName.Penance), "Penance retains the corrected top-rank ID")
+end
+
 os.exit(H.report("locale") and 0 or 1)

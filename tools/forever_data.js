@@ -35,7 +35,7 @@ function load({ D, E }) {
     const nodes = BZ.talents[cls];
     const talents = {
       trees: BZ.trees[cls].map(t => ({ n: t.n, f: t.f, i: seedTree[t.n] ? seedTree[t.n].i : undefined })),
-      nodes: nodes.map(n => ({ k: n.k, n: n.n, t: n.t, r: n.r, c: n.c, m: n.m, i: seedNode[n.k] && seedNode[n.k].n === n.n ? seedNode[n.k].i : undefined, f: n.f })),
+      nodes: nodes.map(n => ({ k: n.k, n: n.n, t: n.t, r: n.r, c: n.c, m: n.m, node: n.node, i: seedNode[n.k] && seedNode[n.k].n === n.n ? seedNode[n.k].i : undefined, f: n.f })),
       arrows: nodes.filter(n => n.req).map(n => [n.req, n.k]),
     };
     out.talents[cls] = talents;
@@ -77,6 +77,9 @@ function load({ D, E }) {
         else if (!book[name]) { note(s.name, 'removed: its talent ' + s.talent + ' is not in the live tree and no class skill line teaches it (Wowhead\'s Forever class abilities agree)'); continue; }
       }
       const r0 = (s.ranks || []).map(r => ({ id: r.id, l: r.l }));
+      // The frozen seed omits the mount ID; both checked-in Era and TBC client tables identify it as 13819.
+      // Keep Forever's own level/gating and let the live client decide whether this spell is learned.
+      if (cls === 'paladin' && name === 'Summon Warhorse' && r0.length === 1 && !r0[0].id) r0[0].id = 13819;
       const ranks = ranksFrom(name, r0, talent);
       const before = r0.map(r => r.id + '@' + r.l).join(' '), after = ranks.map(r => r.id + '@' + r.l).join(' ');
       if (before !== after) note(name, 'ranks ' + (before || '-') + ' -> ' + after);

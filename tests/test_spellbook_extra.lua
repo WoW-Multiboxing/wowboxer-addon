@@ -200,4 +200,35 @@ do
   end
 end
 
+-- German book names must not create duplicates of data spells, even when name lookup is not loaded yet.
+for _, cls in ipairs({ "paladin", "priest" }) do
+  local W, ns = boot({ name = "Deutsch", class = cls:upper(), race = "Scourge", level = 60 })
+  W.env.GetLocale = function() return "deDE" end
+  local me = ns.Core.compute().member
+  local id, name = cls == "paladin" and 20154 or 585, cls == "paladin" and "Siegel der Rechtschaffenheit" or "Göttliche Pein"
+  local items = { { id = id, name = name }, { id = 7744, name = "Wille der Verlassenen" },
+    { id = 900100, name = "Zusätzlicher Zauber" } }
+  if cls == "priest" then items[#items + 1] = { id = 5019, name = "Schießen" } end
+  W.env.C_Spell.GetSpellName = function() return nil end
+  ns.Compat.spellbookItems = function() return items end
+  local extras = ns.Kit.bookSpells(me)
+  H.eq(#extras, 1, cls .. ": translated class/racial/wand entries match by ID without cached spell names")
+  H.eq(extras[1] and extras[1].name, "Zusätzlicher Zauber", cls .. ": a genuinely new spell is retained")
+
+  -- Another rank/variant can have a new ID but still be the same localized spell.
+  W.env.C_Spell.GetSpellName = function(spellID) return spellID == id and name or nil end
+  items = { { id = 900200, name = name }, { id = 900201, name = "Späterer Zauber", future = true, level = 60 } }
+  extras = ns.Kit.bookSpells(me)
+  H.eq(#extras, 1, cls .. ": another rank with the same localized name is not duplicated")
+  H.eq(extras[1] and extras[1].name, "Späterer Zauber", cls .. ": an unrelated future spell is retained")
+  H.ok(extras[1] and extras[1].future, cls .. ": the extra future spell stays unlearned")
+
+  -- The book cache itself need not change when localized spell data finishes loading.
+  W.env.C_Spell.GetSpellName = function() return nil end
+  items = { { id = cls == "paladin" and 21084 or 900202, name = name } }
+  H.eq(#ns.Kit.bookSpells(me), 1, cls .. ": unresolved variant is initially available from the book")
+  W.env.C_Spell.GetSpellName = function(spellID) return spellID == id and name or nil end
+  H.eq(#ns.Kit.bookSpells(me), 0, cls .. ": late localized data removes the duplicate without replacing book items")
+end
+
 H.report("spellbook-extra")

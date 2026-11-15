@@ -86,6 +86,12 @@ function B.layout(desired, cdb, info)
       if not slot and d.spell then -- by spell ID too (any rank): works on every client language
         for _, r in ipairs(d.spell.ranks or {}) do if r.id and byId[r.id] then slot = byId[r.id]; break end end
       end
+      if not slot and d.spell then -- client variants can have another ID but the same localized name
+        for _, r in ipairs(d.spell.ranks or {}) do
+          local name = r.id and C.spellName(r.id)
+          if name and bySpell[name] then slot = bySpell[name]; break end
+        end
+      end
       if not out[d.name] and slot and not taken[slot] then out[d.name] = take(slot) end
     end
   end
@@ -128,8 +134,7 @@ end
 --- Does action `cur` hold spell s (any rank)?
 function B.holdsSpell(cur, s)
   if not (cur and cur.kind == "spell" and s) then return false end
-  for _, r in ipairs(s.ranks or {}) do if r.id and r.id == cur.id then return true end end
-  return type(cur.name) == "string" and cur.name == s.name
+  return C.spellMatches(s, cur.name, cur.id)
 end
 --- Placement plan: {items={{name, slot, status, current}}, counts}.
 --- status: placed | empty | ours | occupied | missing | off | convert | rank | unlearned

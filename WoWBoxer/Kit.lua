@@ -82,14 +82,27 @@ function K.bookSpells(m)
   if not per then per = {}; bookMemo[items] = per end
   local key = tostring(m.cls) .. ":" .. tostring(m.race) .. ":" .. tostring(m.level)
   if per[key] then return per[key] end
-  local have = {}
-  for _, s in ipairs(D().spells[m.cls] or {}) do have[s.name] = true end -- every data spell, also other races' (no doubles)
-  for _, s in ipairs(K.racialsOf(m)) do have[s.name] = true end
+  local have, haveId = {}, {}
+  local localNames, unresolved = ns.Compat.needsLocalNames(), false
+  local function add(s)
+    have[s.name] = true
+    local resolved = false
+    for _, r in ipairs(s.ranks or {}) do
+      if r.id then
+        haveId[r.id] = true
+        local name = ns.Compat.spellName(r.id)
+        if name then have[name], resolved = true, true end
+      end
+    end
+    if localNames and not resolved then unresolved = true end
+  end
+  for _, s in ipairs(D().spells[m.cls] or {}) do add(s) end -- every data spell, also other races' (no doubles)
+  for _, s in ipairs(K.racialsOf(m)) do add(s) end
   local w = K.wandOf(m)
-  if w then have[w.name] = true end
+  if w then add(w) end
   local out, byName = {}, {}
   for _, it in ipairs(items) do
-    if not have[it.name] then
+    if not have[it.name] and not haveId[it.id] then
       local s = byName[it.name]
       if not s then
         local lvl = it.future and (it.level or false) or math.min(m.level or 1, it.level or 1)
@@ -103,7 +116,9 @@ function K.bookSpells(m)
       s.ranks[#s.ranks + 1] = { r = #s.ranks + 1, id = it.id, l = it.future and it.level or nil }
     end
   end
-  per[key] = out
+  -- An unmatched variant may become recognizable once its localized data name loads. Do not freeze it as an
+  -- extra spell while any data spell lacks a resolved name; an empty result is already safely deduplicated.
+  if #out == 0 or not unresolved then per[key] = out end
   return out
 end
 --- Spells an own macro can use: the class spells plus Shoot for wand classes, plus the book's extra spells.

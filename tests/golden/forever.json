@@ -8872,7 +8872,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_blessingofprotection",
@@ -9204,7 +9205,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_blessingofprotection",
@@ -9533,7 +9535,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_blessingofprotection",
@@ -9860,7 +9863,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_blessingofprotection",
@@ -10183,7 +10187,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_blessingofprotection",
@@ -10505,7 +10510,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_blessingofprotection",
@@ -10826,7 +10832,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_blessingofprotection",
@@ -11146,7 +11153,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_blessingofprotection",
@@ -11465,7 +11473,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_blessingofprotection",
@@ -11779,7 +11788,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_blessingofprotection",
@@ -12091,7 +12101,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_blessingofprotection",
@@ -12402,7 +12413,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_blessingofprotection",
@@ -12711,7 +12723,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_blessingofprotection",
@@ -13019,7 +13032,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_blessingofprotection",
@@ -13325,7 +13339,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_blessingofprotection",
@@ -13630,7 +13645,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_blessingofprotection",
@@ -13933,7 +13949,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_blessingofprotection",
@@ -14235,7 +14252,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_blessingofprotection",
@@ -14536,7 +14554,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_blessingofprotection",
@@ -14836,7 +14855,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_blessingofprotection",
@@ -15131,9 +15151,10 @@
        "name":"WBX Hammer of th"
       },
       {
-       "icon":134400,
+       "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
-       "name":"WBX Summon Warho"
+       "name":"WBX Summon Warho",
+       "plain":true
       },
       {
        "icon":"spell_holy_blessingofprotection",
@@ -15428,9 +15449,10 @@
        "name":"WBX Hammer of th"
       },
       {
-       "icon":134400,
+       "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
-       "name":"WBX Summon Warho"
+       "name":"WBX Summon Warho",
+       "plain":true
       },
       {
        "icon":"spell_holy_blessingofprotection",
@@ -15723,9 +15745,10 @@
        "name":"WBX Hammer of th"
       },
       {
-       "icon":134400,
+       "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
-       "name":"WBX Summon Warho"
+       "name":"WBX Summon Warho",
+       "plain":true
       },
       {
        "icon":"spell_holy_blessingofprotection",
@@ -16017,9 +16040,10 @@
        "name":"WBX Hammer of th"
       },
       {
-       "icon":134400,
+       "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
-       "name":"WBX Summon Warho"
+       "name":"WBX Summon Warho",
+       "plain":true
       },
       {
        "icon":"spell_holy_blessingofprotection",
@@ -16310,9 +16334,10 @@
        "name":"WBX Hammer of th"
       },
       {
-       "icon":134400,
+       "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
-       "name":"WBX Summon Warho"
+       "name":"WBX Summon Warho",
+       "plain":true
       },
       {
        "icon":"spell_holy_blessingofprotection",
@@ -16602,9 +16627,10 @@
        "name":"WBX Hammer of th"
       },
       {
-       "icon":134400,
+       "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
-       "name":"WBX Summon Warho"
+       "name":"WBX Summon Warho",
+       "plain":true
       },
       {
        "icon":"spell_holy_blessingofprotection",
@@ -16893,9 +16919,10 @@
        "name":"WBX Hammer of th"
       },
       {
-       "icon":134400,
+       "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
-       "name":"WBX Summon Warho"
+       "name":"WBX Summon Warho",
+       "plain":true
       },
       {
        "icon":"spell_holy_blessingofprotection",
@@ -17183,9 +17210,10 @@
        "name":"WBX Hammer of th"
       },
       {
-       "icon":134400,
+       "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
-       "name":"WBX Summon Warho"
+       "name":"WBX Summon Warho",
+       "plain":true
       },
       {
        "icon":"spell_holy_blessingofprotection",
@@ -17515,7 +17543,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"ability_paladin_judgementofthepure",
@@ -17851,7 +17880,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"ability_paladin_judgementofthepure",
@@ -18184,7 +18214,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"ability_paladin_judgementofthepure",
@@ -18515,7 +18546,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"ability_paladin_judgementofthepure",
@@ -18842,7 +18874,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"ability_paladin_judgementofthepure",
@@ -19168,7 +19201,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"ability_paladin_judgementofthepure",
@@ -19493,7 +19527,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"ability_paladin_judgementofthepure",
@@ -19817,7 +19852,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"ability_paladin_judgementofthepure",
@@ -20140,7 +20176,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"ability_paladin_judgementofthepure",
@@ -20458,7 +20495,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"ability_paladin_judgementofthepure",
@@ -20774,7 +20812,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"ability_paladin_judgementofthepure",
@@ -21089,7 +21128,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"ability_paladin_judgementofthepure",
@@ -21402,7 +21442,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"ability_paladin_judgementofthepure",
@@ -21714,7 +21755,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"ability_paladin_judgementofthepure",
@@ -22024,7 +22066,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"ability_paladin_judgementofthepure",
@@ -22333,7 +22376,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"ability_paladin_judgementofthepure",
@@ -22641,7 +22685,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"ability_paladin_judgementofthepure",
@@ -22948,7 +22993,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"ability_paladin_judgementofthepure",
@@ -23255,7 +23301,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"ability_paladin_judgementofthepure",
@@ -23560,7 +23607,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"ability_paladin_judgementofthepure",
@@ -23860,9 +23908,10 @@
        "name":"WBX Hammer of th"
       },
       {
-       "icon":134400,
+       "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
-       "name":"WBX Summon Warho"
+       "name":"WBX Summon Warho",
+       "plain":true
       },
       {
        "icon":"ability_paladin_judgementofthepure",
@@ -24161,9 +24210,10 @@
        "name":"WBX Hammer of th"
       },
       {
-       "icon":134400,
+       "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
-       "name":"WBX Summon Warho"
+       "name":"WBX Summon Warho",
+       "plain":true
       },
       {
        "icon":"ability_paladin_judgementofthepure",
@@ -24461,9 +24511,10 @@
        "name":"WBX Hammer of th"
       },
       {
-       "icon":134400,
+       "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
-       "name":"WBX Summon Warho"
+       "name":"WBX Summon Warho",
+       "plain":true
       },
       {
        "icon":"ability_paladin_judgementofthepure",
@@ -24759,9 +24810,10 @@
        "name":"WBX Hammer of th"
       },
       {
-       "icon":134400,
+       "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
-       "name":"WBX Summon Warho"
+       "name":"WBX Summon Warho",
+       "plain":true
       },
       {
        "icon":"ability_paladin_judgementofthepure",
@@ -25057,9 +25109,10 @@
        "name":"WBX Hammer of th"
       },
       {
-       "icon":134400,
+       "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
-       "name":"WBX Summon Warho"
+       "name":"WBX Summon Warho",
+       "plain":true
       },
       {
        "icon":"ability_paladin_judgementofthepure",
@@ -25354,9 +25407,10 @@
        "name":"WBX Hammer of th"
       },
       {
-       "icon":134400,
+       "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
-       "name":"WBX Summon Warho"
+       "name":"WBX Summon Warho",
+       "plain":true
       },
       {
        "icon":"ability_paladin_judgementofthepure",
@@ -25650,9 +25704,10 @@
        "name":"WBX Hammer of th"
       },
       {
-       "icon":134400,
+       "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
-       "name":"WBX Summon Warho"
+       "name":"WBX Summon Warho",
+       "plain":true
       },
       {
        "icon":134400,
@@ -25944,9 +25999,10 @@
        "name":"WBX Hammer of th"
       },
       {
-       "icon":134400,
+       "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
-       "name":"WBX Summon Warho"
+       "name":"WBX Summon Warho",
+       "plain":true
       },
       {
        "icon":134400,
@@ -26237,9 +26293,10 @@
        "name":"WBX Hammer of th"
       },
       {
-       "icon":134400,
+       "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
-       "name":"WBX Summon Warho"
+       "name":"WBX Summon Warho",
+       "plain":true
       },
       {
        "icon":134400,
@@ -26573,7 +26630,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_renew",
@@ -26897,7 +26955,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_renew",
@@ -27218,7 +27277,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_renew",
@@ -27537,7 +27597,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_renew",
@@ -27852,7 +27913,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_renew",
@@ -28166,7 +28228,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_renew",
@@ -28479,7 +28542,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_renew",
@@ -28791,7 +28855,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_renew",
@@ -29102,7 +29167,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_renew",
@@ -29408,7 +29474,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_renew",
@@ -29711,7 +29778,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_renew",
@@ -30013,7 +30081,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_renew",
@@ -30313,7 +30382,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_renew",
@@ -30612,7 +30682,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_renew",
@@ -30909,7 +30980,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_renew",
@@ -31205,7 +31277,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_renew",
@@ -31500,7 +31573,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_renew",
@@ -31794,7 +31868,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_renew",
@@ -32087,7 +32162,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_renew",
@@ -32379,7 +32455,8 @@
        "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
        "name":"WBX Summon Warho",
-       "pending":40
+       "pending":40,
+       "plain":true
       },
       {
        "icon":"spell_holy_renew",
@@ -32666,9 +32743,10 @@
        "name":"WBX Hammer of th"
       },
       {
-       "icon":134400,
+       "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
-       "name":"WBX Summon Warho"
+       "name":"WBX Summon Warho",
+       "plain":true
       },
       {
        "icon":"spell_holy_renew",
@@ -32955,9 +33033,10 @@
        "name":"WBX Hammer of th"
       },
       {
-       "icon":134400,
+       "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
-       "name":"WBX Summon Warho"
+       "name":"WBX Summon Warho",
+       "plain":true
       },
       {
        "icon":134400,
@@ -33243,9 +33322,10 @@
        "name":"WBX Hammer of th"
       },
       {
-       "icon":134400,
+       "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
-       "name":"WBX Summon Warho"
+       "name":"WBX Summon Warho",
+       "plain":true
       },
       {
        "icon":134400,
@@ -33530,9 +33610,10 @@
        "name":"WBX Hammer of th"
       },
       {
-       "icon":134400,
+       "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
-       "name":"WBX Summon Warho"
+       "name":"WBX Summon Warho",
+       "plain":true
       },
       {
        "icon":134400,
@@ -33816,9 +33897,10 @@
        "name":"WBX Hammer of th"
       },
       {
-       "icon":134400,
+       "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
-       "name":"WBX Summon Warho"
+       "name":"WBX Summon Warho",
+       "plain":true
       },
       {
        "icon":134400,
@@ -34101,9 +34183,10 @@
        "name":"WBX Hammer of th"
       },
       {
-       "icon":134400,
+       "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
-       "name":"WBX Summon Warho"
+       "name":"WBX Summon Warho",
+       "plain":true
       },
       {
        "icon":134400,
@@ -34385,9 +34468,10 @@
        "name":"WBX Hammer of th"
       },
       {
-       "icon":134400,
+       "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
-       "name":"WBX Summon Warho"
+       "name":"WBX Summon Warho",
+       "plain":true
       },
       {
        "icon":134400,
@@ -34668,9 +34752,10 @@
        "name":"WBX Hammer of th"
       },
       {
-       "icon":134400,
+       "icon":"spell_nature_swiftness",
        "id":"paladin-summon-warhorse",
-       "name":"WBX Summon Warho"
+       "name":"WBX Summon Warho",
+       "plain":true
       },
       {
        "icon":134400,

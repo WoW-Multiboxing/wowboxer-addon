@@ -166,7 +166,10 @@ end
 function M.liveCheck()
   local names = C.knownSpellNames()
   if not names then return nil end
-  return function(name, spell) return names[name] == true or C.knowsAnyRank(spell) end
+  return function(name, spell)
+    -- Engage Target is our /startattack helper, not a spell a trainer teaches.
+    return (spell and spell.action == "engage") or names[name] == true or C.knowsSpell(spell, names)
+  end
 end
 
 local function shortName(name) local s = R.PREFIX .. " " .. name; if #s > R.NAME_LIMIT then s = s:sub(1, R.NAME_LIMIT) end return s end
@@ -177,18 +180,14 @@ M.shortName = shortName
 -- from the spell IDs in the data (C_Spell.GetSpellName / GetSpellInfo). Only whole tokens are replaced – the name after
 -- #showtooltip, after the conditions of /cast (optionally "!"), and each entry of a /castsequence – never substrings,
 -- so "Heal" inside "Greater Heal" stays intact. English clients skip all of this.
-local nameMaps = {}
 function M.nameMap(m)
   if not C.needsLocalNames() then return nil end
-  local key = m.cls .. ":" .. tostring(m.race)
-  if nameMaps[key] ~= nil then return nameMaps[key] or nil end
   local map, n = {}, 0
   for _, s in ipairs(K.customSpellsOf(m)) do -- incl. Shoot (5019): wand lines in the client's language
-    local id = s.ranks and s.ranks[1] and s.ranks[1].id
-    local loc = id and C.spellName(id)
+    -- Spell data may load after login; retry missing names and try every rank.
+    local loc = C.localSpellName(s)
     if loc and loc ~= s.name then map[s.name] = loc; n = n + 1 end
   end
-  nameMaps[key] = n > 0 and map or false
   return n > 0 and map or nil
 end
 local function locName(map, name)
