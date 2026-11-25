@@ -798,13 +798,14 @@ function Core.newSingle(spell, preset)
   local _, m = Core.me()
   if not (m and spell) then return nil, "No spell" end
   m.customSeq = m.customSeq or {}
-  for i, c in ipairs(m.customSeq) do if c.kind == "priority" and #c.steps == 1 and c.steps[1] == spell.name then return i end end
+  for i, c in ipairs(m.customSeq) do if c.kind == "priority" and #c.steps == 1 and c.steps[1] == spell.name then return c.slot or i end end
   if #m.customSeq >= S.CUSTOM_MAX then return nil, "You have " .. S.CUSTOM_MAX .. " own macros already – delete one first" end
   local help = ns.Engine.makeMacro(spell, K.memberCtx(m)):find("help", 1, true) ~= nil
   if preset == "enemy" then help = false elseif preset == "friendly" or preset == "self" or type(preset) == "table" then help = true end
-  local c = S.cleanCustom({ { name = spell.name, kind = "priority", aim = help and "help" or "harm", steps = { spell.name } } })[1]
+  local c = S.cleanCustom({ { name = spell.name, kind = "priority", aim = help and "help" or "harm", steps = { spell.name }, single = true } })[1]
+  local i = S.freeSlot(m.customSeq)
+  if i ~= #m.customSeq + 1 then S.pinSlots(m.customSeq); c.slot = i end -- a hole left by a deleted macro is filled first
   m.customSeq[#m.customSeq + 1] = c
-  local i = #m.customSeq
   local name = "WBX C" .. i
   if preset == "self" then Core.cdb.overrides[name] = ns.Override.clean({ targets = { { who = "player", help = true } } })
   elseif type(preset) == "table" and preset.pet then
@@ -1056,6 +1057,40 @@ function Core.changed()
   if ns.SeqStrip then ns.SeqStrip.markDirty() end
   if ns.Settings then ns.Settings.check() end
   if ns.UI and ns.UI.Refresh then ns.UI.Refresh() end
+  Core.refreshEditor()
+end
+--- An open Macro editor shows what changed (a spell learned, a level up): its spell list, preview and targeting.
+function Core.refreshEditor()
+  local KE, A = ns.KeyEditor, ns.Advanced
+  if KE and KE.IsOpen and KE.IsOpen() then KE.Refresh() end
+  if A and A.ef and A.ef:IsShown() and A.refreshEditor then A.refreshEditor() end
+end
+
+--- Once per login, idempotent (feedback 25 Nov §2): the wand's Shoot as a sequence step or filler stops the wand on
+--- the next press. Such an own sequence keeps its other spells and gets the wand line after it (c.wand) instead.
+--- Returns the names of the macros it changed.
+function Core.migrateWandSequences(db)
+  local changed = {}
+  for _, sq in ipairs((db or Core.db).squads or {}) do
+    for _, m in ipairs(sq.members or {}) do
+      if ns.Engine.WAND_CLASSES[m.cls] then
+        for _, c in ipairs(m.customSeq or {}) do
+          if c.kind == "sequence" then
+            local hit, steps = c.filler == "Shoot", {}
+            for _, n in ipairs(c.steps or {}) do if n == "Shoot" then hit = true else steps[#steps + 1] = n end end
+            if hit then
+              c.steps = steps
+              if c.filler == "Shoot" then c.filler = "" end
+              if #steps == 0 and c.filler == "" then c.kind, c.steps, c.single, c.wand = "priority", { "Shoot" }, true, nil -- Shoot only
+              else c.wand = true end
+              changed[#changed + 1] = (m.name or "?") .. ": " .. tostring(c.name)
+            end
+          end
+        end
+      end
+    end
+  end
+  return changed
 end
 
 -- ------------------------------------------------------------------ selftest (for testing without looking at the screen)
@@ -1158,9 +1193,10 @@ function Core.selftest(quiet)
   if ctx then
     r.ownMacros = {}
     for i, c in ipairs(ctx.member.customSeq or {}) do
-      local st
-      for _, it in ipairs(ctx.macros.items) do if it.name == "WBX C" .. i then st = it.status end end
-      r.ownMacros[i] = { name = c.name, kind = c.kind, steps = table.concat(c.steps or {}, ","), status = st, override = Core.cdb.overrides["WBX C" .. i] ~= nil }
+      local st, nm = nil, "WBX C" .. (c.slot or i)
+      for _, it in ipairs(ctx.macros.items) do if it.name == nm then st = it.status end end
+      r.ownMacros[i] = { name = c.name, kind = c.kind, steps = table.concat(c.steps or {}, ","), status = st, override = Core.cdb.overrides[nm] ~= nil,
+        slot = c.slot, wand = c.wand }
     end
     r.ownFlow = {}
     for k = #db.log, 1, -1 do
@@ -1377,6 +1413,13 @@ function Core.onEvent(event, ...)
       S.guidesGone = nil
       chat("Your talent guide was updated for " .. ((ns.Data.game and ns.Data.game.name) or "the game") .. "'s live talents.")
     end
+    do
+      local moved = Core.migrateWandSequences()
+      if #moved > 0 then
+        Core.log("info", "own macros: Shoot moved out of the sequence (wand line): " .. table.concat(moved, ", "))
+        chat("Own macros " .. table.concat(moved, ", ") .. ": Shoot now runs after the sequence (as a step or filler it stopped the wand). Press Update macros.")
+      end
+    end
     if not Core.cdb.welcomed then
       Core.cdb.welcomed = true
       chat("loaded. Type |cffffd100/wbx|r or click the minimap button to set up this character's macros.")
@@ -1441,6 +1484,7 @@ function Core.onEvent(event, ...)
     local lvl = ...
     Core.log("info", "level up to " .. tostring(lvl))
     C.invalidateSpellbook()
+    Core.refreshEditor()
     if C_Timer and C_Timer.After then C_Timer.After(1, function() Core.checkOffer("level " .. tostring(lvl)) end) else Core.checkOffer("level") end
   elseif event == "SPELLS_CHANGED" or event == "LEARNED_SPELL_IN_TAB" or event == "LEARNED_SPELL_IN_SKILL_LINE"
       or event == "TRAIT_CONFIG_UPDATED" or event == "PLAYER_TALENT_UPDATE" or event == "CHARACTER_POINTS_CHANGED" then

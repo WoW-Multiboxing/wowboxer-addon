@@ -326,6 +326,17 @@ function K.seqHas(m, L, live)
   end
 end
 
+--- An own sequence with c.wand: the wand line after the sequence is always there (Shoot is never a step or filler of a
+--- /castsequence: a second press would stop the wand). Other macros: ctx as it is.
+function K.customCtx(c, ctx)
+  if not (c and c.wand and c.kind == "sequence" and ctx and ctx.wand) then return ctx end
+  local x = {}
+  for k, v in pairs(ctx) do x[k] = v end
+  x.no = {}
+  for k, v in pairs(ctx.no or {}) do if k ~= "wand" then x.no[k] = v end end
+  return x
+end
+
 --- ctxFor(id) (optional): the context of one key ("dps", "heal", "c<id>") with its own extra-line choices.
 --- only (optional): build just that one id (the book asks which extra lines a key has).
 function K.seqOf(m, L, live, ctxFor, only)
@@ -335,7 +346,7 @@ function K.seqOf(m, L, live, ctxFor, only)
   for _, c in ipairs(m.customSeq or {}) do
     local id = "c" .. tostring(c.id)
     if not only or only == id then
-      local r = E.buildCustom(m.cls, c, ctxFor and ctxFor(id) or K.memberCtx(m), has, { melee = K.isMelee(m) })
+      local r = E.buildCustom(m.cls, c, K.customCtx(c, ctxFor and ctxFor(id) or K.memberCtx(m)), has, { melee = K.isMelee(m) })
       if r.kind ~= "empty" then gen[#gen + 1] = r end
     end
   end

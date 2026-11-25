@@ -263,7 +263,7 @@ function M.desired(m, L, opts)
     end
   end
   local customIndex = {}
-  for i, c in ipairs(m.customSeq or {}) do customIndex["c" .. c.id] = i end
+  for i, c in ipairs(m.customSeq or {}) do customIndex["c" .. c.id] = c.slot or i end -- the stable slot: WBX C<slot>
   local function seqKey(id) return customIndex[id] and ("C" .. customIndex[id]) or SEQ_KEY[id] end
   local function seqCtx(id) local k = seqKey(id); return ctxFor(k and (R.PREFIX .. " " .. k) or nil) end
   for _, x in ipairs(K.seqOf(m, L, live, seqCtx)) do

@@ -93,7 +93,8 @@ function Sh.export(squad, extra)
     if own and own.user then build, buildName = own.order, own.label end
     local custom = Json.array()
     for _, c in ipairs(m.customSeq or {}) do
-      custom[#custom + 1] = { id = c.id, name = c.name, kind = c.kind, aim = c.aim, steps = Json.array(E_copy(c.steps)), filler = c.filler, fills = c.fills, reset = c.reset }
+      custom[#custom + 1] = { id = c.id, name = c.name, kind = c.kind, aim = c.aim, steps = Json.array(E_copy(c.steps)), filler = c.filler, fills = c.fills, reset = c.reset,
+        slot = c.slot, single = c.single, wand = c.wand }
     end
     members[#members + 1] = { id = m.id, name = m.name, cls = m.cls, race = m.race, role = m.role, level = m.level, leader = m.leader, unit = m.unit,
       talented = m.talented, build = Json.array(E_copy(build)), buildName = buildName, guide = m.guide, seq = m.seq, seqTarget = m.seqTarget, assist = ns.State.offOrNil(m.assist), lines = ns.State.cleanLines(m.lines), customSeq = custom,
@@ -118,7 +119,8 @@ Sh.KEY_PREFIX = "!WBXK:1!"
 Sh.KEY_FORMAT = "wowboxer-key/1"
 
 function Sh.encodeKey(c, cls)
-  local key = { name = c.name, kind = c.kind, aim = c.aim, steps = Json.array(E_copy(c.steps)), filler = c.filler or "", fills = c.fills, reset = c.reset }
+  local key = { name = c.name, kind = c.kind, aim = c.aim, steps = Json.array(E_copy(c.steps)), filler = c.filler or "", fills = c.fills, reset = c.reset,
+    single = c.single, wand = c.wand }
   local json = Json.encode({ f = Sh.KEY_FORMAT, cls = cls, key = key }, KEY_ORDER)
   return Sh.KEY_PREFIX .. Json.b64encode(json) .. "!" .. Json.crc32hex(json)
 end

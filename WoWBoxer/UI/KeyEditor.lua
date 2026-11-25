@@ -33,15 +33,43 @@ function KE.spellChoices(m, L)
   return out
 end
 
---- Macro + warnings for the draft key (what the book will show after saving).
---- The engine's view of a draft: "single" is the custom priority kind with one step.
+--- The wand's Shoot (mage, priest, warlock): in a sequence it is never a step or the filler – a second press while the
+--- wand shoots stops it (/castsequence can't use !Shoot) – so it becomes the wand line after the sequence (c.wand).
+local WAND = "Shoot"
+function KE.isWand(name) return name == WAND end
+--- One set of the spells an own macro can take (the picker, Add, a drop from the spellbook and Paste use the same).
+function KE.choiceSet(m, L)
+  local set = {}
+  if not m then return set end
+  for _, s in ipairs(KE.spellChoices(m, L or ns.Compat.playerLevel())) do set[s.name] = s end
+  return set
+end
+
+--- The engine's view of a draft (what is saved): "single" is the custom priority kind with one step (single = true);
+--- a one-step Priority stays a Priority (single = false); Priority and Single keep no hidden filler; a sequence's Shoot
+--- (step or filler) becomes the wand line. The draft itself is never changed (switching kind back restores it).
 function KE.engineDraft(c)
-  if c.kind ~= "single" then return c end
   local x = {}
   for k, v in pairs(c) do x[k] = v end
-  x.kind, x.steps, x.filler = "priority", { c.steps[1] }, ""
+  x.preset = nil
+  x.steps = {}
+  for i, n in ipairs(c.steps or {}) do x.steps[i] = n end
+  if c.kind == "single" then
+    x.kind, x.steps, x.filler, x.single, x.wand = "priority", { x.steps[1] }, "", true, nil
+  elseif c.kind == "priority" then
+    x.filler, x.wand = "", nil
+    if #x.steps == 1 then x.single = false else x.single = nil end
+  else
+    x.single = nil
+    local steps = {}
+    for _, n in ipairs(x.steps) do if KE.isWand(n) then x.wand = true else steps[#steps + 1] = n end end
+    x.steps = steps
+    if KE.isWand(x.filler) then x.filler, x.wand = "", true end
+    x.wand = x.wand and true or nil
+  end
   return x
 end
+--- Macro + warnings for the draft key (what the book will show after saving).
 --- per (optional): the Macro editor's extra-line ticks {key = on}; else this macro's saved choice (and the switches).
 function KE.preview(m, c, L, per)
   c = KE.engineDraft(c)
@@ -51,7 +79,7 @@ function KE.preview(m, c, L, per)
     local name = f and f.index and ("WBX C" .. f.index)
     per = name and cdb.keyLines and cdb.keyLines[name] or nil
   end
-  local ctx = ns.Kit.keyCtx(m, m.lines, per)
+  local ctx = ns.Kit.customCtx(c, ns.Kit.keyCtx(m, m.lines, per))
   local has = ns.Kit.seqHas(m, L, nil)
   local r = E().buildCustom(m.cls, c, ctx, has, { melee = ns.Kit.isMelee(m) })
   local sp = {}
@@ -99,23 +127,48 @@ function KE.shortWarning(w)
   return table.concat(out, " ")
 end
 
---- Save a draft into the member's custom keys (index = nil adds a new one). Returns index or nil, reason.
-function KE.save(m, c, index)
+--- Save a draft into the member's own macros. slot = the macro's stable slot (WBX C<slot>), nil adds a new one in the
+--- lowest free slot (a hole a deleted macro left is filled first). Returns the slot or nil, reason.
+function KE.save(m, c, slot)
+  local S = ns.State
   local list = m.customSeq or {}
-  if not index and #list >= ns.State.CUSTOM_MAX then return nil, "At most " .. ns.State.CUSTOM_MAX .. " own macros." end
-  if #(c.steps or {}) == 0 and (c.filler or "") == "" then return nil, "Add at least one spell." end
+  local x = KE.engineDraft(c)
+  if #x.steps == 0 and (x.filler or "") == "" then
+    return nil, (x.wand and "A sequence needs a spell besides Shoot (Shoot runs after it). Or make it a Priority macro." or "Add at least one spell.")
+  end
   local copy = {}
   for i, v in ipairs(list) do copy[i] = v end
-  copy[index or (#copy + 1)] = KE.engineDraft(c)
-  local clean = ns.State.cleanCustom(copy)
-  m.customSeq = clean
-  return index or #clean
+  if slot then
+    local cur, i = S.customAt(list, slot)
+    if not cur then return nil, "That own macro is gone." end
+    x.slot = cur.slot
+    copy[i] = x
+  else
+    if #list >= S.CUSTOM_MAX then return nil, "At most " .. S.CUSTOM_MAX .. " own macros." end
+    slot = S.freeSlot(list)
+    if slot ~= #list + 1 then S.pinSlots(copy); x.slot = slot else x.slot = nil end
+    copy[#copy + 1] = x
+  end
+  m.customSeq = S.cleanCustom(copy)
+  return slot
 end
 
-function KE.delete(m, index)
+--- Delete the own macro in `slot`. The others keep their slots (and names, targeting, extra lines, bar buttons and
+--- keybinds); this slot's own targeting and extra-line choices go with it, so a new macro there starts clean.
+function KE.delete(m, slot)
+  local S = ns.State
   local list = m.customSeq or {}
-  if list[index] then table.remove(list, index) end
-  m.customSeq = ns.State.cleanCustom(list)
+  local _, i = S.customAt(list, slot)
+  if not i then return false end
+  S.pinSlots(list)
+  table.remove(list, i)
+  m.customSeq = S.cleanCustom(list)
+  local cdb, name = Core().cdb, "WBX C" .. slot
+  if cdb then
+    if cdb.overrides then cdb.overrides[name] = nil end
+    if cdb.keyLines then cdb.keyLines[name] = nil end
+  end
+  return true
 end
 
 -- ------------------------------------------------------------------ the editor frame (overlays the book)
@@ -229,7 +282,10 @@ function KE.Build(parent)
     b:SetPoint("LEFT", 5 + (i - 1) * 25, 0)
     b.icon = W.icon(b, 22, true)
     b.icon:SetPoint("CENTER")
-    b:SetScript("OnClick", function(self) table.remove(f.draft.steps, self.i); KE.Refresh() end)
+    b:SetScript("OnClick", function(self)
+      if spellFromCursor() then drop(); return end -- a spell on the cursor: a click on a step adds it, never removes
+      table.remove(f.draft.steps, self.i); KE.Refresh()
+    end)
     b:SetScript("OnReceiveDrag", drop)
     W.tooltip(b, function(GT) GT:AddLine(f.draft.steps[b.i] or "", 1, 0.82, 0); GT:AddLine("Click to remove", 0.66, 0.6, 0.49) end)
     f.stepBtns[i] = b
@@ -238,9 +294,17 @@ function KE.Build(parent)
   f.fillerText:SetPoint("TOPLEFT", f.strip, "BOTTOMLEFT", 0, -6)
   f.fillerText:SetWidth(312)
   f.fillerText.wbxCopy = "hint"
-  local fHit = CreateFrame("Frame", nil, f)
+  local fHit = CreateFrame("Button", nil, f)
   fHit:SetAllPoints(f.fillerText)
-  W.tip(fHit, "Filler", "A sequence macro can repeat one spell between the other steps. Pick it with Filler in the spell list; set how often with Filler × N.")
+  fHit:SetScript("OnClick", function()
+    local d = f.draft
+    if not (d and d.kind == "sequence") then return end
+    if d.wand then d.wand = nil elseif d.filler ~= "" then d.filler = "" else return end
+    KE.Refresh()
+  end)
+  f.fillerHit = fHit
+  W.tip(fHit, "Filler", "A sequence macro can repeat one spell between the other steps. Pick it with Filler in the spell list; set how often with Filler × N. " ..
+    "Shoot (wand) is never the filler: Add it and it runs after the sequence. Click here to take the wand line, then the filler, out.")
 
   -- spell picker (right)
   local pl = W.text(f, "GameFontNormal", nil, W.GOLD)
@@ -255,7 +319,10 @@ function KE.Build(parent)
     r:SetSize(286, 22)
     r.icon = W.icon(r, 18)
     r.icon:SetPoint("LEFT", 2, 0)
-    r.fill = W.button(r, "Filler", 48, 18, function() f.draft.filler = r.spell.name; KE.Refresh() end,
+    r.fill = W.button(r, "Filler", 48, 18, function()
+      if KE.isWand(r.spell.name) then f.draft.wand = true else f.draft.filler = r.spell.name end
+      KE.Refresh()
+    end,
       "Makes this spell the filler: it is cast between the steps (sequence macros only).")
     r.fill:SetPoint("RIGHT", 0, 0)
     r.add = W.button(r, "Add", 44, 18, function() KE.addStep(r.spell.name) end, "Adds this spell as the next step of the macro.")
@@ -320,7 +387,7 @@ function KE.Build(parent)
     local idx, err = KE.save(m, f.draft, f.index)
     if not idx then Core().print("|cffff8a80" .. err .. "|r"); return end
     KE.applyPreset(idx, f.draft.preset)
-    Core().log("info", "own macro: C" .. idx .. " saved as " .. tostring(m.customSeq[idx] and m.customSeq[idx].name) .. " (" .. tostring(m.customSeq[idx] and m.customSeq[idx].kind) .. ")")
+    Core().log("info", "own macro: C" .. idx .. " saved as " .. tostring((ns.State.customAt(m.customSeq, idx) or {}).name) .. " (" .. tostring((ns.State.customAt(m.customSeq, idx) or {}).kind) .. ")")
     KE.Close()
     if UI.panels and UI.panels.custom then UI.panels.custom.selected = "WBX C" .. idx end
     Core().changed()
@@ -341,7 +408,7 @@ function KE.Build(parent)
     local _, m = Core().me()
     if not (m and f.draft) then return end
     local r = KE.preview(m, f.draft, ns.Compat.playerLevel())
-    ns.CopyBox.ShowCopy("Copy \"" .. (f.draft.name or "My macro") .. "\"", r.macro, ns.Share.encodeKey(f.draft, m.cls))
+    ns.CopyBox.ShowCopy("Copy \"" .. (f.draft.name or "My macro") .. "\"", r.macro, ns.Share.encodeKey(KE.engineDraft(f.draft), m.cls))
   end, "Shows the macro text and a WoWBoxer macro, ready to copy and give to others.")
   f.copy:SetPoint("TOPRIGHT", pv, "BOTTOMRIGHT", 0, -4)
   f.paste:ClearAllPoints(); f.paste:SetPoint("RIGHT", f.copy, "LEFT", -6, 0)
@@ -358,14 +425,22 @@ function KE.usePasted(d)
   local f = KE.frame
   local _, m = Core().me()
   if not (f and f.draft and m) then return end
-  local known = {}
-  for _, s in ipairs(ns.Kit.spellsOf(m)) do known[s.name] = true end
+  local known = KE.choiceSet(m)
   local steps, dropped = {}, {}
   for _, n in ipairs(d.steps or {}) do if known[n] and #steps < MAX_STEPS then steps[#steps + 1] = n else dropped[#dropped + 1] = n end end
   local filler = d.filler or ""
   if filler ~= "" and not known[filler] then dropped[#dropped + 1] = filler; filler = "" end
   local x = f.draft
-  x.kind, x.aim, x.steps, x.filler, x.fills, x.reset = d.kind, d.aim, steps, filler, d.fills or 1, d.reset or "combat"
+  local kind = d.kind
+  if kind == "priority" and #steps == 1 and d.single ~= false then kind = "single" end
+  x.kind, x.aim, x.steps, x.filler, x.fills, x.reset = kind, d.aim, steps, filler, d.fills or 1, d.reset or "combat"
+  x.wand = (d.wand == true and known[WAND]) and true or nil
+  if kind == "sequence" then -- Shoot in a pasted sequence: the wand line, never a step or the filler
+    local keep = {}
+    for _, n in ipairs(x.steps) do if KE.isWand(n) then x.wand = true else keep[#keep + 1] = n end end
+    x.steps = keep
+    if KE.isWand(x.filler) then x.filler, x.wand = "", true end
+  end
   if d.name and d.name ~= "" and d.name ~= "Pasted macro" then x.name = d.name; f.name:SetText(d.name) end
   if #dropped > 0 then Core().print("|cfff0b43cLeft out (not a " .. (ns.Data.classes[m.cls] and ns.Data.classes[m.cls].n or m.cls) .. " spell):|r " .. table.concat(dropped, ", ")) end
   local note = ns.CopyBox and ns.CopyBox.droppedNote and ns.CopyBox.droppedNote(d)
@@ -377,13 +452,18 @@ end
 function KE.addStep(name)
   local f = KE.frame
   if not f or not f.draft then return end
-  if #f.draft.steps >= MAX_STEPS then Core().print("A macro holds at most " .. MAX_STEPS .. " steps."); return end
   local _, m = Core().me()
-  local known = false
-  for _, s in ipairs(ns.Kit.spellsOf(m)) do if s.name == name then known = true end end
-  if not known then Core().print("|cffff8a80" .. tostring(name) .. " is not in WoWBoxer's spell list for your class.|r"); return end
-  if f.draft.kind == "single" then f.draft.steps = { name } else f.draft.steps[#f.draft.steps + 1] = name end
+  -- the same list the picker shows: class spells, Shoot, book and talent spells you have at this level
+  if not KE.choiceSet(m)[name] then
+    Core().print("|cffff8a80" .. tostring(name) .. " can't go into a macro: not one of your spells at this level.|r"); return false
+  end
+  local d = f.draft
+  if d.kind == "sequence" and KE.isWand(name) then d.wand = true; KE.Refresh(); return true end -- the wand line
+  if d.kind == "single" then d.steps[1] = name; KE.Refresh(); return true end -- the other steps stay for Sequence
+  if #d.steps >= MAX_STEPS then Core().print("A macro holds at most " .. MAX_STEPS .. " steps."); return false end
+  d.steps[#d.steps + 1] = name
   KE.Refresh()
+  return true
 end
 
 --- Targeting presets: Enemy, Friendly, Myself and each squad pet (Hunters and Warlocks in the squad).
@@ -412,17 +492,23 @@ function KE.applyPreset(index, preset)
   end
 end
 
---- Open the editor for custom key `index` of this character (nil = new key).
-function KE.Open(parent, index)
+--- The editor's kind of a saved own macro: a one-step Priority made as Single spell (or saved before 1.3.0) is Single.
+function KE.kindOf(src)
+  if src.kind == "priority" and #(src.steps or {}) == 1 and src.single ~= false then return "single" end
+  return src.kind
+end
+--- Open the editor for the own macro in `slot` (WBX C<slot>) of this character (nil = new macro).
+function KE.Open(parent, slot)
   local _, m = Core().me()
   if not m then return end
   local f = KE.Build(parent)
   if f:GetParent() ~= parent then f:SetParent(parent); f:ClearAllPoints(); f:SetAllPoints(parent); f:SetFrameLevel((parent:GetFrameLevel() or 1) + 20) end
-  local src = index and m.customSeq and m.customSeq[index]
-  f.index = src and index or nil
-  f.draft = { id = src and src.id or nil, name = src and src.name or "My macro", kind = src and ((src.kind == "priority" and #src.steps == 1) and "single" or src.kind) or "sequence",
+  local src = slot and ns.State.customAt(m.customSeq, slot)
+  f.index = src and slot or nil
+  local index = f.index
+  f.draft = { id = src and src.id or nil, name = src and src.name or "My macro", kind = src and KE.kindOf(src) or "sequence",
     aim = src and src.aim or "harm", steps = {}, filler = src and src.filler or "", fills = src and src.fills or 2,
-    reset = src and src.reset or "combat" }
+    reset = src and src.reset or "combat", wand = src and src.wand or nil }
   for i, s in ipairs(src and src.steps or {}) do f.draft.steps[i] = s end
   f.draft.preset = index and src and KE.presetOf(index, src.aim) or "enemy"
   f.choice:SetShown(f.index == nil) -- a new macro starts with the choice
@@ -449,7 +535,7 @@ function KE.commit()
   if not idx then return nil, err end
   KE.applyPreset(idx, f.draft.preset)
   f.index = idx
-  Core().log("info", "own macro: C" .. idx .. " saved as " .. tostring(m.customSeq[idx] and m.customSeq[idx].name) .. " (" .. tostring(m.customSeq[idx] and m.customSeq[idx].kind) .. ")")
+  Core().log("info", "own macro: C" .. idx .. " saved as " .. tostring((ns.State.customAt(m.customSeq, idx) or {}).name) .. " (" .. tostring((ns.State.customAt(m.customSeq, idx) or {}).kind) .. ")")
   return idx
 end
 function KE.IsOpen() return KE.frame ~= nil and KE.frame:IsShown() end
@@ -457,7 +543,13 @@ function KE.IsOpen() return KE.frame ~= nil and KE.frame:IsShown() end
 function KE.sig(d)
   if not d then return "" end
   return table.concat({ tostring(d.name), tostring(d.kind), tostring(d.aim), tostring(d.filler), tostring(d.fills), tostring(d.reset),
-    tostring(d.preset), table.concat(d.steps or {}, ";") }, "|")
+    tostring(d.preset), tostring(d.wand and true or nil), table.concat(d.steps or {}, ";") }, "|")
+end
+--- Can this draft be saved (at least one spell besides the wand line)?
+function KE.canSave(d)
+  if not d then return false end
+  local x = KE.engineDraft(d)
+  return #x.steps > 0 or (x.kind == "sequence" and (x.filler or "") ~= "")
 end
 --- Does the open draft have unsaved changes?
 function KE.dirty() local f = KE.frame; return f ~= nil and f.draft ~= nil and KE.sig(f.draft) ~= f.orig end
@@ -474,18 +566,27 @@ function KE.Refresh()
   f.reset:SetShown(seq); f.fills:SetShown(seq)
   local byName = {}
   for _, s in ipairs(ns.Kit.customSpellsOf(m)) do byName[s.name] = byName[s.name] or s end
+  -- Single spell shows (and saves) the first step only; the other steps stay in the draft for Sequence / Priority
+  local shownSteps = d.kind == "single" and math.min(1, #d.steps) or #d.steps
   for i, b in ipairs(f.stepBtns) do
-    local n = d.steps[i]
+    local n = i <= shownSteps and d.steps[i] or nil
     b.i = i
     if n then W.setIcon(b.icon, byName[n] and byName[n].icon or nil); b:Show() else b:Hide() end
   end
-  f.fillerText:SetText(seq and ((d.filler ~= "" and ("Filler: |cffffd100" .. d.filler .. "|r ×" .. d.fills)) or "|cff9d9d9dNo filler|r")
-    or "Top spell first")
+  local ft
+  if seq then
+    ft = (d.filler ~= "" and ("Filler: |cffffd100" .. d.filler .. "|r ×" .. d.fills)) or "|cff9d9d9dNo filler|r"
+    if d.wand then ft = ft .. " · then |cffffd100Shoot|r (wand)" end
+  elseif d.kind == "single" then
+    ft = #d.steps > 1 and "|cfff0b43cSingle uses the first spell|r (Sequence keeps the others)" or "One spell"
+  else ft = "Top spell first" end
+  f.fillerText:SetText(ft)
   -- picker
   f.pickPool:reset()
   local inKey = {}
-  for _, n in ipairs(d.steps) do inKey[n] = true end
-  if d.filler ~= "" then inKey[d.filler] = true end
+  for i, n in ipairs(d.steps) do if i <= shownSteps then inKey[n] = true end end
+  if seq and d.filler ~= "" then inKey[d.filler] = true end -- Priority / Single have no filler: no gold tick for it
+  if seq and d.wand then inKey[WAND] = true end
   local y = 0
   for _, s in ipairs(KE.spellChoices(m, L)) do
     local r = f.pickPool:get()
@@ -497,7 +598,7 @@ function KE.Refresh()
     local c = r.inKey and W.GOLD or W.TEXT
     r.name:SetTextColor(c[1], c[2], c[3])
     r.check:SetShown(r.inKey)
-    r.fill:SetShown(seq)
+    r.fill:SetShown(seq and not KE.isWand(s.name)) -- Shoot is never the filler (it would stop the wand)
   end
   f.pick:SetHeight(math.max(y, 10))
   W.tidyScroll(f.pickSf, y)
@@ -519,7 +620,15 @@ function KE.Refresh()
   f.warn:SetText(table.concat(short, "\n"))
   f.warnFull = table.concat(warn, "\n")
   f.warnIcon:SetShown(#warn > 0)
-  f.save:SetEnabled(#d.steps > 0 or (seq and d.filler ~= ""))
+  f.save:SetEnabled(KE.canSave(d))
+  -- the Macro editor's Save, preview and targeting follow the spells at once (Save greyed until there is a spell)
+  local A = ns.Advanced
+  if A and A.ef and A.ef:IsShown() and A.ef.own and A.refreshEditor and not KE.inRefresh then
+    KE.inRefresh = true
+    local ok, err = pcall(A.refreshEditor)
+    KE.inRefresh = nil
+    if not ok then error(err, 0) end
+  end
 end
 
 return KE

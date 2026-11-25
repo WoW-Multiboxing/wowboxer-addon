@@ -675,7 +675,7 @@ end
 function Book.copyKey(c)
   local _, m = Core().me()
   local i = c.name and tonumber(c.name:match("^WBX C(%d)$"))
-  local own = i and m and m.customSeq and m.customSeq[i]
+  local own = i and m and ns.State.customAt(m.customSeq, i)
   ns.CopyBox.ShowCopy("Copy \"" .. (c.label or "key") .. "\"", c.d.body, own and ns.Share.encodeKey(own, m.cls) or nil)
 end
 

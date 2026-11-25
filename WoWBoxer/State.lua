@@ -81,10 +81,48 @@ function S.cleanCustom(list)
       if x.name == "" then x.name = "My key" end
       if seen[x.id] then x.id = S.uid("q") end
       seen[x.id] = true
+      -- stable slot (WBX C<slot>): kept when given; a list without slots keeps the old names (slot = position)
+      local sl = tonumber(c.slot)
+      if sl and sl == floor(sl) and sl >= 1 and sl <= S.CUSTOM_MAX then x.slot = sl end
+      -- a one-step Priority made as "Single spell" (true) or as "Priority" (false); nil = saved before 1.3.0
+      if x.kind == "priority" and #steps == 1 and type(c.single) == "boolean" then x.single = c.single end
+      -- a sequence whose wand runs after it (/cast !Shoot line), whatever the wand switch says
+      if c.wand == true then x.wand = true end
       out[#out + 1] = x
     end
   end
+  -- slots: unique; an entry without one (or with a taken one) gets its position when free, else the lowest free slot
+  local used = {}
+  for _, x in ipairs(out) do if x.slot then if used[x.slot] then x.slot = nil else used[x.slot] = true end end end
+  local clash = {}
+  for i, x in ipairs(out) do if not x.slot then if used[i] then clash[#clash + 1] = x else used[i] = true end end end
+  for _, x in ipairs(clash) do
+    for k = 1, S.CUSTOM_MAX do if not used[k] then x.slot = k; used[k] = true; break end end
+  end
   return out
+end
+
+--- The stable slot of own macro i (its game macro is WBX C<slot>; deleting another macro never changes it).
+function S.customSlot(list, i)
+  local c = list and list[i]
+  return c and (c.slot or i) or nil
+end
+--- The own macro in slot `slot`: the entry and its position, or nil.
+function S.customAt(list, slot)
+  for i, c in ipairs(list or {}) do if (c.slot or i) == slot then return c, i end end
+  return nil
+end
+--- The lowest slot no own macro uses (nil when all CUSTOM_MAX are taken).
+function S.freeSlot(list)
+  local used = {}
+  for i, c in ipairs(list or {}) do used[c.slot or i] = true end
+  for k = 1, S.CUSTOM_MAX do if not used[k] then return k end end
+  return nil
+end
+--- Give every own macro its slot explicitly (before the list changes order or length).
+function S.pinSlots(list)
+  for i, c in ipairs(list or {}) do c.slot = c.slot or i end
+  return list
 end
 
 function S.newMember(o)

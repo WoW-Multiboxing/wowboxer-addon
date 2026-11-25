@@ -96,13 +96,21 @@ for _, game in ipairs({ { "forever", 16001, "camelot" }, { "era", 11509 }, { "tb
       -- Shoot first in a priority: the lines below never run (warned)
       local _, w2 = KE.preview(m, { id = "z", name = "x", kind = "priority", aim = "harm", steps = { "Shoot", nuke }, filler = "", fills = 1, reset = "combat" }, 20)
       H.ok(#w2 > 0, who .. "Shoot first is warned about")
-      -- Sequence with Shoot: warned, no extra wand line
+      -- Sequence with Shoot (feedback 25 Nov §2): never a /castsequence step (a second press stops the wand) – the
+      -- wand line after the sequence instead, once, with nothing left to warn about
       local q, w3 = KE.preview(m, { id = "q", name = "x", kind = "sequence", aim = "harm", steps = { nuke, "Shoot" }, filler = "", fills = 1, reset = "combat" }, 20)
-      H.ok(not q.macro:find("!Shoot", 1, true), who .. "sequence: no extra wand line: " .. q.macro)
-      H.ok(q.macro:find("Shoot", 1, true) ~= nil, who .. "sequence casts Shoot as a step")
+      local _, nq = q.macro:gsub("Shoot", "")
+      H.eq(nq, 1, who .. "sequence: Shoot once, as the wand line: " .. q.macro)
+      H.ok(q.macro:find("\n/cast [^\n]*!Shoot$") ~= nil, who .. "sequence: the wand line is last")
       local hasW = false
       for _, w in ipairs(w3) do if w:find("Shoot in a sequence", 1, true) then hasW = true end end
-      H.ok(hasW, who .. "sequence with Shoot is warned about")
+      H.ok(not hasW, who .. "sequence: nothing to warn about")
+      -- any other path to the engine with Shoot in a sequence is still warned about
+      local sh
+      for _, s in ipairs(ns.Kit.customSpellsOf(m)) do if s.name == "Shoot" then sh = s end end
+      local hasE = false
+      for _, w in ipairs(ns.Engine.customWarnings("sequence", { sh }, nil, "harm", m.cls)) do if w:find("Shoot in a sequence", 1, true) then hasE = true end end
+      H.ok(hasE, who .. "the engine still warns about Shoot as a sequence step")
       -- Friendly macro with Shoot: warned
       local _, w4 = KE.preview(m, { id = "f", name = "x", kind = "priority", aim = "help", steps = { "Shoot" }, filler = "", fills = 1, reset = "combat" }, 20)
       H.ok(#w4 > 0, who .. "Shoot in a Friendly macro is warned about")

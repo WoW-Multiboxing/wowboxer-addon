@@ -1,5 +1,11 @@
 # WoWBoxer addon – backlog
 
+## The owner: TEST BUILD 1.3.0-test.15 – Macro editor fixes (/reload is enough)
+1. On Rup: one chat line says Shoot moved out of "Dot Wand" and "Test"; Update macros, then press Dot Wand in a fight: the wand keeps shooting.
+2. My macros → New macro → Sequence: Add two spells + Shoot (no Filler button on Shoot), Save; delete an older own macro – the others keep their names and bar buttons.
+3. Open an own macro, add a spell, press Cancel (or click another macro): it asks Save · Discard · Keep editing; switch page and back – your change is still there.
+4. Sequence → Single shows one spell; Priority with one spell reopens as Priority; turn Advanced on with the editor open – Targeting works at once.
+
 ## The owner: TEST BUILD 1.3.0-test.14 – Gather sharing (restart the Forever clients – new files, /reload is not enough)
 1. Paladin and Warlock: `/wbx` → Setup → Gathering… → Nearby detection: **Apply**.
 2. Warlock follows: walk past a few herbs and veins, and gather one herb with the Warlock. Let the Paladin walk right next to one herb too.

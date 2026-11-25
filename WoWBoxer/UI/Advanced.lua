@@ -94,20 +94,62 @@ function A.setMode(on)
   Core().db.settings.advanced = on and true or nil
   Core().log("info", on and "advanced mode on" or "standard mode")
   Core().changed()
+  -- an open Macro editor follows the mode at once (Targeting enabled / greyed, the note, Edit text)
+  local f = A.ef
+  if f and f:IsShown() and f.section then A.showSection(f.section) end
 end
 --- Advanced → Standard (§2): never leave a half-advanced editor. An own macro stays open on its Spells tab (Standard
---- can edit it); any other macro closes. Unsaved targeting first asks: keep editing, or discard and switch.
+--- can edit it); any other macro closes. Unsaved targeting first asks: Save, Discard or Keep editing.
 function A.leaveAdvanced()
   local f = A.ef
   if not (f and f:IsShown()) then A.setMode(false); return end
   local function go()
+    if f:IsShown() and f.touched then A.resetTargeting(f) end -- Discard: the targeting as saved
     f.touched = false
-    if f.own then A.setMode(false); A.showSection("spells") else f:Hide(); A.setMode(false) end
+    if f:IsShown() and f.own then A.setMode(false); A.showSection("spells") else f:Hide(); A.setMode(false) end
   end
   if not f.touched then go(); return end
-  UI.Popup("Unsaved changes in the Macro editor.", {
-    { "Keep editing", function() end, "Stays in Advanced mode; the Macro editor stays open with your changes." },
-    { "Discard", go, "Drops the unsaved targeting changes and switches to Standard mode." } })
+  A.askUnsaved(go)
+end
+
+-- ------------------------------------------------------------------ unsaved changes: one guard (feedback 25 Nov §4)
+--- Unsaved changes in the open Macro editor: spells (the own macro's draft) or targeting, options and extra lines.
+function A.unsaved()
+  local f = A.ef
+  if not (f and f:IsShown()) then return false end
+  if f.touched then return true end
+  return f.own ~= nil and ns.KeyEditor.dirty() or false
+end
+--- Closes the editor and drops its draft (Cancel, Discard, after Save).
+function A.closeEditor()
+  local f = A.ef
+  if f then f.touched = false; f:Hide() end
+  local K = ns.KeyEditor.frame
+  if K then K:Hide(); K.draft = nil end
+end
+--- The targeting back to the saved state (Discard while the editor stays open, e.g. Advanced → Standard on an own macro).
+function A.resetTargeting(f)
+  local ov = Core().cdb.overrides[f.name or ""]
+  f.targets, f.opts = {}, {}
+  local src = (ov and ov.targets and #ov.targets > 0) and ov.targets or O().fromBody(f.base or "", f.ctx)
+  for i, t in ipairs(src) do local c = {}; for k, v in pairs(t) do c[k] = v end; f.targets[i] = c end
+  for _, k in ipairs({ "mod", "reset", "startattack", "petattack" }) do f.opts[k] = ov and ov[k] end
+  for k, v in pairs(f.linesOrig or {}) do f.lines[k] = v end
+end
+--- "Unsaved changes – Save · Discard · Keep editing". discard() runs after Discard and after a Save that worked.
+function A.askUnsaved(discard, text)
+  UI.Popup(text or "Unsaved changes in the Macro editor.", {
+    { "Save", function() if A.saveEditor(true) then discard() end end, "Saves your changes, then goes on." },
+    { "Discard", discard, "Drops the unsaved changes, then goes on." },
+    { "Keep editing", function() end, "The Macro editor stays open with your changes." } })
+end
+--- Run go() now when nothing is unsaved, else ask first (Save · Discard · Keep editing). Every way the editor closes or
+--- switches to another macro goes through here: Cancel, opening another macro, New macro, the mode switch.
+function A.guard(go, text)
+  if not A.unsaved() then go(); return true end
+  A.flow("unsaved changes: asked")
+  A.askUnsaved(function() A.closeEditor(); go() end, text)
+  return false
 end
 function A.refreshSwitch()
   if UI.modeSeg then UI.modeSeg.Refresh() end
@@ -379,7 +421,7 @@ local function editorFrame(parent)
   f.save = W.button(f, "Save", 70, 24, function() A.saveEditor() end, "Saves your targeting and options. Press Update macros afterwards to write the macro.")
   W.primary(f.save)
   f.save:SetPoint("BOTTOMRIGHT", -10, 8)
-  f.cancel = W.button(f, "Cancel", 70, 24, function() f:Hide() end, "Closes this. Nothing changes.")
+  f.cancel = W.button(f, "Cancel", 70, 24, function() A.guard(A.closeEditor) end, "Closes this. Nothing changes (asks first when you changed something).")
   f.cancel:SetPoint("RIGHT", f.save, "LEFT", -6, 0)
   f.back = W.button(f, "WoWBoxer's version", 140, 24, function() Core().backToDefault(f.name); f:Hide() end,
     "Back to WoWBoxer's version: removes your targeting (and text) for this macro.")
@@ -440,7 +482,13 @@ local function editorFrame(parent)
   f.spellsInfo.hint:SetPoint("RIGHT", -10, 0)
   f.spellsInfo.hint:SetText("WoWBoxer picks these spells for your level and updates them when you level up. Choose who it casts on under Targeting.")
   f.spellsInfo.hint.wbxCopy = "guide"
-  f:SetScript("OnHide", function() local K = ns.KeyEditor.frame; if K then K:Hide(); K.draft = nil end end)
+  -- Hidden on purpose (Cancel, Save, Discard): the draft goes. Hidden because the page or the window was (the frame's
+  -- own state stays shown): the draft and the targeting stay, and are there again when the page comes back.
+  f:SetScript("OnHide", function(self)
+    if self:IsShown() then return end
+    self.touched = false
+    local K = ns.KeyEditor.frame; if K then K:Hide(); K.draft = nil end
+  end)
   return f
 end
 
@@ -602,6 +650,7 @@ function A.flow(step) Core().log("info", "own macro: " .. step) end
 
 --- New macro: the same Macro editor, starting with "Single spell or Sequence".
 function A.openNew(parent)
+  if A.unsaved() then return A.guard(function() A.openNew(parent) end) or true end -- a second New macro asks first
   local f = editorFrame(parent)
   f.name, f.label, f.own, f.ctx, f.touched = nil, "New macro", "new", O().ctx(), false
   f.targets, f.opts, f.base, f.help = {}, {}, "", nil
@@ -618,13 +667,20 @@ function A.openEditor(parent, name, label)
   local own = name and tonumber(name:match("^WBX C(%d)$"))
   local d = current(name)
   if not d and not own then return false end
+  local _, me = Core().me()
+  local ownMacro = own and me and ns.State.customAt(me.customSeq, own)
+  if own and not ownMacro then return false end
+  if A.unsaved() then
+    -- the same macro again: keep editing it; another macro: Save · Discard · Keep editing first
+    if A.ef.name == name and A.ef:GetParent() == parent then return true end
+    A.guard(function() A.openEditor(parent, name, label) end)
+    return true
+  end
   local f = editorFrame(parent)
   f.own, f.touched = own, false
   if own then
-    local _, m = Core().me()
-    if not (m and m.customSeq and m.customSeq[own]) then return false end
     ns.KeyEditor.Open(f.spellsBox, own)
-    label = label or m.customSeq[own].name
+    label = label or ownMacro.name
     A.flow("open C" .. own)
   end
   d = d or { body = "", label = label }
@@ -746,7 +802,9 @@ function A.refreshEditor()
   elseif #missing > 0 then msg = msg .. " · |cfff0b43c" .. table.concat(missing, ", ") .. " skipped (not in your party)|r" end
   if #f.targets == 0 then msg = msg .. " · no targets: WoWBoxer's own targeting stays" end
   f.info:SetText(msg)
-  f.save:SetEnabled(ok and #body <= 255)
+  local K = ns.KeyEditor.frame
+  local spellsOk = not f.own or (K and K.draft and ns.KeyEditor.canSave(K.draft)) or false
+  f.save:SetEnabled(ok and #body <= 255 and spellsOk)
   f.back:SetEnabled(Core().cdb.overrides[f.name] ~= nil or (Core().cdb.keyLines or {})[f.name or ""] ~= nil)
 end
 A.refreshTargeting = A.refreshEditor
@@ -788,11 +846,13 @@ function A.saveLines(f)
   end
 end
 --- Save: an own macro saves its spells first (and its preset), then the targeting when it was changed here.
+--- Returns true when it saved (the editor closes), false when it could not (it stays open, the reason in chat).
 function A.saveEditor()
   local f = A.ef
+  if not f then return false end
   if f.own then
     local idx, err = ns.KeyEditor.commit()
-    if not idx then Core().print("|cffff8a80" .. tostring(err) .. "|r"); A.flow("save failed: " .. tostring(err)); return end
+    if not idx then Core().print("|cffff8a80" .. tostring(err) .. "|r"); A.flow("save failed: " .. tostring(err)); return false end
     f.name = "WBX C" .. idx
     A.flow("saved C" .. idx .. (f.touched and " with targeting" or ""))
     if f.touched and A.on() then Core().setOverride(f.name, A.draft()) end
@@ -803,7 +863,8 @@ function A.saveEditor()
     Core().setOverride(f.name, A.draft())
     A.saveLines(f)
   end
-  f:Hide()
+  A.closeEditor()
+  return true
 end
 --- Closing the editor closes its Spells section too (the draft is dropped).
 A.saveTargeting = A.saveEditor
