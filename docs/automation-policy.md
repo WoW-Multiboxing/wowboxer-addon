@@ -104,6 +104,14 @@ the boring parts (invites, quests, dialogs, vendor, loot) with WoW's own addon A
    - Never sync: delete item, logout, quit, or anything that costs gold above a limit.
 4. **Accept resurrection and summons** from squad members (`AcceptResurrect`, `ConfirmSummon`). Option, on by default.
    Also accept LFG role checks.
+   - **Checked accepts** (owner, 25 Nov 2026): a resurrection WoWBoxer "accepted" did not take and its box was hidden.
+     Now WoWBoxer never hides Blizzard's box. A ghost waits for the corpse recovery delay (`GetCorpseRecoveryDelay`),
+     a summon waits until the fight ends, both within the offer's time left. About 1 s after the call it checks that
+     it worked (alive again, the summon gone or you moved, in a group, the quest in the log, the role chosen); only
+     then "Accepted …". Otherwise one chat line "Click Accept yourself …", Blizzard's box again if it is gone, and
+     the reason in the log and `diag.auto.accepts`: delay, combat, blocked (`ADDON_ACTION_BLOCKED`), expired or
+     unknown. Party invites, started quests and role checks are checked the same way.
+     [AFKLAR: Forever – whether `AcceptResurrect` / `ConfirmSummon` work from an addon at all.]
 5. **Merchant:**
    - Sell grey items plus a shared sell list.
    - Auto-repair (option, with a gold floor).

@@ -762,6 +762,27 @@ function C.questInLog(id, title)
   return false
 end
 
+-- ------------------------------------------------------------------ accepts (Auto: resurrection, summon)
+--- Seconds before a ghost can accept a resurrection (Blizzard's box greys Accept that long), or 0.
+--- [AFKLAR: Forever – whether the delay is the only reason AcceptResurrect is ignored; diag.auto.accepts]
+function C.corpseDelay()
+  if not G.GetCorpseRecoveryDelay then return 0 end
+  local ok, d = pcall(G.GetCorpseRecoveryDelay)
+  return ok and tonumber(C.safe(d)) or 0
+end
+--- What this client offers for the checked accepts (read-only, for the diagnose).
+function C.acceptProbe()
+  local SI = G.C_SummonInfo
+  local function fn(f) return type(f) == "function" end
+  return {
+    GetCorpseRecoveryDelay = fn(G.GetCorpseRecoveryDelay), corpseDelay = C.corpseDelay(),
+    ResurrectHasTimer = fn(G.ResurrectHasTimer), ResurrectHasSickness = fn(G.ResurrectHasSickness),
+    summonTimeLeft = fn(SI and SI.GetSummonConfirmTimeLeft) or fn(G.GetSummonConfirmTimeLeft),
+    UnitPosition = fn(G.UnitPosition), StaticPopup_Visible = fn(G.StaticPopup_Visible),
+    afklar = "Forever: AcceptResurrect / ConfirmSummon from an event – blocked, or only through the box's own button?",
+  }
+end
+
 -- ------------------------------------------------------------------ addons
 --- "loaded" | "installed" (present but not loaded) | "missing"
 function C.addonState(name)

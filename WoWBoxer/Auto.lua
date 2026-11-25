@@ -300,16 +300,142 @@ function AU.receive(prefix, text, _, sender)
   end
 end
 
+-- ------------------------------------------------------------------ 0. accepts that are checked (owner, 25 Nov 2026)
+-- A pcall'd AcceptResurrect returned true although the game ignored it (a ghost before the corpse recovery delay),
+-- WoWBoxer said "Accepted" and hid Blizzard's box, so the resurrection was lost. Now every accept that has a Blizzard
+-- box (resurrection, summon, party invite, a started quest, role check):
+-- - never hides that box (Blizzard closes it when the accept worked);
+-- - waits for the corpse recovery delay (resurrection) or the end of the fight (summon), within the offer's time left;
+-- - checks about 1 s after the call that it worked (alive again, summon gone or moved, in a group, quest in the log,
+--   role chosen). Only then "Accepted ..."; else one chat line "click Accept yourself", the box shown again when it
+--   is gone, and the reason in the log: delay, combat, blocked, expired or unknown.
+AU.VERIFY = 1.2       -- seconds between the call and the check
+AU.pending = {}       -- kind -> {who, at, expires, tried, ...}
+AU.accepts = {}       -- the last outcomes {kind, who, ok, why, at} (diagnose)
+local function dead() return G.UnitIsDeadOrGhost and C().safe(G.UnitIsDeadOrGhost("player")) == true or false end
+local function inFight()
+  if G.InCombatLockdown and G.InCombatLockdown() then return true end
+  return G.UnitAffectingCombat and C().safe(G.UnitAffectingCombat("player")) == true or false
+end
+local function summonTimeLeft()
+  local SI = G.C_SummonInfo
+  local f = (SI and SI.GetSummonConfirmTimeLeft) or G.GetSummonConfirmTimeLeft
+  if not f then return nil end
+  local ok, t = pcall(f)
+  return ok and tonumber(C().safe(t)) or nil
+end
+local function where()
+  local x, y, _, map = nil, nil, nil, nil
+  if G.UnitPosition then local ok, a, b, c, d = pcall(G.UnitPosition, "player"); if ok then x, y, map = C().safe(a), C().safe(b), C().safe(d) end end
+  return tostring(map) .. ":" .. tostring(x and math.floor(x) or "?") .. ":" .. tostring(y and math.floor(y) or "?")
+end
+AU.ACC = {
+  res = { what = "the resurrection", popups = { "RESURRECT", "RESURRECT_NO_SICKNESS", "RESURRECT_NO_TIMER" },
+    life = function() return 60 + (C().corpseDelay() or 0) end,
+    wait = function() local d = dead() and C().corpseDelay() or 0; if d and d > 0 then return "delay", d end end,
+    call = function() return call(G.AcceptResurrect) end,
+    ok = function() return not dead() end },
+  summon = { what = "the summon", popups = { "CONFIRM_SUMMON" },
+    life = function() return summonTimeLeft() or 120 end,
+    wait = function() if inFight() then return "combat" end end,
+    start = function(p) p.from = where() end,
+    call = function()
+      local SI = G.C_SummonInfo
+      if SI and SI.ConfirmSummon then return (pcall(SI.ConfirmSummon)) end
+      return call(G.ConfirmSummon)
+    end,
+    ok = function(p) local t = summonTimeLeft(); return (t ~= nil and t <= 0) or (p.from ~= nil and where() ~= p.from) end },
+  invite = { what = "the group invite", popups = { "PARTY_INVITE" }, life = function() return 60 end,
+    call = function() return call(G.AcceptGroup) end,
+    ok = function() return G.IsInGroup and G.IsInGroup() and true or false end },
+  quest = { what = "the quest", popups = { "QUEST_ACCEPT" }, life = function() return 60 end,
+    call = function() return call(G.ConfirmAcceptQuest) end,
+    ok = function(p) return p.done or C().questInLog(nil, p.title) end },
+  role = { what = "the role check", popups = {}, life = function() return 60 end,
+    call = function() return call(G.CompleteLFGRoleCheck, true) end,
+    ok = function(p) return p.done == true end },
+}
+local function remember(kind, who, ok, why)
+  local a = AU.accepts
+  a[#a + 1] = { kind = kind, who = who, ok = ok, why = why, at = math.floor(now()) }
+  while #a > 10 do table.remove(a, 1) end
+end
+--- Is one of Blizzard's boxes for this accept still shown?
+local function popupShown(A)
+  if not G.StaticPopup_Visible then return nil end
+  for _, n in ipairs(A.popups) do if G.StaticPopup_Visible(n) then return true end end
+  return false
+end
+--- The accept did not take: say so once, show Blizzard's box again if it is gone, log why.
+function AU.acceptFailed(kind, why)
+  local p, A = AU.pending[kind], AU.ACC[kind]
+  if not p then return end
+  AU.pending[kind] = nil
+  if popupShown(A) == false and A.popups[1] and G.StaticPopup_Show and now() < p.expires then
+    pcall(G.StaticPopup_Show, A.popups[kind == "res" and 3 or 1], p.who, p.title)
+  end
+  Core().print("Click Accept yourself: WoWBoxer could not accept " .. A.what .. " from " .. p.who .. " (" .. why .. ").")
+  Core().log("info", "auto: " .. A.what .. " from " .. p.who .. " not accepted (" .. why .. ")")
+  remember(kind, p.who, false, why)
+end
+--- Offer kind from who (already allowed): accept now or when it can be accepted.
+function AU.offer(kind, who, extra)
+  local A = AU.ACC[kind]
+  local p = extra or {}
+  p.who, p.at, p.expires = who, now(), now() + (A.life() or 60)
+  AU.pending[kind] = p
+  if A.start then A.start(p) end
+  return AU.attempt(kind)
+end
+function AU.attempt(kind)
+  local p, A = AU.pending[kind], AU.ACC[kind]
+  if not p or p.tried then return false end
+  if now() >= p.expires then AU.acceptFailed(kind, p.waitWhy or "expired"); return false end
+  local why, sec = nil, nil
+  if A.wait then why, sec = A.wait(p) end
+  if why then
+    if p.waitWhy ~= why then Core().log("info", "auto: " .. A.what .. " from " .. p.who .. " waits (" .. why .. (sec and (" " .. math.ceil(sec) .. " s") or "") .. ")") end
+    p.waitWhy = why
+    if sec and now() + sec >= p.expires then AU.acceptFailed(kind, why); return false end
+    local after = G.C_Timer and G.C_Timer.After
+    if after then after(sec and (sec + 0.3) or 1, function() AU.attempt(kind) end) end -- combat: also PLAYER_REGEN_ENABLED
+    return false
+  end
+  if shift() then AU.pending[kind] = nil; Core().log("info", "auto: " .. A.what .. " skipped (Shift held)"); return false end
+  p.tried = now()
+  if not A.call(p) then AU.acceptFailed(kind, "error"); return false end
+  local after = G.C_Timer and G.C_Timer.After
+  if after then after(AU.VERIFY, function() AU.verify(kind) end) else AU.verify(kind) end
+  return true
+end
+--- About 1 s after the call (or early, early = true, from an event that says it worked): did it take?
+function AU.verify(kind, early)
+  local p, A = AU.pending[kind], AU.ACC[kind]
+  if not (p and p.tried) then return false end
+  if A.ok(p) then
+    AU.pending[kind] = nil
+    AU.did("Accepted " .. A.what .. " from " .. p.who .. ".")
+    remember(kind, p.who, true, p.waitWhy)
+    return true
+  end
+  if early then return false end
+  AU.acceptFailed(kind, p.blocked and ("blocked: " .. tostring(p.blocked)) or "unknown")
+  return false
+end
+--- ADDON_ACTION_BLOCKED / ADDON_ACTION_FORBIDDEN for WoWBoxer: the accept tried just now was blocked.
+function AU.onBlocked(addon, fn)
+  if addon ~= "WoWBoxer" then return end
+  for _, p in pairs(AU.pending) do if p.tried and now() - p.tried <= 2 then p.blocked = fn or "?" end end
+  Core().log("info", "auto: blocked " .. tostring(fn))
+end
+
 -- ------------------------------------------------------------------ 1. invites
 function AU.onInvite(name)
   if not AU.on("invite") then return end
   local who = AU.allowed("invite", name, false) -- not in the party yet: matched by name only
   if not who then Core().log("info", "auto: invite not accepted (Accept from: " .. AU.FROM_SHORT[AU.acceptFrom("invite")] .. ")"); return end
   if skipShift("invite") then return end
-  if call(G.AcceptGroup) then
-    if G.StaticPopup_Hide then pcall(G.StaticPopup_Hide, "PARTY_INVITE") end
-    AU.did("Accepted the group invite from " .. who .. ".")
-  end
+  AU.offer("invite", who)
 end
 AU.invited = {}
 --- Leader: invite squad members who are not in the group (at most every INVITE_EVERY seconds per name).
@@ -545,12 +671,7 @@ function AU.onQuestConfirm(name, title)
   if not m then Core().log("info", "auto: the quest " .. tostring(short(name)) .. " started was not joined (not a squad member in your party)"); return false end
   if C().questInLog(nil, title) then Core().log("info", "auto: " .. tostring(title) .. " is already in your quest log"); return false end
   if skipShift("quest") then return false end
-  if call(G.ConfirmAcceptQuest) then
-    if G.StaticPopup_Hide then pcall(G.StaticPopup_Hide, "QUEST_ACCEPT") end
-    AU.did("Accepted the quest " .. m.name .. " started.")
-    return true
-  end
-  return false
+  return AU.offer("quest", m.name, { title = title })
 end
 --- Leader: share a quest it just accepted (QUEST_ACCEPTED: retail = questID, Classic = questLogIndex, questID).
 function AU.onQuestAccepted(a, b)
@@ -848,10 +969,7 @@ function AU.onResurrect(name)
   if not AU.on("res") then return end
   local who = AU.allowed("res", name, true)
   if not who or skipShift("resurrection") then return end
-  if call(G.AcceptResurrect) then
-    if G.StaticPopup_Hide then pcall(G.StaticPopup_Hide, "RESURRECT"); pcall(G.StaticPopup_Hide, "RESURRECT_NO_SICKNESS") end
-    AU.did("Accepted the resurrection from " .. who .. ".")
-  end
+  AU.offer("res", who)
 end
 function AU.onSummon()
   if not AU.on("summon") then return end
@@ -859,11 +977,7 @@ function AU.onSummon()
   local who = (SI and SI.GetSummonConfirmSummoner and SI.GetSummonConfirmSummoner()) or (G.GetSummonConfirmSummoner and G.GetSummonConfirmSummoner())
   local from = AU.allowed("summon", who, true)
   if not from or skipShift("summon") then return end
-  local ok = (SI and SI.ConfirmSummon and pcall(SI.ConfirmSummon)) or call(G.ConfirmSummon)
-  if ok then
-    if G.StaticPopup_Hide then pcall(G.StaticPopup_Hide, "CONFIRM_SUMMON") end
-    AU.did("Accepted the summon from " .. from .. ".")
-  end
+  AU.offer("summon", from)
 end
 function AU.onRoleCheck()
   if not AU.on("rolecheck") then return end
@@ -874,7 +988,7 @@ function AU.onRoleCheck()
   end
   if AU.isLeader() and G.UnitIsGroupLeader and C().safe(G.UnitIsGroupLeader("player")) == true then leaderOk = true end
   if not leaderOk or skipShift("role check") then return end
-  if call(G.CompleteLFGRoleCheck, true) then AU.did("Accepted the role check.") end
+  AU.offer("role", "the group leader")
 end
 
 -- ------------------------------------------------------------------ 5. merchant
@@ -1016,6 +1130,7 @@ function AU.probe()
     "AcceptResurrect", "C_SummonInfo.ConfirmSummon", "ConfirmSummon", "CompleteLFGRoleCheck", "RepairAllItems", "C_Container.UseContainerItem",
     "UseContainerItem", "BuyMerchantItem" }) do r[p] = has(p) end
   r.afklar = "InviteUnit / TakeTaxiNode / AcceptQuest without a key press on Forever – check in the launch test"
+  r.accept = C().acceptProbe() -- corpse delay, summon time left, popups [AFKLAR: Forever]
   return r
 end
 
@@ -1023,7 +1138,9 @@ local f = CreateFrame("Frame")
 AU.frame = f
 local EVENTS = { "CHAT_MSG_ADDON", "PARTY_INVITE_REQUEST", "QUEST_DETAIL", "QUEST_ACCEPT_CONFIRM", "QUEST_ACCEPTED", "QUEST_PROGRESS",
   "QUEST_COMPLETE", "QUEST_FINISHED", "QUEST_GREETING", "GOSSIP_SHOW", "GOSSIP_CLOSED", "TAXIMAP_OPENED", "TAXIMAP_CLOSED", "RESURRECT_REQUEST",
-  "CONFIRM_SUMMON", "LFG_ROLE_CHECK_SHOW", "MERCHANT_SHOW", "GROUP_ROSTER_UPDATE", "QUEST_REMOVED", "QUEST_TURNED_IN" }
+  "CONFIRM_SUMMON", "LFG_ROLE_CHECK_SHOW", "MERCHANT_SHOW", "GROUP_ROSTER_UPDATE", "QUEST_REMOVED", "QUEST_TURNED_IN",
+  "PLAYER_ALIVE", "PLAYER_UNGHOST", "PLAYER_REGEN_ENABLED", "CANCEL_SUMMON", "ADDON_ACTION_BLOCKED", "ADDON_ACTION_FORBIDDEN",
+  "LFG_ROLE_CHECK_ROLE_CHOSEN", "LFG_ROLE_CHECK_HIDE" }
 function AU.Init()
   local CI = G.C_ChatInfo
   local regp = (CI and CI.RegisterAddonMessagePrefix) or G.RegisterAddonMessagePrefix
@@ -1064,7 +1181,17 @@ f:SetScript("OnEvent", function(_, event, a, b, c, d)
     elseif event == "QUEST_DETAIL" then AU.onQuestDetail()
     elseif event == "QUEST_ACCEPT_CONFIRM" then AU.onQuestConfirm(a, b)
     elseif event == "QUEST_TURNED_IN" then AU.noteTurnIn(a)
-    elseif event == "QUEST_ACCEPTED" then AU.onQuestAccepted(a, b)
+    elseif event == "QUEST_ACCEPTED" then
+      local q = AU.pending.quest
+      if q and q.tried and now() - q.tried <= 3 then q.done = true; AU.verify("quest", true) end
+      AU.onQuestAccepted(a, b)
+    elseif event == "PLAYER_ALIVE" or event == "PLAYER_UNGHOST" then AU.verify("res", true)
+    elseif event == "PLAYER_REGEN_ENABLED" then AU.attempt("summon")
+    elseif event == "CANCEL_SUMMON" then if AU.pending.summon and not AU.pending.summon.tried then AU.pending.summon = nil; Core().log("info", "auto: the summon was cancelled") end
+    elseif event == "ADDON_ACTION_BLOCKED" or event == "ADDON_ACTION_FORBIDDEN" then AU.onBlocked(a, b)
+    elseif event == "LFG_ROLE_CHECK_ROLE_CHOSEN" or event == "LFG_ROLE_CHECK_HIDE" then
+      local r = AU.pending.role
+      if r and r.tried and (event == "LFG_ROLE_CHECK_HIDE" or C().sameName(a, C().playerName())) then r.done = true; AU.verify("role", true) end
     elseif event == "QUEST_REMOVED" then if AU.isLeader() then AU.sendQuestList() end
     elseif event == "QUEST_PROGRESS" then AU.onQuestProgress()
     elseif event == "QUEST_COMPLETE" then AU.onQuestComplete()
@@ -1078,7 +1205,7 @@ f:SetScript("OnEvent", function(_, event, a, b, c, d)
     elseif event == "CONFIRM_SUMMON" then AU.onSummon()
     elseif event == "LFG_ROLE_CHECK_SHOW" then AU.onRoleCheck()
     elseif event == "MERCHANT_SHOW" then AU.onMerchant()
-    elseif event == "GROUP_ROSTER_UPDATE" then AU.inviteMissing(); if AU.isLeader() then AU.sendQuestList() end
+    elseif event == "GROUP_ROSTER_UPDATE" then AU.verify("invite", true); AU.inviteMissing(); if AU.isLeader() then AU.sendQuestList() end
     end
   end)
   if not ok then Core().log("error", "auto " .. event .. ": " .. tostring(err)) end

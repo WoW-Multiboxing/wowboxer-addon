@@ -49,7 +49,7 @@ do
   W.mods.shift = true; W.fire("PARTY_INVITE_REQUEST", "Dorin"); W.mods.shift = false
   H.eq(did(W, "AcceptGroup"), nil, "Shift held: skipped")
   W.fire("PARTY_INVITE_REQUEST", "Dorin-Silvermoon")
-  H.ok(did(W, "AcceptGroup") and did(W, "StaticPopup_Hide"), "a squad member's invite is accepted (Name-Realm too)")
+  H.ok(did(W, "AcceptGroup") and not did(W, "StaticPopup_Hide"), "a squad member's invite is accepted (Name-Realm too), Blizzard's box is never hidden")
   W.env.issecretvalue = function(v) return v == "SECRET" end
   reset(W); W.fire("PARTY_INVITE_REQUEST", "SECRET")
   H.eq(did(W, "AcceptGroup"), nil, "a secret name is ignored")
