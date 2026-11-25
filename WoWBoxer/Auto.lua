@@ -24,8 +24,11 @@ local function now() return (G.GetTime and G.GetTime()) or 0 end
 AU.OPTIONS = {
   { "invite", "Accept invites", "Accepts a group invite from a squad member." },
   { "autoInvite", "Invite the squad", "Leader: invites squad members who are not in the group (now and then, while you lead)." },
-  { "quests", "Accept quests", "Leader: takes every quest a quest giver you open offers. Followers: accept the quests the leader has." },
-  { "questAny", "Accept any quest", "Accepts every quest offered, not only the leader's (needs Accept quests)." },
+  -- Quest givers + Shared quests replace the single "Accept quests" tick (owner, 25 Nov 2026; settings.auto.quests is
+  -- read until either one is first set: on = Leader and followers + Shared quests on, off = Off + Shared quests off)
+  { "questGivers", "Quest givers", "Accepts quests from quest givers (NPCs): on the leader and followers, followers only, or off.", modes = "questGivers" },
+  { "questShared", "Shared quests", "Accepts quests a squad member in your party shares with you, and the escorts and events they start." },
+  { "questAny", "Accept any quest", "Followers accept every quest a quest giver offers, not only the leader's (needs Quest givers)." },
   { "share", "Share quests", "Leader: shares every quest you accept with the party." },
   { "turnin", "Turn in quests", "Completes and turns in finished quests at the quest giver you opened." },
   -- modes = a dropdown card instead of an on/off tick (owner, 10 Nov 2026): Automatically · Ask on every quest · Never
@@ -51,7 +54,7 @@ AU.OPTIONS = {
 }
 AU.BY_KEY = {}
 for _, o in ipairs(AU.OPTIONS) do AU.BY_KEY[o[1]] = o end
-AU.PRESET_LEVELLING = { "invite", "quests", "share", "turnin", "dialog", "res", "summon", "rolecheck", "sell", "repair", "shareSell",
+AU.PRESET_LEVELLING = { "invite", "questGivers", "questShared", "share", "turnin", "dialog", "res", "summon", "rolecheck", "sell", "repair", "shareSell",
   "whispers", "followWarn", "questCheck", "warnSound" }
 AU.REWARD_RULES = { "leader", "value", "ask" }
 --- Abandon together: {value, label, the one sentence under it}. Stored as settings.auto.abandonMode.
@@ -61,6 +64,17 @@ AU.ABANDON_MODES = {
   { "never", "Never", "Followers keep the quest." },
 }
 AU.ABANDON_DEFAULT = "ask"
+--- Quest givers: {value, label, the one sentence under it}. Stored as settings.auto.questGivers.
+AU.QG_MODES = {
+  { "all", "Leader and followers", "The leader takes every quest; followers accept the leader's quests." },
+  { "followers", "Followers only", "You pick quests on the leader; followers accept the leader's quests." },
+  { "off", "Off", "Nothing is accepted from quest givers." },
+}
+--- The dropdown cards on the Automation page: which list, how to read and set it.
+AU.MODES = {
+  abandon = { list = AU.ABANDON_MODES, get = function() return AU.abandonMode() end, set = function(v) return AU.setAbandonMode(v) end },
+  questGivers = { list = AU.QG_MODES, get = function() return AU.questGiverMode() end, set = function(v) return AU.setQuestGivers(v) end },
+}
 AU.GOLD_FLOOR = 10000     -- copper kept when repairing (1 gold)
 AU.TAXI_LIMIT = 20000     -- a synced flight costs at most 2 gold
 AU.INVITE_EVERY = 120     -- seconds between invites of the same name
@@ -74,7 +88,9 @@ end
 --- Is option `key` on? (resurrect/summon default on)
 function AU.on(key)
   if key == "abandon" then return AU.abandonMode() == "auto" end
+  if key == "questGivers" then return AU.questGiverMode() ~= "off" end
   local v = opts()[key]
+  if v == nil and key == "questShared" then return opts().quests == true end -- the old Accept quests tick
   if v == nil then return AU.BY_KEY[key] and AU.BY_KEY[key][4] == true or false end
   return v == true
 end
@@ -92,29 +108,75 @@ function AU.setAbandonMode(v)
   o.abandonMode, o.abandon = v, nil
   return true
 end
+--- Quest givers. Before 1.3.0 one tick (settings.auto.quests) did NPC quests and shared quests: on reads as "all",
+--- anything else as "off". The old key is read until Quest givers or Shared quests is first set; then both are stored
+--- and it is dropped (a login never rewrites saved data).
+local QG_OK = { all = true, followers = true, off = true }
+function AU.questGiverMode()
+  local o = opts()
+  if QG_OK[o.questGivers] then return o.questGivers end
+  return o.quests == true and "all" or "off"
+end
+local function dropOldQuests(o)
+  if o.quests == nil then return end
+  if not QG_OK[o.questGivers] then o.questGivers = o.quests == true and "all" or "off" end
+  if o.questShared == nil then o.questShared = o.quests == true end
+  o.quests = nil
+end
+function AU.setQuestGivers(v)
+  if not QG_OK[v] then return false end
+  local o = opts()
+  dropOldQuests(o)
+  o.questGivers = v
+  return true
+end
 --- set("abandon", on/off) from share strings and the settings list: on = Automatically; off leaves Ask / Never as they are.
+--- set("questGivers", on/off): on keeps Followers only, else Leader and followers; off = Off. set("quests") is the old
+--- tick: both quest options.
 function AU.set(key, v)
   if key == "abandon" then
     if v then return AU.setAbandonMode("auto") end
     if AU.abandonMode() == "auto" then AU.setAbandonMode(AU.ABANDON_DEFAULT) end
     return
   end
+  if key == "questGivers" then
+    if not v then return AU.setQuestGivers("off") end
+    if AU.questGiverMode() == "off" then return AU.setQuestGivers("all") end
+    return AU.setQuestGivers(AU.questGiverMode())
+  end
+  if key == "quests" then AU.setQuestGivers(v and "all" or "off"); opts().questShared = v and true or false; return end
+  if key == "questShared" then dropOldQuests(opts()) end
   opts()[key] = v and true or false
 end
+--- Turn options on and the rest off from a list of keys (share strings, the settings list). The old "quests" key turns
+--- on both quest options; qg = the Quest givers choice ("all" for old strings).
+function AU.applyOn(want, qg)
+  if want.quests then want.questGivers, want.questShared = true, true; qg = qg or "all" end
+  for _, o in ipairs(AU.OPTIONS) do AU.set(o[1], want[o[1]] == true) end
+  if want.questGivers then AU.setQuestGivers((QG_OK[qg] and qg ~= "off") and qg or "all") end
+end
+--- An option key share strings and the settings list may carry (today's keys and the old "quests").
+function AU.knownKey(k) return AU.BY_KEY[k] ~= nil or k == "quests" end
 --- equipAsk is a setting of Auto-equip, not an automation: "all off" leaves it as it is. Abandon: All on = Automatically,
 --- All off = Never.
 function AU.setAll(v)
   for _, o in ipairs(AU.OPTIONS) do if o[1] ~= "equipAsk" then AU.set(o[1], v) end end
   AU.setAbandonMode(v and "auto" or "never")
+  AU.setQuestGivers(v and "all" or "off")
 end
 --- WoWBoxer's recommendation (the owner, 30 Oct 2026): everything on except these three.
 AU.RECOMMENDED_OFF = { abandon = true, questAny = true, restock = true, autoEquip = true, greed = true }
-function AU.defaults() for _, o in ipairs(AU.OPTIONS) do AU.set(o[1], not AU.RECOMMENDED_OFF[o[1]]) end AU.setAbandonMode(AU.ABANDON_DEFAULT) end
+function AU.defaults()
+  for _, o in ipairs(AU.OPTIONS) do AU.set(o[1], not AU.RECOMMENDED_OFF[o[1]]) end
+  AU.setAbandonMode(AU.ABANDON_DEFAULT)
+  AU.setQuestGivers("all")
+end
 function AU.preset()
   for _, o in ipairs(AU.OPTIONS) do if o[1] ~= "equipAsk" then AU.set(o[1], false) end end
   for _, k in ipairs(AU.PRESET_LEVELLING) do AU.set(k, true) end
   AU.set("chat", true)
   AU.setAbandonMode(AU.ABANDON_DEFAULT)
+  AU.setQuestGivers("all")
 end
 function AU.rewardRule() local r = db().autoReward; for _, x in ipairs(AU.REWARD_RULES) do if x == r then return r end end return "leader" end
 
@@ -141,7 +203,8 @@ function AU.isLeader() local _, me = Core().me(); return me ~= nil and me.leader
 -- summons and role checks. In Advanced mode a row can have its own choice.
 AU.FROM = { { "squad", "Squad only" }, { "friends", "Squad, friends and guild" }, { "everyone", "Everyone" } }
 AU.FROM_SHORT = { squad = "Squad", friends = "Squad, friends, guild", everyone = "Everyone" }
-AU.ACCEPTS = { invite = true, quests = true, res = true, summon = true, rolecheck = true }
+-- (Shared quests is not one of them: squad members in the party only, owner 25 Nov 2026)
+AU.ACCEPTS = { invite = true, res = true, summon = true, rolecheck = true }
 function AU.acceptFrom(key)
   local s = db()
   local o = key and ns.Advanced and ns.Advanced.on() and type(s.acceptOverride) == "table" and s.acceptOverride[key]
@@ -231,6 +294,7 @@ function AU.receive(prefix, text, _, sender)
   elseif kind == "QR" and m.leader then
     local q, i = tonumber(f[2]), tonumber(f[3])
     if q and i then AU.leaderReward[q] = i; AU.chooseReward() end
+  elseif kind == "QT" and AU.isLeader() then AU.turnedIn(tonumber(f[2]), m.name)
   elseif kind == "QA" and m.leader then AU.abandonHere(tonumber(f[2]), f[3], m.name)
   elseif kind == "D" and m.leader then AU.applyDialog(f[2], f[3], tonumber(f[4]), f[5], m)
   end
@@ -313,14 +377,20 @@ function AU.sendQuestList(tries)
     after(AU.QL_RETRY, function() AU.qlPending = nil; AU.sendQuestList((tries or 1) + 1) end)
   end
 end
---- A quest window shared by a squad member: "questnpc" is then that player. [AFKLAR: Forever + Era – if it is not,
---- the follower asks the leader for its list instead (QQ) and accepts when it arrives.]
-function AU.questSharer()
+--- A quest window opened by a player (a quest share): "questnpc" is then that player. Returns the name or nil.
+--- [AFKLAR: Forever + Era – if it is not, the share looks like a quest giver's window and Quest givers decides; a
+--- follower then asks the leader for its list (QQ) and accepts when it arrives.]
+function AU.questFromPlayer()
   local isP = G.UnitIsPlayer and C().safe(G.UnitIsPlayer("questnpc"))
   if not isP then return nil end
   local n = G.UnitName and C().safe(G.UnitName("questnpc"))
   if type(n) ~= "string" or n == "" then return nil end
-  local m = AU.member(n, true)
+  return n
+end
+--- The squad member in the party who shares the open quest, or nil.
+function AU.questSharer()
+  local n = AU.questFromPlayer()
+  local m = n and AU.member(n, true)
   return m and m.name or nil
 end
 AU.asked = {}
@@ -334,30 +404,153 @@ local function questTitle(id)
   end
   return (type(t) == "string" and t ~= "") and t or ("#" .. tostring(id or "?"))
 end
+--- A short line on screen (the yellow line of the error frame) and in the log.
+function AU.notice(text)
+  local f = G.UIErrorsFrame
+  if f and f.AddMessage then pcall(f.AddMessage, f, text, 1, 0.82, 0) end
+  Core().log("info", "auto: " .. text)
+  AU.lastNotice = text
+end
+local function accept(id, how)
+  if skipShift("quest") then return false end
+  if call(G.AcceptQuest) then AU.detailOpen = nil; AU.did("Accepted quest " .. questTitle(id) .. (how or "") .. "."); return true end
+  return false
+end
+
+-- ------------------------------------------------------------------ 2a. chain quests wait for the squad
+-- Turning in a quest makes the NPC offer the next one of the chain at once. When that one is an escort or an event
+-- (The Missing Diplomat, Rup's log 23 Nov 2026) the leader started it before the followers had turned in, so they
+-- could not get it or join it. Now a quest offered right after the leader's turn-in waits until every squad member in
+-- the party has turned in the same quest (followers send "QT|id"), at most CHAIN_WAIT seconds.
+AU.CHAIN_WINDOW = 5   -- a quest window this soon after a turn-in is the next quest of that chain
+AU.CHAIN_WAIT = 20    -- the longest the leader waits for the followers' turn-ins
+AU.TURNIN_KEEP = 300  -- a follower's turn-in counts this long
+AU.turnIns = {}       -- questID -> {name -> time}: followers' turn-ins (from "QT")
+AU.lastTurnIn = nil   -- {id, at}: this character's last turn-in
+AU.waiting = nil      -- {id, prev, untilT}: the leader waits with quest id open
+--- This character turned in quest id (the reward click, QUEST_TURNED_IN): remember it; a follower tells the leader.
+function AU.noteTurnIn(id)
+  id = tonumber(id)
+  if not id or id <= 0 then return end
+  if AU.lastTurnIn and AU.lastTurnIn.id == id and now() - AU.lastTurnIn.at <= AU.CHAIN_WINDOW then return end
+  AU.lastTurnIn = { id = id, at = now() }
+  if not AU.isLeader() then AU.send("QT", id) end
+end
+--- Leader: the squad members in the party who have not turned in quest prev yet.
+function AU.notTurnedIn(prev)
+  local s, me = Core().me()
+  local got, out = AU.turnIns[prev] or {}, {}
+  for _, m in ipairs(s and s.members or {}) do
+    if m ~= me and ns.Squad.unitOf(m.name) and not (got[m.name] and now() - got[m.name] <= AU.TURNIN_KEEP) then out[#out + 1] = m.name end
+  end
+  return out
+end
+--- Leader, quest id open: wait for the squad? True while waiting (the quest is not accepted now).
+function AU.chainWait(id)
+  local w = AU.waiting
+  if w and w.id == id then
+    local names = AU.notTurnedIn(w.prev)
+    if #names == 0 then AU.waiting = nil; return false end
+    if now() >= w.untilT then
+      AU.waiting = nil
+      Core().log("info", "auto: stopped waiting for " .. table.concat(names, ", ") .. " (" .. AU.CHAIN_WAIT .. " s)")
+      return false
+    end
+    AU.notice("Waiting for " .. table.concat(names, ", ") .. " to turn in.")
+    return true
+  end
+  local T = AU.lastTurnIn
+  if not T or T.id == id or now() - T.at > AU.CHAIN_WINDOW then return false end
+  local names = AU.notTurnedIn(T.id)
+  if #names == 0 then return false end
+  AU.waiting = { id = id, prev = T.id, untilT = now() + AU.CHAIN_WAIT - 0.1 }
+  AU.notice("Waiting for " .. table.concat(names, ", ") .. " to turn in.")
+  AU.chainTimer(AU.CHAIN_WAIT)
+  return true
+end
+--- The timeout: check when the wait ends (again later if it is not over yet).
+function AU.chainTimer(sec)
+  local after = G.C_Timer and G.C_Timer.After
+  if not after then return end
+  after(sec, function()
+    local w = AU.waiting
+    AU.chainCheck()
+    if AU.waiting and AU.waiting == w then AU.chainTimer(math.max(0.5, w.untilT - now() + 0.1)) end
+  end)
+end
+--- A follower's turn-in arrived or the wait timed out: accept the waiting quest when its window is still open.
+function AU.chainCheck()
+  local w = AU.waiting
+  if not w then return false end
+  if AU.detailOpen ~= w.id then AU.waiting = nil; return false end -- the leader closed the window
+  if AU.chainWait(w.id) then return false end
+  return AU.onQuestDetail()
+end
+--- Leader: a follower turned in quest id ("QT").
+function AU.turnedIn(id, name)
+  if not id then return end
+  AU.turnIns[id] = AU.turnIns[id] or {}
+  AU.turnIns[id][name] = now()
+  if AU.waiting and AU.waiting.prev == id then AU.chainCheck() end
+end
+
+-- ------------------------------------------------------------------ 2b. accept
+--- QUEST_DETAIL. A quest shared by a player: Shared quests, squad members in the party only. A quest giver's quest:
+--- Quest givers (Leader and followers · Followers only · Off). Never a quest already in the log; never an escort or
+--- event quest on the leader, and a follower takes one only through QUEST_ACCEPT_CONFIRM.
 function AU.onQuestDetail()
   local id = questId()
   AU.detailOpen = id
-  if not AU.on("quests") then return end
-  if AU.isLeader() then
-    -- the leader (owner, 5 Nov 2026): every quest a quest giver offers is taken; Share quests then shares it
-    if skipShift("quest") then return end
-    if call(G.AcceptQuest) then AU.detailOpen = nil; AU.did("Accepted quest " .. questTitle(id) .. ".") end
-    return
+  local player = AU.questFromPlayer()
+  if player then
+    if not AU.on("questShared") then return false end
+    local m = AU.member(player, true)
+    if not m then
+      Core().log("info", "auto: quest " .. questTitle(id) .. " shared by " .. tostring(short(player)) .. " not accepted (not a squad member in your party)")
+      return false
+    end
+    if C().questInLog(id) then Core().log("info", "auto: quest " .. questTitle(id) .. " is already in your quest log"); return false end
+    return accept(id, " shared by " .. m.name)
   end
-  if not (AU.on("questAny") or (id and AU.leaderQuests[id]) or AU.questSharer()) then
+  local mode = AU.questGiverMode()
+  if mode == "off" then return false end
+  if C().questInLog(id) then Core().log("info", "auto: quest " .. questTitle(id) .. " is already in your quest log"); return false end
+  local escort = C().questIsEscort(id)
+  local tag, tagName = C().questTag(id)
+  AU.lastTag = { id = id, tag = tag, name = tagName, escort = escort } -- diag: the escort probe [AFKLAR]
+  if AU.isLeader() then
+    if mode ~= "all" then return false end -- Followers only: the leader picks quests himself
+    if escort then AU.notice(questTitle(id) .. " is an escort or event – accept it when the squad is ready."); return false end
+    if AU.chainWait(id) then return false end
+    return accept(id)
+  end
+  if escort then
+    Core().log("info", "auto: " .. questTitle(id) .. " is an escort or event – joined when the leader starts it")
+    return false
+  end
+  if not (AU.on("questAny") or (id and AU.leaderQuests[id])) then
     -- maybe the leader's list was lost on the way: ask once (the answer accepts it while this window is open)
     local t = now()
     if id and t - (AU.asked[id] or -1e9) >= AU.ASK_EVERY then AU.asked[id] = t; AU.send("QQ", id) end
     Core().log("info", "auto: quest " .. questTitle(id) .. " not accepted yet – the leader does not have it (accepted when " ..
       "the leader takes it while this window is open)")
-    return
+    return false
   end
-  if skipShift("quest") then return end
-  if call(G.AcceptQuest) then AU.detailOpen = nil; AU.did("Accepted quest " .. questTitle(id) .. ".") end
+  return accept(id)
 end
-function AU.onQuestConfirm(name) -- an escort / shared start from a squad member
-  if not AU.on("quests") or not AU.allowed("quests", name, true) or skipShift("quest") then return end
-  if call(G.ConfirmAcceptQuest) then AU.did("Accepted the quest " .. (short(name) or "?") .. " started.") end
+--- QUEST_ACCEPT_CONFIRM: a squad member in the party started an escort / event, or a shared start (Shared quests).
+function AU.onQuestConfirm(name, title)
+  if not AU.on("questShared") then return false end
+  local m = AU.member(name, true)
+  if not m then Core().log("info", "auto: the quest " .. tostring(short(name)) .. " started was not joined (not a squad member in your party)"); return false end
+  if C().questInLog(nil, title) then Core().log("info", "auto: " .. tostring(title) .. " is already in your quest log"); return false end
+  if skipShift("quest") then return false end
+  if call(G.ConfirmAcceptQuest) then
+    if G.StaticPopup_Hide then pcall(G.StaticPopup_Hide, "QUEST_ACCEPT") end
+    AU.did("Accepted the quest " .. m.name .. " started.")
+    return true
+  end
+  return false
 end
 --- Leader: share a quest it just accepted (QUEST_ACCEPTED: retail = questID, Classic = questLogIndex, questID).
 function AU.onQuestAccepted(a, b)
@@ -396,12 +589,18 @@ function AU.chooseReward()
   if not (AU.completeOpen and AU.on("turnin")) then return end
   if skipShift("reward") then return end
   local i = AU.rewardIndex()
-  if i and call(G.GetQuestReward, i) then AU.completeOpen = false; AU.did("Took reward " .. i .. " for quest " .. tostring(questId()) .. ".") end
+  if i and call(G.GetQuestReward, i) then
+    AU.completeOpen = false
+    AU.noteTurnIn(AU.completeId or questId())
+    AU.did("Took reward " .. i .. " for quest " .. tostring(AU.completeId or questId()) .. ".")
+  end
 end
-function AU.onQuestComplete() AU.completeOpen = true; AU.chooseReward() end
---- Leader: tell the followers which reward it picked (hooked on GetQuestReward).
+function AU.onQuestComplete() AU.completeId = questId(); AU.completeOpen = true; AU.chooseReward() end
+--- The reward was clicked (hooked on GetQuestReward): the leader tells the followers which one; every character
+--- notes the turn-in (before the NPC offers the next quest of a chain).
 function AU.leaderPicked(i)
-  if AU.isLeader() and i then AU.send("QR", questId() or 0, i) end
+  if AU.isLeader() and i then AU.send("QR", AU.completeId or questId() or 0, i) end
+  AU.noteTurnIn(AU.completeId or questId())
 end
 --- The quest the quest log is about to abandon: id (0 when unknown) and name ("" when unknown).
 local function abandonInfo()
@@ -632,7 +831,7 @@ function AU.availableQuests(greeting)
 end
 --- GOSSIP_SHOW / QUEST_GREETING on the leader: open the next quest not tried in this NPC window.
 function AU.leaderTakeQuests(greeting)
-  if not (AU.on("quests") and AU.isLeader()) or shift() then return false end
+  if not (AU.questGiverMode() == "all" and AU.isLeader()) or shift() then return false end
   local P = pickSession()
   if (P.n or 0) >= AU.PICK_MAX then return false end
   for _, q in ipairs(AU.availableQuests(greeting)) do
@@ -790,14 +989,14 @@ end
 function AU.export()
   local on = {}
   for _, o in ipairs(AU.OPTIONS) do if AU.on(o[1]) then on[#on + 1] = o[1] end end
-  return { on = on, from = AU.acceptFrom() }
+  return { on = on, from = AU.acceptFrom(), qg = AU.questGiverMode() }
 end
 --- Apply an imported automation choice (the Import click is the confirmation). Unknown keys are dropped.
 function AU.import(t)
   if type(t) ~= "table" or type(t.on) ~= "table" then return false end
   local want = {}
-  for _, k in ipairs(t.on) do if AU.BY_KEY[k] then want[k] = true end end
-  for _, o in ipairs(AU.OPTIONS) do AU.set(o[1], want[o[1]] == true) end
+  for _, k in ipairs(t.on) do if AU.knownKey(k) then want[k] = true end end
+  AU.applyOn(want, t.qg)
   if t.from == "squad" or t.from == "friends" then db().acceptFrom = t.from end -- "everyone" never travels
   return true
 end
@@ -824,7 +1023,7 @@ local f = CreateFrame("Frame")
 AU.frame = f
 local EVENTS = { "CHAT_MSG_ADDON", "PARTY_INVITE_REQUEST", "QUEST_DETAIL", "QUEST_ACCEPT_CONFIRM", "QUEST_ACCEPTED", "QUEST_PROGRESS",
   "QUEST_COMPLETE", "QUEST_FINISHED", "QUEST_GREETING", "GOSSIP_SHOW", "GOSSIP_CLOSED", "TAXIMAP_OPENED", "TAXIMAP_CLOSED", "RESURRECT_REQUEST",
-  "CONFIRM_SUMMON", "LFG_ROLE_CHECK_SHOW", "MERCHANT_SHOW", "GROUP_ROSTER_UPDATE", "QUEST_REMOVED" }
+  "CONFIRM_SUMMON", "LFG_ROLE_CHECK_SHOW", "MERCHANT_SHOW", "GROUP_ROSTER_UPDATE", "QUEST_REMOVED", "QUEST_TURNED_IN" }
 function AU.Init()
   local CI = G.C_ChatInfo
   local regp = (CI and CI.RegisterAddonMessagePrefix) or G.RegisterAddonMessagePrefix
@@ -863,12 +1062,13 @@ f:SetScript("OnEvent", function(_, event, a, b, c, d)
     if event == "CHAT_MSG_ADDON" then AU.receive(a, b, c, d)
     elseif event == "PARTY_INVITE_REQUEST" then AU.onInvite(a)
     elseif event == "QUEST_DETAIL" then AU.onQuestDetail()
-    elseif event == "QUEST_ACCEPT_CONFIRM" then AU.onQuestConfirm(a)
+    elseif event == "QUEST_ACCEPT_CONFIRM" then AU.onQuestConfirm(a, b)
+    elseif event == "QUEST_TURNED_IN" then AU.noteTurnIn(a)
     elseif event == "QUEST_ACCEPTED" then AU.onQuestAccepted(a, b)
     elseif event == "QUEST_REMOVED" then if AU.isLeader() then AU.sendQuestList() end
     elseif event == "QUEST_PROGRESS" then AU.onQuestProgress()
     elseif event == "QUEST_COMPLETE" then AU.onQuestComplete()
-    elseif event == "QUEST_FINISHED" then AU.completeOpen = false; AU.detailOpen = nil
+    elseif event == "QUEST_FINISHED" then AU.completeOpen = false; AU.detailOpen = nil; AU.completeId = nil
     elseif event == "GOSSIP_SHOW" then AU.window.gossip = npcName(); AU.leaderTakeQuests(false)
     elseif event == "QUEST_GREETING" then AU.leaderTakeQuests(true)
     elseif event == "GOSSIP_CLOSED" then AU.window.gossip = nil

@@ -695,6 +695,73 @@ function C.openOptions(name)
   return nil
 end
 
+-- ------------------------------------------------------------------ quests (Auto: escorts, the quest log)
+--- Escort / event quests WoWBoxer never accepts on the leader by itself and a follower never takes from the NPC
+--- (it joins through QUEST_ACCEPT_CONFIRM when the leader starts it). Quest type / tag 84 = Escort
+--- (GetQuestTagInfo, C_QuestLog.GetQuestTagInfo, C_QuestLog.GetQuestType). Scripted events without a tag are listed
+--- by quest ID: 1447 The Missing Diplomat (Dashel Stonefist starts the fight on accept; Rup's log 23 Nov 2026).
+--- [AFKLAR: Forever + Era – whether the tag is known for a quest still in the quest giver's window, check
+--- diag.auto.questTag after the owner opens an escort quest]
+C.ESCORT_TAG = 84
+C.EVENT_QUESTS = { [1447] = true }
+function C.questTag(id)
+  id = tonumber(id)
+  if not id or id <= 0 then return nil end
+  local QL = G.C_QuestLog
+  if QL and QL.GetQuestTagInfo then
+    local ok, info = pcall(QL.GetQuestTagInfo, id)
+    if ok and type(info) == "table" and C.safe(info.tagID) then return C.safe(info.tagID), C.safe(info.tagName) end
+  end
+  if G.GetQuestTagInfo then
+    local ok, tag, name = pcall(G.GetQuestTagInfo, id)
+    if ok and C.safe(tag) then return C.safe(tag), C.safe(name) end
+  end
+  if QL and QL.GetQuestType then
+    local ok, t = pcall(QL.GetQuestType, id)
+    if ok and tonumber(C.safe(t)) then return tonumber(C.safe(t)), nil end
+  end
+  return nil
+end
+function C.questIsEscort(id)
+  id = tonumber(id)
+  if not id then return false end
+  if C.EVENT_QUESTS[id] then return true end
+  local tag, name = C.questTag(id)
+  if tonumber(tag) == C.ESCORT_TAG then return true end
+  return type(name) == "string" and name:lower():find("escort", 1, true) ~= nil
+end
+--- Is quest id (or a quest titled `title`) in this character's quest log?
+function C.questInLog(id, title)
+  id = tonumber(id)
+  local QL = G.C_QuestLog
+  if id and id > 0 then
+    if QL and QL.IsOnQuest then local ok, on = pcall(QL.IsOnQuest, id); if ok and C.safe(on) == true then return true end end
+    if QL and QL.GetLogIndexForQuestID then local ok, i = pcall(QL.GetLogIndexForQuestID, id); if ok and tonumber(C.safe(i)) and C.safe(i) > 0 then return true end end
+    if G.GetQuestLogIndexByID then local ok, i = pcall(G.GetQuestLogIndexByID, id); if ok and tonumber(C.safe(i)) and C.safe(i) > 0 then return true end end
+  end
+  local want = type(title) == "string" and title ~= "" and title:lower() or nil
+  if QL and QL.GetNumQuestLogEntries and QL.GetInfo then
+    local ok, n = pcall(QL.GetNumQuestLogEntries)
+    for i = 1, (ok and tonumber(n) or 0) do
+      local okI, info = pcall(QL.GetInfo, i)
+      if okI and type(info) == "table" and not info.isHeader then
+        if id and C.safe(info.questID) == id then return true end
+        if want and type(C.safe(info.title)) == "string" and info.title:lower() == want then return true end
+      end
+    end
+  elseif G.GetNumQuestLogEntries and G.GetQuestLogTitle then
+    local ok, n = pcall(G.GetNumQuestLogEntries)
+    for i = 1, (ok and tonumber(n) or 0) do
+      local r = { pcall(G.GetQuestLogTitle, i) }
+      if r[1] and not r[5] then
+        if id and r[9] == id then return true end
+        if want and type(r[2]) == "string" and r[2]:lower() == want then return true end
+      end
+    end
+  end
+  return false
+end
+
 -- ------------------------------------------------------------------ addons
 --- "loaded" | "installed" (present but not loaded) | "missing"
 function C.addonState(name)

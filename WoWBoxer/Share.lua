@@ -68,7 +68,9 @@ function Sh.validate(v, game)
   local auto
   if type(v.auto) == "table" and type(v.auto.on) == "table" and ns.Auto then
     auto = { on = {}, from = (v.auto.from == "friends") and "friends" or "squad" }
-    for _, k in ipairs(v.auto.on) do if type(k) == "string" and ns.Auto.BY_KEY[k] and #auto.on < 20 then auto.on[#auto.on + 1] = k end end
+    for _, k in ipairs(v.auto.on) do if type(k) == "string" and ns.Auto.knownKey(k) and #auto.on < 24 then auto.on[#auto.on + 1] = k end end
+    -- Quest givers: Leader and followers / Followers only / Off (strings before 1.3.0 carry "quests" instead)
+    if v.auto.qg == "all" or v.auto.qg == "followers" or v.auto.qg == "off" then auto.qg = v.auto.qg end
   end
   return { squad = s, cvars = cvars, addons = addons, game = g, auto = auto }, warn
 end
@@ -108,7 +110,7 @@ function Sh.export(squad, extra)
   if squad.notes and squad.notes ~= "" then payload.squad.notes = squad.notes end
   if extra.cvars and next(extra.cvars) then payload.cvars = Json.object(extra.cvars) end
   if extra.addons and #extra.addons > 0 then payload.addons = Json.array(E_copy(extra.addons)) end
-  if extra.auto then payload.auto = { on = Json.array(E_copy(extra.auto.on)), from = extra.auto.from } end
+  if extra.auto then payload.auto = { on = Json.array(E_copy(extra.auto.on)), from = extra.auto.from, qg = extra.auto.qg } end
   return Sh.encode(payload)
 end
 

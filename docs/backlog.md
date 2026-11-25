@@ -1,5 +1,11 @@
 # WoWBoxer addon – backlog
 
+## The owner: TEST BUILD 1.3.0-test.16 – Quest givers / Shared quests, chain quests wait (/reload is enough)
+1. Setup → Automation: *Quest givers* shows *Leader and followers* and *Shared quests* is on (your old Accept quests); switch to *Followers only* → Rip takes nothing from an NPC, Rup and Rap still take what Rip accepts.
+2. Back to *Leader and followers*; turn in a chain quest on Rip first → "Waiting for Rup, Rap to turn in." until both turned in, then Rip takes the next quest.
+3. At The Missing Diplomat (Dashel) or any escort: Rip does not start it by itself; accept it on Rip → Rup and Rap join.
+4. Rip shares a quest → Rup and Rap accept it; then /reload on all three → I read the log and `diag.auto.questTag`.
+
 ## The owner: TEST BUILD 1.3.0-test.15 – Macro editor fixes (/reload is enough)
 1. On Rup: one chat line says Shoot moved out of "Dot Wand" and "Test"; Update macros, then press Dot Wand in a fight: the wand keeps shooting.
 2. My macros → New macro → Sequence: Add two spells + Shoot (no Filler button on Shoot), Save; delete an older own macro – the others keep their names and bar buttons.

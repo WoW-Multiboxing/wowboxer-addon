@@ -43,7 +43,9 @@ every automatic action is logged.
 |---|---|---|
 | Accept invites | Accepts a group invite from a squad member. | no |
 | Invite the squad | Leader: invites squad members who are not in the group. | no |
-| Accept quests / Accept any quest | Accepts quests the leader has (or every quest) when the quest window opens. | no |
+| Quest givers | Quests from NPCs: Leader and followers (the leader takes every quest, followers the leader's), Followers only, or Off. A quest offered right after a turn-in waits until the squad has turned in (about 20 s at most); escorts and events are never taken by themselves. | off |
+| Shared quests | Accepts quests a squad member in the party shares, and the escorts/events they start. Squad members only. | no |
+| Accept any quest | Followers take every quest a quest giver offers, not only the leader's (needs Quest givers). | no |
 | Share quests | Leader: shares every quest you accept. | no |
 | Turn in quests | Completes finished quests at the quest giver; picks the reward by rule (leader's choice, best vendor value, or ask). | no |
 | Abandon together | When the leader abandons a quest: followers drop it too (Automatically), ask with Abandon / Keep it (Ask on every quest, the default) or keep it (Never). Never a completed quest. | ask |

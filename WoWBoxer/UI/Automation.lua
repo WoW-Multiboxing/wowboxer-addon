@@ -27,20 +27,20 @@ function AP.setFrom(v)
   UI.Refresh()
 end
 
---- The full help of a dropdown option (Abandon together): what each choice does, for the tooltip.
+--- The full help of a dropdown option (Abandon together, Quest givers): what each choice does, for the tooltip.
 local function modesTip(o)
   local t = { o[3] }
-  for _, m in ipairs(AU().ABANDON_MODES) do t[#t + 1] = m[2] .. ": " .. m[3] end
+  for _, m in ipairs(AU().MODES[o.modes].list) do t[#t + 1] = m[2] .. ": " .. m[3] end
   return table.concat(t, "\n")
 end
---- A card with a dropdown instead of a switch (Abandon together, owner 10 Nov 2026): the option's name, the dropdown at
---- the right and one muted line saying what the chosen value does.
+--- A card with a dropdown instead of a switch (Abandon together, owner 10 Nov 2026; Quest givers, 25 Nov 2026): the
+--- option's name, the dropdown at the right and one muted line saying what the chosen value does.
 local function modeCard(p, o, col, row, pitch, cardH, themed)
-  local c = { key = o[1], opt = o }
+  local c = { key = o[1], opt = o, mode = AU().MODES[o.modes] }
   c.dd = W.dropdown(p, { width = 140,
-    values = function() local v = {}; for _, m in ipairs(AU().ABANDON_MODES) do v[#v + 1] = { m[1], m[2], m[3] } end return v end,
-    get = function() return AU().abandonMode() end,
-    set = function(v) if AU().setAbandonMode(v) then ns.Core.log("info", "automation " .. o[1] .. " " .. v) end UI.Refresh() end })
+    values = function() local v = {}; for _, m in ipairs(c.mode.list) do v[#v + 1] = { m[1], m[2], m[3] } end return v end,
+    get = function() return c.mode.get() end,
+    set = function(v) if c.mode.set(v) then ns.Core.log("info", "automation " .. o[1] .. " " .. v) end UI.Refresh() end })
   W.ddTip(c.dd, o[2], function() return modesTip(o) end)
   if themed then
     c.card = W.card(p)
@@ -162,12 +162,12 @@ function tab.build(p)
   p.reward:SetPoint("BOTTOMRIGHT", -2, 4)
   W.ddTip(p.reward, "Quest rewards", "When a quest offers a choice: the leader's pick, the best vendor value, or ask.")
   p.preset = W.button(p, "Default squad values", 150, 24, function() AU().preset(); ns.Core.log("info", "automation preset: default squad values"); UI.Refresh() end,
-    "Turns on invites, quests, quest sharing and turn-in, dialogs, resurrections, summons, role checks, selling junk and repairing.")
+    "Turns on invites, quests from quest givers (leader and followers), shared quests, quest sharing and turn-in, dialogs, resurrections, summons, role checks, selling junk and repairing.")
   p.preset.wbxBig = true
   W.primary(p.preset)
   p.preset:SetPoint("BOTTOMLEFT", 0, 2)
   p.defaults = W.button(p, "Default", 70, 24, function() AU().defaults(); ns.Core.log("info", "automation: default"); UI.Refresh() end,
-    "WoWBoxer's recommendation: everything on except Accept any quest, Restock reagents and Auto-equip. Abandon together asks.")
+    "WoWBoxer's recommendation: everything on except Accept any quest, Restock reagents and Auto-equip. Quest givers: leader and followers. Abandon together asks.")
   p.defaults:SetPoint("LEFT", p.preset, "RIGHT", 8, 0)
   p.allOn = W.button(p, "All on", 70, 24, function() AU().setAll(true); UI.Refresh() end, "Turns every automation on.")
   p.allOn:SetPoint("LEFT", p.defaults, "RIGHT", 6, 0)
@@ -182,8 +182,8 @@ function tab.refresh(p)
   p.from.Refresh(); p.reward.Refresh()
   for _, c in ipairs(p.modes) do
     c.dd.Refresh()
-    local v = AU().abandonMode()
-    for _, m in ipairs(AU().ABANDON_MODES) do if m[1] == v then c.line:SetText(m[3]) end end
+    local v = c.mode.get()
+    for _, m in ipairs(c.mode.list) do if m[1] == v then c.line:SetText(m[3]) end end
   end
   for _, c in ipairs(p.ticks) do
     local o = c.opt

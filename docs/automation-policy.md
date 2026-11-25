@@ -69,8 +69,27 @@ the boring parts (invites, quests, dialogs, vendor, loot) with WoW's own addon A
      today it is a key press.
    - [AFKLAR: `C_PartyInfo.InviteUnit` without a key press on Forever.]
 2. **Quests:**
-   - Auto-accept quests on followers: `QUEST_DETAIL` → `AcceptQuest`, but only for quests the squad leader has, or any
-     quest (option).
+   - Two options (owner, 25 Nov 2026; before that one tick *Accept quests* did both):
+     - **Quest givers** (NPCs), a dropdown: *Leader and followers* (the leader takes every quest a quest giver
+       offers; followers accept the quests the leader has), *Followers only* (the leader picks quests himself;
+       followers accept the quests the leader has) or *Off* (nothing from NPCs). *Accept any quest* (followers take
+       every quest, not only the leader's) works under it.
+     - **Shared quests**, a tick: accepts quests a squad member in the party shares (`QUEST_DETAIL` from a player)
+       and the escorts/events a squad member starts (`QUEST_ACCEPT_CONFIRM` → `ConfirmAcceptQuest`). Squad members in
+       the party only – *Accept from* does not widen it.
+     - Defaults keep the old behaviour: nothing stored = Off + Shared off; the old tick on reads as Leader and
+       followers + Shared on, off as Off + Shared off (read until either option is first set). Share strings and the
+       settings list carry the choice (`qg`) and still read the old `quests` key.
+   - **Chain quests wait for the squad:** a quest the NPC offers right after the leader's turn-in (within 5 s) is not
+     accepted until every squad member in the party has turned in the same quest. Followers report each turn-in with
+     the data-only message `QT|questID`. At most about 20 s, with a line on screen: "Waiting for Rup, Rap to turn in."
+     (Rup's log 23 Nov 2026: the leader started The Missing Diplomat before the followers had turned in.)
+   - **Escorts and events** (quest tag 84 through a `Compat` probe, plus quest IDs of known scripted events, e.g. 1447
+     The Missing Diplomat) are never accepted on the leader by itself – the leader accepts when the squad is ready. A
+     follower never takes one from the NPC; it joins through `QUEST_ACCEPT_CONFIRM` when the leader starts it.
+     [AFKLAR: whether Forever and Era know the tag while the quest is still in the quest giver's window –
+     `diag.auto.questTag`.]
+   - Never a quest that is already in the quest log.
    - Auto-share quests the leader accepts (`QuestLogPushQuest`).
    - Auto-turn-in and complete (`CompleteQuest`, `GetQuestReward`). If there is a choice of reward, pick by rule:
      the leader's choice, best vendor value, or ask.
@@ -113,7 +132,8 @@ the boring parts (invites, quests, dialogs, vendor, loot) with WoW's own addon A
 **Setup → Automation:** one page with every option above.
 
 - Each option is a tick with one line explaining it, plus **All on / All off**.
-- A preset "Levelling squad" turns on invites, quests, dialogs, resurrections and merchant.
+- A preset "Levelling squad" turns on invites, quests (Quest givers: Leader and followers, Shared quests), dialogs,
+  resurrections and merchant.
 - The automation never runs when the other character is not in the squad.
 
 ## 3. Safety and trust (still important)
