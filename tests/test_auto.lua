@@ -298,7 +298,7 @@ do
   H.ok(not ns.Auto.on("warnSound") and fw.sub:GetText():find("Sound off", 1, true), "the button turns the sound off, warning stays on")
   H.ok(ns.Auto.on("followWarn"), "Follow warning still on")
   fw.sub:Click()
-  H.eq(table.concat(on, ","), "invite,questShared,share,turnin,dialog,res,summon,rolecheck,sell,repair,shareSell,whispers,followWarn,warnSound,questCheck,equipAsk,chat", "Default squad values preset (Ask about… is a setting of Auto-equip, on by default)")
+  H.eq(table.concat(on, ","), "invite,questShared,share,turnin,dialog,res,summon,rolecheck,sell,shareSell,repair,whispers,followWarn,warnSound,questCheck,equipAsk,chat", "Default squad values preset (Ask about… is a setting of Auto-equip, on by default)")
   H.eq(ns.Auto.questGiverMode(), "all", "Default squad values: Quest givers = Leader and followers")
   f.allOff:Click()
   for _, c in ipairs(f.ticks) do H.ok(not c:GetChecked(), "All off: " .. c.key) end
@@ -398,7 +398,7 @@ do
   ns.UI.Open("automation")
   ns.UI.panels.automation.defaults:Click()
   for _, o in ipairs(ns.Auto.OPTIONS) do
-    local want = not (o[1] == "abandon" or o[1] == "questAny" or o[1] == "restock" or o[1] == "autoEquip" or o[1] == "greed") -- Auto-equip (owner 5 Nov 2026) and Auto greed (10 Nov): off by default
+    local want = not (o[1] == "abandon" or o[1] == "questAny" or o[1] == "restock" or o[1] == "autoEquip" or o[1] == "greed" or o[1] == "flyLeader") -- Auto-equip (owner 5 Nov 2026) and Auto greed (10 Nov): off by default
     H.eq(ns.Auto.on(o[1]) and true or false, want, "Default: " .. o[1] .. (want and " on" or " off"))
   end
   H.eq(W.calls.CreateMacro, nil, "Default writes nothing to the game")

@@ -49,6 +49,7 @@ every automatic action is logged.
 | Share quests | Leader: shares every quest you accept. | no |
 | Turn in quests | Completes finished quests at the quest giver; picks the reward by rule (leader's choice, best vendor value, or ask). | no |
 | Abandon together | When the leader abandons a quest: followers drop it too (Automatically), ask with Abandon / Keep it (Ask on every quest, the default) or keep it (Never). Never a completed quest. | ask |
+| Fly where leader flew | Followers: when you open a flight master (your own key press), fly where the leader just flew – once, within 10 minutes, a known and reachable path, at most 2 gold, never in combat. | no |
 | Follow dialogs | Picks the leader's dialog, quest or flight choice when the follower has the **same NPC window open**. The follower opened that NPC with their own key press. Never syncs logout, delete, unlearn and similar options, or flights over 2 gold. | no |
 | Accept resurrection / summons | From squad members. | **yes** |
 | Accept role checks | When the group leader is in your squad. | no |

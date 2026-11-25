@@ -1,5 +1,17 @@
 # WoWBoxer addon – backlog
 
+## The owner: TEST BUILD 1.3.0-test.16 – resurrection/summon accepts checked (/reload is enough)
+1. Paladin dies and releases; Priest resurrects him → Accept happens when the box's timer allows it, then "Accepted the resurrection" – he is alive.
+2. If not: chat says "Click Accept yourself … (reason)" and Blizzard's box is there – click it.
+3. Summon a follower while it is in a fight → it is summoned right after the fight.
+4. /reload on all → I read `diag.auto.accepts` and the log.
+
+## The owner: TEST BUILD 1.3.0-test.16 – Fly where the leader flew (/reload is enough)
+1. Setup → Automation on the followers: tick *Fly where leader flew* (Share sell list is now the small button on Sell junk).
+2. Rip flies e.g. Stormwind → Lakeshire; then Rup and Rap talk to the flight master → they fly to Lakeshire at once.
+3. A follower without that path: "You don't know the flight path to Lakeshire."
+4. /reload on the followers → the log shows "Took the flight" (or why not).
+
 ## The owner: TEST BUILD 1.3.0-test.16 – Quest givers / Shared quests, chain quests wait (/reload is enough)
 1. Setup → Automation: *Quest givers* shows *Leader and followers* and *Shared quests* is on (your old Accept quests); switch to *Followers only* → Rip takes nothing from an NPC, Rup and Rap still take what Rip accepts.
 2. Back to *Leader and followers*; turn in a chain quest on Rip first → "Waiting for Rup, Rap to turn in." until both turned in, then Rip takes the next quest.

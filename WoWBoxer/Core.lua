@@ -1180,7 +1180,8 @@ function Core.selftest(quiet)
     r.auto = { api = okA and aprobe or { error = tostring(aprobe) }, on = on, last = ns.Auto.last,
       abandonMode = ns.Auto.abandonMode(), abandonHooks = ns.Auto.abandonHooks, -- which abandon functions were hooked
       questGivers = ns.Auto.questGiverMode(), questTag = ns.Auto.lastTag, notice = ns.Auto.lastNotice,
-      accepts = ns.Auto.accepts } -- the last checked accepts: kind, who, ok, why (delay, combat, blocked, unknown)
+      accepts = ns.Auto.accepts,
+      flight = { takeTaxi = okA and aprobe and aprobe.TakeTaxiNode, last = ns.Auto.flyLast } } -- [AFKLAR: TakeTaxiNode on Forever] -- the last checked accepts: kind, who, ok, why (delay, combat, blocked, unknown)
   end
   -- the 12 main buttons and their keybinds at login: slot, content, key ("button 3 missing" is visible in the files)
   r.buttons = {}

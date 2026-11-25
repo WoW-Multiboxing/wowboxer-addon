@@ -34,13 +34,16 @@ AU.OPTIONS = {
   -- modes = a dropdown card instead of an on/off tick (owner, 10 Nov 2026): Automatically · Ask on every quest · Never
   { "abandon", "Abandon together", "When the leader abandons a quest: followers abandon it too, ask first, or keep it. Never a completed quest.", modes = "abandon" },
   { "dialog", "Follow dialogs", "Picks the leader's dialog, quest or flight choice when you have the same NPC window open." },
+  -- owner, 25 Nov 2026 (like RestedXP's automatic flight): off by default, not in the Levelling preset
+  { "flyLeader", "Fly where leader flew", "Followers: when you open a flight master, fly where the leader just flew." },
   { "res", "Accept resurrection", "Accepts a resurrection from a squad member.", true },
   { "summon", "Accept summons", "Accepts a summon from a squad member.", true },
   { "rolecheck", "Accept role checks", "Accepts the group's role check when the group leader is in your squad." },
   { "sell", "Sell junk", "Sells grey items and your sell list (/wbx sell) at a merchant you open." },
   { "repair", "Repair", "Repairs everything at a merchant that can repair, keeping at least the gold floor." },
   { "restock", "Restock reagents", "Buys your class reagents (candles, symbols, ankhs, powders, ammo you use) up to a set amount." },
-  { "shareSell", "Share sell list", "Keeps the sell list the same on every squad window (/wbx sell add [item]); each sells at its own merchant." },
+  -- a Share on/off button inside the Sell junk card (25 Nov 2026: room for Fly where leader flew)
+  { "shareSell", "Share sell list", "Keeps the sell list the same on every squad window (/wbx sell add [item]); each sells at its own merchant.", nil, nil, "sell", { "Shared", "Own list" } },
   { "whispers", "Forward whispers", "Followers' whispers show in the leader's chat; GM whispers are tagged, with a sound.", true, true },
   { "followWarn", "Follow warning", "Warning on the leader when a follower stops following (not in combat, zoning, death, flights).", true, true },
   { "questCheck", "Quest check", "Warning on the leader when a follower did not get a quest you accepted, or still has one you turned in.", true, true },
@@ -165,7 +168,7 @@ function AU.setAll(v)
   AU.setQuestGivers(v and "all" or "off")
 end
 --- WoWBoxer's recommendation (the owner, 30 Oct 2026): everything on except these three.
-AU.RECOMMENDED_OFF = { abandon = true, questAny = true, restock = true, autoEquip = true, greed = true }
+AU.RECOMMENDED_OFF = { abandon = true, questAny = true, restock = true, autoEquip = true, greed = true, flyLeader = true }
 function AU.defaults()
   for _, o in ipairs(AU.OPTIONS) do AU.set(o[1], not AU.RECOMMENDED_OFF[o[1]]) end
   AU.setAbandonMode(AU.ABANDON_DEFAULT)
@@ -297,6 +300,7 @@ function AU.receive(prefix, text, _, sender)
   elseif kind == "QT" and AU.isLeader() then AU.turnedIn(tonumber(f[2]), m.name)
   elseif kind == "QA" and m.leader then AU.abandonHere(tonumber(f[2]), f[3], m.name)
   elseif kind == "D" and m.leader then AU.applyDialog(f[2], f[3], tonumber(f[4]), f[5], m)
+  elseif kind == "FL" and m.leader then AU.leaderFlewTo(f[2], f[3], tonumber(f[4]), m)
   end
 end
 
@@ -326,7 +330,7 @@ local function summonTimeLeft()
 end
 local function where()
   local x, y, _, map = nil, nil, nil, nil
-  if G.UnitPosition then local ok, a, b, c, d = pcall(G.UnitPosition, "player"); if ok then x, y, map = C().safe(a), C().safe(b), C().safe(d) end end
+  if G.UnitPosition then local ok, a, b, _, d = pcall(G.UnitPosition, "player"); if ok then x, y, map = C().safe(a), C().safe(b), C().safe(d) end end
   return tostring(map) .. ":" .. tostring(x and math.floor(x) or "?") .. ":" .. tostring(y and math.floor(y) or "?")
 end
 AU.ACC = {
@@ -889,7 +893,10 @@ function AU.applyDialog(npc, kind, index, text, from)
         AU.applying = true
         local okT = call(G.TakeTaxiNode, i)
         AU.applying = false
-        if okT then AU.did("Took the flight to " .. text .. " like " .. from.name .. "."); return true end
+        if okT then
+          if AU.lastFlight and AU.lastFlight.dest == text then AU.lastFlight = nil end -- flown now: used up
+          AU.did("Took the flight to " .. text .. " like " .. from.name .. "."); return true
+        end
       end
     end
     return false
@@ -908,6 +915,63 @@ function AU.applyDialog(npc, kind, index, text, from)
     else ok = call(kind == "a" and G.SelectGossipAvailableQuest or G.SelectGossipActiveQuest, index) end
     if ok then AU.did("Picked the quest " .. tostring(text) .. " like " .. from.name .. "."); return true end
   end
+  return false
+end
+
+-- ------------------------------------------------------------------ 3a. fly where the leader flew (option flyLeader)
+-- The leader takes a flight: "FL|destination|start|time" (data only). A follower remembers the last one; when it opens
+-- a flight master with its own interact key (TAXIMAP_OPENED), it takes that destination once: less than FLY_FRESH
+-- seconds old, in its own list and reachable, at most TAXI_LIMIT, never in combat, Shift skips. Then it is used up.
+-- The same-window sync above (D|taxi) stays as it is. [AFKLAR: TakeTaxiNode without a key press on Forever – until
+-- the owner's test shows "Took the flight" in the log; the probe is diag.auto.api.TakeTaxiNode.]
+AU.FLY_FRESH = 600
+AU.lastFlight = nil -- {dest, start, sent, at, from}
+--- Leader (TakeTaxiNode hook): tell the followers where it flies.
+function AU.leaderFlew(i)
+  if not (AU.isLeader() and C().inParty()) then return false end
+  local dest = G.TaxiNodeName and C().safe(G.TaxiNodeName(i))
+  if type(dest) ~= "string" or dest == "" then return false end
+  local start = ""
+  if G.NumTaxiNodes and G.TaxiNodeGetType then
+    for j = 1, (G.NumTaxiNodes() or 0) do if G.TaxiNodeGetType(j) == "CURRENT" then start = C().safe(G.TaxiNodeName(j)) or "" end end
+  end
+  local t = (G.GetServerTime and G.GetServerTime()) or (G.time and G.time()) or 0
+  Core().log("info", "auto: leader flies to " .. dest .. " (sent to the followers)")
+  return AU.send("FL", dest, start, math.floor(t))
+end
+--- Follower: the leader took a flight.
+function AU.leaderFlewTo(dest, start, sent, from)
+  if AU.isLeader() or type(dest) ~= "string" or dest == "" then return end
+  AU.lastFlight = { dest = dest, start = start, sent = sent, at = now(), from = from.name }
+  Core().log("info", "auto: " .. from.name .. " flew to " .. dest .. " (from " .. tostring(start) .. ")")
+end
+local function flyLog(text) AU.flyLast = text; Core().log("info", "auto: fly where the leader flew – " .. text) end
+--- Follower, TAXIMAP_OPENED: fly to the leader's last destination. True = took the flight.
+function AU.flyLikeLeader()
+  if not AU.on("flyLeader") or AU.isLeader() then return false end
+  local F = AU.lastFlight
+  if not F then return false end
+  if now() - F.at > AU.FLY_FRESH then AU.lastFlight = nil; flyLog(F.dest .. " is older than 10 minutes"); return false end
+  if not AU.member(F.from, true) then AU.lastFlight = nil; flyLog(F.from .. " is not in your party"); return false end
+  if inFight() then flyLog("not in combat"); return false end
+  if shift() then flyLog("skipped (Shift held)"); return false end
+  AU.lastFlight = nil -- used up from here on
+  local idx
+  for i = 1, ((G.NumTaxiNodes and G.NumTaxiNodes()) or 0) do if G.TaxiNodeName(i) == F.dest then idx = i end end
+  local kind = idx and G.TaxiNodeGetType and G.TaxiNodeGetType(idx) or (idx and "REACHABLE") or "NONE"
+  if kind == "CURRENT" then flyLog("you are at " .. F.dest .. " already"); return false end
+  if kind ~= "REACHABLE" then
+    Core().print("You don't know the flight path to " .. F.dest .. ".")
+    flyLog(F.dest .. " not known or not reachable here (" .. tostring(kind) .. ")")
+    return false
+  end
+  local cost = G.TaxiNodeCost and G.TaxiNodeCost(idx) or 0
+  if cost > AU.TAXI_LIMIT then flyLog(F.dest .. " costs " .. cost .. " copper (more than the limit)"); return false end
+  AU.applying = true
+  local ok = call(G.TakeTaxiNode, idx)
+  AU.applying = false
+  if ok then flyLog("took the flight to " .. F.dest); AU.did("Took the flight to " .. F.dest .. " like " .. F.from .. "."); return true end
+  flyLog("TakeTaxiNode failed")
   return false
 end
 
@@ -1157,7 +1221,7 @@ function AU.Init()
     elseif G.SelectGossipAvailableQuest then pcall(hook, "SelectGossipAvailableQuest", function(i) AU.leaderChose("a", i, tostring(i)) end) end
     if GI and GI.SelectActiveQuest then pcall(hook, GI, "SelectActiveQuest", function(id) AU.leaderChose("c", id, tostring(id)) end)
     elseif G.SelectGossipActiveQuest then pcall(hook, "SelectGossipActiveQuest", function(i) AU.leaderChose("c", i, tostring(i)) end) end
-    if G.TakeTaxiNode then pcall(hook, "TakeTaxiNode", function(i) if not AU.applying then AU.leaderChose("t", i, G.TaxiNodeName and G.TaxiNodeName(i)) end end) end
+    if G.TakeTaxiNode then pcall(hook, "TakeTaxiNode", function(i) if not AU.applying then AU.leaderFlew(i); AU.leaderChose("t", i, G.TaxiNodeName and G.TaxiNodeName(i)) end end) end
     if G.GetQuestReward then pcall(hook, "GetQuestReward", function(i) AU.leaderPicked(i) end) end
     -- abandon: Forever's quest log uses C_QuestLog, Era the globals; the quest is captured on SetAbandonQuest
     local QL, hk = G.C_QuestLog, AU.abandonHooks
@@ -1199,7 +1263,7 @@ f:SetScript("OnEvent", function(_, event, a, b, c, d)
     elseif event == "GOSSIP_SHOW" then AU.window.gossip = npcName(); AU.leaderTakeQuests(false)
     elseif event == "QUEST_GREETING" then AU.leaderTakeQuests(true)
     elseif event == "GOSSIP_CLOSED" then AU.window.gossip = nil
-    elseif event == "TAXIMAP_OPENED" then AU.window.taxi = true
+    elseif event == "TAXIMAP_OPENED" then AU.window.taxi = true; AU.flyLikeLeader()
     elseif event == "TAXIMAP_CLOSED" then AU.window.taxi = nil
     elseif event == "RESURRECT_REQUEST" then AU.onResurrect(a)
     elseif event == "CONFIRM_SUMMON" then AU.onSummon()

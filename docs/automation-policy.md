@@ -102,6 +102,12 @@ the boring parts (invites, quests, dialogs, vendor, loot) with WoW's own addon A
    - The follower still opens the NPC with their own interact key, because interaction is protected.
    - Skip single-option dialogs (vendors, trainers).
    - Never sync: delete item, logout, quit, or anything that costs gold above a limit.
+   - **Fly where the leader flew** (option, off by default, not in the Levelling preset; owner, 25 Nov 2026, like
+     RestedXP): the leader's flight (`TakeTaxiNode` hook) sends `FL|destination|start|time` (data only). A follower
+     remembers the last one; when it opens a flight master with its own interact key it flies there once – less than
+     10 minutes old, in its own list and reachable (`TaxiNodeGetType`), within the gold limit, never in combat, Shift
+     skips. A path it lacks: "You don't know the flight path to X." [AFKLAR: `TakeTaxiNode` without a key press on
+     Forever, until the owner's test shows "Took the flight" in the log.]
 4. **Accept resurrection and summons** from squad members (`AcceptResurrect`, `ConfirmSummon`). Option, on by default.
    Also accept LFG role checks.
    - **Checked accepts** (owner, 25 Nov 2026): a resurrection WoWBoxer "accepted" did not take and its box was hidden.
